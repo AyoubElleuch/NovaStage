@@ -15,14 +15,21 @@ interface LoginFormProps {
 export default function LoginForm({ initialWaitlistSuccess = false }: LoginFormProps) {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
+  const errorParam = searchParams.get("error");
+  const initialErrorMessage =
+    errorParam === "not_approved"
+      ? "Your account is pending review. Please join the waitlist first or wait for an invitation."
+      : errorParam === "auth_callback_failed"
+        ? "Authentication could not be completed. Please try again."
+        : "";
 
-  const [isLoginMode, setIsLoginMode] = useState(false);
+  const [isLoginMode, setIsLoginMode] = useState(Boolean(errorParam));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialErrorMessage);
   const [isSuccess, setIsSuccess] = useState(initialWaitlistSuccess);
   const [lockoutSeconds, setLockoutSeconds] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -102,7 +109,14 @@ export default function LoginForm({ initialWaitlistSuccess = false }: LoginFormP
         setMessage(result.message || result.error || "");
         setIsSuccess(Boolean(result.success));
         if (result.success && !isLoginMode) playSuccessChime();
-      } catch {
+      } catch (err: unknown) {
+        if (
+          err instanceof Error &&
+          (err.message.includes("NEXT_REDIRECT") ||
+            (err as { digest?: string }).digest?.startsWith("NEXT_REDIRECT"))
+        ) {
+          return;
+        }
         setMessage(
           isLoginMode
             ? "We could not log you in right now. Please try again."

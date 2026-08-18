@@ -33,8 +33,12 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 // Keep this list synchronized with public tables in supabase/migrations.
 // Never add auth.users or any other table in the auth schema here.
 const tables = [
+  { name: "user_roles", requiredColumn: "role_id" },
+  { name: "role_permissions", requiredColumn: "role_id" },
   { name: "profiles", requiredColumn: "id" },
   { name: "waitlist", requiredColumn: "email" },
+  { name: "roles", requiredColumn: "id" },
+  { name: "permissions", requiredColumn: "id" },
 ];
 
 for (const table of tables) {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import LoadingScreen from "./loading-screen";
+import { NotificationProvider } from "@/components/notifications/notification-provider";
 
 export const metadata: Metadata = {
   title: "NovaStage — Collaborative System Architecture & Stack Designer",
@@ -19,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen bg-[#080b11] text-slate-100 antialiased">
-        {children}
+        <NotificationProvider>{children}</NotificationProvider>
         <LoadingScreen />
       </body>
     </html>

@@ -1,5 +1,15 @@
 import { redirect } from "next/navigation";
+import { getAuthenticatedProfile, isAdminRole } from "@/lib/auth/session";
 
-export default function RootPage() {
+export const dynamic = "force-dynamic";
+
+export default async function RootPage() {
+  const session = await getAuthenticatedProfile();
+  if (session?.user) {
+    const isAdmin =
+      isAdminRole(session.roles) || isAdminRole(session.profile?.role);
+    redirect(isAdmin ? "/admin" : "/dashboard");
+  }
+
   redirect("/login");
 }

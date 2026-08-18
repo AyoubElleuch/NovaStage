@@ -69,10 +69,6 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
   const requestedRedirect = formData.get("redirectTo");
-  const redirectTo =
-    typeof requestedRedirect === "string" && requestedRedirect.startsWith("/") && !requestedRedirect.startsWith("//")
-      ? requestedRedirect
-      : "/dashboard";
 
   if (!email) return { error: "Enter your email address." };
   if (!password) return { error: "Enter your password." };
@@ -109,7 +105,7 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
 
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data: authData, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -122,7 +118,37 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
   resetRateLimit(ipRateLimitKey);
   resetRateLimit(emailRateLimitKey);
 
-  redirect(redirectTo);
+  let destination = "/dashboard";
+  if (
+    typeof requestedRedirect === "string" &&
+    requestedRedirect.startsWith("/") &&
+    !requestedRedirect.startsWith("//") &&
+    requestedRedirect !== "/dashboard"
+  ) {
+    destination = requestedRedirect;
+  } else if (authData.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", authData.user.id)
+      .single();
+
+    const { data: userRoles } = await supabase
+      .from("user_roles")
+      .select("role_id")
+      .eq("user_id", authData.user.id);
+
+    const isUserAdmin =
+      profile?.role === "admin" ||
+      profile?.role === "super_admin" ||
+      userRoles?.some((r) => r.role_id === "admin" || r.role_id === "super_admin");
+
+    if (isUserAdmin) {
+      destination = "/admin";
+    }
+  }
+
+  redirect(destination);
 }
 
 export async function signUp(formData: FormData): Promise<AuthActionResult> {
