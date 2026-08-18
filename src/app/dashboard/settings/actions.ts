@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedUser } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 
 export interface SettingsActionResult {
   success?: boolean;
@@ -71,4 +73,31 @@ export async function updatePassword(_previousState: SettingsActionResult, formD
   if (error) return { error: "We could not update your password. Please try again." };
   revalidatePath("/dashboard/settings");
   return { success: true, message: "Password updated." };
+}
+
+export async function deleteAccount(_previousState: SettingsActionResult, formData: FormData): Promise<SettingsActionResult> {
+  const user = await getAuthenticatedUser();
+  if (!user) return { error: "Your session has expired. Please sign in again." };
+
+  const confirmation = String(formData.get("confirmation") || "");
+  const nameConfirmation = String(formData.get("nameConfirmation") || "").trim();
+  const supabase = await createClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single();
+  const fullName = profile?.full_name?.trim() || "";
+
+  if (confirmation !== "delete") return { error: 'Type "delete" to confirm account removal.' };
+  if (!fullName) return { error: "Add your full name in Profile before deleting your account." };
+  if (nameConfirmation.toLocaleLowerCase() !== fullName.toLocaleLowerCase()) {
+    return { error: "Enter your full name exactly as it appears in your profile." };
+  }
+
+  const { error } = await createAdminClient().auth.admin.deleteUser(user.id);
+  if (error) return { error: "We could not delete your account. Please try again." };
+
+  await supabase.auth.signOut();
+  redirect("/login?deleted=1");
 }

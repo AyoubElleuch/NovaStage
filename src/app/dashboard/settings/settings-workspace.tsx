@@ -3,7 +3,7 @@
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import type { DashboardSettingsData } from "@/lib/dashboard-data";
-import { ProfileForm, PasswordForm } from "./settings-forms";
+import { DeleteAccountForm, ProfileForm, PasswordForm } from "./settings-forms";
 
 export default function SettingsWorkspace() {
   const { data } = useSWR<DashboardSettingsData>(
@@ -56,6 +56,7 @@ export default function SettingsWorkspace() {
       <div className="space-y-6">
         <ProfileForm profile={profile} email={email} />
         <PasswordForm />
+        <DeleteAccountForm fullName={profile.full_name} />
       </div>
     </div>
   );
