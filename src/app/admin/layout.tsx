@@ -11,10 +11,12 @@ export default async function AdminLayout({
   const userRole = session.profile?.role || "admin";
 
   return (
-    <div className="admin-shell">
+    <div className="dashboard-v2 flex h-dvh overflow-hidden bg-[#fafafa] text-neutral-900 antialiased">
       <AdminSidebar userEmail={userEmail} userRole={userRole} />
-      <main className="admin-main">
-        <div className="admin-main__inner">{children}</div>
+      <main className="min-w-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-6xl px-6 py-10 sm:px-10 sm:py-12">
+          {children}
+        </div>
       </main>
     </div>
   );

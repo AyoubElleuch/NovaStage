@@ -41,7 +41,8 @@ function NotificationToast({
   onResume: (id: string) => void;
 }) {
   const [isCopied, setIsCopied] = useState(false);
-  const Icon = notification.tone === "error" ? AlertCircle : CheckCircle2;
+  const isError = notification.tone === "error";
+  const Icon = isError ? AlertCircle : CheckCircle2;
 
   const handleCopy = async () => {
     if (!notification.copyText) return;
@@ -57,22 +58,48 @@ function NotificationToast({
 
   return (
     <article
-      className={`site-notification site-notification--${notification.tone || "success"} ${notification.isExiting ? "site-notification--exiting" : ""}`}
-      role={notification.tone === "error" ? "alert" : "status"}
+      className={`site-notification ${notification.isExiting ? "site-notification--exiting" : ""} flex items-start gap-3 rounded-2xl border bg-white p-4 shadow-xl transition-all duration-200 ${
+        isError ? "border-red-200 text-red-950" : "border-neutral-200 text-neutral-900"
+      }`}
+      role={isError ? "alert" : "status"}
       onMouseEnter={() => onPause(notification.id)}
       onMouseLeave={() => onResume(notification.id)}
     >
-      <Icon className="site-notification__icon" aria-hidden="true" />
-      <div className="site-notification__content">
-        <strong>{notification.title}</strong>
-        {notification.message && <p>{notification.message}</p>}
+      <span
+        className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${
+          isError ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"
+        }`}
+      >
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <strong className="block text-xs font-semibold leading-5 text-neutral-900">
+          {notification.title}
+        </strong>
+        {notification.message && (
+          <p className="mt-0.5 text-xs leading-4 text-neutral-500">{notification.message}</p>
+        )}
         {notification.detail && (
-          <div className="site-notification__detail">
-            <span>{notification.detail}</span>
+          <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-neutral-200/80 bg-neutral-50 px-2.5 py-1.5 font-mono text-[11px] text-neutral-700">
+            <span className="truncate">{notification.detail}</span>
             {notification.copyText && (
-              <button type="button" onClick={handleCopy} className="site-notification__copy" title="Copy notification detail">
-                {isCopied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-                {isCopied ? "Copied" : "Copy"}
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-medium text-neutral-500 transition-colors hover:text-neutral-900"
+                title="Copy notification detail"
+              >
+                {isCopied ? (
+                  <>
+                    <Check className="h-3 w-3 text-emerald-600" aria-hidden="true" />
+                    <span className="text-emerald-600">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3 w-3" aria-hidden="true" />
+                    <span>Copy</span>
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -80,12 +107,12 @@ function NotificationToast({
       </div>
       <button
         type="button"
-        className="site-notification__dismiss"
+        className="grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
         onClick={() => onDismiss(notification.id)}
         aria-label="Dismiss notification"
         title="Dismiss notification"
       >
-        <X aria-hidden="true" />
+        <X className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     </article>
   );
