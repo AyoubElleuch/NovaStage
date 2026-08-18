@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedProfile, isAdminRole } from "@/lib/auth/session";
 import { hasPermission, Permission } from "@/lib/auth/permissions";
 import { revalidatePath } from "next/cache";
+import { sendWaitlistApprovedEmail } from "@/lib/email/resend";
 
 export interface WaitlistRecord {
   email: string;
@@ -150,6 +151,12 @@ export async function approveWaitlistEntry(
     if (updateError) {
       return { error: `User created, but waitlist status update failed: ${updateError.message}` };
     }
+
+    // Send email with credentials to the approved user
+    await sendWaitlistApprovedEmail({
+      email: normalizedEmail,
+      temporaryPassword: passwordToSet,
+    });
 
     revalidatePath("/admin/waitlist");
     return {

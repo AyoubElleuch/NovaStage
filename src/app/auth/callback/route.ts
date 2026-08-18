@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+import { sendWaitlistJoinedEmail } from "@/lib/email/resend";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -40,7 +41,13 @@ export async function GET(request: Request) {
           { onConflict: "email", ignoreDuplicates: true }
         );
 
-        // 2. Immediately purge the auto-created auth.users record so they are not an active user
+        // 2. Send waitlist confirmation email
+        await sendWaitlistJoinedEmail({
+          email: normalizedEmail,
+          name: user.user_metadata?.full_name || user.user_metadata?.name,
+        });
+
+        // 3. Immediately purge the auto-created auth.users record so they are not an active user
         await adminClient.auth.admin.deleteUser(user.id);
         await supabase.auth.signOut();
 

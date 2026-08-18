@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, resetRateLimit, getClientIp } from "@/lib/security/rate-limit";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { sendWaitlistJoinedEmail } from "@/lib/email/resend";
 
 export interface AuthActionResult {
   success?: boolean;
@@ -62,6 +63,10 @@ export async function joinWaitlist(formData: FormData): Promise<AuthActionResult
 
   resetRateLimit(ipRateLimitKey);
   resetRateLimit(emailRateLimitKey);
+
+  // Send waitlist confirmation email
+  await sendWaitlistJoinedEmail({ email });
+
   return { success: true, message: "You are on the list. We will be in touch soon." };
 }
 
