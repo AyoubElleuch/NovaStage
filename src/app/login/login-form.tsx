@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { joinWaitlist, signIn, signInWithOAuth } from "@/app/auth/actions";
 import { GitHubIcon } from "@/components/icons";
-import { Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import { AlertCircle, Check, Eye, EyeOff, Loader2 } from "lucide-react";
 
 const MINIMUM_SUBMIT_TIME = 700;
 
@@ -140,7 +140,7 @@ export default function LoginForm({ initialWaitlistSuccess = false }: LoginFormP
   };
 
   const isLockedOut = lockoutSeconds !== null && lockoutSeconds > 0;
-  const isDisabled = isPending || isLockedOut;
+  const isButtonDisabled = isPending || isLockedOut;
   const contentKey = isLoginMode ? "login" : isSuccess ? "success" : "waitlist";
 
   return (
@@ -169,7 +169,7 @@ export default function LoginForm({ initialWaitlistSuccess = false }: LoginFormP
             <div className="mt-8">
               <button
                 type="button"
-                disabled={isDisabled}
+                disabled={isPending}
                 onClick={() => handleOAuth("github")}
                 className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-medium text-neutral-700 shadow-sm transition-colors hover:border-neutral-300 hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -195,26 +195,33 @@ export default function LoginForm({ initialWaitlistSuccess = false }: LoginFormP
                   id="email"
                   type="email"
                   autoComplete="email"
-                  disabled={isDisabled}
+                  disabled={isPending}
                   value={email}
                   onChange={(event) => {
                     setEmail(event.target.value);
-                    setEmailError("");
-                    setPasswordError("");
-                    setMessage("");
+                    if (emailError) setEmailError("");
+                    if (message) setMessage("");
+                    if (lockoutSeconds !== null) setLockoutSeconds(null);
                     setIsSuccess(false);
                   }}
                   placeholder="you@example.com"
-                  aria-invalid={Boolean(emailError)}
+                  aria-invalid={Boolean(emailError || (message && !isLoginMode))}
                   aria-describedby={emailError ? "email-error" : undefined}
-                  className={`h-11 w-full rounded-lg border bg-white px-3.5 text-sm text-neutral-900 placeholder-neutral-400 shadow-sm transition focus:outline-none focus:ring-4 disabled:opacity-50 ${emailError ? "border-red-300 focus:border-red-400 focus:ring-red-50" : "border-neutral-200 focus:border-neutral-400 focus:ring-neutral-100"}`}
+                  className={`h-11 w-full rounded-lg border px-3.5 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 ${
+                    emailError || (message && !isLoginMode)
+                      ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10"
+                      : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100"
+                  }`}
                 />
-                <p
-                  id="email-error"
-                  className={`mt-1.5 min-h-5 text-sm ${emailError ? "text-red-600" : "invisible"}`}
-                >
-                  {emailError || " "}
-                </p>
+                {emailError && (
+                  <p
+                    id="email-error"
+                    className="login-error-transition mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600"
+                  >
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span>{emailError}</span>
+                  </p>
+                )}
               </div>
 
               {isLoginMode && (
@@ -227,21 +234,26 @@ export default function LoginForm({ initialWaitlistSuccess = false }: LoginFormP
                       id="password"
                       type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
-                      disabled={isDisabled}
+                      disabled={isPending}
                       value={password}
                       onChange={(event) => {
                         setPassword(event.target.value);
-                        setPasswordError("");
-                        setMessage("");
+                        if (passwordError) setPasswordError("");
+                        if (message) setMessage("");
+                        if (lockoutSeconds !== null) setLockoutSeconds(null);
                       }}
                       placeholder="••••••••"
                       aria-invalid={Boolean(passwordError)}
                       aria-describedby={passwordError ? "password-error" : undefined}
-                      className={`h-11 w-full rounded-lg border bg-white px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-sm transition focus:outline-none focus:ring-4 disabled:opacity-50 ${passwordError ? "border-red-300 focus:border-red-400 focus:ring-red-50" : "border-neutral-200 focus:border-neutral-400 focus:ring-neutral-100"}`}
+                      className={`h-11 w-full rounded-lg border px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 ${
+                        passwordError
+                          ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10"
+                          : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100"
+                      }`}
                     />
                     <button
                       type="button"
-                      disabled={isDisabled}
+                      disabled={isPending}
                       aria-label={showPassword ? "Hide password" : "Show password"}
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -249,31 +261,41 @@ export default function LoginForm({ initialWaitlistSuccess = false }: LoginFormP
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  <p
-                    id="password-error"
-                    className={`mt-1.5 min-h-5 text-sm ${passwordError ? "text-red-600" : "invisible"}`}
-                  >
-                    {passwordError || " "}
-                  </p>
+                  {passwordError && (
+                    <p
+                      id="password-error"
+                      className="login-error-transition mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600"
+                    >
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span>{passwordError}</span>
+                    </p>
+                  )}
                 </div>
               )}
 
               {message && (
-                <div role="alert" className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-red-700">
-                  <div>
-                    <p className="text-sm font-medium">Something went wrong</p>
-                    <p className="mt-0.5 text-sm opacity-85">{message}</p>
-                  </div>
+                <div
+                  role="alert"
+                  className="login-error-transition flex items-center gap-2.5 rounded-lg border border-red-200/80 bg-red-50/70 px-3.5 py-2.5 text-[13px] font-medium leading-snug text-red-700 shadow-2xs"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                  <span>{message}</span>
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={isDisabled}
-                className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isButtonDisabled}
+                className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isLoginMode ? (isLockedOut ? `Locked (${lockoutSeconds}s)` : "Log in") : "Join the waitlist"}
+                {isLoginMode
+                  ? isLockedOut
+                    ? `Try again in ${lockoutSeconds}s`
+                    : "Log in"
+                  : isLockedOut
+                    ? `Try again in ${lockoutSeconds}s`
+                    : "Join the waitlist"}
               </button>
             </form>
           </>
@@ -288,6 +310,7 @@ export default function LoginForm({ initialWaitlistSuccess = false }: LoginFormP
               setEmailError("");
               setPasswordError("");
               setMessage("");
+              if (lockoutSeconds !== null) setLockoutSeconds(null);
               setIsSuccess(false);
             }}
             className="cursor-pointer font-medium text-neutral-900 underline decoration-neutral-300 underline-offset-4 transition-colors hover:decoration-neutral-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100"

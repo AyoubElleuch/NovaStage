@@ -26,7 +26,7 @@ export async function joinWaitlist(formData: FormData): Promise<AuthActionResult
   const rateCheck = checkRateLimit(ipRateLimitKey, {
     maxAttempts: 5,
     windowSeconds: 60,
-    lockoutSeconds: 120,
+    lockoutSeconds: 30,
   });
 
   if (!rateCheck.allowed) {
@@ -38,8 +38,8 @@ export async function joinWaitlist(formData: FormData): Promise<AuthActionResult
 
   const emailRateCheck = checkRateLimit(emailRateLimitKey, {
     maxAttempts: 3,
-    windowSeconds: 600,
-    lockoutSeconds: 600,
+    windowSeconds: 60,
+    lockoutSeconds: 30,
   });
 
   if (!emailRateCheck.allowed) {
@@ -80,7 +80,7 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
   const rateCheck = checkRateLimit(ipRateLimitKey, {
     maxAttempts: 5,
     windowSeconds: 60,
-    lockoutSeconds: 180, // 3 minutes lockout after 5 consecutive failures
+    lockoutSeconds: 30, // 30 seconds lockout after 5 consecutive failures
   });
 
   if (!rateCheck.allowed) {
@@ -92,8 +92,8 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
 
   const emailRateCheck = checkRateLimit(emailRateLimitKey, {
     maxAttempts: 5,
-    windowSeconds: 300,
-    lockoutSeconds: 300,
+    windowSeconds: 60,
+    lockoutSeconds: 30,
   });
 
   if (!emailRateCheck.allowed) {
@@ -171,8 +171,8 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
   const rateLimitKey = `signup:${clientIp}`;
   const rateCheck = checkRateLimit(rateLimitKey, {
     maxAttempts: 4,
-    windowSeconds: 600,
-    lockoutSeconds: 600,
+    windowSeconds: 60,
+    lockoutSeconds: 30,
   });
 
   if (!rateCheck.allowed) {
@@ -226,7 +226,7 @@ export async function signInWithOAuth(
   const rateCheck = checkRateLimit(rateLimitKey, {
     maxAttempts: 5,
     windowSeconds: 60,
-    lockoutSeconds: 120,
+    lockoutSeconds: 30,
   });
 
   if (!rateCheck.allowed) {

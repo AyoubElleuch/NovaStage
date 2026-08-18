@@ -45,7 +45,7 @@ export interface RateLimitResult {
  */
 export function checkRateLimit(
   key: string,
-  options: RateLimitOptions = { maxAttempts: 5, windowSeconds: 60, lockoutSeconds: 120 }
+  options: RateLimitOptions = { maxAttempts: 5, windowSeconds: 60, lockoutSeconds: 30 }
 ): RateLimitResult {
   cleanupStaleEntries();
 
