@@ -9,7 +9,7 @@ Read this file before changing the project. Keep it current when architecture, d
 - `/login` is the public waitlist page: email signup and GitHub signup use the existing visual design. The page also has an inline animated `Log in` mode for approved users, with email/password and GitHub login.
 - Auth code lives in `src/app/auth/`; Supabase clients live in `src/lib/supabase/`.
 - `middleware.ts` refreshes Supabase sessions. Do not expose the service-role key to client code.
-- Database migrations live in `supabase/migrations/`. Current public tables are `profiles`, `waitlist`, `permissions`, `roles`, `role_permissions`, and `user_roles`; `auth.users` is managed by Supabase and must never be deleted by development cleanup.
+- Database migrations live in `supabase/migrations/`. Current public tables are `profiles`, `waitlist`, `permissions`, `roles`, `role_permissions`, `user_roles`, `projects`, and `project_members`; `auth.users` is managed by Supabase and must never be deleted by development cleanup.
 - Granular permissions and roles live in `src/lib/auth/permissions.ts` and `src/lib/auth/session.ts`.
 - `public/images/` and `public/videos/login_page.mp4` are intentional login-page assets.
 
@@ -20,6 +20,26 @@ Read this file before changing the project. Keep it current when architecture, d
 - Server route/action guards: `requireAdmin()`, `requirePermission(perm)` in `src/lib/auth/session.ts` and `hasPermission(perms, perm)` in `src/lib/auth/permissions.ts`.
 - PostgreSQL security functions: `public.has_permission(auth.uid(), '...')` and `public.has_role(auth.uid(), '...')` back RLS policies.
 - New users automatically receive the default `developer` role via the `handle_new_user()` trigger.
+
+## Projects & Collaboration Architecture
+
+- **`projects` table**: Contains `id` (UUID PK), `slug` (unique URL identifier), `name` (max 80 chars), `description` (optional text), `invite_code` (unique uppercase token `NS-XXXXX`), `created_by` (FK `auth.users`), `created_at`, `updated_at`.
+- **`project_members` table**: Join table with `project_id` (FK `projects`), `user_id` (FK `auth.users`), `role` (`owner` | `collaborator`), and `joined_at` (timestamptz for chronological succession).
+- **Invite code system**: Short, shareable, crypto-random code generated server-side via `generateInviteCode()` in `src/lib/projects.ts` (`NS-` prefix + 5 uppercase hex characters = 1,048,576+ entropy combinations). Any authenticated user with the code can join as a collaborator.
+- **Ownership succession on account deletion**: Trigger `promote_next_project_owner` runs `BEFORE DELETE ON auth.users`. When a project owner deletes their account, the earliest collaborator (`joined_at ASC`) is automatically promoted to `owner` and `projects.created_by` is updated. If no collaborators remain, the orphaned project is deleted.
+- **RLS & Security**: Non-recursive Security Definer functions `is_project_member(project_id, user_id)` and `is_project_owner(project_id, user_id)` enforce that users can only view/modify projects they are members of.
+- **Project APIs**:
+  - `GET /api/dashboard/projects`: Returns user's projects with role, member count, and invite code.
+  - `POST /api/dashboard/projects`: Creates project with unique slug and invite code, assigns creator as `owner`.
+  - `POST /api/dashboard/projects/join`: Joins a project via invite code as `collaborator`.
+  - `POST /api/dashboard/projects/leave`: Allows a collaborator to leave a project with instant SWR cache invalidation.
+  - `POST /api/dashboard/projects/delete`: Allows the project owner to permanently delete the project.
+  - `GET /api/dashboard/projects/members`: Returns detailed member list (with profiles and joined dates) for a project.
+  - `POST /api/dashboard/projects/kick`: Allows the project owner to remove collaborators from a project.
+- **Frontend & Navigation**:
+  - `src/app/dashboard/projects-workspace.tsx`: Workspace list with three-dot action menus (Leave project for collaborators; See all members and Delete project for owners), members management modal with collaborator kicking, real-time create/join dialogs, 1-click invite code copying with toast feedback, and role badges.
+  - `src/app/dashboard/dashboard-sidebar.tsx`: Dynamic project navigation synced via SWR.
+  - `src/app/dashboard/projects/[slug]/page.tsx`: Workspace shell displaying active project metadata and collaborator counts.
 
 ## Commands
 

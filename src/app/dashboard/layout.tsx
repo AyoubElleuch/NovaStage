@@ -1,5 +1,5 @@
 import { requireAuth, getAuthenticatedProfile } from "@/lib/auth/session";
-import { dashboardProjects } from "@/lib/dashboard-data";
+import { getUserProjects } from "@/lib/projects";
 import DashboardSidebar from "./dashboard-sidebar";
 import DashboardDataProvider from "./dashboard-data-provider";
 
@@ -12,6 +12,8 @@ export default async function DashboardLayout({
   const session = await getAuthenticatedProfile();
   const userEmail = user.email;
   const userRole = session?.profile?.role || session?.roles?.[0] || "developer";
+  const userProjects = await getUserProjects(user.id);
+
   const settings = {
     email: user.email || session?.profile?.email || "",
     profile: session?.profile
@@ -24,8 +26,9 @@ export default async function DashboardLayout({
         }
       : null,
   };
+
   const projects = {
-    projects: dashboardProjects,
+    projects: userProjects,
     userName: session?.profile?.full_name || user.email?.split("@")[0] || "Developer",
   };
 

@@ -16,6 +16,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
+import { fetcher } from "@/lib/fetcher";
+import type { DashboardProjectsData } from "@/lib/dashboard-data";
+import useSWR from "swr";
 
 interface DashboardSidebarProps {
   userEmail: string | undefined;
@@ -25,12 +28,6 @@ interface DashboardSidebarProps {
 const navigation = [
   { href: "/dashboard", label: "Projects", icon: FolderGit2 },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
-];
-
-const projects = [
-  { slug: "novastage-web", name: "novastage-web" },
-  { slug: "novastage-api-service", name: "novastage-api-service" },
-  { slug: "novastage-docs", name: "novastage-docs" },
 ];
 
 function SignOutButton({ collapsed }: { collapsed: boolean }) {
@@ -59,6 +56,11 @@ function SignOutButton({ collapsed }: { collapsed: boolean }) {
 
 export default function DashboardSidebar({ userEmail, userRole }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const { data } = useSWR<DashboardProjectsData>(
+    "/api/dashboard/projects",
+    fetcher<DashboardProjectsData>
+  );
+  const projects = data?.projects || [];
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -67,6 +69,7 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
   );
   const isAdmin = userRole === "admin" || userRole === "super_admin";
   const collapsed = isCollapsed || isMobile;
+  const activePendingHref = pendingHref !== pathname ? pendingHref : null;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 768px)");
@@ -75,10 +78,6 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
   }, []);
-
-  useEffect(() => {
-    setPendingHref(null);
-  }, [pathname]);
 
   const navigate = (href: string) => {
     if (href !== pathname) setPendingHref(href);
@@ -143,7 +142,7 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
           const isProjectsRoute =
             pathname === "/dashboard" || pathname.startsWith("/dashboard/projects/");
           const isActive = href === "/dashboard" ? isProjectsRoute : pathname.startsWith(href);
-          const isPending = pendingHref === href;
+          const isPending = activePendingHref === href;
 
           if (href === "/dashboard") {
             return (
@@ -164,7 +163,7 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
                   ) : (
                     <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                   )}
-                  {!collapsed && (
+                  {!collapsed && projects.length > 0 && (
                     <>
                       <span className="truncate">{label}</span>
                       <ChevronDown
@@ -175,9 +174,12 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
                       />
                     </>
                   )}
+                  {!collapsed && projects.length === 0 && (
+                    <span className="truncate">{label}</span>
+                  )}
                 </Link>
 
-                {isProjectsExpanded && !collapsed && (
+                {isProjectsExpanded && !collapsed && projects.length > 0 && (
                   <div className="mt-0.5 ml-[19px] space-y-0.5 border-l border-neutral-200 pl-3">
                     {projects.map((project) => {
                       const projectHref = `/dashboard/projects/${project.slug}`;
@@ -194,7 +196,7 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
                           }`}
                         >
                           <span className="truncate">{project.name}</span>
-                          {pendingHref === projectHref && (
+                          {activePendingHref === projectHref && (
                             <Loader2
                               className="ml-auto h-3 w-3 shrink-0 animate-spin text-neutral-400"
                               aria-hidden="true"
@@ -240,7 +242,7 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
               onClick={() => navigate("/admin")}
               className={`${linkBase} ${linkTone(false)} ${collapsed ? "justify-center px-0" : ""}`}
             >
-              {pendingHref === "/admin" ? (
+              {activePendingHref === "/admin" ? (
                 <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
               ) : (
                 <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />

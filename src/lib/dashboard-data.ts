@@ -1,9 +1,24 @@
+export interface ProjectMemberInfo {
+  userId: string;
+  role: "owner" | "collaborator";
+  fullName?: string | null;
+  email?: string | null;
+  username?: string | null;
+  avatarUrl?: string | null;
+  joinedAt?: string;
+}
+
 export interface DashboardProject {
+  id: string;
   slug: string;
   name: string;
-  description: string;
+  description?: string | null;
+  inviteCode?: string;
+  role?: "owner" | "collaborator";
   updatedAt: string;
+  createdAt?: string;
   members: number;
+  memberList?: ProjectMemberInfo[];
 }
 
 export interface DashboardProjectsData {
@@ -23,27 +38,3 @@ export interface DashboardSettingsData {
   email: string;
   profile: DashboardProfile | null;
 }
-
-export const dashboardProjects: DashboardProject[] = [
-  {
-    slug: "novastage-web",
-    name: "novastage-web",
-    description: "Production website plan",
-    updatedAt: "Updated 2 mins ago",
-    members: 4,
-  },
-  {
-    slug: "novastage-api-service",
-    name: "novastage-api-service",
-    description: "Service architecture and flows",
-    updatedAt: "Updated 45 mins ago",
-    members: 2,
-  },
-  {
-    slug: "novastage-docs",
-    name: "novastage-docs",
-    description: "Product documentation structure",
-    updatedAt: "Updated 3 hours ago",
-    members: 1,
-  },
-];
