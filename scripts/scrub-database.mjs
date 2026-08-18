@@ -33,6 +33,10 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 // Keep this list synchronized with public tables in supabase/migrations.
 // Never add auth.users or any other table in the auth schema here.
 const tables = [
+  { name: "canvas_claim_requests", requiredColumn: "id" },
+  { name: "canvas_edges", requiredColumn: "id" },
+  { name: "canvas_checkpoints", requiredColumn: "id" },
+  { name: "canvas_nodes", requiredColumn: "id" },
   { name: "project_members", requiredColumn: "project_id" },
   { name: "projects", requiredColumn: "id" },
   { name: "user_roles", requiredColumn: "role_id" },

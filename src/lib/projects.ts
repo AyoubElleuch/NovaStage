@@ -563,3 +563,65 @@ export async function kickProjectMember(params: {
 
   return { success: true };
 }
+
+/**
+ * Fetches a project by its URL slug.
+ */
+export async function getProjectBySlug(slug: string) {
+  const adminClient = createAdminClient();
+  const { data: project } = await adminClient
+    .from("projects")
+    .select("id, slug, name, description, invite_code, created_by, created_at, updated_at")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  return project;
+}
+
+/**
+ * Checks if a user is a member or creator of a project.
+ */
+export async function isProjectMember(projectId: string, userId: string): Promise<boolean> {
+  const adminClient = createAdminClient();
+  const { data: member } = await adminClient
+    .from("project_members")
+    .select("role")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (member) return true;
+
+  const { data: project } = await adminClient
+    .from("projects")
+    .select("created_by")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  return project?.created_by === userId;
+}
+
+/**
+ * Checks if a user is the owner of a project.
+ */
+export async function isProjectOwner(projectId: string, userId: string): Promise<boolean> {
+  const adminClient = createAdminClient();
+  const { data: member } = await adminClient
+    .from("project_members")
+    .select("role")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .eq("role", "owner")
+    .maybeSingle();
+
+  if (member) return true;
+
+  const { data: project } = await adminClient
+    .from("projects")
+    .select("created_by")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  return project?.created_by === userId;
+}
+

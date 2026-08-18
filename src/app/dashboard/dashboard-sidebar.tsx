@@ -71,6 +71,14 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
   const collapsed = isCollapsed || isMobile;
   const activePendingHref = pendingHref !== pathname ? pendingHref : null;
 
+  const [prevPathname, setPrevPathname] = useState(pathname);
+
+  // If route changed during render, clear any pending indicator
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setPendingHref(null);
+  }
+
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 768px)");
     const update = () => setIsMobile(mediaQuery.matches);
@@ -80,7 +88,12 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
   }, []);
 
   const navigate = (href: string) => {
-    if (href !== pathname) setPendingHref(href);
+    if (href !== pathname) {
+      setPendingHref(href);
+      setTimeout(() => {
+        setPendingHref((current) => (current === href ? null : current));
+      }, 2500);
+    }
   };
 
   const linkBase =
@@ -92,7 +105,7 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
 
   return (
     <aside
-      className={`relative flex h-dvh shrink-0 flex-col border-r border-neutral-200 bg-white transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+      className={`relative z-30 flex h-dvh shrink-0 flex-col border-r border-neutral-200 bg-white transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
         collapsed ? "w-[68px]" : "w-60"
       }`}
     >
@@ -281,12 +294,12 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
         onClick={() => setIsCollapsed((value) => !value)}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="absolute top-1/2 -right-3 hidden h-6 w-6 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-neutral-200 bg-white text-neutral-500 shadow-sm transition-colors hover:bg-neutral-900 hover:text-white md:grid"
+        className="absolute top-1/2 -right-3.5 z-50 hidden h-7 w-7 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-neutral-200/90 bg-white text-neutral-600 shadow-md transition-all hover:bg-neutral-900 hover:text-white md:grid"
       >
         {isCollapsed ? (
-          <PanelLeftOpen className="h-3 w-3" aria-hidden="true" />
+          <PanelLeftOpen className="h-3.5 w-3.5" aria-hidden="true" />
         ) : (
-          <PanelLeftClose className="h-3 w-3" aria-hidden="true" />
+          <PanelLeftClose className="h-3.5 w-3.5" aria-hidden="true" />
         )}
       </button>
     </aside>
