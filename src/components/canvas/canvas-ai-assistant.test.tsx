@@ -28,11 +28,11 @@ describe("CanvasAIAssistant Component", () => {
     const dialog = screen.getByRole("dialog");
     expect(dialog).not.toBeNull();
     expect(
-      screen.getByRole("heading", { name: "Generate Workflow with AI" })
+      screen.getByRole("heading", { name: /Generate or Update Workflow with AI/i })
     ).not.toBeNull();
     expect(screen.getByText("7 of 10 requests left")).not.toBeNull();
     expect(
-      screen.getByPlaceholderText(/Describe your project, architecture, or workflow/i)
+      screen.getByPlaceholderText(/Describe your project or ask to modify the pipeline/i)
     ).not.toBeNull();
   });
 
@@ -42,7 +42,7 @@ describe("CanvasAIAssistant Component", () => {
     );
 
     const textarea = screen.getByPlaceholderText(
-      /Describe your project, architecture, or workflow/i
+      /Describe your project or ask to modify the pipeline/i
     ) as HTMLTextAreaElement;
 
     fireEvent.change(textarea, {
@@ -67,7 +67,7 @@ describe("CanvasAIAssistant Component", () => {
     );
 
     const textarea = screen.getByPlaceholderText(
-      /Describe your project, architecture, or workflow/i
+      /Describe your project or ask to modify the pipeline/i
     );
     fireEvent.change(textarea, {
       target: { value: "Create a modern event pipeline" },
@@ -96,7 +96,7 @@ describe("CanvasAIAssistant Component", () => {
     );
 
     const textarea = screen.getByPlaceholderText(
-      /Describe your project, architecture, or workflow/i
+      /Describe your project or ask to modify the pipeline/i
     );
     fireEvent.change(textarea, {
       target: { value: "Concurrent test prompt" },
@@ -126,7 +126,7 @@ describe("CanvasAIAssistant Component", () => {
     expect(screen.getByText("Limit Reached")).not.toBeNull();
 
     const textarea = screen.getByPlaceholderText(
-      /You have reached your 10 AI workflow generation limit/i
+      /You have reached your 10 AI workflow limit/i
     );
     expect(textarea.hasAttribute("disabled")).toBe(true);
   });

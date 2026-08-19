@@ -169,10 +169,10 @@ export default function CanvasAIAura({
               left: blob.initialX,
               top: blob.initialY,
               background: `radial-gradient(circle at center, ${blob.color}, transparent 70%)`,
-              animation:
-                phase === "active"
-                  ? `${blob.animationName} ${blob.duration} ease-in-out infinite`
-                  : "none",
+              animationName: phase === "active" ? blob.animationName : "none",
+              animationDuration: blob.duration,
+              animationTimingFunction: "ease-in-out",
+              animationIterationCount: "infinite",
               animationDelay: blob.delay,
               willChange: "transform",
               transform: "translate(-50%, -50%)",

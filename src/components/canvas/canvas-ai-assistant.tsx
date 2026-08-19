@@ -26,26 +26,26 @@ interface CanvasAIAssistantProps {
 const THINKING_STAGES = [
   {
     buttonLabel: "Analyzing…",
-    title: "Analyzing project requirements",
-    detail: "Decomposing system scope into foundational architecture stages…",
+    title: "Analyzing request & canvas graph",
+    detail: "Decomposing workflow scope and evaluating topological graph changes…",
     pct: "25%",
   },
   {
     buttonLabel: "Structuring…",
-    title: "Drafting detailed checkpoints",
-    detail: "Structuring 3 to 6 actionable checkpoint subtasks per milestone…",
+    title: "Drafting milestones & checkpoints",
+    detail: "Structuring actionable checkpoint subtasks and adjusting step order…",
     pct: "55%",
   },
   {
     buttonLabel: "Connecting…",
-    title: "Mapping dependency graph",
+    title: "Mapping & rewiring dependencies",
     detail: "Connecting sequential and parallel DAG wires across phases…",
     pct: "80%",
   },
   {
     buttonLabel: "Finalizing…",
-    title: "Computing layout & canvas sync",
-    detail: "Calculating non-overlapping coordinates and placing boxes on canvas…",
+    title: "Computing layout, shift & sync",
+    detail: "Calculating non-overlapping coordinates and synchronizing canvas…",
     pct: "95%",
   },
 ];
@@ -314,7 +314,7 @@ export default function CanvasAIAssistant({
                   id="ai-assistant-title"
                   className="text-sm font-semibold tracking-tight text-neutral-900"
                 >
-                  Generate Workflow with AI
+                  Generate or Update Workflow with AI
                 </h3>
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
@@ -327,7 +327,7 @@ export default function CanvasAIAssistant({
                 </span>
               </div>
               <p className="text-[11px] text-neutral-500">
-                Describe what you want to build or record your voice
+                Describe a pipeline to build, or ask to update the current one
               </p>
             </div>
 
@@ -350,8 +350,8 @@ export default function CanvasAIAssistant({
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={
                   isQuotaDepleted
-                    ? "You have reached your 10 AI workflow generation limit."
-                    : "Describe your project, architecture, or workflow (e.g., 'Build a real-time collaborative canvas with auth, milestone locks, and checkpoint subtasks')..."
+                    ? "You have reached your 10 AI workflow limit."
+                    : "Describe your project or ask to modify the pipeline (e.g., 'Add a QA testing step between step 2 and step 3', 'Add Redis cache checkpoints to step 2')..."
                 }
                 disabled={isThinking || isQuotaDepleted}
                 style={{ height: "68px", overflowY: "hidden" }}

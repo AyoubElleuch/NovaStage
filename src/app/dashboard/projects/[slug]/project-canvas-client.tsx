@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -78,7 +77,6 @@ export default function ProjectCanvasClient({
   isOwner,
   initialAiRequestsRemaining = 10,
 }: ProjectCanvasClientProps) {
-  const router = useRouter();
   const { notify } = useNotifications();
   const supabase = useMemo(() => createClient(), []);
   const canvasChannelRef = useRef<RealtimeChannel | null>(null);
@@ -676,48 +674,69 @@ export default function ProjectCanvasClient({
         }
 
         if (data.success && data.nodes) {
-          // Merge generated nodes
-          setNodes((prev) => {
-            const existingIds = new Set(prev.map((n) => n.id));
-            const newNodes = data.nodes.filter((n: CanvasNode) => !existingIds.has(n.id));
-            return [...prev, ...newNodes];
-          });
+          const isUpdateIntent = data.intent === "update_pipeline";
 
-          // Merge generated edges
-          if (data.edges) {
-            setEdges((prev) => {
-              const existingIds = new Set(prev.map((e) => e.id));
-              const newEdges = data.edges.filter((e: CanvasEdge) => !existingIds.has(e.id));
-              return [...prev, ...newEdges];
+          if (isUpdateIntent) {
+            // Update full canvas graph with shifted and reconciled nodes & edges
+            setNodes(data.nodes);
+            if (data.edges) {
+              setEdges(data.edges);
+            }
+
+            broadcastEvent("canvas:batch_updated", {
+              nodes: data.nodes,
+              edges: data.edges,
+              creatorName: generatorName,
+              summary: data.summary,
+            });
+
+            notify({
+              title: "Pipeline Updated",
+              message: data.summary || "AI updated the workflow pipeline.",
+            });
+          } else {
+            // Merge newly generated independent pipeline
+            setNodes((prev) => {
+              const existingIds = new Set(prev.map((n) => n.id));
+              const newNodes = data.nodes.filter((n: CanvasNode) => !existingIds.has(n.id));
+              return [...prev, ...newNodes];
+            });
+
+            if (data.edges) {
+              setEdges((prev) => {
+                const existingIds = new Set(prev.map((e) => e.id));
+                const newEdges = data.edges.filter((e: CanvasEdge) => !existingIds.has(e.id));
+                return [...prev, ...newEdges];
+              });
+            }
+
+            broadcastEvent("canvas:batch_created", {
+              nodes: data.nodes,
+              edges: data.edges,
+              creatorName: generatorName,
+              summary: data.summary,
+            });
+
+            // Smoothly center the canvas viewport on the new milestones
+            if (data.nodes.length > 0) {
+              const firstNode = data.nodes[data.nodes.length - 1] || data.nodes[0];
+              setViewport((prev) => ({
+                ...prev,
+                x: Math.round(-firstNode.position_x * prev.zoom + window.innerWidth / 2 - 140),
+                y: Math.round(-firstNode.position_y * prev.zoom + window.innerHeight / 2 - 100),
+              }));
+            }
+
+            notify({
+              title: "Workflow Generated",
+              message: data.summary || "New AI workflow pipeline added to canvas.",
             });
           }
 
-          // Update remaining requests
+          // Update remaining requests quota count
           if (typeof data.requests_remaining === "number") {
             setAiRequestsRemaining(data.requests_remaining);
           }
-
-          // Broadcast to collaborators
-          broadcastEvent("canvas:batch_created", {
-            nodes: data.nodes,
-            edges: data.edges,
-            creatorName: generatorName,
-          });
-
-          // Smoothly center the canvas viewport on the new milestones
-          if (data.nodes.length > 0) {
-            const firstNode = data.nodes[0];
-            setViewport((prev) => ({
-              ...prev,
-              x: Math.round(-firstNode.position_x * prev.zoom + window.innerWidth / 2 - 140),
-              y: Math.round(-firstNode.position_y * prev.zoom + window.innerHeight / 2 - 100),
-            }));
-          }
-
-          notify({
-            title: "Workflow Generated",
-            message: data.summary || "New AI workflow pipeline added to canvas.",
-          });
 
           setIsAIAssistantOpen(false);
         }
@@ -874,6 +893,18 @@ export default function ProjectCanvasClient({
         notify({
           title: "AI Workflow Added",
           message: `${payload?.creatorName || "A collaborator"} generated new milestones with AI.`,
+        });
+      })
+      .on("broadcast", { event: "canvas:batch_updated" }, ({ payload }) => {
+        if (payload?.nodes && Array.isArray(payload.nodes)) {
+          setNodes(payload.nodes);
+        }
+        if (payload?.edges && Array.isArray(payload.edges)) {
+          setEdges(payload.edges);
+        }
+        notify({
+          title: "AI Workflow Updated",
+          message: payload?.summary || `${payload?.creatorName || "A collaborator"} updated the workflow pipeline with AI.`,
         });
       })
       .on("broadcast", { event: "ai:generating_start" }, ({ payload }) => {

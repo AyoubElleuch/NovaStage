@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getProjectBySlug, isProjectMember } from "@/lib/projects";
 import { getAuthenticatedProfile } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateWorkflowWithGemini } from "@/lib/ai/gemini";
-import { createBatchCanvasWorkflow } from "@/lib/canvas/server";
+import { generateWorkflowWithGemini, CanvasAIContext } from "@/lib/ai/gemini";
+import { getProjectCanvasData, applyAIWorkflowResult } from "@/lib/canvas/server";
 
 export async function POST(
   request: NextRequest,
@@ -35,7 +35,7 @@ export async function POST(
 
     if (!prompt) {
       return NextResponse.json(
-        { error: "Prompt is required to generate a workflow" },
+        { error: "Prompt is required to generate or update a workflow" },
         { status: 400 }
       );
     }
@@ -65,7 +65,7 @@ export async function POST(
           error: "COLLISION_LOCKED",
           message:
             lockResult.error ||
-            "Another collaborator is currently generating a workflow for this project. Please wait.",
+            "Another collaborator is currently using AI for this project. Please wait.",
           generatingUser: lockResult.generating_user || "A collaborator",
         },
         { status: 409 }
@@ -98,7 +98,7 @@ export async function POST(
           error: "QUOTA_EXCEEDED",
           message:
             quotaResult.error ||
-            "You have reached your limit of 10 AI workflow generation requests.",
+            "You have reached your limit of 10 AI workflow requests.",
           requests_used: quotaResult.requests_used ?? 10,
           requests_remaining: quotaResult.requests_remaining ?? 0,
         },
@@ -108,12 +108,36 @@ export async function POST(
 
     quotaConsumed = true;
 
-    // 3. Call Google Gemini to generate structured DAG workflow
-    let workflow;
+    // 3. Load current canvas graph state to provide as context
+    const currentCanvasData = await getProjectCanvasData(project.id);
+    const aiContext: CanvasAIContext = {
+      existingMilestones: currentCanvasData.nodes.map((n, idx) => ({
+        id: n.id,
+        order: n.sort_order ?? idx,
+        title: n.title,
+        description: n.description,
+        color: n.color,
+        status: n.status,
+        checkpoints: (n.checkpoints || []).map((cp) => ({
+          id: cp.id,
+          title: cp.title,
+          is_completed: cp.is_completed,
+          sort_order: cp.sort_order,
+        })),
+      })),
+      existingEdges: currentCanvasData.edges.map((e) => ({
+        id: e.id,
+        sourceId: e.source_node_id,
+        targetId: e.target_node_id,
+      })),
+    };
+
+    // 4. Call Google Gemini to generate or update structured DAG workflow
+    let workflowResult;
     try {
-      workflow = await generateWorkflowWithGemini(prompt);
+      workflowResult = await generateWorkflowWithGemini(prompt, aiContext);
     } catch (aiErr: unknown) {
-      console.error("Gemini Generation failed:", aiErr);
+      console.error("Gemini AI Processing failed:", aiErr);
 
       // Rollback consumed quota on AI API failure
       if (quotaConsumed) {
@@ -126,31 +150,33 @@ export async function POST(
       const errMsg =
         aiErr instanceof Error
           ? aiErr.message
-          : "Failed to generate workflow with AI";
+          : "Failed to process workflow with AI";
       return NextResponse.json(
         { error: "AI_GENERATION_FAILED", message: errMsg },
         { status: 502 }
       );
     }
 
-    // 4. Batch insert nodes, checkpoints, and edges with DAG auto-layout
-    const { nodes, edges } = await createBatchCanvasWorkflow(
+    // 5. Apply graph mutations, insertions, rewiring, or parallel generation
+    const reconciled = await applyAIWorkflowResult(
       project.id,
-      workflow
+      workflowResult,
+      currentCanvasData
     );
 
     return NextResponse.json({
       success: true,
-      summary: workflow.summary,
-      nodes,
-      edges,
+      intent: reconciled.intent,
+      summary: reconciled.summary,
+      nodes: reconciled.nodes,
+      edges: reconciled.edges,
       requests_used: quotaResult.requests_used,
       requests_remaining: quotaResult.requests_remaining,
     });
   } catch (err: unknown) {
     const errorMsg =
       err instanceof Error ? err.message : "Internal Server Error";
-    console.error("AI Generation route error:", err);
+    console.error("AI Workflow route error:", err);
 
     // Rollback quota if error happened after consumption
     if (quotaConsumed && userToUnlock) {
@@ -162,7 +188,7 @@ export async function POST(
 
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   } finally {
-    // 5. Always release project lock when done
+    // 6. Always release project lock when done
     if (projectToUnlock && userToUnlock) {
       const adminClient = createAdminClient();
       await adminClient.rpc("release_project_ai_lock", {

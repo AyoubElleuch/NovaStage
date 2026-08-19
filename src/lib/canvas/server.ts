@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasClaimRequest, HandlePosition, NodeStatus } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
 import { GeneratedWorkflow } from "@/lib/ai/gemini";
+export { applyAIWorkflowResult } from "./ai-reconcile";
 
 export async function getProjectCanvasData(projectId: string): Promise<{
   nodes: CanvasNode[];
