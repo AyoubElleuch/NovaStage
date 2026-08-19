@@ -12,6 +12,7 @@ import {
   Volume2,
   X,
 } from "lucide-react";
+import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
 
 interface CanvasAIAssistantProps {
   isOpen: boolean;
@@ -441,6 +442,14 @@ export default function CanvasAIAssistant({
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* AI Transparency & Privacy Note */}
+            <div className="flex items-center justify-between px-1 text-[11px] text-neutral-400">
+              <span>Google Gemini AI &bull; Prompts are not stored</span>
+              <PrivacyPolicyTrigger className="cursor-pointer text-[11px] text-neutral-400 underline decoration-neutral-300 underline-offset-2 transition-colors hover:text-neutral-700">
+                AI Privacy
+              </PrivacyPolicyTrigger>
             </div>
 
             {/* Collision or API Error Notice */}

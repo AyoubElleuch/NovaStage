@@ -18,6 +18,12 @@ describe("PrivacyPolicyModal", () => {
     // Verify key privacy principles from codebase
     expect(screen.getByText(/We do not sell your personal or project data/i)).not.toBeNull();
     expect(screen.getByText(/Information We Collect/i)).not.toBeNull();
+    expect(screen.getByText(/AI Usage Quotas/i)).not.toBeNull();
+    expect(screen.getByText(/Artificial Intelligence & Workflow Generation/i)).not.toBeNull();
+    expect(screen.getByText(/Platform-Managed AI & API Keys/i)).not.toBeNull();
+    expect(screen.getByText(/Zero Prompt Logging or Storage/i)).not.toBeNull();
+    expect(screen.getByText(/Canvas Artifact Storage/i)).not.toBeNull();
+    expect(screen.getByText(/No AI Model Training/i)).not.toBeNull();
     expect(screen.getByText(/Ephemeral Real-Time Collaboration/i)).not.toBeNull();
     expect(screen.getByText(/Zero Selling & Zero Behavioral Tracking/i)).not.toBeNull();
     expect(screen.getByText(/Account Deletion & Total Data Purge/i)).not.toBeNull();

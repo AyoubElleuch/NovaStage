@@ -112,25 +112,53 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
                 <strong className="font-medium text-neutral-800">Workspace &amp; Project Data:</strong> Project titles, descriptions, milestone nodes, checklist items, and workflow dependency links that you create or edit.
               </li>
               <li>
+                <strong className="font-medium text-neutral-800">AI Usage Quotas:</strong> An aggregate counter tracking the number of AI workflow requests used per account (<code className="rounded bg-neutral-100 px-1 py-0.5 font-mono text-[11px] text-neutral-700">ai_requests_count</code>) to enforce generation limits.
+              </li>
+              <li>
                 <strong className="font-medium text-neutral-800">Transactional Communications:</strong> Operational emails necessary for waitlist confirmations, invitation notices, and password resets.
               </li>
             </ul>
           </section>
 
-          {/* Section 2: Real-time Collaboration */}
+          {/* Section 2: Artificial Intelligence & Workflow Generation */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900">2. Ephemeral Real-Time Collaboration</h3>
+            <h3 className="text-sm font-semibold text-neutral-900">2. Artificial Intelligence &amp; Workflow Generation</h3>
             <p>
-              NovaStage features interactive multi-user canvas collaboration. Real-time events — such as active milestone edit locks and live multiplayer cursor positions — are streamed ephemerally over secure WebSocket channels between connected project collaborators. This transient collaboration state is held in-memory and is <strong>never recorded or stored permanently</strong>.
+              NovaStage includes an integrated Canvas AI Assistant that transforms natural language descriptions and voice input into structured Directed Acyclic Graph (DAG) workflows containing milestone boxes, checkpoint tasks, and dependency links.
+            </p>
+            <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600">
+              <li>
+                <strong className="font-medium text-neutral-800">Platform-Managed AI &amp; API Keys:</strong> AI workflow generation is powered by Google Gemini generative AI models through NovaStage&apos;s own platform-managed API infrastructure. Users do not need to provide, manage, or expose personal API keys.
+              </li>
+              <li>
+                <strong className="font-medium text-neutral-800">Voice Dictation (Web Speech API):</strong> When voice dictation is used, speech-to-text conversion is handled locally via your browser&apos;s native Web Speech API. NovaStage never records, stores, or transmits your microphone audio streams to our backend servers.
+              </li>
+              <li>
+                <strong className="font-medium text-neutral-800">Zero Prompt Logging or Storage:</strong> When you submit a prompt to generate a workflow, the prompt text and schema requirements are sent via secure TLS encryption directly to the Google Gemini API solely to compute the milestone structure. NovaStage <strong>does not log, archive, or retain your raw prompts or conversational interactions</strong> in our database or server logs.
+              </li>
+              <li>
+                <strong className="font-medium text-neutral-800">Canvas Artifact Storage:</strong> Only the structured project elements that you generate and place onto the canvas (milestone nodes, checkpoints, and edge connections) are stored in our PostgreSQL database, exactly like manually created nodes.
+              </li>
+              <li>
+                <strong className="font-medium text-neutral-800">No AI Model Training:</strong> Neither NovaStage nor Google uses your private prompts or project canvas data to train public foundation AI models.
+              </li>
+            </ul>
+          </section>
+
+          {/* Section 3: Ephemeral Real-Time Collaboration */}
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold text-neutral-900">3. Ephemeral Real-Time Collaboration</h3>
+            <p>
+              NovaStage features interactive multi-user canvas collaboration. Real-time events — such as active milestone edit locks, AI generation collision locks, and live multiplayer cursor positions — are streamed ephemerally over secure WebSocket channels between connected project collaborators. This transient collaboration state is held in-memory and is <strong>never recorded or stored permanently</strong>.
             </p>
           </section>
 
-          {/* Section 3: What We Never Do */}
+          {/* Section 4: What We Never Do */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900">3. Zero Selling &amp; Zero Behavioral Tracking</h3>
+            <h3 className="text-sm font-semibold text-neutral-900">4. Zero Selling &amp; Zero Behavioral Tracking</h3>
             <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600">
               <li>
-                <strong className="font-medium text-neutral-800">No Data Selling:</strong> We never sell, monetize, rent, or trade your personal information or workspace content with third parties or data brokers.
+                <strong className="font-medium text-neutral-800">No Data Selling:</strong> We never sell, monetize, rent, or trade your personal information, AI prompts, or workspace content with third parties or data brokers.
               </li>
               <li>
                 <strong className="font-medium text-neutral-800">No Telemetry or Tracking:</strong> We do not deploy third-party advertising cookies, session replay recording software, or cross-site tracking scripts.
@@ -141,9 +169,9 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
             </ul>
           </section>
 
-          {/* Section 4: Account Deletion */}
+          {/* Section 5: Account Deletion */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900">4. Account Deletion &amp; Total Data Purge</h3>
+            <h3 className="text-sm font-semibold text-neutral-900">5. Account Deletion &amp; Total Data Purge</h3>
             <p>
               You maintain full ownership of your data and have an absolute right to be forgotten. When you choose to delete your account from your Account Settings:
             </p>
@@ -152,7 +180,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
                 Your authentication record is permanently purged from our identity service.
               </li>
               <li>
-                Our database immediately cascades and removes your user profile, role permissions, waitlist history, and join requests.
+                Our database immediately cascades and removes your user profile, AI quota history, role permissions, waitlist history, and join requests.
               </li>
               <li>
                 Projects owned solely by you — including all milestone nodes, checkpoints, and dependency links — are completely and irreversibly deleted.
@@ -166,9 +194,9 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
             </p>
           </section>
 
-          {/* Section 5: Security */}
+          {/* Section 6: Security */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900">5. Data Security &amp; Isolation</h3>
+            <h3 className="text-sm font-semibold text-neutral-900">6. Data Security &amp; Isolation</h3>
             <p>
               Your data is protected with PostgreSQL Row-Level Security (RLS) policies and Role-Based Access Controls (RBAC), ensuring that only verified project members can access project resources. Passwords and credentials are encrypted using industry-standard hashing algorithms.
             </p>
