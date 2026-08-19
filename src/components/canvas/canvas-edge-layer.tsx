@@ -69,7 +69,7 @@ export default function CanvasEdgeLayer({
           <path d="M 0 1 L 8 5 L 0 9 z" fill="#a3a3a3" />
         </marker>
 
-        {/* Active Neon Arrowhead */}
+        {/* Active Green Arrowhead */}
         <marker
           id="arrow-neon"
           viewBox="0 0 10 10"
@@ -81,17 +81,6 @@ export default function CanvasEdgeLayer({
         >
           <path d="M 0 1 L 8 5 L 0 9 z" fill="#10b981" />
         </marker>
-
-        {/* Multi-layer Neon Glow Filter */}
-        <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3.5" result="blur1" />
-          <feGaussianBlur stdDeviation="8" result="blur2" />
-          <feMerge>
-            <feMergeNode in="blur2" />
-            <feMergeNode in="blur1" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
 
       {/* Render Established Edges */}
@@ -146,18 +135,6 @@ export default function CanvasEdgeLayer({
               strokeLinecap="round"
             />
 
-            {/* Neon Glow Underlay (when completed) */}
-            {isNeonActive && (
-              <path
-                d={pathData}
-                fill="none"
-                stroke="#10b981"
-                strokeWidth="4"
-                strokeOpacity="0.6"
-                filter="url(#neon-glow)"
-              />
-            )}
-
             {/* Main Visual Path */}
             <path
               d={pathData}
@@ -169,7 +146,7 @@ export default function CanvasEdgeLayer({
                   ? "#10b981"
                   : "#9ca3af"
               }
-              strokeWidth={isNeonActive ? "3" : "2.5"}
+              strokeWidth={isNeonActive ? "2.5" : "2.5"}
               strokeDasharray={isNeonActive ? "6 4" : undefined}
               className={isNeonActive ? "animate-[dash-flow_1.5s_linear_infinite]" : ""}
               markerEnd={isNeonActive ? "url(#arrow-neon)" : "url(#arrow-default)"}

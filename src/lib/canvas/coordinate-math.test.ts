@@ -9,6 +9,7 @@ import {
   getBezierControlPoints,
   calculateBezierPath,
   getUserColor,
+  canConnectMilestones,
 } from "./coordinate-math";
 import type { CanvasCheckpoint, CanvasNode, CanvasViewport } from "./types";
 
@@ -194,6 +195,47 @@ describe("Canvas Coordinate Math & Utilities", () => {
 
     it("handles empty user ID gracefully", () => {
       expect(getUserColor("")).toBeDefined();
+    });
+  });
+
+  describe("canConnectMilestones", () => {
+    const futureDate = new Date(Date.now() + 60000).toISOString();
+    const pastDate = new Date(Date.now() - 60000).toISOString();
+
+    it("allows connecting if source milestone is claimed by user", () => {
+      const nodeA = { claimed_by: "user-1", claim_expires_at: futureDate };
+      const nodeB = { claimed_by: null, claim_expires_at: null };
+      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(true);
+    });
+
+    it("allows connecting if target milestone is claimed by user", () => {
+      const nodeA = { claimed_by: null, claim_expires_at: null };
+      const nodeB = { claimed_by: "user-1", claim_expires_at: futureDate };
+      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(true);
+    });
+
+    it("allows connecting if target is claimed by another user but source is claimed by current user", () => {
+      const nodeA = { claimed_by: "user-1", claim_expires_at: futureDate };
+      const nodeB = { claimed_by: "user-2", claim_expires_at: futureDate };
+      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(true);
+    });
+
+    it("disallows connecting if neither milestone is claimed by user", () => {
+      const nodeA = { claimed_by: "user-2", claim_expires_at: futureDate };
+      const nodeB = { claimed_by: null, claim_expires_at: null };
+      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(false);
+    });
+
+    it("disallows connecting if claimed lease has expired", () => {
+      const nodeA = { claimed_by: "user-1", claim_expires_at: pastDate };
+      const nodeB = { claimed_by: null, claim_expires_at: null };
+      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(false);
+    });
+
+    it("always allows project owner to connect milestones", () => {
+      const nodeA = { claimed_by: "user-2", claim_expires_at: futureDate };
+      const nodeB = { claimed_by: null, claim_expires_at: null };
+      expect(canConnectMilestones(nodeA, nodeB, "user-1", true)).toBe(true);
     });
   });
 });

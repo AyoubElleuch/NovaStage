@@ -18,6 +18,7 @@ import {
   snapToGrid,
   getUserColor,
   getNodeHandlePosition,
+  canConnectMilestones,
 } from "@/lib/canvas/coordinate-math";
 import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
 import CanvasViewportContainer from "@/components/canvas/canvas-viewport";
@@ -698,6 +699,71 @@ export default function ProjectCanvasClient({
           });
         }
       })
+      .on("broadcast", { event: "edge:created" }, ({ payload }) => {
+        if (payload?.edge) {
+          const newEdge = payload.edge as CanvasEdge;
+          setEdges((prev) => {
+            if (prev.some((e) => e.id === newEdge.id)) return prev;
+            return [...prev, newEdge];
+          });
+        }
+      })
+      .on("broadcast", { event: "edge:deleted" }, ({ payload }) => {
+        if (payload?.edgeId) {
+          setEdges((prev) => prev.filter((e) => e.id !== payload.edgeId));
+        }
+      })
+      .on("broadcast", { event: "node:created" }, ({ payload }) => {
+        if (payload?.node) {
+          const newNode = payload.node as CanvasNode;
+          setNodes((prev) => {
+            if (prev.some((n) => n.id === newNode.id)) return prev;
+            return [...prev, { ...newNode, checkpoints: newNode.checkpoints || [] }];
+          });
+        }
+      })
+      .on("broadcast", { event: "node:deleted" }, ({ payload }) => {
+        if (payload?.nodeId) {
+          setNodes((prev) => prev.filter((n) => n.id !== payload.nodeId));
+          setEdges((prev) =>
+            prev.filter(
+              (e) =>
+                e.source_node_id !== payload.nodeId &&
+                e.target_node_id !== payload.nodeId
+            )
+          );
+        }
+      })
+      .on("broadcast", { event: "checkpoint:added" }, ({ payload }) => {
+        if (payload?.nodeId && payload?.checkpoint) {
+          setNodes((prev) =>
+            prev.map((n) =>
+              n.id === payload.nodeId
+                ? {
+                    ...n,
+                    checkpoints: n.checkpoints.some((c) => c.id === payload.checkpoint.id)
+                      ? n.checkpoints
+                      : [...n.checkpoints, payload.checkpoint],
+                  }
+                : n
+            )
+          );
+        }
+      })
+      .on("broadcast", { event: "checkpoint:deleted" }, ({ payload }) => {
+        if (payload?.nodeId && payload?.checkpointId) {
+          setNodes((prev) =>
+            prev.map((n) =>
+              n.id === payload.nodeId
+                ? {
+                    ...n,
+                    checkpoints: n.checkpoints.filter((c) => c.id !== payload.checkpointId),
+                  }
+                : n
+            )
+          );
+        }
+      })
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "canvas_nodes", filter: `project_id=eq.${project.id}` },
@@ -805,6 +871,13 @@ export default function ProjectCanvasClient({
           cursor: null,
           selectedNodeId: null,
         });
+
+        // Immediate initial ping
+        channel.send({
+          type: "broadcast",
+          event: "ping",
+          payload: { senderId: currentUser.id, t: Date.now() },
+        });
       } else if (status === "TIMED_OUT" || status === "CHANNEL_ERROR") {
         setNetworkStatus("reconnecting");
       } else if (status === "CLOSED") {
@@ -822,7 +895,7 @@ export default function ProjectCanvasClient({
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // Periodic Latency Ping (Every 10s)
+    // Periodic Latency Ping (Every 4s)
     const pingInterval = setInterval(() => {
       if (navigator.onLine && canvasChannelRef.current) {
         canvasChannelRef.current.send({
@@ -831,7 +904,7 @@ export default function ProjectCanvasClient({
           payload: { senderId: currentUser.id, t: Date.now() },
         });
       }
-    }, 10000);
+    }, 4000);
 
     return () => {
       clearInterval(pingInterval);
@@ -1040,11 +1113,6 @@ export default function ProjectCanvasClient({
     node: CanvasNode,
     handle: HandlePosition,
   ) => {
-    if (node.claimed_by !== currentUser.id && !isOwner) {
-      notify({ tone: "error", title: "Claim Required", message: "You must claim this milestone box to create dependency links" });
-      return;
-    }
-
     const activeDraft = draftEdgeRef.current;
     if (!activeDraft) {
       const nextDraft = {
@@ -1067,8 +1135,24 @@ export default function ProjectCanvasClient({
     const sourceNodeId = activeDraft.sourceNode.id;
     const targetNodeId = node.id;
     const sourceHandle = activeDraft.sourceHandle;
+    const canConnect = canConnectMilestones(
+      activeDraft.sourceNode,
+      node,
+      currentUser.id,
+      isOwner
+    );
+
     draftEdgeRef.current = null;
     setDraftEdge(null);
+
+    if (!canConnect) {
+      notify({
+        tone: "error",
+        title: "Claim Required",
+        message: "You must claim at least one of the milestone boxes to create a connection",
+      });
+      return;
+    }
 
     const exists = edges.some(
       (edge) => edge.source_node_id === sourceNodeId && edge.target_node_id === targetNodeId
@@ -1094,7 +1178,10 @@ export default function ProjectCanvasClient({
       const data = await res.json();
       if (data.success && data.edge) {
         setEdges((prev) => [...prev, data.edge]);
+        broadcastEvent("edge:created", { edge: data.edge });
         notify({ title: "Connected!", message: "Dependency wire created" });
+      } else if (data.error) {
+        notify({ tone: "error", title: "Connection Failed", message: data.error });
       }
     } catch (e) {
       console.error("Failed to link nodes:", e);
@@ -1123,6 +1210,7 @@ export default function ProjectCanvasClient({
     }
 
     setEdges((prev) => prev.filter((e) => e.id !== edgeId));
+    broadcastEvent("edge:deleted", { edgeId });
     try {
       await fetch(`/api/dashboard/projects/${project.slug}/canvas`, {
         method: "POST",

@@ -305,11 +305,15 @@ export async function createCanvasEdge(
   if (!isOwner && userId) {
     const { data: nodes } = await adminClient
       .from("canvas_nodes")
-      .select("id, claimed_by")
+      .select("id, claimed_by, claim_expires_at")
       .in("id", [sourceNodeId, targetNodeId])
       .eq("project_id", projectId);
 
-    const ownsAny = nodes?.some((n) => n.claimed_by === userId);
+    const now = new Date();
+    const ownsAny = nodes?.some((n) => {
+      const isExpired = Boolean(n.claim_expires_at && new Date(n.claim_expires_at) < now);
+      return n.claimed_by === userId && !isExpired;
+    });
     if (!ownsAny) {
       return null;
     }
@@ -357,11 +361,15 @@ export async function deleteCanvasEdge(
     if (edge) {
       const { data: nodes } = await adminClient
         .from("canvas_nodes")
-        .select("id, claimed_by")
+        .select("id, claimed_by, claim_expires_at")
         .in("id", [edge.source_node_id, edge.target_node_id])
         .eq("project_id", projectId);
 
-      const ownsAny = nodes?.some((n) => n.claimed_by === userId);
+      const now = new Date();
+      const ownsAny = nodes?.some((n) => {
+        const isExpired = Boolean(n.claim_expires_at && new Date(n.claim_expires_at) < now);
+        return n.claimed_by === userId && !isExpired;
+      });
       if (!ownsAny) {
         return { success: false };
       }

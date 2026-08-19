@@ -117,15 +117,15 @@ export default function CanvasHud({
                 <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              <span className="hidden sm:inline font-mono text-[10px]">
-                {latencyMs ? `${latencyMs}ms` : "Live"}
+              <span className="font-mono text-[10px] font-medium text-neutral-700">
+                {latencyMs !== null && latencyMs !== undefined ? `${latencyMs}ms` : "0ms"}
               </span>
             </>
           ) : networkStatus === "slow" ? (
             <>
               <Wifi className="h-3.5 w-3.5 text-amber-600 animate-pulse" />
-              <span className="font-semibold text-[10px]">
-                Slow{latencyMs ? ` (${latencyMs}ms)` : ""}
+              <span className="font-mono text-[10px] font-medium text-amber-800">
+                {latencyMs !== null && latencyMs !== undefined ? `${latencyMs}ms` : "Slow"}
               </span>
             </>
           ) : networkStatus === "reconnecting" ? (

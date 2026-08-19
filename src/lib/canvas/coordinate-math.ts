@@ -184,3 +184,21 @@ export function getBezierPoint(
 
   return { x, y };
 }
+
+export function canConnectMilestones(
+  nodeA: { claimed_by: string | null; claim_expires_at?: string | null },
+  nodeB: { claimed_by: string | null; claim_expires_at?: string | null },
+  userId?: string,
+  isOwner?: boolean
+): boolean {
+  if (isOwner) return true;
+  if (!userId) return false;
+  const now = new Date();
+  const isClaimActive = (node: { claimed_by: string | null; claim_expires_at?: string | null }) => {
+    if (node.claimed_by !== userId) return false;
+    if (node.claim_expires_at && new Date(node.claim_expires_at) < now) return false;
+    return true;
+  };
+  return isClaimActive(nodeA) || isClaimActive(nodeB);
+}
+
