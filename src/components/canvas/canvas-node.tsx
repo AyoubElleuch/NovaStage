@@ -53,6 +53,11 @@ export default function CanvasNodeComponent({
   const isClaimedByMe = node.claimed_by === currentUserId;
   const isClaimedByOther = Boolean(node.claimed_by && !isClaimedByMe);
   const claimColor = node.claimed_by ? getUserColor(node.claimed_by) : "#a3a3a3";
+  const otherClaimName =
+    node.claim_holder?.fullName && node.claim_holder.fullName !== "You"
+      ? node.claim_holder.fullName
+      : "Collaborator";
+  const otherClaimFirstName = otherClaimName.split(" ")[0];
 
   // Handles list
   const handles: HandlePosition[] = ["top", "right", "bottom", "left"];
@@ -174,7 +179,7 @@ export default function CanvasNodeComponent({
             isClaimedByMe
               ? "You currently have exclusive edit lock on this box"
               : isClaimedByOther
-              ? `Claimed by ${node.claim_holder?.fullName || "Collaborator"}. Click to request edit handoff.`
+              ? `Claimed by ${otherClaimName}. Click to request edit handoff.`
               : "Unclaimed box. Click to claim edit lock."
           }
         >
@@ -190,7 +195,7 @@ export default function CanvasNodeComponent({
             <>
               <Lock className="h-2.5 w-2.5 text-amber-700" />
               <span className="max-w-[70px] truncate">
-                {node.claim_holder?.fullName?.split(" ")[0] || "Locked"}
+                {otherClaimFirstName || "Locked"}
               </span>
             </>
           ) : (

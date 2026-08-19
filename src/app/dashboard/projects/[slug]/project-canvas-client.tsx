@@ -126,6 +126,7 @@ export default function ProjectCanvasClient({
 
   // Multiplayer Presence & Claims State
   const [collaborators, setCollaborators] = useState<CollaboratorPresence[]>([]);
+  const collaboratorsRef = useRef<CollaboratorPresence[]>([]);
   const [incomingClaimModal, setIncomingClaimModal] = useState<CanvasClaimRequest | null>(null);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
@@ -199,16 +200,43 @@ export default function ProjectCanvasClient({
 
         const data = await res.json();
         if (data.success && data.node) {
-          setNodes((prev) => [...prev, data.node]);
-          setSelectedNodeId(data.node.id);
-          broadcastEvent("node:created", { node: data.node });
-          notify({ title: "Milestone Created", message: `Added "${data.node.title}" to canvas` });
+          const myHolder = {
+            id: currentUser.id,
+            fullName: currentUser.fullName,
+            email: currentUser.email,
+            avatarUrl: currentUser.avatarUrl,
+          };
+          const nodeWithHolder: CanvasNode = {
+            ...data.node,
+            claim_holder:
+              data.node.claim_holder?.fullName && data.node.claim_holder.fullName !== "You"
+                ? data.node.claim_holder
+                : myHolder,
+          };
+          setNodes((prev) => [...prev, nodeWithHolder]);
+          setSelectedNodeId(nodeWithHolder.id);
+          broadcastEvent("node:created", { node: nodeWithHolder });
+          notify({ title: "Milestone Created", message: `Added "${nodeWithHolder.title}" to canvas` });
         }
       } catch {
         notify({ tone: "error", title: "Error", message: "Failed to create milestone box" });
       }
     },
-    [broadcastEvent, nodes.length, notify, project.slug, secureFetch, snapGrid, viewport.x, viewport.y, viewport.zoom]
+    [
+      broadcastEvent,
+      currentUser.avatarUrl,
+      currentUser.email,
+      currentUser.fullName,
+      currentUser.id,
+      nodes.length,
+      notify,
+      project.slug,
+      secureFetch,
+      snapGrid,
+      viewport.x,
+      viewport.y,
+      viewport.zoom,
+    ]
   );
 
   // Update Milestone Content
@@ -644,6 +672,7 @@ export default function ProjectCanvasClient({
             });
           }
         }
+        collaboratorsRef.current = activeCollaborators;
         setCollaborators(activeCollaborators);
       })
       .on("broadcast", { event: "cursor" }, ({ payload }) => {
@@ -805,13 +834,68 @@ export default function ProjectCanvasClient({
             const newNode = payload.new as CanvasNode;
             setNodes((prev) => {
               if (prev.some((n) => n.id === newNode.id)) return prev;
-              return [...prev, { ...newNode, checkpoints: [] }];
+              const holder =
+                newNode.claimed_by === currentUser.id
+                  ? {
+                      id: currentUser.id,
+                      fullName: currentUser.fullName,
+                      email: currentUser.email,
+                      avatarUrl: currentUser.avatarUrl,
+                    }
+                  : newNode.claimed_by
+                  ? (() => {
+                      const collab = collaboratorsRef.current.find((c) => c.userId === newNode.claimed_by);
+                      return collab
+                        ? {
+                            id: collab.userId,
+                            fullName: collab.fullName,
+                            email: collab.email,
+                            avatarUrl: collab.avatarUrl,
+                          }
+                        : {
+                            id: newNode.claimed_by,
+                            fullName: "Collaborator",
+                            email: null,
+                            avatarUrl: null,
+                          };
+                    })()
+                  : null;
+              return [...prev, { ...newNode, checkpoints: [], claim_holder: holder }];
             });
           } else if (payload.eventType === "UPDATE") {
             const updated = payload.new as CanvasNode;
             setNodes((prev) =>
               prev.map((n) => {
                 if (n.id !== updated.id) return n;
+                const claimHolder =
+                  updated.claimed_by === null
+                    ? null
+                    : updated.claimed_by === n.claimed_by
+                    ? n.claim_holder
+                    : updated.claimed_by === currentUser.id
+                    ? {
+                        id: currentUser.id,
+                        fullName: currentUser.fullName,
+                        email: currentUser.email,
+                        avatarUrl: currentUser.avatarUrl,
+                      }
+                    : (() => {
+                        const collab = collaboratorsRef.current.find((c) => c.userId === updated.claimed_by);
+                        return collab
+                          ? {
+                              id: collab.userId,
+                              fullName: collab.fullName,
+                              email: collab.email,
+                              avatarUrl: collab.avatarUrl,
+                            }
+                          : n.claim_holder || {
+                              id: updated.claimed_by,
+                              fullName: "Collaborator",
+                              email: null,
+                              avatarUrl: null,
+                            };
+                      })();
+
                 return {
                   ...n,
                   ...updated,
@@ -819,12 +903,7 @@ export default function ProjectCanvasClient({
                   position_y: Number(updated.position_y ?? n.position_y),
                   // Deep-merge to preserve checkpoints & profile
                   checkpoints: updated.checkpoints || n.checkpoints,
-                  claim_holder:
-                    updated.claimed_by === null
-                      ? null
-                      : updated.claimed_by === n.claimed_by
-                      ? n.claim_holder
-                      : n.claim_holder,
+                  claim_holder: claimHolder,
                 };
               })
             );

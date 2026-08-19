@@ -200,10 +200,31 @@ export async function createCanvasNode(
     createdCps = (cps as CanvasCheckpoint[]) || [];
   }
 
+  // Fetch profile for the creator to populate claim_holder accurately
+  const { data: userProfile } = await adminClient
+    .from("profiles")
+    .select("id, full_name, email, avatar_url")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const claimHolder = userProfile
+    ? {
+        id: userId,
+        email: userProfile.email || null,
+        fullName: userProfile.full_name || userProfile.email?.split("@")[0] || "Collaborator",
+        avatarUrl: userProfile.avatar_url || null,
+      }
+    : {
+        id: userId,
+        email: null,
+        fullName: "Collaborator",
+        avatarUrl: null,
+      };
+
   return {
     ...node,
     checkpoints: createdCps,
-    claim_holder: { id: userId, email: null, fullName: "You", avatarUrl: null },
+    claim_holder: claimHolder,
   };
 }
 

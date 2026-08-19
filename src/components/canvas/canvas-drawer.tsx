@@ -67,6 +67,10 @@ function MilestoneDrawerContent({
   const isClaimedByOther = Boolean(node.claimed_by && !isClaimedByMe);
   const isUnclaimed = !node.claimed_by;
   const claimColor = node.claimed_by ? getUserColor(node.claimed_by) : "#a3a3a3";
+  const otherClaimName =
+    node.claim_holder?.fullName && node.claim_holder.fullName !== "You"
+      ? node.claim_holder.fullName
+      : "Collaborator";
 
   // Find incoming (prerequisite) and outgoing (unlocked) dependencies
   const incomingEdges = edges.filter((e) => e.target_node_id === node.id);
@@ -154,7 +158,7 @@ function MilestoneDrawerContent({
               ) : isClaimedByOther ? (
                 <p className="font-medium text-amber-800 truncate">
                   Claimed by{" "}
-                  <strong>{node.claim_holder?.fullName || "Collaborator"}</strong>
+                  <strong>{otherClaimName}</strong>
                 </p>
               ) : (
                 <p className="font-medium text-neutral-500 truncate">
