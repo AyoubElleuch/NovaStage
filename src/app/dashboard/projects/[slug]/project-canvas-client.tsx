@@ -32,6 +32,7 @@ import CanvasHud from "@/components/canvas/canvas-hud";
 import CanvasCursors from "@/components/canvas/canvas-cursors";
 import CanvasClaimModal from "@/components/canvas/canvas-claim-modal";
 import CanvasAIAssistant from "@/components/canvas/canvas-ai-assistant";
+import CanvasAIAura from "@/components/canvas/canvas-ai-aura";
 import { useNotifications } from "@/components/notifications/notification-provider";
 
 interface ProjectCanvasClientProps {
@@ -84,6 +85,9 @@ export default function ProjectCanvasClient({
   const [isEvicted, setIsEvicted] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [aiRequestsRemaining, setAiRequestsRemaining] = useState(initialAiRequestsRemaining);
+  const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [aiGeneratingUser, setAiGeneratingUser] = useState<string | null>(null);
+  const [isAuraExiting, setIsAuraExiting] = useState(false);
 
   const handleEviction = useCallback(() => {
     setIsEvicted(true);
@@ -184,6 +188,7 @@ export default function ProjectCanvasClient({
   // Add Milestone Box
   const handleAddNode = useCallback(
     async (customPos?: { x: number; y: number }) => {
+      if (isAIGenerating) return;
       const posX = customPos ? customPos.x : (400 - viewport.x) / viewport.zoom;
       const posY = customPos ? customPos.y : (250 - viewport.y) / viewport.zoom;
 
@@ -233,6 +238,7 @@ export default function ProjectCanvasClient({
       currentUser.email,
       currentUser.fullName,
       currentUser.id,
+      isAIGenerating,
       nodes.length,
       notify,
       project.slug,
@@ -643,69 +649,85 @@ export default function ProjectCanvasClient({
   // Generate Visual Workflow Pipeline with AI
   const handleGenerateAIWorkflow = useCallback(
     async (promptText: string) => {
-      const res = await secureFetch(
-        `/api/dashboard/projects/${project.slug}/canvas/ai-generate`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: promptText }),
+      // Lock canvas for all collaborators with aura overlay
+      const generatorName = currentUser.fullName || currentUser.email;
+      setIsAIGenerating(true);
+      setAiGeneratingUser(generatorName);
+      setIsAuraExiting(false);
+      broadcastEvent("ai:generating_start", {
+        userId: currentUser.id,
+        userName: generatorName,
+      });
+
+      try {
+        const res = await secureFetch(
+          `/api/dashboard/projects/${project.slug}/canvas/ai-generate`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: promptText }),
+          }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || data.error || "Failed to generate workflow with AI");
         }
-      );
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || data.error || "Failed to generate workflow with AI");
-      }
-
-      if (data.success && data.nodes) {
-        // Merge generated nodes
-        setNodes((prev) => {
-          const existingIds = new Set(prev.map((n) => n.id));
-          const newNodes = data.nodes.filter((n: CanvasNode) => !existingIds.has(n.id));
-          return [...prev, ...newNodes];
-        });
-
-        // Merge generated edges
-        if (data.edges) {
-          setEdges((prev) => {
-            const existingIds = new Set(prev.map((e) => e.id));
-            const newEdges = data.edges.filter((e: CanvasEdge) => !existingIds.has(e.id));
-            return [...prev, ...newEdges];
+        if (data.success && data.nodes) {
+          // Merge generated nodes
+          setNodes((prev) => {
+            const existingIds = new Set(prev.map((n) => n.id));
+            const newNodes = data.nodes.filter((n: CanvasNode) => !existingIds.has(n.id));
+            return [...prev, ...newNodes];
           });
+
+          // Merge generated edges
+          if (data.edges) {
+            setEdges((prev) => {
+              const existingIds = new Set(prev.map((e) => e.id));
+              const newEdges = data.edges.filter((e: CanvasEdge) => !existingIds.has(e.id));
+              return [...prev, ...newEdges];
+            });
+          }
+
+          // Update remaining requests
+          if (typeof data.requests_remaining === "number") {
+            setAiRequestsRemaining(data.requests_remaining);
+          }
+
+          // Broadcast to collaborators
+          broadcastEvent("canvas:batch_created", {
+            nodes: data.nodes,
+            edges: data.edges,
+            creatorName: generatorName,
+          });
+
+          // Smoothly center the canvas viewport on the new milestones
+          if (data.nodes.length > 0) {
+            const firstNode = data.nodes[0];
+            setViewport((prev) => ({
+              ...prev,
+              x: Math.round(-firstNode.position_x * prev.zoom + window.innerWidth / 2 - 140),
+              y: Math.round(-firstNode.position_y * prev.zoom + window.innerHeight / 2 - 100),
+            }));
+          }
+
+          notify({
+            title: "Workflow Generated",
+            message: data.summary || "New AI workflow pipeline added to canvas.",
+          });
+
+          setIsAIAssistantOpen(false);
         }
-
-        // Update remaining requests
-        if (typeof data.requests_remaining === "number") {
-          setAiRequestsRemaining(data.requests_remaining);
-        }
-
-        // Broadcast to collaborators
-        broadcastEvent("canvas:batch_created", {
-          nodes: data.nodes,
-          edges: data.edges,
-          creatorName: currentUser.fullName || currentUser.email,
-        });
-
-        // Smoothly center the canvas viewport on the new milestones
-        if (data.nodes.length > 0) {
-          const firstNode = data.nodes[0];
-          setViewport((prev) => ({
-            ...prev,
-            x: Math.round(-firstNode.position_x * prev.zoom + window.innerWidth / 2 - 140),
-            y: Math.round(-firstNode.position_y * prev.zoom + window.innerHeight / 2 - 100),
-          }));
-        }
-
-        notify({
-          title: "Workflow Generated",
-          message: data.summary || "New AI workflow pipeline added to canvas.",
-        });
-
-        setIsAIAssistantOpen(false);
+      } finally {
+        // Trigger aura exit animation, then clear lock state
+        broadcastEvent("ai:generating_end", { userId: currentUser.id });
+        setIsAuraExiting(true);
       }
     },
-    [broadcastEvent, currentUser.email, currentUser.fullName, notify, project.slug, secureFetch]
+    [broadcastEvent, currentUser.email, currentUser.fullName, currentUser.id, notify, project.slug, secureFetch]
   );
 
   // ---------------------------------------------------------------------------
@@ -853,6 +875,20 @@ export default function ProjectCanvasClient({
           title: "AI Workflow Added",
           message: `${payload?.creatorName || "A collaborator"} generated new milestones with AI.`,
         });
+      })
+      .on("broadcast", { event: "ai:generating_start" }, ({ payload }) => {
+        // A collaborator started AI generation — lock canvas with aura for everyone
+        if (payload?.userId !== currentUser.id) {
+          setIsAIGenerating(true);
+          setAiGeneratingUser(payload?.userName || "A collaborator");
+          setIsAuraExiting(false);
+        }
+      })
+      .on("broadcast", { event: "ai:generating_end" }, ({ payload }) => {
+        // AI generation finished — trigger exit animation for peers
+        if (payload?.userId !== currentUser.id) {
+          setIsAuraExiting(true);
+        }
       })
       .on("broadcast", { event: "edge:created" }, ({ payload }) => {
         if (payload?.edge) {
@@ -1376,6 +1412,9 @@ export default function ProjectCanvasClient({
         setSelectedNodeId(null);
         draftEdgeRef.current = null;
         setDraftEdge(null);
+      } else if (isAIGenerating) {
+        // Block all canvas-modifying shortcuts while AI is generating
+        return;
       } else if (e.key === "v" || e.key === "V") {
         setActiveTool("select");
       } else if (e.key === "h" || e.key === "H") {
@@ -1391,7 +1430,7 @@ export default function ProjectCanvasClient({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleAddNode, handleDeleteNode, selectedNodeId]);
+  }, [handleAddNode, handleDeleteNode, isAIGenerating, selectedNodeId]);
 
   // ---------------------------------------------------------------------------
   // 5. Linking & Layout Methods
@@ -1619,6 +1658,7 @@ export default function ProjectCanvasClient({
         activeTool={activeTool}
         isDraggingNode={Boolean(draggingNode)}
         onCanvasClick={(worldPos) => {
+          if (isAIGenerating) return;
           if (activeTool === "add_node") {
             handleAddNode(worldPos);
             setActiveTool("select");
@@ -1651,9 +1691,11 @@ export default function ProjectCanvasClient({
             isLinking={Boolean(draftEdge)}
             currentUserId={currentUser.id}
             onSelect={(n) => {
+              if (isAIGenerating) return;
               setSelectedNodeId(n.id);
             }}
             onDragStart={(n, e) => {
+              if (isAIGenerating) return;
               if (activeTool === "hand") return;
               const nextDrag = {
                 nodeId: n.id,
@@ -1665,10 +1707,22 @@ export default function ProjectCanvasClient({
               setDraggingNode(nextDrag);
             }}
             onDragEnd={handleDragEnd}
-            onStartLink={handleStartLink}
-            onToggleCheckpoint={handleToggleCheckpoint}
-            onRequestClaim={handleRequestClaim}
-            onClaimNode={handleClaimNode}
+            onStartLink={(n, h, e) => {
+              if (isAIGenerating) return;
+              handleStartLink(n, h, e);
+            }}
+            onToggleCheckpoint={(cpId, nId, val) => {
+              if (isAIGenerating) return;
+              handleToggleCheckpoint(cpId, nId, val);
+            }}
+            onRequestClaim={(n) => {
+              if (isAIGenerating) return;
+              handleRequestClaim(n);
+            }}
+            onClaimNode={(nId) => {
+              if (isAIGenerating) return;
+              handleClaimNode(nId);
+            }}
           />
         ))}
 
@@ -1678,6 +1732,19 @@ export default function ProjectCanvasClient({
           currentUserId={currentUser.id}
         />
       </CanvasViewportContainer>
+
+      {/* AI Generation Aura Overlay — locks canvas with animated multi-color effect */}
+      {isAIGenerating && (
+        <CanvasAIAura
+          generatingUserName={aiGeneratingUser}
+          isExiting={isAuraExiting}
+          onExitComplete={() => {
+            setIsAIGenerating(false);
+            setAiGeneratingUser(null);
+            setIsAuraExiting(false);
+          }}
+        />
+      )}
 
       {/* Slide-Out Right Milestone Detail Screen */}
       {selectedNode && (
