@@ -144,7 +144,7 @@ export default function CanvasHud({
         {/* Collaborators Avatar Stack */}
         {collaborators.length > 0 && (
           <div className="flex items-center -space-x-1.5 rounded-xl border border-neutral-200/80 bg-white/90 p-1 shadow-sm backdrop-blur-md">
-            {collaborators.slice(0, 4).map((c) => (
+            {collaborators.slice(0, 5).map((c) => (
               <span
                 key={c.userId}
                 title={`${c.fullName || c.email} ${c.userId === currentUserId ? "(You)" : ""}`}
@@ -155,9 +155,9 @@ export default function CanvasHud({
                 <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-1 ring-white" />
               </span>
             ))}
-            {collaborators.length > 4 && (
+            {collaborators.length > 5 && (
               <span className="grid h-7 w-7 place-items-center rounded-full bg-neutral-100 text-[10px] font-semibold text-neutral-600 ring-2 ring-white">
-                +{collaborators.length - 4}
+                +{collaborators.length - 5}
               </span>
             )}
           </div>

@@ -4,6 +4,7 @@ import {
   slugify,
   formatRelativeTime,
   formatJoinedDate,
+  joinProjectByInviteCode,
 } from "./projects";
 
 describe("Projects Utilities & Formatters", () => {
@@ -57,6 +58,33 @@ describe("Projects Utilities & Formatters", () => {
 
       const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
       expect(formatJoinedDate(tenMinutesAgo)).toBe("Joined 10m ago");
+    });
+  });
+
+  describe("joinProjectByInviteCode validation", () => {
+    it("rejects empty invite codes", async () => {
+      const result = await joinProjectByInviteCode({
+        inviteCode: "",
+        userId: "user-123",
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Please enter an invite code");
+    });
+
+    it("rejects improperly formatted invite codes", async () => {
+      const result = await joinProjectByInviteCode({
+        inviteCode: "INVALID_CODE",
+        userId: "user-123",
+      });
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Invalid invite code format");
+    });
+  });
+
+  describe("MAX_PROJECT_MEMBERS constant", () => {
+    it("is strictly configured to 5 members (1 owner + 4 collaborators)", async () => {
+      const { MAX_PROJECT_MEMBERS } = await import("./projects");
+      expect(MAX_PROJECT_MEMBERS).toBe(5);
     });
   });
 });

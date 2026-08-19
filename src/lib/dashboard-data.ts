@@ -8,6 +8,30 @@ export interface ProjectMemberInfo {
   joinedAt?: string;
 }
 
+export interface ProjectJoinRequestInfo {
+  id: string;
+  projectId: string;
+  userId: string;
+  status: "pending" | "approved" | "declined";
+  fullName?: string | null;
+  email?: string | null;
+  username?: string | null;
+  avatarUrl?: string | null;
+  createdAt: string;
+}
+
+export interface ProjectBannedMemberInfo {
+  id: string;
+  projectId: string;
+  userId: string;
+  reason?: string | null;
+  fullName?: string | null;
+  email?: string | null;
+  username?: string | null;
+  avatarUrl?: string | null;
+  bannedAt: string;
+}
+
 export interface DashboardProject {
   id: string;
   slug: string;
@@ -19,6 +43,7 @@ export interface DashboardProject {
   createdAt?: string;
   members: number;
   memberList?: ProjectMemberInfo[];
+  pendingRequestsCount?: number;
 }
 
 export interface DashboardProjectsData {

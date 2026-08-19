@@ -40,8 +40,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      pendingApproval: result.pendingApproval || false,
       project: result.project,
-      message: `Successfully joined ${result.project.name}!`,
+      message: result.message || `Successfully sent join request for ${result.project.name}!`,
     });
   } catch (error) {
     console.error("Error joining project:", error);

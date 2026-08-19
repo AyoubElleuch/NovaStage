@@ -8,6 +8,8 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Check,
+  CheckCircle2,
+  Clock,
   Copy,
   Crown,
   FolderPlus,
@@ -16,14 +18,25 @@ import {
   LogOut,
   MoreVertical,
   Plus,
+  ShieldAlert,
   Trash2,
+  UserCheck,
   UserMinus,
   Users,
+  UserX,
   X,
+  XCircle,
 } from "lucide-react";
 import { fetcher } from "@/lib/fetcher";
+import { createClient } from "@/lib/supabase/client";
 import { useNotifications } from "@/components/notifications/notification-provider";
-import type { DashboardProject, DashboardProjectsData, ProjectMemberInfo } from "@/lib/dashboard-data";
+import type {
+  DashboardProject,
+  DashboardProjectsData,
+  ProjectMemberInfo,
+  ProjectJoinRequestInfo,
+  ProjectBannedMemberInfo,
+} from "@/lib/dashboard-data";
 
 export default function ProjectsWorkspace() {
   const pathname = usePathname();
@@ -52,12 +65,20 @@ export default function ProjectsWorkspace() {
   const [projectDescription, setProjectDescription] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [joinPendingProject, setJoinPendingProject] = useState<DashboardProject | null>(null);
 
-  // Members Modal & Kick State (Same modal view transition)
+  // Members Modal & Kick State
+  const [memberTab, setMemberTab] = useState<"members" | "requests" | "banned">("members");
   const [projectMembers, setProjectMembers] = useState<ProjectMemberInfo[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
+  const [projectRequests, setProjectRequests] = useState<ProjectJoinRequestInfo[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [projectBanned, setProjectBanned] = useState<ProjectBannedMemberInfo[]>([]);
+  const [isLoadingBanned, setIsLoadingBanned] = useState(false);
   const [confirmKickTarget, setConfirmKickTarget] = useState<ProjectMemberInfo | null>(null);
   const [isKickingMember, setIsKickingMember] = useState(false);
+  const [resolvingRequestId, setResolvingRequestId] = useState<string | null>(null);
+  const [unbanningUserId, setUnbanningUserId] = useState<string | null>(null);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const activePendingSlug = pendingSlug && !pathname.includes(pendingSlug) ? pendingSlug : null;
@@ -73,13 +94,19 @@ export default function ProjectsWorkspace() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch members when members modal opens
-  const openMembersModal = async (project: DashboardProject) => {
+  // Fetch members, requests, and banned lists when members modal opens
+  const openMembersModal = async (
+    project: DashboardProject,
+    initialTab: "members" | "requests" | "banned" = "members"
+  ) => {
     setSelectedProject(project);
     setActiveModal("members");
+    setMemberTab(initialTab);
     setMenuOpenProjectId(null);
     setConfirmKickTarget(null);
     setIsLoadingMembers(true);
+    setIsLoadingRequests(true);
+    setIsLoadingBanned(true);
 
     try {
       const res = await fetch(`/api/dashboard/projects/members?projectId=${project.id}`);
@@ -98,6 +125,111 @@ export default function ProjectsWorkspace() {
       setProjectMembers([]);
     } finally {
       setIsLoadingMembers(false);
+    }
+
+    if (project.role === "owner") {
+      try {
+        const [reqRes, banRes] = await Promise.all([
+          fetch(`/api/dashboard/projects/requests?projectId=${project.id}`),
+          fetch(`/api/dashboard/projects/banned?projectId=${project.id}`),
+        ]);
+        const reqJson = await reqRes.json();
+        const banJson = await banRes.json();
+        if (reqRes.ok && reqJson.success) setProjectRequests(reqJson.requests || []);
+        if (banRes.ok && banJson.success) setProjectBanned(banJson.bannedMembers || []);
+      } catch (err) {
+        console.warn("Failed to load requests/banned:", err);
+      } finally {
+        setIsLoadingRequests(false);
+        setIsLoadingBanned(false);
+      }
+    }
+  };
+
+  const handleResolveRequest = async (requestId: string, action: "approve" | "decline") => {
+    if (!selectedProject || resolvingRequestId) return;
+    setResolvingRequestId(requestId);
+
+    try {
+      const res = await fetch("/api/dashboard/projects/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          projectId: selectedProject.id,
+          action,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        notify({
+          tone: "error",
+          title: "Action failed",
+          message: json.error || "Failed to update join request.",
+        });
+        return;
+      }
+
+      setProjectRequests((prev) => prev.filter((r) => r.id !== requestId));
+      await mutate("/api/dashboard/projects");
+
+      // Refresh members list
+      const memRes = await fetch(`/api/dashboard/projects/members?projectId=${selectedProject.id}`);
+      const memJson = await memRes.json();
+      if (memRes.ok && memJson.success) {
+        setProjectMembers(memJson.members || []);
+      }
+
+      notify({
+        title: action === "approve" ? "Collaborator approved" : "Request declined",
+        message:
+          action === "approve"
+            ? "New collaborator has been added to the project."
+            : "Join request has been declined.",
+      });
+    } catch (err) {
+      console.error("Resolve request error:", err);
+      notify({ tone: "error", title: "Network error", message: "Please try again." });
+    } finally {
+      setResolvingRequestId(null);
+    }
+  };
+
+  const handleUnbanUser = async (targetUserId: string) => {
+    if (!selectedProject || unbanningUserId) return;
+    setUnbanningUserId(targetUserId);
+
+    try {
+      const res = await fetch("/api/dashboard/projects/banned", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: selectedProject.id,
+          targetUserId,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        notify({
+          tone: "error",
+          title: "Could not unblock user",
+          message: json.error || "Failed to unblock collaborator.",
+        });
+        return;
+      }
+
+      setProjectBanned((prev) => prev.filter((b) => b.userId !== targetUserId));
+      notify({
+        title: "Collaborator unblocked",
+        message: "They can now request to join this project again.",
+      });
+    } catch (err) {
+      console.error("Unban error:", err);
+      notify({ tone: "error", title: "Network error", message: "Please try again." });
+    } finally {
+      setUnbanningUserId(null);
     }
   };
 
@@ -224,6 +356,16 @@ export default function ProjectsWorkspace() {
       }
 
       await mutate("/api/dashboard/projects");
+
+      if (json.pendingApproval) {
+        setJoinPendingProject(json.project);
+        setIsSubmitting(false);
+        notify({
+          title: "Join request sent",
+          message: `Your request to join "${json.project.name}" has been sent to the owner for approval.`,
+        });
+        return;
+      }
 
       notify({
         title: "Joined project",
@@ -367,11 +509,53 @@ export default function ProjectsWorkspace() {
       }
 
       setProjectMembers((current) => current.filter((m) => m.userId !== memberId));
+      if (confirmKickTarget) {
+        setProjectBanned((prev) => [
+          {
+            id: memberId,
+            projectId: selectedProject.id,
+            userId: memberId,
+            fullName: confirmKickTarget.fullName,
+            email: confirmKickTarget.email,
+            username: confirmKickTarget.username,
+            avatarUrl: confirmKickTarget.avatarUrl,
+            bannedAt: "Removed just now",
+          },
+          ...prev,
+        ]);
+      }
       await mutate("/api/dashboard/projects");
 
+      // Broadcast eviction event to kick them out in real time if they have the canvas open
+      try {
+        const supabase = createClient();
+        const kickChannel = supabase.channel(`project-canvas:${selectedProject.id}`, {
+          config: { broadcast: { ack: true } },
+        });
+        kickChannel.subscribe(async (status) => {
+          if (status === "SUBSCRIBED") {
+            try {
+              await kickChannel.send({
+                type: "broadcast",
+                event: "member:kicked",
+                payload: { userId: memberId, projectId: selectedProject.id },
+              });
+            } catch (err) {
+              console.warn("Error sending member:kicked event:", err);
+            } finally {
+              window.setTimeout(() => {
+                supabase.removeChannel(kickChannel);
+              }, 3000);
+            }
+          }
+        });
+      } catch (broadcastErr) {
+        console.warn("Failed to broadcast member:kicked event:", broadcastErr);
+      }
+
       notify({
-        title: "Collaborator removed",
-        message: `${memberName} has been removed from "${selectedProject.name}".`,
+        title: "Collaborator removed & blocked",
+        message: `${memberName} has been removed from "${selectedProject.name}" and blocked from rejoining with the invite code.`,
       });
 
       // Animate back to the members list view smoothly
@@ -483,6 +667,29 @@ export default function ProjectsWorkspace() {
                       </span>
 
                       <div className="flex items-center gap-1.5">
+                        {/* Pending Join Requests Indicator Badge for Project Owner */}
+                        {isOwner && (project.pendingRequestsCount || 0) > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openMembersModal(project, "requests");
+                            }}
+                            title={`${project.pendingRequestsCount} pending join request${project.pendingRequestsCount === 1 ? "" : "s"}`}
+                            aria-label={`View ${project.pendingRequestsCount} pending join requests`}
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-neutral-900 px-2.5 py-0.5 text-[11px] font-medium text-white shadow-2xs transition-all hover:bg-neutral-800 hover:scale-105 active:scale-95"
+                          >
+                            <span className="relative flex h-2 w-2">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                            </span>
+                            <span>
+                              {project.pendingRequestsCount} {project.pendingRequestsCount === 1 ? "request" : "requests"}
+                            </span>
+                          </button>
+                        )}
+
                         {project.role && (
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
@@ -521,14 +728,30 @@ export default function ProjectsWorkspace() {
                                 e.preventDefault();
                                 e.stopPropagation();
                               }}
-                              className="dash-pop absolute right-0 top-8 z-30 w-44 rounded-xl border border-neutral-200 bg-white py-1.5 shadow-xl"
+                              className="dash-pop absolute right-0 top-8 z-30 w-48 rounded-xl border border-neutral-200 bg-white py-1.5 shadow-xl"
                             >
                               {isOwner ? (
                                 <>
+                                  {(project.pendingRequestsCount || 0) > 0 && (
+                                    <button
+                                      type="button"
+                                      role="menuitem"
+                                      onClick={() => openMembersModal(project, "requests")}
+                                      className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-xs font-semibold text-neutral-900 transition-colors hover:bg-neutral-50"
+                                    >
+                                      <div className="flex items-center gap-2.5">
+                                        <Clock className="h-3.5 w-3.5 text-neutral-600" aria-hidden="true" />
+                                        <span>Review requests</span>
+                                      </div>
+                                      <span className="grid h-4.5 min-w-4.5 place-items-center rounded-full bg-neutral-900 px-1 text-[10px] font-bold text-white">
+                                        {project.pendingRequestsCount}
+                                      </span>
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     role="menuitem"
-                                    onClick={() => openMembersModal(project)}
+                                    onClick={() => openMembersModal(project, "members")}
                                     className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-neutral-900"
                                   >
                                     <Users className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
@@ -617,9 +840,16 @@ export default function ProjectsWorkspace() {
                     )}
 
                     <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-xs text-neutral-400">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                        {project.members} {project.members === 1 ? "member" : "members"}
+                      <span className="inline-flex items-center gap-1.5 text-neutral-500">
+                        <Users className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
+                        <span>
+                          {project.members}/5 members
+                          {project.members >= 5 && (
+                            <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-amber-600">
+                              (Full)
+                            </span>
+                          )}
+                        </span>
                       </span>
                       <span className="whitespace-nowrap">{project.updatedAt}</span>
                     </div>
@@ -765,6 +995,32 @@ export default function ProjectsWorkspace() {
                   {isSubmitting ? "Creating project…" : "Create project"}
                 </button>
               </form>
+            ) : joinPendingProject ? (
+              <div className="mt-6 space-y-5 dash-fade">
+                <div className="rounded-2xl border border-neutral-200/80 bg-neutral-50/70 p-5 text-center shadow-xs">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white border border-neutral-200/80 text-neutral-800 shadow-2xs">
+                    <Clock className="h-5 w-5 text-neutral-700" aria-hidden="true" />
+                  </div>
+                  <h3 className="mt-3.5 text-sm font-semibold text-neutral-900">
+                    Request Sent — Waiting for Owner Approval
+                  </h3>
+                  <p className="mt-1.5 text-xs text-neutral-500 leading-relaxed max-w-xs mx-auto">
+                    Your request to join <span className="font-semibold text-neutral-800">{joinPendingProject.name}</span> has been submitted to the project owner. You will gain access as soon as they accept.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveModal(null);
+                    setJoinPendingProject(null);
+                    setInviteCode("");
+                  }}
+                  className={`${primaryButton} h-11 w-full`}
+                >
+                  Understood
+                </button>
+              </div>
             ) : (
               <form className="mt-6 space-y-4" onSubmit={handleJoinProject}>
                 <div>
@@ -796,7 +1052,7 @@ export default function ProjectsWorkspace() {
                   className={`${primaryButton} h-11 w-full`}
                 >
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                  {isSubmitting ? "Joining workspace…" : "Join project"}
+                  {isSubmitting ? "Sending request…" : "Request to join"}
                 </button>
               </form>
             )}
@@ -804,7 +1060,7 @@ export default function ProjectsWorkspace() {
             <p className="mt-5 text-xs leading-5 text-neutral-400">
               {activeModal === "create"
                 ? "You will be set as the project owner with a unique invite code to share with collaborators."
-                : "You will join as a collaborator and gain access to the project planning canvas."}
+                : "Entering the invite code submits a join request to the project owner for approval."}
             </p>
           </div>
         </div>
@@ -867,7 +1123,7 @@ export default function ProjectsWorkspace() {
                       Remove {confirmKickTarget.fullName || confirmKickTarget.email?.split("@")[0] || "collaborator"}?
                     </h2>
                     <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
-                      Are you sure you want to remove this collaborator from <span className="font-medium text-neutral-800">{selectedProject.name}</span>? They will immediately lose access to this planning canvas.
+                      Are you sure you want to remove this collaborator from <span className="font-medium text-neutral-800">{selectedProject.name}</span>? They will immediately lose access and be <span className="font-semibold text-rose-700">blocked from rejoining with the invite code</span>.
                     </p>
                   </div>
                 </div>
@@ -910,12 +1166,12 @@ export default function ProjectsWorkspace() {
                     className={`${dangerButton} h-9 text-xs px-4 whitespace-nowrap`}
                   >
                     {isKickingMember && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
-                    {isKickingMember ? "Removing collaborator…" : "I confirm to remove this collaborator"}
+                    {isKickingMember ? "Removing & blocking…" : "Confirm removal"}
                   </button>
                 </div>
               </div>
             ) : (
-              /* VIEW B: ALL COLLABORATORS LIST VIEW */
+              /* VIEW B: ALL COLLABORATORS & REQUESTS VIEW */
               <div className="dash-fade space-y-5">
                 <div className="flex items-center gap-3">
                   <span className="grid h-10 w-10 place-items-center rounded-xl bg-neutral-100 text-neutral-700">
@@ -934,118 +1190,355 @@ export default function ProjectsWorkspace() {
                   </div>
                 </div>
 
-                {/* Invite code banner inside members modal */}
-                {selectedProject.inviteCode && (
-                  <div className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-neutral-50 p-3.5">
-                    <div>
-                      <p className="text-xs font-medium text-neutral-700">Invite new teammate</p>
-                      <p className="font-mono text-xs font-semibold tracking-wider text-neutral-900 mt-0.5">
-                        {selectedProject.inviteCode}
-                      </p>
-                    </div>
+                {/* Owner Sub-Tabs for Members, Requests, Blocked */}
+                {selectedProject.role === "owner" && (
+                  <div className="flex items-center gap-1.5 border-b border-neutral-100 pb-3">
                     <button
                       type="button"
-                      onClick={(e) => handleCopyCode(e, selectedProject.inviteCode!)}
-                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:bg-neutral-50"
+                      onClick={() => setMemberTab("members")}
+                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                        memberTab === "members"
+                          ? "bg-neutral-900 text-white shadow-2xs"
+                          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                      }`}
                     >
-                      {copiedCode === selectedProject.inviteCode ? (
-                        <>
-                          <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
-                          <span className="text-emerald-600">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
-                          <span>Copy code</span>
-                        </>
+                      <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>Members ({projectMembers.length}/5)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMemberTab("requests")}
+                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                        memberTab === "requests"
+                          ? "bg-neutral-900 text-white shadow-2xs"
+                          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                      }`}
+                    >
+                      <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>Requests</span>
+                      {projectRequests.length > 0 && (
+                        <span
+                          className={`grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] font-bold ${
+                            memberTab === "requests"
+                              ? "bg-white text-neutral-950"
+                              : "bg-neutral-200 text-neutral-800"
+                          }`}
+                        >
+                          {projectRequests.length}
+                        </span>
                       )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMemberTab("banned")}
+                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                        memberTab === "banned"
+                          ? "bg-neutral-900 text-white shadow-2xs"
+                          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                      }`}
+                    >
+                      <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>Blocked ({projectBanned.length})</span>
                     </button>
                   </div>
                 )}
 
-                {/* Members List */}
-                <div>
-                  <div className="mb-2.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400">
-                    <span>Members ({projectMembers.length})</span>
-                    <span>Role</span>
-                  </div>
-
-                  {isLoadingMembers ? (
-                    <div className="space-y-2 py-4">
-                      {[1, 2].map((i) => (
-                        <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50">
-                          <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-full bg-neutral-200" />
-                            <div className="space-y-1.5">
-                              <div className="h-3 w-28 rounded bg-neutral-200" />
-                              <div className="h-2.5 w-20 rounded bg-neutral-200" />
-                            </div>
-                          </div>
-                          <div className="h-6 w-16 rounded-full bg-neutral-200" />
+                {/* TAB 1: MEMBERS */}
+                {memberTab === "members" && (
+                  <div className="space-y-4">
+                    {/* Invite code banner inside members modal */}
+                    {selectedProject.inviteCode && (
+                      <div className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-neutral-50 p-3.5">
+                        <div>
+                          <p className="text-xs font-medium text-neutral-700">Invite new teammate</p>
+                          <p className="font-mono text-xs font-semibold tracking-wider text-neutral-900 mt-0.5">
+                            {selectedProject.inviteCode}
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                  ) : projectMembers.length > 0 ? (
-                    <div className="max-h-64 overflow-y-auto space-y-1 divide-y divide-neutral-100 pr-1">
-                      {projectMembers.map((member) => {
-                        const isMemberOwner = member.role === "owner";
-                        const displayName = member.fullName || member.email?.split("@")[0] || "User";
-                        const displaySub = member.email || (member.username ? `@${member.username}` : "");
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopyCode(e, selectedProject.inviteCode!)}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:bg-neutral-50"
+                        >
+                          {copiedCode === selectedProject.inviteCode ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
+                              <span className="text-emerald-600">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
+                              <span>Copy code</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
 
-                        return (
-                          <div
-                            key={member.userId}
-                            className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 rounded-lg"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase">
-                                {displayName[0]}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-neutral-900 truncate">
-                                  {displayName}
-                                </p>
-                                <p className="text-xs text-neutral-400 truncate">
-                                  {displaySub} {member.joinedAt ? `• ${member.joinedAt}` : ""}
-                                </p>
+                    {/* Members List */}
+                    <div>
+                      <div className="mb-2.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                        <span>Members ({projectMembers.length}/5)</span>
+                        <span>Role</span>
+                      </div>
+
+                      {isLoadingMembers ? (
+                        <div className="space-y-2 py-4">
+                          {[1, 2].map((i) => (
+                            <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50">
+                              <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-full bg-neutral-200" />
+                                <div className="space-y-1.5">
+                                  <div className="h-3 w-28 rounded bg-neutral-200" />
+                                  <div className="h-2.5 w-20 rounded bg-neutral-200" />
+                                </div>
+                              </div>
+                              <div className="h-6 w-16 rounded-full bg-neutral-200" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : projectMembers.length > 0 ? (
+                        <div className="max-h-64 overflow-y-auto space-y-1 divide-y divide-neutral-100 pr-1">
+                          {projectMembers.map((member) => {
+                            const isMemberOwner = member.role === "owner";
+                            const displayName = member.fullName || member.email?.split("@")[0] || "User";
+                            const displaySub = member.email || (member.username ? `@${member.username}` : "");
+
+                            return (
+                              <div
+                                key={member.userId}
+                                className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 rounded-lg"
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase">
+                                    {displayName[0]}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-neutral-900 truncate">
+                                      {displayName}
+                                    </p>
+                                    <p className="text-xs text-neutral-400 truncate">
+                                      {displaySub} {member.joinedAt ? `• ${member.joinedAt}` : ""}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span
+                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                      isMemberOwner
+                                        ? "bg-amber-50 text-amber-700 border border-amber-200/60"
+                                        : "bg-neutral-100 text-neutral-600 border border-neutral-200/60"
+                                    }`}
+                                  >
+                                    {isMemberOwner && <Crown className="h-3 w-3" aria-hidden="true" />}
+                                    {isMemberOwner ? "Owner" : "Collaborator"}
+                                  </span>
+
+                                  {/* Kick collaborator button */}
+                                  {selectedProject.role === "owner" && !isMemberOwner && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmKickTarget(member)}
+                                      title={`Remove and block ${displayName}`}
+                                      aria-label={`Remove ${displayName}`}
+                                      className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                                    >
+                                      <UserMinus className="h-3.5 w-3.5" aria-hidden="true" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="py-6 text-center text-xs text-neutral-400">
+                          No members found.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: JOIN REQUESTS */}
+                {memberTab === "requests" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                      <span>Pending Join Requests ({projectRequests.length})</span>
+                      <span>Action</span>
+                    </div>
+
+                    {/* Capacity limit warning banner if project full */}
+                    {projectMembers.length >= 5 && (
+                      <div className="flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 text-xs text-neutral-600">
+                        <ShieldAlert className="h-4 w-4 shrink-0 text-neutral-700" aria-hidden="true" />
+                        <p>
+                          <span className="font-semibold text-neutral-900">Project capacity reached (5/5 members).</span> Remove an existing member before accepting new requests.
+                        </p>
+                      </div>
+                    )}
+
+                    {isLoadingRequests ? (
+                      <div className="space-y-2 py-4">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50">
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-full bg-neutral-200" />
+                              <div className="space-y-1.5">
+                                <div className="h-3 w-28 rounded bg-neutral-200" />
+                                <div className="h-2.5 w-20 rounded bg-neutral-200" />
                               </div>
                             </div>
+                            <div className="h-7 w-24 rounded bg-neutral-200" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : projectRequests.length > 0 ? (
+                      <div className="max-h-64 overflow-y-auto space-y-2 divide-y divide-neutral-100 pr-1">
+                        {projectRequests.map((req) => {
+                          const displayName = req.fullName || req.email?.split("@")[0] || "User";
+                          const displaySub = req.email || (req.username ? `@${req.username}` : "");
+                          const isBusy = resolvingRequestId === req.id;
+                          const isProjectFull = projectMembers.length >= 5;
 
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                                  isMemberOwner
-                                    ? "bg-amber-50 text-amber-700 border border-amber-200/60"
-                                    : "bg-neutral-100 text-neutral-600 border border-neutral-200/60"
-                                }`}
-                              >
-                                {isMemberOwner && <Crown className="h-3 w-3" aria-hidden="true" />}
-                                {isMemberOwner ? "Owner" : "Collaborator"}
-                              </span>
+                          return (
+                            <div
+                              key={req.id}
+                              className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 rounded-lg"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase">
+                                  {displayName[0]}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-neutral-900 truncate">
+                                    {displayName}
+                                  </p>
+                                  <p className="text-xs text-neutral-400 truncate">
+                                    {displaySub} {req.createdAt ? `• ${req.createdAt}` : ""}
+                                  </p>
+                                </div>
+                              </div>
 
-                              {/* Kick collaborator button -> Transitions to confirmation view inside the same modal */}
-                              {selectedProject.role === "owner" && !isMemberOwner && (
+                              <div className="flex items-center gap-1.5 shrink-0">
                                 <button
                                   type="button"
-                                  onClick={() => setConfirmKickTarget(member)}
-                                  title={`Remove ${displayName} from project`}
-                                  aria-label={`Remove ${displayName}`}
-                                  className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                                  disabled={isBusy || isProjectFull}
+                                  onClick={() => handleResolveRequest(req.id, "approve")}
+                                  title={isProjectFull ? "Project is at maximum capacity (5/5 members)" : "Approve join request"}
+                                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-2xs transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
-                                  <UserMinus className="h-3.5 w-3.5" aria-hidden="true" />
+                                  {isBusy ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                                  ) : (
+                                    <UserCheck className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
+                                  )}
+                                  <span>Approve</span>
                                 </button>
-                              )}
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleResolveRequest(req.id, "decline")}
+                                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-600 shadow-2xs transition-colors hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 disabled:opacity-50"
+                                >
+                                  <UserX className="h-3.5 w-3.5" aria-hidden="true" />
+                                  <span>Decline</span>
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center">
+                        <CheckCircle2 className="mx-auto h-7 w-7 text-neutral-300" aria-hidden="true" />
+                        <p className="mt-2 text-xs font-medium text-neutral-600">No pending join requests</p>
+                        <p className="text-[11px] text-neutral-400">When someone uses your invite code, their request will appear here.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 3: BLOCKED / REMOVED */}
+                {memberTab === "banned" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                      <span>Blocked Collaborators ({projectBanned.length})</span>
+                      <span>Action</span>
                     </div>
-                  ) : (
-                    <p className="py-6 text-center text-xs text-neutral-400">
-                      No members found.
-                    </p>
-                  )}
-                </div>
+
+                    {isLoadingBanned ? (
+                      <div className="space-y-2 py-4">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50">
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-full bg-neutral-200" />
+                              <div className="space-y-1.5">
+                                <div className="h-3 w-28 rounded bg-neutral-200" />
+                                <div className="h-2.5 w-20 rounded bg-neutral-200" />
+                              </div>
+                            </div>
+                            <div className="h-7 w-20 rounded bg-neutral-200" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : projectBanned.length > 0 ? (
+                      <div className="max-h-64 overflow-y-auto space-y-2 divide-y divide-neutral-100 pr-1">
+                        {projectBanned.map((banned) => {
+                          const displayName = banned.fullName || banned.email?.split("@")[0] || "User";
+                          const displaySub = banned.email || (banned.username ? `@${banned.username}` : "");
+                          const isBusy = unbanningUserId === banned.userId;
+
+                          return (
+                            <div
+                              key={banned.id}
+                              className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 rounded-lg"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase">
+                                  {displayName[0]}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-neutral-900 truncate">
+                                    {displayName}
+                                  </p>
+                                  <p className="text-xs text-neutral-400 truncate">
+                                    {displaySub} {banned.bannedAt ? `• ${banned.bannedAt}` : ""}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleUnbanUser(banned.userId)}
+                                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:bg-neutral-50 disabled:opacity-50"
+                                >
+                                  {isBusy ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                                  ) : (
+                                    <Check className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
+                                  )}
+                                  <span>Unblock</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center">
+                        <ShieldAlert className="mx-auto h-7 w-7 text-neutral-300" aria-hidden="true" />
+                        <p className="mt-2 text-xs font-medium text-neutral-600">No blocked collaborators</p>
+                        <p className="text-[11px] text-neutral-400">Collaborators you remove from this project will appear here.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="border-t border-neutral-100 pt-4 flex justify-end">
                   <button

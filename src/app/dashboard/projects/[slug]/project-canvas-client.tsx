@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -72,9 +74,28 @@ export default function ProjectCanvasClient({
   currentUser,
   isOwner,
 }: ProjectCanvasClientProps) {
+  const router = useRouter();
   const { notify } = useNotifications();
   const supabase = useMemo(() => createClient(), []);
   const canvasChannelRef = useRef<RealtimeChannel | null>(null);
+  const [isEvicted, setIsEvicted] = useState(false);
+
+  const handleEviction = useCallback(() => {
+    setIsEvicted(true);
+    notify({
+      tone: "error",
+      title: "Access Revoked",
+      message: "You have been removed from this project by the owner. Redirecting to workspace...",
+    });
+    if (canvasChannelRef.current) {
+      try {
+        supabase.removeChannel(canvasChannelRef.current);
+      } catch {}
+      canvasChannelRef.current = null;
+    }
+    // Hard redirect immediately to projects dashboard
+    window.location.replace("/dashboard");
+  }, [notify, supabase]);
 
   // Core Canvas State
   const [nodes, setNodes] = useState<CanvasNode[]>(initialNodes);
@@ -126,10 +147,23 @@ export default function ProjectCanvasClient({
     }
   }, []);
 
+  // Secure fetch helper that immediately triggers eviction if user lost access
+  const secureFetch = useCallback(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const res = await fetch(input, init);
+      if (res.status === 401 || res.status === 403) {
+        handleEviction();
+        throw new Error("Access Revoked");
+      }
+      return res;
+    },
+    [handleEviction]
+  );
+
   // Resync full canvas state on reconnection
   const resyncCanvasState = useCallback(async () => {
     try {
-      const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas`);
+      const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`);
       if (res.ok) {
         const data = await res.json();
         if (data.nodes) setNodes(data.nodes);
@@ -139,7 +173,7 @@ export default function ProjectCanvasClient({
     } catch (e) {
       console.warn("Failed to resync canvas state:", e);
     }
-  }, [notify, project.slug]);
+  }, [notify, project.slug, secureFetch]);
 
   // Add Milestone Box
   const handleAddNode = useCallback(
@@ -151,13 +185,12 @@ export default function ProjectCanvasClient({
       const defaultTitle = `Milestone Step ${stepNum}`;
 
       try {
-        const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+        const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "create_node",
             title: defaultTitle,
-            description: "",
             position_x: snapGrid ? snapToGrid(posX) : posX,
             position_y: snapGrid ? snapToGrid(posY) : posY,
             checkpoints: [],
@@ -175,7 +208,7 @@ export default function ProjectCanvasClient({
         notify({ tone: "error", title: "Error", message: "Failed to create milestone box" });
       }
     },
-    [broadcastEvent, nodes.length, notify, project.slug, snapGrid, viewport.x, viewport.y, viewport.zoom]
+    [broadcastEvent, nodes.length, notify, project.slug, secureFetch, snapGrid, viewport.x, viewport.y, viewport.zoom]
   );
 
   // Update Milestone Content
@@ -189,7 +222,7 @@ export default function ProjectCanvasClient({
       broadcastEvent("node:updated", { nodeId, updates });
 
       try {
-        await fetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+        await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -202,7 +235,7 @@ export default function ProjectCanvasClient({
         console.error("Failed to update node:", e);
       }
     },
-    [broadcastEvent, project.slug]
+    [broadcastEvent, project.slug, secureFetch]
   );
 
   // Delete Milestone Box
@@ -223,7 +256,7 @@ export default function ProjectCanvasClient({
       broadcastEvent("node:deleted", { nodeId });
 
       try {
-        await fetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+        await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "delete_node", node_id: nodeId }),
@@ -233,7 +266,7 @@ export default function ProjectCanvasClient({
         console.error("Failed to delete node:", e);
       }
     },
-    [broadcastEvent, currentUser.id, isOwner, nodes, notify, project.slug]
+    [broadcastEvent, currentUser.id, isOwner, nodes, notify, project.slug, secureFetch]
   );
 
   // Toggle Checkpoint Checkbox
@@ -265,7 +298,7 @@ export default function ProjectCanvasClient({
       });
 
       try {
-        const res = await fetch(
+        const res = await secureFetch(
           `/api/dashboard/projects/${project.slug}/canvas/checkpoints`,
           {
             method: "POST",
@@ -287,14 +320,14 @@ export default function ProjectCanvasClient({
         console.error("Failed to toggle checkpoint:", e);
       }
     },
-    [broadcastEvent, notify, project.slug]
+    [broadcastEvent, notify, project.slug, secureFetch]
   );
 
   // Add Checkpoint
   const handleAddCheckpoint = useCallback(
     async (nodeId: string, title: string) => {
       try {
-        const res = await fetch(
+        const res = await secureFetch(
           `/api/dashboard/projects/${project.slug}/canvas/checkpoints`,
           {
             method: "POST",
@@ -321,7 +354,7 @@ export default function ProjectCanvasClient({
         console.error("Failed to add checkpoint:", e);
       }
     },
-    [broadcastEvent, project.slug]
+    [broadcastEvent, project.slug, secureFetch]
   );
 
   // Delete Checkpoint
@@ -338,7 +371,7 @@ export default function ProjectCanvasClient({
       broadcastEvent("checkpoint:deleted", { nodeId, checkpointId });
 
       try {
-        await fetch(`/api/dashboard/projects/${project.slug}/canvas/checkpoints`, {
+        await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/checkpoints`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -351,7 +384,7 @@ export default function ProjectCanvasClient({
         console.error("Failed to delete checkpoint:", e);
       }
     },
-    [broadcastEvent, project.slug]
+    [broadcastEvent, project.slug, secureFetch]
   );
 
   // Claim Methods with instant peer broadcast
@@ -389,7 +422,7 @@ export default function ProjectCanvasClient({
       });
 
       try {
-        const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
+        const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "claim", node_id: nodeId }),
@@ -408,7 +441,7 @@ export default function ProjectCanvasClient({
         resyncCanvasState();
       }
     },
-    [broadcastEvent, currentUser.avatarUrl, currentUser.email, currentUser.fullName, currentUser.id, notify, project.slug, resyncCanvasState]
+    [broadcastEvent, currentUser.avatarUrl, currentUser.email, currentUser.fullName, currentUser.id, notify, project.slug, resyncCanvasState, secureFetch]
   );
 
   const handleReleaseNode = useCallback(
@@ -432,7 +465,7 @@ export default function ProjectCanvasClient({
       });
 
       try {
-        await fetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
+        await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "release", node_id: nodeId }),
@@ -443,7 +476,7 @@ export default function ProjectCanvasClient({
         resyncCanvasState();
       }
     },
-    [broadcastEvent, notify, project.slug, resyncCanvasState]
+    [broadcastEvent, notify, project.slug, resyncCanvasState, secureFetch]
   );
 
   const handleRequestClaim = useCallback(
@@ -454,7 +487,7 @@ export default function ProjectCanvasClient({
       }
 
       try {
-        const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
+        const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "request_claim", node_id: node.id }),
@@ -482,13 +515,13 @@ export default function ProjectCanvasClient({
         console.error("Failed to request claim:", e);
       }
     },
-    [broadcastEvent, currentUser.fullName, currentUser.id, handleClaimNode, notify, project.slug]
+    [broadcastEvent, currentUser.fullName, currentUser.id, handleClaimNode, notify, project.slug, secureFetch]
   );
 
   const handleResolveClaimRequest = useCallback(
     async (requestId: string, accept: boolean) => {
       try {
-        const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
+        const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -539,7 +572,7 @@ export default function ProjectCanvasClient({
         console.error("Failed to resolve claim:", e);
       }
     },
-    [broadcastEvent, incomingClaimModal, notify, project.slug]
+    [broadcastEvent, incomingClaimModal, notify, project.slug, secureFetch]
   );
 
   const handleForceUnlock = useCallback(
@@ -561,7 +594,7 @@ export default function ProjectCanvasClient({
       });
 
       try {
-        await fetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
+        await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "force_unlock", node_id: nodeId }),
@@ -571,7 +604,7 @@ export default function ProjectCanvasClient({
         console.error("Failed to force unlock:", e);
       }
     },
-    [broadcastEvent, notify, project.slug]
+    [broadcastEvent, notify, project.slug, secureFetch]
   );
 
   // ---------------------------------------------------------------------------
@@ -857,6 +890,37 @@ export default function ProjectCanvasClient({
             );
           }
         }
+      )
+      .on("broadcast", { event: "member:kicked" }, ({ payload }) => {
+        if (payload?.userId === currentUser.id && payload?.projectId === project.id) {
+          handleEviction();
+        }
+      })
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "project_members" },
+        (payload) => {
+          const oldRecord = payload.old as { user_id?: string; project_id?: string } | null;
+          if (
+            (oldRecord?.project_id === project.id || !oldRecord?.project_id) &&
+            oldRecord?.user_id === currentUser.id
+          ) {
+            handleEviction();
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "project_banned_members" },
+        (payload) => {
+          const newRecord = payload.new as { user_id?: string; project_id?: string } | null;
+          if (
+            (newRecord?.project_id === project.id || !newRecord?.project_id) &&
+            newRecord?.user_id === currentUser.id
+          ) {
+            handleEviction();
+          }
+        }
       );
 
     canvasChannelRef.current = channel;
@@ -915,7 +979,58 @@ export default function ProjectCanvasClient({
       }
       supabase.removeChannel(channel);
     };
-  }, [project.id, currentUser.id, currentUser.email, currentUser.fullName, currentUser.avatarUrl, supabase, notify, resyncCanvasState]);
+  }, [project.id, currentUser.id, currentUser.email, currentUser.fullName, currentUser.avatarUrl, supabase, notify, resyncCanvasState, handleEviction]);
+
+  // ---------------------------------------------------------------------------
+  // 1b. Periodic Fast Membership Verification (Evicts immediately if kicked)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (isEvicted) return;
+
+    let isChecking = false;
+    const verifyAccess = async () => {
+      if (isChecking) return;
+      isChecking = true;
+      try {
+        const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+          cache: "no-store",
+          headers: { pragma: "no-cache", "cache-control": "no-cache" },
+        });
+        if (res.status === 401 || res.status === 403 || res.status === 404) {
+          handleEviction();
+          return;
+        }
+        const json = await res.json();
+        if (json.error === "Forbidden" || json.error === "Unauthorized" || json.error === "Project not found") {
+          handleEviction();
+        }
+      } catch {
+        // network issue, skip
+      } finally {
+        isChecking = false;
+      }
+    };
+
+    // Run immediately on mount, then interval 1500ms
+    verifyAccess();
+    const interval = setInterval(verifyAccess, 1500);
+    window.addEventListener("focus", verifyAccess);
+    window.addEventListener("pointerdown", verifyAccess, { passive: true });
+    window.addEventListener("keydown", verifyAccess, { passive: true });
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") verifyAccess();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", verifyAccess);
+      window.removeEventListener("pointerdown", verifyAccess);
+      window.removeEventListener("keydown", verifyAccess);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [handleEviction, isEvicted, project.slug]);
 
   // ---------------------------------------------------------------------------
   // 2. Autonomous Client-Side Claim Expiration Scanner (Runs every 2.5s)
@@ -1059,7 +1174,7 @@ export default function ProjectCanvasClient({
     setDraggingNode(null);
 
     try {
-      await fetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+      await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1074,7 +1189,7 @@ export default function ProjectCanvasClient({
     } catch (e) {
       console.error("Failed to commit node drag:", e);
     }
-  }, [project.slug]);
+  }, [project.slug, secureFetch]);
 
   // ---------------------------------------------------------------------------
   // 4. Keyboard Shortcuts
@@ -1163,7 +1278,7 @@ export default function ProjectCanvasClient({
     }
 
     try {
-      const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+      const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1212,7 +1327,7 @@ export default function ProjectCanvasClient({
     setEdges((prev) => prev.filter((e) => e.id !== edgeId));
     broadcastEvent("edge:deleted", { edgeId });
     try {
-      await fetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+      await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete_edge", edge_id: edgeId }),
@@ -1287,6 +1402,22 @@ export default function ProjectCanvasClient({
       ? n.checkpoints.every((c) => c.is_completed)
       : n.status === "completed"
   ).length;
+
+  if (isEvicted) {
+    return (
+      <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col items-center justify-center bg-neutral-950 text-white">
+        <div className="flex flex-col items-center gap-4 text-center px-4">
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-neutral-900 border border-neutral-800 text-neutral-400">
+            <Loader2 className="h-6 w-6 animate-spin text-neutral-300" />
+          </div>
+          <h2 className="text-lg font-semibold text-neutral-100">Access Revoked</h2>
+          <p className="max-w-sm text-xs text-neutral-400">
+            You have been removed from this project by the owner. Redirecting you to your projects workspace...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-full w-full overflow-hidden select-none">

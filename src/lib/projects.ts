@@ -1,6 +1,16 @@
 import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { DashboardProject, ProjectMemberInfo } from "@/lib/dashboard-data";
+import type {
+  DashboardProject,
+  ProjectMemberInfo,
+  ProjectJoinRequestInfo,
+  ProjectBannedMemberInfo,
+} from "@/lib/dashboard-data";
+
+/**
+ * Maximum number of members allowed in a project: 1 owner + 4 collaborators = 5 total.
+ */
+export const MAX_PROJECT_MEMBERS = 5;
 
 /**
  * Generates a short, shareable, crypto-random invite code:
@@ -145,6 +155,28 @@ export async function getUserProjects(userId: string): Promise<DashboardProject[
       membersByProject.set(m.project_id, list);
     }
 
+    // 4. Fetch pending join requests count for projects where user is owner
+    const ownerProjectIds = projectRows
+      .filter((p) => p.created_by === userId || userRoleMap.get(p.id) === "owner")
+      .map((p) => p.id);
+
+    const pendingRequestsCountMap = new Map<string, number>();
+
+    if (ownerProjectIds.length > 0) {
+      const { data: pendingRequests, error: reqError } = await adminClient
+        .from("project_join_requests")
+        .select("project_id")
+        .in("project_id", ownerProjectIds)
+        .eq("status", "pending");
+
+      if (!reqError && pendingRequests) {
+        for (const req of pendingRequests) {
+          const current = pendingRequestsCountMap.get(req.project_id) || 0;
+          pendingRequestsCountMap.set(req.project_id, current + 1);
+        }
+      }
+    }
+
     return projectRows.map((p) => {
       const memberList = membersByProject.get(p.id) || [];
       const fallbackRole = p.created_by === userId ? "owner" : "collaborator";
@@ -159,6 +191,7 @@ export async function getUserProjects(userId: string): Promise<DashboardProject[
         role: myRole,
         members: Math.max(memberList.length, 1),
         memberList: memberList.length > 0 ? memberList : [{ userId, role: myRole }],
+        pendingRequestsCount: pendingRequestsCountMap.get(p.id) || 0,
         updatedAt: formatRelativeTime(p.updated_at),
         createdAt: p.created_at,
       };
@@ -275,12 +308,19 @@ export async function createProject(params: {
 }
 
 /**
- * Joins an existing project using an invite code (NS-XXXXX).
+ * Requests to join an existing project using an invite code (NS-XXXXX).
+ * Checks the banned members blocklist and enters the project's approval queue.
  */
 export async function joinProjectByInviteCode(params: {
   inviteCode: string;
   userId: string;
-}): Promise<{ success: boolean; project?: DashboardProject; error?: string }> {
+}): Promise<{
+  success: boolean;
+  pendingApproval?: boolean;
+  project?: DashboardProject;
+  message?: string;
+  error?: string;
+}> {
   const { inviteCode, userId } = params;
   const normalizedCode = inviteCode.trim().toUpperCase();
 
@@ -301,7 +341,7 @@ export async function joinProjectByInviteCode(params: {
   // Find project by invite code
   const { data: project, error: findError } = await adminClient
     .from("projects")
-    .select("id, slug, name, description, invite_code, created_at, updated_at")
+    .select("id, slug, name, description, invite_code, created_by, created_at, updated_at")
     .eq("invite_code", normalizedCode)
     .maybeSingle();
 
@@ -312,7 +352,22 @@ export async function joinProjectByInviteCode(params: {
     };
   }
 
-  // Check if user is already a member
+  // 1. Check if user is banned/kicked from this project
+  const { data: bannedEntry } = await adminClient
+    .from("project_banned_members")
+    .select("id")
+    .eq("project_id", project.id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (bannedEntry) {
+    return {
+      success: false,
+      error: "You were removed from this project by the owner and cannot rejoin with this invite code.",
+    };
+  }
+
+  // 2. Check if user is already an active member
   const { data: existingMember } = await adminClient
     .from("project_members")
     .select("role")
@@ -327,23 +382,27 @@ export async function joinProjectByInviteCode(params: {
     };
   }
 
-  // Insert user as collaborator
-  const { error: joinError } = await adminClient.from("project_members").insert({
-    project_id: project.id,
-    user_id: userId,
-    role: "collaborator",
-  });
+  // 3. Check if project has already reached full capacity (1 owner + 4 collaborators = 5 total)
+  const { count: memberCount } = await adminClient
+    .from("project_members")
+    .select("user_id", { count: "exact", head: true })
+    .eq("project_id", project.id);
 
-  if (joinError) {
-    console.error("Failed to join project:", joinError);
-    return { success: false, error: "Could not join this project. Please try again." };
+  if ((memberCount || 0) >= MAX_PROJECT_MEMBERS) {
+    return {
+      success: false,
+      error: `This project is at full capacity (${MAX_PROJECT_MEMBERS}/${MAX_PROJECT_MEMBERS} members: 1 owner + 4 collaborators).`,
+    };
   }
 
-  // Get total member count
-  const { count } = await adminClient
-    .from("project_members")
-    .select("*", { count: "exact", head: true })
-    .eq("project_id", project.id);
+  // 4. Check for existing pending join request
+  const { data: existingRequest } = await adminClient
+    .from("project_join_requests")
+    .select("id, status")
+    .eq("project_id", project.id)
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .maybeSingle();
 
   const dashboardProject: DashboardProject = {
     id: project.id,
@@ -352,12 +411,38 @@ export async function joinProjectByInviteCode(params: {
     description: project.description,
     inviteCode: project.invite_code,
     role: "collaborator",
-    members: count || 1,
+    members: memberCount || 1,
     updatedAt: formatRelativeTime(project.updated_at),
     createdAt: project.created_at,
   };
 
-  return { success: true, project: dashboardProject };
+  if (existingRequest) {
+    return {
+      success: true,
+      pendingApproval: true,
+      project: dashboardProject,
+      message: "Your request to join is pending approval from the project owner.",
+    };
+  }
+
+  // 5. Create join request
+  const { error: reqError } = await adminClient.from("project_join_requests").insert({
+    project_id: project.id,
+    user_id: userId,
+    status: "pending",
+  });
+
+  if (reqError) {
+    console.error("Failed to create join request:", reqError);
+    return { success: false, error: "Could not send join request. Please try again." };
+  }
+
+  return {
+    success: true,
+    pendingApproval: true,
+    project: dashboardProject,
+    message: "Request sent! The project owner must approve your request before you can join.",
+  };
 }
 
 /**
@@ -561,6 +646,262 @@ export async function kickProjectMember(params: {
     return { success: false, error: "Failed to remove collaborator. Please try again." };
   }
 
+  // 3. Automatically add to project_banned_members so they cannot rejoin using the invite code
+  await adminClient
+    .from("project_banned_members")
+    .upsert(
+      {
+        project_id: projectId,
+        user_id: targetUserId,
+        banned_by: requesterUserId,
+        reason: "Removed by project owner",
+      },
+      { onConflict: "project_id,user_id" }
+    );
+
+  return { success: true };
+}
+
+/**
+ * Fetches all pending join requests for a project (Owner only).
+ */
+export async function getProjectJoinRequests(params: {
+  projectId: string;
+  userId: string;
+}): Promise<{ success: boolean; requests?: ProjectJoinRequestInfo[]; error?: string }> {
+  const { projectId, userId } = params;
+  const adminClient = createAdminClient();
+
+  const isOwner = await isProjectOwner(projectId, userId);
+  if (!isOwner) {
+    return { success: false, error: "Only the project owner can view join requests." };
+  }
+
+  const { data: requestRows, error } = await adminClient
+    .from("project_join_requests")
+    .select("id, project_id, user_id, status, created_at")
+    .eq("project_id", projectId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  if (error || !requestRows) {
+    return { success: false, error: "Failed to fetch join requests." };
+  }
+
+  const userIds = requestRows.map((r) => r.user_id);
+  if (userIds.length === 0) {
+    return { success: true, requests: [] };
+  }
+
+  const { data: profiles } = await adminClient
+    .from("profiles")
+    .select("id, full_name, email, username, avatar_url")
+    .in("id", userIds);
+
+  const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+
+  const requests: ProjectJoinRequestInfo[] = requestRows.map((r) => {
+    const prof = profileMap.get(r.user_id);
+    return {
+      id: r.id,
+      projectId: r.project_id,
+      userId: r.user_id,
+      status: r.status as "pending" | "approved" | "declined",
+      fullName: prof?.full_name || null,
+      email: prof?.email || null,
+      username: prof?.username || null,
+      avatarUrl: prof?.avatar_url || null,
+      createdAt: formatJoinedDate(r.created_at),
+    };
+  });
+
+  return { success: true, requests };
+}
+
+/**
+ * Resolves a project join request (approve or decline).
+ */
+export async function resolveProjectJoinRequest(params: {
+  requestId: string;
+  projectId: string;
+  action: "approve" | "decline";
+  userId: string;
+}): Promise<{
+  success: boolean;
+  status?: "approved" | "declined";
+  targetUserId?: string;
+  projectSlug?: string;
+  error?: string;
+}> {
+  const { requestId, projectId, action, userId } = params;
+  const adminClient = createAdminClient();
+
+  const isOwner = await isProjectOwner(projectId, userId);
+  if (!isOwner) {
+    return { success: false, error: "Only the project owner can resolve join requests." };
+  }
+
+  const { data: req } = await adminClient
+    .from("project_join_requests")
+    .select("id, project_id, user_id, status")
+    .eq("id", requestId)
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (!req || req.status !== "pending") {
+    return { success: false, error: "Join request not found or already resolved." };
+  }
+
+  const now = new Date().toISOString();
+
+  if (action === "approve") {
+    // Enforce project capacity limit (max 5 members: 1 owner + 4 collaborators)
+    const { count: currentMemberCount } = await adminClient
+      .from("project_members")
+      .select("user_id", { count: "exact", head: true })
+      .eq("project_id", projectId);
+
+    if ((currentMemberCount || 0) >= MAX_PROJECT_MEMBERS) {
+      return {
+        success: false,
+        error: `Project has reached maximum capacity (${MAX_PROJECT_MEMBERS}/${MAX_PROJECT_MEMBERS} members: 1 owner + 4 collaborators). You must remove a member before accepting new requests.`,
+      };
+    }
+
+    // Insert into project_members
+    await adminClient.from("project_members").upsert(
+      {
+        project_id: projectId,
+        user_id: req.user_id,
+        role: "collaborator",
+      },
+      { onConflict: "project_id,user_id" }
+    );
+
+    // If user was previously on banned list, remove them from banned
+    await adminClient
+      .from("project_banned_members")
+      .delete()
+      .eq("project_id", projectId)
+      .eq("user_id", req.user_id);
+
+    await adminClient
+      .from("project_join_requests")
+      .update({
+        status: "approved",
+        resolved_at: now,
+        resolved_by: userId,
+      })
+      .eq("id", requestId);
+
+    const { data: project } = await adminClient
+      .from("projects")
+      .select("slug")
+      .eq("id", projectId)
+      .maybeSingle();
+
+    return {
+      success: true,
+      status: "approved",
+      targetUserId: req.user_id,
+      projectSlug: project?.slug,
+    };
+  } else {
+    await adminClient
+      .from("project_join_requests")
+      .update({
+        status: "declined",
+        resolved_at: now,
+        resolved_by: userId,
+      })
+      .eq("id", requestId);
+
+    return { success: true, status: "declined", targetUserId: req.user_id };
+  }
+}
+
+/**
+ * Fetches banned/removed members for a project (Owner only).
+ */
+export async function getProjectBannedMembers(params: {
+  projectId: string;
+  userId: string;
+}): Promise<{ success: boolean; bannedMembers?: ProjectBannedMemberInfo[]; error?: string }> {
+  const { projectId, userId } = params;
+  const adminClient = createAdminClient();
+
+  const isOwner = await isProjectOwner(projectId, userId);
+  if (!isOwner) {
+    return { success: false, error: "Only the project owner can view removed collaborators." };
+  }
+
+  const { data: rows, error } = await adminClient
+    .from("project_banned_members")
+    .select("id, project_id, user_id, reason, created_at")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (error || !rows) {
+    return { success: false, error: "Failed to fetch banned collaborators." };
+  }
+
+  const userIds = rows.map((r) => r.user_id);
+  if (userIds.length === 0) {
+    return { success: true, bannedMembers: [] };
+  }
+
+  const { data: profiles } = await adminClient
+    .from("profiles")
+    .select("id, full_name, email, username, avatar_url")
+    .in("id", userIds);
+
+  const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+
+  const bannedMembers: ProjectBannedMemberInfo[] = rows.map((r) => {
+    const prof = profileMap.get(r.user_id);
+    return {
+      id: r.id,
+      projectId: r.project_id,
+      userId: r.user_id,
+      reason: r.reason,
+      fullName: prof?.full_name || null,
+      email: prof?.email || null,
+      username: prof?.username || null,
+      avatarUrl: prof?.avatar_url || null,
+      bannedAt: formatJoinedDate(r.created_at),
+    };
+  });
+
+  return { success: true, bannedMembers };
+}
+
+/**
+ * Unbans a removed collaborator, allowing them to request to join again (Owner only).
+ */
+export async function unbanProjectMember(params: {
+  projectId: string;
+  targetUserId: string;
+  requesterUserId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { projectId, targetUserId, requesterUserId } = params;
+  const adminClient = createAdminClient();
+
+  const isOwner = await isProjectOwner(projectId, requesterUserId);
+  if (!isOwner) {
+    return { success: false, error: "Only the project owner can unblock collaborators." };
+  }
+
+  const { error } = await adminClient
+    .from("project_banned_members")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("user_id", targetUserId);
+
+  if (error) {
+    console.error("Failed to unban member:", error);
+    return { success: false, error: "Failed to unblock collaborator." };
+  }
+
   return { success: true };
 }
 
@@ -583,6 +924,17 @@ export async function getProjectBySlug(slug: string) {
  */
 export async function isProjectMember(projectId: string, userId: string): Promise<boolean> {
   const adminClient = createAdminClient();
+
+  // If user is banned/kicked from this project, immediately return false
+  const { data: banned } = await adminClient
+    .from("project_banned_members")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (banned) return false;
+
   const { data: member } = await adminClient
     .from("project_members")
     .select("role")
@@ -606,6 +958,17 @@ export async function isProjectMember(projectId: string, userId: string): Promis
  */
 export async function isProjectOwner(projectId: string, userId: string): Promise<boolean> {
   const adminClient = createAdminClient();
+
+  // If user is banned/kicked, cannot be owner
+  const { data: banned } = await adminClient
+    .from("project_banned_members")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (banned) return false;
+
   const { data: member } = await adminClient
     .from("project_members")
     .select("role")
