@@ -859,13 +859,6 @@ export default function ProjectCanvasClient({
           })
         );
       })
-      .on("broadcast", { event: "ping" }, ({ payload }) => {
-        if (payload.senderId === currentUser.id) {
-          const rtt = Math.round(Date.now() - payload.t);
-          setLatencyMs(rtt);
-          setNetworkStatus(rtt > 250 ? "slow" : "online");
-        }
-      })
       .on("broadcast", { event: "claim:requested" }, ({ payload }) => {
         if (payload.current_holder_id === currentUser.id) {
           setIncomingClaimModal(payload);
@@ -1174,13 +1167,6 @@ export default function ProjectCanvasClient({
           cursor: null,
           selectedNodeId: null,
         });
-
-        // Immediate initial ping
-        channel.send({
-          type: "broadcast",
-          event: "ping",
-          payload: { senderId: currentUser.id, t: Date.now() },
-        });
       } else if (status === "TIMED_OUT" || status === "CHANNEL_ERROR") {
         setNetworkStatus("reconnecting");
       } else if (status === "CLOSED") {
@@ -1198,19 +1184,7 @@ export default function ProjectCanvasClient({
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // Periodic Latency Ping (Every 4s)
-    const pingInterval = setInterval(() => {
-      if (navigator.onLine && canvasChannelRef.current) {
-        canvasChannelRef.current.send({
-          type: "broadcast",
-          event: "ping",
-          payload: { senderId: currentUser.id, t: Date.now() },
-        });
-      }
-    }, 4000);
-
     return () => {
-      clearInterval(pingInterval);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       if (canvasChannelRef.current === channel) {
@@ -1219,6 +1193,67 @@ export default function ProjectCanvasClient({
       supabase.removeChannel(channel);
     };
   }, [project.id, currentUser.id, currentUser.email, currentUser.fullName, currentUser.avatarUrl, supabase, notify, resyncCanvasState, handleEviction]);
+
+  // ---------------------------------------------------------------------------
+  // 1b. Real Server Round-Trip Latency (Ping) Measurement & Network Monitoring
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    let isCancelled = false;
+
+    const measureLatency = async () => {
+      if (!navigator.onLine) {
+        setNetworkStatus("offline");
+        return;
+      }
+
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+
+      const start = performance.now();
+      try {
+        const res = await fetch("/api/ping", {
+          method: "HEAD",
+          cache: "no-store",
+          signal: AbortSignal.timeout(5000),
+        });
+
+        if (!isCancelled && (res.ok || res.status === 204)) {
+          const rtt = Math.max(1, Math.round(performance.now() - start));
+          setLatencyMs(rtt);
+          setNetworkStatus(rtt > 300 ? "slow" : "online");
+        }
+      } catch (err: unknown) {
+        if (isCancelled) return;
+        if (err instanceof Error && err.name === "TimeoutError") {
+          setLatencyMs(5000);
+          setNetworkStatus("slow");
+        } else if (!navigator.onLine) {
+          setNetworkStatus("offline");
+        }
+      }
+    };
+
+    // Immediate initial probe on mount
+    measureLatency();
+
+    // Periodic probe every 5s
+    const pingInterval = setInterval(measureLatency, 5000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        measureLatency();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(pingInterval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
 
   // ---------------------------------------------------------------------------
   // 1b. Periodic Fast Membership Verification (Evicts immediately if kicked)

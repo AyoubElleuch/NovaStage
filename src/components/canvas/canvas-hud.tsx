@@ -118,7 +118,7 @@ export default function CanvasHud({
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
               <span className="font-mono text-[10px] font-medium text-neutral-700">
-                {latencyMs !== null && latencyMs !== undefined ? `${latencyMs}ms` : "0ms"}
+                {latencyMs !== null && latencyMs !== undefined ? `${latencyMs}ms` : "—"}
               </span>
             </>
           ) : networkStatus === "slow" ? (
