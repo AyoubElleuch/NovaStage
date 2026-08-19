@@ -10,10 +10,12 @@ import {
   Check,
   Eye,
   EyeOff,
+  FileText,
   Loader2,
   LockKeyhole,
 } from "lucide-react";
 import { completeOnboarding } from "./actions";
+import { TermsOfServiceContent } from "@/components/terms/terms-of-service-content";
 
 interface OnboardingFlowProps {
   initialFullName?: string;
@@ -74,7 +76,7 @@ export default function OnboardingFlow({
   destination = "/dashboard",
 }: OnboardingFlowProps) {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [fullName, setFullName] = useState(initialFullName);
   const [username, setUsername] = useState(initialUsername);
   const [password, setPassword] = useState("");
@@ -82,16 +84,29 @@ export default function OnboardingFlow({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
+  // Step 4 state
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
   const [fullNameError, setFullNameError] = useState("");
   const [usernameError, setUsernameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [termsError, setTermsError] = useState("");
   const [serverError, setServerError] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Progress percentage calculation:
-  // Step 1: 0% -> Step 2: 33% -> Step 3: 66% -> Complete: 100%
-  const progressPercent = isCompleted ? 100 : step === 3 ? 66 : step === 2 ? 33 : 0;
+  // Progress percentage calculation for 4 steps:
+  // Step 1: 0% -> Step 2: 25% -> Step 3: 50% -> Step 4: 75% -> Complete: 100%
+  const progressPercent = isCompleted
+    ? 100
+    : step === 4
+      ? 75
+      : step === 3
+        ? 50
+        : step === 2
+          ? 25
+          : 0;
 
   const handleStep1Submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -117,7 +132,7 @@ export default function OnboardingFlow({
     setStep(3);
   };
 
-  const handleStep3Submit = async (event: React.FormEvent) => {
+  const handleStep3Submit = (event: React.FormEvent) => {
     event.preventDefault();
     if (password.length < 8) {
       setPasswordError("Your password must be at least 8 characters.");
@@ -128,6 +143,26 @@ export default function OnboardingFlow({
       return;
     }
     setPasswordError("");
+    setServerError("");
+    setStep(4);
+  };
+
+  const handleTermsScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    // Detect when user scrolled to the bottom (with a threshold for rounding & sub-pixels)
+    const isAtBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 12;
+    if (isAtBottom && !hasScrolledToBottom) {
+      setHasScrolledToBottom(true);
+    }
+  };
+
+  const handleStep4Submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!agreedToTerms) {
+      setTermsError("Please agree to the Terms of Service to continue.");
+      return;
+    }
+    setTermsError("");
     setServerError("");
 
     startTransition(async () => {
@@ -146,7 +181,7 @@ export default function OnboardingFlow({
         // Animate the bar to 100%
         setIsCompleted(true);
 
-        // Transition smoothly to dashboard
+        // Transition smoothly to destination
         setTimeout(() => {
           router.push(destination);
           router.refresh();
@@ -306,7 +341,7 @@ export default function OnboardingFlow({
                 </button>
               </form>
             </div>
-          ) : (
+          ) : step === 3 ? (
             <div>
               <header>
                 <div className="mb-2">
@@ -449,7 +484,117 @@ export default function OnboardingFlow({
 
                 <button
                   type="submit"
-                  disabled={isPending || isCompleted}
+                  className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 active:scale-[0.99]"
+                >
+                  <span>Next</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div>
+              <header>
+                <div className="mb-2">
+                  <button
+                    type="button"
+                    disabled={isPending || isCompleted}
+                    onClick={() => {
+                      setStep(3);
+                      setTermsError("");
+                      setServerError("");
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded disabled:opacity-50"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    <span>Back</span>
+                  </button>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600">
+                    <FileText className="h-4 w-4" />
+                  </span>
+                  <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+                    Terms of Service
+                  </h1>
+                </div>
+                <p className="mt-2 text-sm text-neutral-500">
+                  Please review and agree to our terms to finish setup.
+                </p>
+              </header>
+
+              <form onSubmit={handleStep4Submit} noValidate className="mt-6 space-y-4">
+                {/* Scrollable Terms Box */}
+                <div>
+                  <div
+                    tabIndex={0}
+                    onScroll={handleTermsScroll}
+                    aria-label="Terms of Service Agreement"
+                    className="h-48 sm:h-52 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white p-3.5 shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200"
+                  >
+                    <TermsOfServiceContent />
+                  </div>
+                  {!hasScrolledToBottom ? (
+                    <p className="mt-2 text-[11.5px] text-neutral-400">
+                      &darr; Please scroll to the bottom of the terms to enable the agreement checkbox.
+                    </p>
+                  ) : (
+                    <p className="mt-2 flex items-center gap-1 text-[11.5px] font-medium text-emerald-600">
+                      <Check className="h-3.5 w-3.5" />
+                      <span>You have reviewed the terms.</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Native HTML Checkbox */}
+                <div className="pt-1">
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      id="terms-agreement-checkbox"
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      disabled={!hasScrolledToBottom || isPending || isCompleted}
+                      onChange={(event) => {
+                        setAgreedToTerms(event.target.checked);
+                        if (termsError) setTermsError("");
+                        if (serverError) setServerError("");
+                      }}
+                      className="mt-0.5 h-4 w-4 cursor-pointer rounded border-neutral-300 text-neutral-900 accent-neutral-900 focus:ring-2 focus:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    />
+                    <label
+                      htmlFor="terms-agreement-checkbox"
+                      className={`text-xs font-medium leading-tight select-none ${
+                        !hasScrolledToBottom
+                          ? "cursor-not-allowed text-neutral-400"
+                          : "cursor-pointer text-neutral-700 hover:text-neutral-900"
+                      }`}
+                    >
+                      I have read and agree to the Terms of Service and Privacy Policy
+                    </label>
+                  </div>
+                  {termsError && (
+                    <p
+                      id="terms-error"
+                      className="login-error-transition mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600"
+                    >
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span>{termsError}</span>
+                    </p>
+                  )}
+                </div>
+
+                {serverError && (
+                  <div
+                    role="alert"
+                    className="login-error-transition flex items-center gap-2.5 rounded-lg border border-red-200/80 bg-red-50/70 px-3.5 py-2.5 text-[13px] font-medium leading-snug text-red-700 shadow-2xs"
+                  >
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                    <span>{serverError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!agreedToTerms || isPending || isCompleted}
                   className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isPending || isCompleted ? (
@@ -466,7 +611,7 @@ export default function OnboardingFlow({
                     )
                   ) : (
                     <>
-                      <span>Complete setup</span>
+                      <span>Finish</span>
                       <ArrowRight className="h-4 w-4" />
                     </>
                   )}
@@ -483,10 +628,12 @@ export default function OnboardingFlow({
               {isCompleted
                 ? "Setup complete"
                 : step === 1
-                  ? "Step 1 of 3"
+                  ? "Step 1 of 4"
                   : step === 2
-                    ? "Step 2 of 3"
-                    : "Step 3 of 3"}
+                    ? "Step 2 of 4"
+                    : step === 3
+                      ? "Step 3 of 4"
+                      : "Step 4 of 4"}
             </span>
             <span className="font-mono">{progressPercent}%</span>
           </div>
