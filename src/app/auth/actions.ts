@@ -156,12 +156,30 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
   redirect(destination);
 }
 
+function getRequestOrigin(headerList: Headers): string {
+  const forwardedHost = headerList.get("x-forwarded-host");
+  const forwardedProto = headerList.get("x-forwarded-proto") || "https";
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+  const origin = headerList.get("origin");
+  if (origin) {
+    return origin;
+  }
+  const host = headerList.get("host");
+  if (host) {
+    const proto = host.includes("localhost") || host.includes("127.0.0.1") ? "http" : "https";
+    return `${proto}://${host}`;
+  }
+  return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+}
+
 export async function signUp(formData: FormData): Promise<AuthActionResult> {
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
   const fullName = (formData.get("fullName") as string)?.trim();
   const headerList = await headers();
-  const origin = headerList.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const origin = getRequestOrigin(headerList);
 
   if (!email || !password || !fullName) {
     return { error: "All fields are required." };
@@ -242,7 +260,7 @@ export async function signInWithOAuth(
   }
 
   const headerList = await headers();
-  const origin = headerList.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const origin = getRequestOrigin(headerList);
 
   const supabase = await createClient();
 

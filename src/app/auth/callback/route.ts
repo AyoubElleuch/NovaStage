@@ -4,7 +4,8 @@ import { NextResponse } from "next/server";
 import { sendWaitlistJoinedEmail } from "@/lib/email/resend";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const requestUrl = new URL(request.url);
+  const { searchParams } = requestUrl;
   const code = searchParams.get("code");
   const mode = searchParams.get("mode") === "login" ? "login" : "waitlist";
   const requestedNext = searchParams.get("next");
@@ -12,6 +13,13 @@ export async function GET(request: Request) {
     requestedNext && requestedNext.startsWith("/") && !requestedNext.startsWith("//")
       ? requestedNext
       : "/dashboard";
+
+  // Extract public origin (supports reverse proxies like Vercel/Cloudflare/Nginx)
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const origin = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : (process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin);
 
   if (code) {
     const supabase = await createClient();
