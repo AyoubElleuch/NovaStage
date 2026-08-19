@@ -18,8 +18,8 @@ function cleanupStaleEntries() {
   lastCleanup = now;
 
   for (const [key, record] of rateLimitStore.entries()) {
-    // Keep entries that are still locked or have timestamps within the last 15 minutes
-    const hasRecentTimestamps = record.timestamps.some((t) => now - t < 15 * 60 * 1000);
+    // Keep entries that are still locked or have timestamps within the last 24 hours
+    const hasRecentTimestamps = record.timestamps.some((t) => now - t < 24 * 60 * 60 * 1000);
     const isStillLocked = record.lockedUntil && record.lockedUntil > now;
 
     if (!hasRecentTimestamps && !isStillLocked) {

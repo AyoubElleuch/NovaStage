@@ -1,10 +1,11 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, resetRateLimit, getClientIp } from "@/lib/security/rate-limit";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { sendWaitlistJoinedEmail } from "@/lib/email/resend";
+import { sendWaitlistJoinedEmail, sendPasswordResetEmail } from "@/lib/email/resend";
 
 export interface AuthActionResult {
   success?: boolean;
@@ -279,11 +280,117 @@ export async function signInWithOAuth(
     },
   });
 
-  if (error) {
-    return { error: error.message };
-  }
-
-  if (data.url) {
+  if (data?.url) {
     redirect(data.url);
   }
 }
+
+export async function requestPasswordReset(formData: FormData): Promise<AuthActionResult> {
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+
+  if (!email) return { error: "Enter your email address." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Enter a valid email address." };
+  }
+
+  // 1. IP-based Abuse Prevention (5 attempts per 15 minutes)
+  const clientIp = await getClientIp();
+  const ipRateLimitKey = `password-reset:ip:${clientIp}`;
+  const ipCheck = checkRateLimit(ipRateLimitKey, {
+    maxAttempts: 5,
+    windowSeconds: 15 * 60,
+    lockoutSeconds: 15 * 60,
+  });
+
+  if (!ipCheck.allowed) {
+    return {
+      error: "Too many reset attempts from this network. Please try again later.",
+      retryAfterSeconds: ipCheck.retryAfterSeconds,
+    };
+  }
+
+  // 2. Email-based Abuse Prevention: Max 2 resets per 24 hours (86,400 seconds)
+  const emailRateLimitKey = `password-reset:email:${email}`;
+  const emailCheck = checkRateLimit(emailRateLimitKey, {
+    maxAttempts: 2,
+    windowSeconds: 24 * 60 * 60,
+    lockoutSeconds: 24 * 60 * 60,
+  });
+
+  if (!emailCheck.allowed) {
+    const hoursRemaining = Math.max(1, Math.ceil((emailCheck.retryAfterSeconds || 86400) / 3600));
+    return {
+      error: `You have reached the limit of 2 password reset requests per day. Please wait ${hoursRemaining} hour${hoursRemaining === 1 ? "" : "s"} before requesting again.`,
+      retryAfterSeconds: emailCheck.retryAfterSeconds,
+    };
+  }
+
+  // 3. Verify user exists in the database
+  const adminClient = createAdminClient();
+  const { data: profile } = await adminClient
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("email", email)
+    .single();
+
+  if (!profile) {
+    return { error: "No account found with this email address." };
+  }
+
+  // 4. Generate recovery link
+  const headerList = await headers();
+  const origin = getRequestOrigin(headerList);
+  const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: {
+      redirectTo: `${origin}/auth/callback?next=/reset-password`,
+    },
+  });
+
+  if (linkError || !linkData?.properties?.action_link) {
+    return { error: "We could not generate a password reset link. Please try again." };
+  }
+
+  // 5. Send custom branded email
+  const emailResult = await sendPasswordResetEmail({
+    email,
+    resetUrl: linkData.properties.action_link,
+    name: profile.full_name || undefined,
+  });
+
+  if (!emailResult.success) {
+    return { error: emailResult.error || "We could not send the recovery email. Please try again." };
+  }
+
+  return {
+    success: true,
+    message: "We've sent a password reset link to your email. Please check your inbox.",
+  };
+}
+
+export async function resetPassword(formData: FormData): Promise<AuthActionResult> {
+  const password = String(formData.get("password") || "");
+  const confirmation = String(formData.get("confirmation") || "");
+
+  if (!password) return { error: "Enter a new password." };
+  if (password.length < 8) return { error: "Your password must be at least 8 characters." };
+  if (password !== confirmation) return { error: "Passwords do not match." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Your reset session has expired. Please request a new reset link." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { error: error.message || "We could not update your password. Please try again." };
+  }
+
+  redirect("/dashboard");
+}
+

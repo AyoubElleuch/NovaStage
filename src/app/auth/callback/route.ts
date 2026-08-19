@@ -106,13 +106,16 @@ export async function GET(request: Request) {
       const username = typeof profile?.username === "string" ? profile.username.trim() : "";
       const isProfileComplete = Boolean(fullName && username);
 
-      const destination = !isProfileComplete
-        ? "/onboarding"
-        : next !== "/dashboard"
-          ? next
-          : isAdmin
-            ? "/admin"
-            : "/dashboard";
+      const destination =
+        next === "/reset-password"
+          ? "/reset-password"
+          : !isProfileComplete
+            ? "/onboarding"
+            : next !== "/dashboard"
+              ? next
+              : isAdmin
+                ? "/admin"
+                : "/dashboard";
 
       return NextResponse.redirect(`${origin}${destination}`);
     }

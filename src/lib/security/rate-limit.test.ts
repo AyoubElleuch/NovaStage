@@ -60,4 +60,24 @@ describe("Rate Limiter & Abuse Prevention", () => {
     const allowedB = checkRateLimit(keyB, { maxAttempts: 1, windowSeconds: 60 });
     expect(allowedB.allowed).toBe(true);
   });
+
+  it("enforces max 2 attempts per 24 hours for password reset abuse prevention", () => {
+    const resetKey = "password-reset:email:victim@example.com";
+    resetRateLimit(resetKey);
+
+    // Attempt 1
+    const att1 = checkRateLimit(resetKey, { maxAttempts: 2, windowSeconds: 86400, lockoutSeconds: 86400 });
+    expect(att1.allowed).toBe(true);
+    expect(att1.remaining).toBe(1);
+
+    // Attempt 2
+    const att2 = checkRateLimit(resetKey, { maxAttempts: 2, windowSeconds: 86400, lockoutSeconds: 86400 });
+    expect(att2.allowed).toBe(true);
+    expect(att2.remaining).toBe(0);
+
+    // Attempt 3 (blocked)
+    const att3 = checkRateLimit(resetKey, { maxAttempts: 2, windowSeconds: 86400, lockoutSeconds: 86400 });
+    expect(att3.allowed).toBe(false);
+    expect(att3.retryAfterSeconds).toBeGreaterThan(0);
+  });
 });
