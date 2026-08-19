@@ -356,18 +356,40 @@
   }
 }
 
-/* Custom scrollbars for canvas and drawers */
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.16) transparent;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0f19;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.canvas-scrollbar,
+.dark-scrollbar {
+  scrollbar-color: #1e293b #0b0f19;
+}
+.canvas-scrollbar::-webkit-scrollbar-track,
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: #0b0f19;
+}
+.canvas-scrollbar::-webkit-scrollbar-thumb,
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+.canvas-scrollbar::-webkit-scrollbar-thumb:hover,
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }

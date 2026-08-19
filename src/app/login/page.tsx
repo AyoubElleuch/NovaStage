@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, isAdminRole, isProfileComplete } from "@/lib/auth/session";
 import LoginForm from "./login-form";
+import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function LoginPage() {
         />
       </div>
 
-      <div className="login-surface flex flex-col bg-[#fdfdfc] px-6 py-10 sm:px-12">
+      <div className="login-surface flex flex-col justify-between bg-[#fdfdfc] px-6 py-10 sm:px-12">
         <div>
           <Image
             src="/images/logo.svg"
@@ -51,6 +52,10 @@ export default async function LoginPage() {
           <Suspense fallback={<div className="text-sm text-neutral-400">Loading...</div>}>
             <LoginForm initialWaitlistSuccess={initialWaitlistSuccess} />
           </Suspense>
+        </div>
+
+        <div className="flex items-center justify-center pt-4">
+          <PrivacyPolicyTrigger />
         </div>
       </div>
     </div>
