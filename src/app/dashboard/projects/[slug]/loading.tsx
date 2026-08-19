@@ -58,7 +58,7 @@ export default function ProjectCanvasLoading() {
 
           <div className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs">
             <Plus className="h-3.5 w-3.5" />
-            <span>Add Box</span>
+            <span>Add Node</span>
           </div>
 
           <div className="flex items-center gap-1 border-l border-neutral-200/80 pl-1.5">

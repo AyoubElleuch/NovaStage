@@ -90,15 +90,15 @@ export default function CanvasDock({
         </button>
       </div>
 
-      {/* Add Box Action Button (Matching App Theme) */}
+      {/* Add Node Action Button (Matching App Theme) */}
       <button
         type="button"
         onClick={onAddNode}
-        title="Add Milestone Box (N)"
+        title="Add Milestone Node (N)"
         className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 hover:scale-[1.02] cursor-pointer"
       >
         <Plus className="h-3.5 w-3.5" />
-        <span>Add Box</span>
+        <span>Add Node</span>
       </button>
 
       {/* Graph Helpers: Auto-Layout & Snap Grid */}
