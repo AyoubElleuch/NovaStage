@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getProjectBySlug, isProjectMember } from "@/lib/projects";
 import { getAuthenticatedProfile } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generateWorkflowWithGemini, CanvasAIContext } from "@/lib/ai/gemini";
+import { executeAIPipeline } from "@/lib/ai/pipeline";
+import { CanvasAIContext } from "@/lib/ai/types";
 import { getProjectCanvasData, applyAIWorkflowResult } from "@/lib/canvas/server";
 
 export async function POST(
@@ -132,10 +133,10 @@ export async function POST(
       })),
     };
 
-    // 4. Call Google Gemini to generate or update structured DAG workflow
+    // 4. Call Multi-Phase AI Pipeline to generate or update structured DAG workflow
     let workflowResult;
     try {
-      workflowResult = await generateWorkflowWithGemini(prompt, aiContext);
+      workflowResult = await executeAIPipeline(prompt, aiContext);
     } catch (aiErr: unknown) {
       console.error("Gemini AI Processing failed:", aiErr);
 

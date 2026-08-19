@@ -280,6 +280,10 @@ export async function signInWithOAuth(
     },
   });
 
+  if (error) {
+    throw new Error(error.message);
+  }
+
   if (data?.url) {
     redirect(data.url);
   }

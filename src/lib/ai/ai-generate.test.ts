@@ -4,11 +4,12 @@ import {
   generateWorkflowWithGemini,
   AIWorkflowResult,
 } from "./gemini";
+import { executeAIPipeline } from "./pipeline";
 import { autoLayoutNodes } from "../canvas/auto-layout";
 import { CanvasNode, CanvasEdge } from "../canvas/types";
 import { CanvasAIContext } from "./types";
 
-describe("AI Workflow Generation & Gemini Service", () => {
+describe("AI Workflow Generation & Multi-Phase Pipeline", () => {
   const originalEnv = process.env.GEMINI_API_KEY;
 
   beforeEach(() => {
@@ -20,28 +21,38 @@ describe("AI Workflow Generation & Gemini Service", () => {
     vi.restoreAllMocks();
   });
 
-  it("generateFallbackWorkflow generates a valid acyclic DAG milestone graph on empty canvas", () => {
+  it("generateFallbackWorkflow generates a deep, comprehensive acyclic DAG milestone graph on empty canvas", () => {
     const workflow = generateFallbackWorkflow("Build a SaaS with Stripe billing");
 
     expect(workflow.intent).toBe("create_pipeline");
     expect(workflow.summary).toContain("Build a SaaS with Stripe billing");
-    expect(workflow.milestones.length).toBeGreaterThanOrEqual(3);
-    expect(workflow.edges.length).toBeGreaterThanOrEqual(2);
+    // Deep fallback should provide at least 5 milestones
+    expect(workflow.milestones.length).toBeGreaterThanOrEqual(5);
+    expect(workflow.edges.length).toBeGreaterThanOrEqual(4);
 
-    // Verify all milestones have checkpoints
+    // Verify all milestones have at least 4 detailed checkpoints
     for (const milestone of workflow.milestones) {
       expect(milestone.tempId).toBeDefined();
       expect(milestone.title).toBeDefined();
-      expect(milestone.checkpoints.length).toBeGreaterThanOrEqual(2);
+      expect(milestone.checkpoints.length).toBeGreaterThanOrEqual(4);
     }
 
-    // Verify all edges link valid tempIds
+    // Verify all edges link valid tempIds without self-loops
     const milestoneIds = new Set(workflow.milestones.map((m) => m.tempId));
     for (const edge of workflow.edges) {
       expect(milestoneIds.has(edge.fromId)).toBe(true);
       expect(milestoneIds.has(edge.toId)).toBe(true);
       expect(edge.fromId).not.toBe(edge.toId);
     }
+  });
+
+  it("generateFallbackWorkflow customizes domain milestones based on keywords (e-commerce)", () => {
+    const workflow = generateFallbackWorkflow("Build an e-commerce store with product catalog and cart");
+
+    expect(workflow.milestones.length).toBeGreaterThanOrEqual(4);
+    const titles = workflow.milestones.map((m) => m.title.toLowerCase());
+    const hasEcommerceTopic = titles.some((t) => t.includes("catalog") || t.includes("cart") || t.includes("order") || t.includes("product"));
+    expect(hasEcommerceTopic).toBe(true);
   });
 
   it("generateFallbackWorkflow inserts an intermediate step between step 2 and step 3 and shifts ordering", () => {
@@ -85,7 +96,7 @@ describe("AI Workflow Generation & Gemini Service", () => {
     const insertedStep = result.milestones.find((m) => m.tempId && !m.id);
     expect(insertedStep).toBeDefined();
     expect(insertedStep?.title).toContain("Quality Assurance");
-    expect(insertedStep?.checkpoints.length).toBeGreaterThanOrEqual(2);
+    expect(insertedStep?.checkpoints.length).toBeGreaterThanOrEqual(4);
 
     // Step 3 should have its sort order shifted
     const step3 = result.milestones.find((m) => m.id === "uuid-step-3");
@@ -107,15 +118,18 @@ describe("AI Workflow Generation & Gemini Service", () => {
     expect(edgeFromNew).toBeDefined();
   });
 
-  it("generateWorkflowWithGemini uses fallback when GEMINI_API_KEY is not set", async () => {
+  it("executeAIPipeline gracefully runs with fallback when GEMINI_API_KEY is not set", async () => {
     delete process.env.GEMINI_API_KEY;
-    const workflow = await generateWorkflowWithGemini("Realtime multiplayer game");
+    const workflow = await executeAIPipeline("Realtime multiplayer game");
 
-    expect(workflow.milestones.length).toBe(4);
-    expect(workflow.edges.length).toBe(3);
+    expect(workflow.milestones.length).toBeGreaterThanOrEqual(5);
+    expect(workflow.edges.length).toBeGreaterThanOrEqual(4);
+    for (const m of workflow.milestones) {
+      expect(m.checkpoints.length).toBeGreaterThanOrEqual(4);
+    }
   });
 
-  it("generateWorkflowWithGemini successfully parses Gemini API structured JSON response for graph update", async () => {
+  it("executeAIPipeline successfully processes multi-phase Gemini responses", async () => {
     process.env.GEMINI_API_KEY = "test_key_123";
 
     const mockAiResponse: AIWorkflowResult = {
@@ -128,7 +142,12 @@ describe("AI Workflow Generation & Gemini Service", () => {
           description: "PostgreSQL setup",
           color: "default",
           sortOrder: 0,
-          checkpoints: [{ id: "cp-1", title: "Create schema", isCompleted: true }],
+          checkpoints: [
+            { id: "cp-1", title: "Create schema", isCompleted: true },
+            { id: "cp-2", title: "Run migrations", isCompleted: true },
+            { id: "cp-3", title: "Set RLS", isCompleted: true },
+            { id: "cp-4", title: "Add indexes", isCompleted: true },
+          ],
         },
         {
           id: "uuid-2",
@@ -136,7 +155,12 @@ describe("AI Workflow Generation & Gemini Service", () => {
           description: "Server routes",
           color: "purple",
           sortOrder: 1,
-          checkpoints: [{ id: "cp-2", title: "CRUD handlers", isCompleted: false }],
+          checkpoints: [
+            { id: "cp-5", title: "CRUD handlers", isCompleted: false },
+            { id: "cp-6", title: "Zod schemas", isCompleted: false },
+            { id: "cp-7", title: "Auth guard", isCompleted: false },
+            { id: "cp-8", title: "Error handler", isCompleted: false },
+          ],
         },
         {
           tempId: "m_new_cache",
@@ -144,7 +168,12 @@ describe("AI Workflow Generation & Gemini Service", () => {
           description: "High speed caching",
           color: "amber",
           sortOrder: 2,
-          checkpoints: [{ title: "Configure Redis instance" }, { title: "Set TTL invalidation" }],
+          checkpoints: [
+            { title: "Configure Redis instance" },
+            { title: "Set TTL invalidation" },
+            { title: "Cache hot queries" },
+            { title: "Add benchmark tests" },
+          ],
         },
         {
           id: "uuid-3",
@@ -152,7 +181,12 @@ describe("AI Workflow Generation & Gemini Service", () => {
           description: "React views",
           color: "amber",
           sortOrder: 3,
-          checkpoints: [{ id: "cp-3", title: "Connect SWR hooks", isCompleted: false }],
+          checkpoints: [
+            { id: "cp-9", title: "Connect SWR hooks", isCompleted: false },
+            { id: "cp-10", title: "Build tables", isCompleted: false },
+            { id: "cp-11", title: "Add toasts", isCompleted: false },
+            { id: "cp-12", title: "Add error boundary", isCompleted: false },
+          ],
         },
       ],
       edges: [
@@ -196,10 +230,9 @@ describe("AI Workflow Generation & Gemini Service", () => {
     expect(result.summary).toBe("Added Caching step between API and Frontend");
     expect(result.milestones.length).toBe(4);
     expect(result.edges.length).toBe(3);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
-  it("calculates non-overlapping DAG auto-layout for AI generated milestone boxes", () => {
+  it("calculates non-overlapping DAG auto-layout with balanced vertical centering", () => {
     const mockNodes: CanvasNode[] = [
       {
         id: "node_1",

@@ -23,7 +23,7 @@ export function autoLayoutNodes(
     inDegree[edge.target_node_id] = (inDegree[edge.target_node_id] || 0) + 1;
   }
 
-  // Topological / Level Assignment
+  // Topological / Level Assignment with cycle safety limit
   const nodeLevels: Record<string, number> = {};
   const queue: { id: string; level: number }[] = [];
 
@@ -34,7 +34,11 @@ export function autoLayoutNodes(
     }
   }
 
-  while (queue.length > 0) {
+  let steps = 0;
+  const maxSteps = nodes.length * 5;
+
+  while (queue.length > 0 && steps < maxSteps) {
+    steps++;
     const { id, level } = queue.shift()!;
     const neighbors = adjList[id] || [];
 
@@ -44,6 +48,13 @@ export function autoLayoutNodes(
         nodeLevels[neighbor] = nextLevel;
         queue.push({ id: neighbor, level: nextLevel });
       }
+    }
+  }
+
+  // Handle any unreached disconnected/cyclic nodes by giving them an incremental level
+  for (const node of nodes) {
+    if (nodeLevels[node.id] === undefined) {
+      nodeLevels[node.id] = 0;
     }
   }
 
@@ -83,3 +94,4 @@ export function autoLayoutNodes(
 
   return updatedNodes;
 }
+

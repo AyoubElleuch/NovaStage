@@ -22,30 +22,30 @@ interface CanvasAIAssistantProps {
   onSubmitPrompt?: (prompt: string) => Promise<void> | void;
 }
 
-// Progressive thinking stage descriptors
+// Progressive thinking stage descriptors representing the 4-phase AI engineering pipeline
 const THINKING_STAGES = [
   {
-    buttonLabel: "Analyzing…",
-    title: "Analyzing request & canvas graph",
-    detail: "Decomposing workflow scope and evaluating topological graph changes…",
+    buttonLabel: "Decomposing…",
+    title: "Phase 1: Architectural Decomposition",
+    detail: "Analyzing domain requirements, tech stack constraints, risk factors, and parallel tracks…",
     pct: "25%",
   },
   {
-    buttonLabel: "Structuring…",
-    title: "Drafting milestones & checkpoints",
-    detail: "Structuring actionable checkpoint subtasks and adjusting step order…",
+    buttonLabel: "Generating…",
+    title: "Phase 2: Deep Branching DAG Generation",
+    detail: "Synthesizing domain-specific engineering milestones, parallel branches, and actionable checklists…",
     pct: "55%",
   },
   {
-    buttonLabel: "Connecting…",
-    title: "Mapping & rewiring dependencies",
-    detail: "Connecting sequential and parallel DAG wires across phases…",
+    buttonLabel: "Validating…",
+    title: "Phase 3: DAG Validation & Cycle Detection",
+    detail: "Running cycle detection DFS, eliminating orphan nodes, verifying edge integrity, and padding tasks…",
     pct: "80%",
   },
   {
-    buttonLabel: "Finalizing…",
-    title: "Computing layout, shift & sync",
-    detail: "Calculating non-overlapping coordinates and synchronizing canvas…",
+    buttonLabel: "Synchronizing…",
+    title: "Phase 4: Auto-Layout & Multiplayer Sync",
+    detail: "Calculating non-overlapping coordinates, persisting database changes, and broadcasting to peers…",
     pct: "95%",
   },
 ];

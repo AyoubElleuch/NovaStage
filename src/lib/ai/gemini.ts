@@ -1,7 +1,7 @@
 /**
- * Google Gemini AI Canvas Workflow Service
- * Converts natural language & voice prompts into structured NovaStage milestone graphs,
- * supporting both new pipeline creation and intelligent in-place updates.
+ * Google Gemini AI Low-Level API Client & Comprehensive Domain Fallback Engine
+ * Handles multi-model fallback chains, strict JSON schema validation,
+ * and high-fidelity deterministic offline workflows.
  */
 
 import {
@@ -10,6 +10,7 @@ import {
   AIProcessedMilestone,
   AIProcessedEdge,
 } from "./types";
+import { DOMAIN_TEMPLATES } from "./prompts/domain-templates";
 
 export * from "./types";
 
@@ -33,37 +34,274 @@ export type GeneratedWorkflow = {
   edges: GeneratedEdge[];
 };
 
-const SYSTEM_INSTRUCTION = `You are an elite software architect and technical project manager for NovaStage, a collaborative visual workflow canvas.
-Your task is to analyze the user's request and either:
-1. CREATE a new workflow pipeline (when the canvas is empty, or when the user explicitly requests an additional separate pipeline).
-2. UPDATE the existing workflow pipeline in-place (when the user asks to insert steps, shift ordering, modify milestones, rewire edges, or add/update checkpoints).
-
-Strict Architectural Rules:
-1. Intent Recognition:
-   - If the canvas is empty or the user asks to create a brand-new distinct pipeline alongside the current one: set "intent": "create_pipeline".
-   - If the canvas already has milestones and the user asks to modify, add a step, insert between steps, reorder, delete, or update tasks/checkpoints: set "intent": "update_pipeline".
-
-2. In-Place Updates & Step Insertion:
-   - When inserting a step between step X and step Y (e.g. "Add a QA step between step 2 and step 3"):
-     a) Keep existing milestones with their original "id" (UUID) and update their "sortOrder" so subsequent steps are incremented/shifted up by 1.
-     b) Create the new intermediate milestone with "tempId": "m_new_1", descriptive title, color, and actionable checkpoints.
-     c) Rewire edges: remove the direct edge between X and Y, and output edges connecting X -> new intermediate step -> Y.
-   - When updating milestone content, title, or checkpoints for an existing step: retain its "id" (UUID) and provide the updated checkpoint list.
-   - When deleting a step: include its ID in "deletedMilestoneIds" and reconnect adjacent milestone edges so the pipeline flow remains unbroken.
-
-3. DAG Graph Integrity:
-   - Every step must have a unique identifier ("id" for existing steps, "tempId" for newly created steps).
-   - All edges must reference valid identifiers in "fromId" and "toId".
-   - NEVER create circular dependencies (the graph must remain a clean acyclic DAG).
-   - Assign color accents meaningfully:
-     - "default" for general architecture, setup, infrastructure
-     - "purple" for core business logic, APIs, backend services
-     - "amber" for frontend, UI/UX, client components, auth
-     - "rose" for testing, security auditing, deployment / launch
-   - Provide 3 to 6 actionable, clear checkpoints per milestone.`;
+export interface GeminiCallOptions {
+  systemInstruction?: string;
+  temperature?: number;
+  modelOverride?: string;
+}
 
 /**
- * Deterministic fallback engine for offline development and testing
+ * OpenAI API Caller with JSON Schema response format
+ */
+async function callOpenAI<T>(
+  prompt: string,
+  schema: object,
+  options?: GeminiCallOptions
+): Promise<T | null> {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const model = options?.modelOverride || process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+  const messages: Array<{ role: "system" | "user"; content: string }> = [];
+
+  if (options?.systemInstruction) {
+    messages.push({ role: "system", content: options.systemInstruction });
+  }
+  messages.push({
+    role: "user",
+    content: `${prompt}\n\nYou MUST respond strictly with a valid JSON object conforming to this schema:\n${JSON.stringify(schema, null, 2)}`,
+  });
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: options?.temperature ?? 0.2,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const textContent = data.choices?.[0]?.message?.content;
+      if (textContent) {
+        return JSON.parse(textContent) as T;
+      }
+    } else {
+      const err = await response.text().catch(() => "");
+      console.warn(`[OpenAI] ${model} error (${response.status}): ${err}`);
+    }
+  } catch (err: unknown) {
+    console.warn(`[OpenAI] Exception:`, err);
+  }
+  return null;
+}
+
+/**
+ * Generic AI / LLM Caller supporting Google Gemini and OpenAI with multi-model fallback
+ */
+export async function callGemini<T>(
+  prompt: string,
+  schema: object,
+  options?: GeminiCallOptions
+): Promise<T | null> {
+  // Check if OpenAI is explicitly chosen or Gemini is unconfigured
+  const preferOpenAI =
+    process.env.AI_PROVIDER === "openai" ||
+    (Boolean(process.env.OPENAI_API_KEY) && !process.env.GEMINI_API_KEY);
+
+  if (preferOpenAI) {
+    const openAIResult = await callOpenAI<T>(prompt, schema, options);
+    if (openAIResult) return openAIResult;
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    // If Gemini key is missing, attempt OpenAI as alternate
+    if (process.env.OPENAI_API_KEY) {
+      return callOpenAI<T>(prompt, schema, options);
+    }
+    return null;
+  }
+
+  const primaryModel = options?.modelOverride || process.env.GEMINI_MODEL?.trim() || "gemini-3.7-flash";
+  const candidateModels = [
+    primaryModel,
+    "gemini-3.6-flash",
+    "gemini-flash-latest",
+    "gemini-2.5-pro",
+    "gemini-pro-latest",
+  ].filter((v, i, a) => a.indexOf(v) === i);
+
+  const fullPrompt = options?.systemInstruction
+    ? `${options.systemInstruction}\n\n${prompt}`
+    : prompt;
+
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: fullPrompt }],
+      },
+    ],
+    generationConfig: {
+      temperature: options?.temperature ?? 0.2,
+      responseMimeType: "application/json",
+      responseSchema: schema,
+    },
+  };
+
+  let lastErrorMsg = "";
+
+  for (const model of candidateModels) {
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (textContent) {
+          try {
+            const parsed = JSON.parse(textContent) as T;
+            if (parsed) {
+              return parsed;
+            }
+          } catch {
+            console.warn(`[Gemini AI] Model ${model} returned malformed JSON, trying next model...`);
+          }
+        }
+      } else {
+        const errBody = await response.text().catch(() => "");
+        lastErrorMsg = `Model ${model} (${response.status}): ${errBody || response.statusText}`;
+        console.warn(`[Gemini AI] ${model} unavailable (${response.status}). Trying next model...`);
+      }
+    } catch (fetchErr: unknown) {
+      const msg = fetchErr instanceof Error ? fetchErr.message : "Network error";
+      lastErrorMsg = `Model ${model} exception: ${msg}`;
+      console.warn(`[Gemini AI] Network issue on ${model}: ${msg}. Trying next model...`);
+    }
+  }
+
+  console.warn(`[Gemini AI] All candidate models failed (${lastErrorMsg}).`);
+  return null;
+}
+
+/**
+ * Domain-aware rich fallback template generator
+ */
+function buildDomainFallbackMilestones(
+  prompt: string,
+  domainKey: string
+): { milestones: AIProcessedMilestone[]; edges: AIProcessedEdge[] } {
+  const template = DOMAIN_TEMPLATES[domainKey] || DOMAIN_TEMPLATES.saas;
+  const milestones: AIProcessedMilestone[] = [];
+  const edges: AIProcessedEdge[] = [];
+
+  // 1. Discovery / Architecture
+  milestones.push({
+    tempId: "m_init",
+    title: "1. System Discovery & Technical Architecture",
+    description: `Define system specifications, data models, and infrastructure for ${prompt.slice(0, 40)}`,
+    color: "default",
+    phase: "planning",
+    sortOrder: 0,
+    checkpoints: [
+      { title: "Define technical specifications and core architecture diagram" },
+      { title: "Design PostgreSQL schema with foreign keys and compound indexes" },
+      { title: "Configure development, staging, and production environment variables" },
+      { title: "Set up CI/CD GitHub Actions workflow with typecheck and automated test suites" },
+      { title: "Establish security headers, CORS policies, and rate-limiting rules" },
+    ],
+  });
+
+  // 2. Add domain-specific milestones
+  template.recommendedMilestones.forEach((m, idx) => {
+    const tempId = `m_domain_${idx + 1}`;
+    milestones.push({
+      tempId,
+      title: `${idx + 2}. ${m.title}`,
+      description: m.description,
+      color: m.color,
+      phase: m.phase,
+      sortOrder: idx + 1,
+      checkpoints: m.checkpoints.map((cp) => ({ title: cp })),
+    });
+  });
+
+  // 3. QA & Security Hardening
+  const qaIndex = milestones.length;
+  milestones.push({
+    tempId: "m_qa",
+    title: `${qaIndex + 1}. Quality Assurance & Security Hardening`,
+    description: "Execute end-to-end testing, security audits, and load verification",
+    color: "rose",
+    phase: "testing",
+    sortOrder: qaIndex,
+    checkpoints: [
+      { title: "Execute Playwright end-to-end tests for critical user journeys" },
+      { title: "Perform security audit covering OWASP Top 10 vulnerabilities" },
+      { title: "Execute load testing with 500+ concurrent requests under 200ms latency" },
+      { title: "Validate error boundaries and fallback UI states across all viewports" },
+      { title: "Verify database backup procedures and disaster recovery failover" },
+    ],
+  });
+
+  // 4. Production Release
+  const releaseIndex = milestones.length;
+  milestones.push({
+    tempId: "m_release",
+    title: `${releaseIndex + 1}. Production Release & Monitoring`,
+    description: "Deploy to production infrastructure, configure CDN, and enable telemetry alerts",
+    color: "rose",
+    phase: "deployment",
+    sortOrder: releaseIndex,
+    checkpoints: [
+      { title: "Deploy database migrations to production cluster with zero downtime" },
+      { title: "Configure production domain DNS with SSL certificate automation" },
+      { title: "Set up real-time error telemetry and latency threshold alerting" },
+      { title: "Conduct smoke test verification on live production endpoints" },
+      { title: "Publish system documentation and onboard initial pilot users" },
+    ],
+  });
+
+  // 5. Build Branching DAG Edges
+  // Connect init -> first 2 domain steps in parallel
+  if (milestones.length >= 4) {
+    edges.push({ fromId: "m_init", toId: "m_domain_1" });
+    if (milestones.some((m) => m.tempId === "m_domain_2")) {
+      edges.push({ fromId: "m_init", toId: "m_domain_2" });
+    }
+
+    // Connect middle steps
+    for (let i = 1; i < template.recommendedMilestones.length; i++) {
+      const prevId = `m_domain_${i}`;
+      const nextId = `m_domain_${i + 1}`;
+      if (milestones.some((m) => m.tempId === nextId)) {
+        edges.push({ fromId: prevId, toId: nextId });
+      }
+    }
+
+    // Connect last domain step(s) to QA
+    const lastDomainId = `m_domain_${template.recommendedMilestones.length}`;
+    edges.push({ fromId: lastDomainId, toId: "m_qa" });
+
+    // Connect QA to Release
+    edges.push({ fromId: "m_qa", toId: "m_release" });
+  } else {
+    // Linear fallback if short
+    for (let i = 0; i < milestones.length - 1; i++) {
+      edges.push({ fromId: milestones[i].tempId!, toId: milestones[i + 1].tempId! });
+    }
+  }
+
+  return { milestones, edges };
+}
+
+/**
+ * Deep, comprehensive deterministic fallback engine
  */
 export function generateFallbackWorkflow(
   prompt: string,
@@ -85,7 +323,7 @@ export function generateFallbackWorkflow(
     if (!isExplicitNewPipeline) {
       // Check for "between step X and step Y" or "between X and Y"
       const betweenMatch = lowerPrompt.match(
-        /between (?:step\s*)?(\d+|one|two|three|four|five)\s+and\s+(?:step\s*)?(\d+|one|two|three|four|five)/i
+        /between (?:step\s*)?(\d+|one|two|three|four|five|six|seven|eight)\s+and\s+(?:step\s*)?(\d+|one|two|three|four|five|six|seven|eight)/i
       );
 
       const wordToNum: Record<string, number> = {
@@ -94,6 +332,9 @@ export function generateFallbackWorkflow(
         three: 3,
         four: 4,
         five: 5,
+        six: 6,
+        seven: 7,
+        eight: 8,
       };
 
       if (betweenMatch) {
@@ -106,16 +347,57 @@ export function generateFallbackWorkflow(
         const prevMilestone = sorted[insertAfterIndex - 1] || sorted[0];
         const nextMilestone = sorted[insertAfterIndex] || sorted[sorted.length - 1];
 
-        // Extract topic if mentioned (e.g. "Add a QA and testing step between step 2 and step 3")
+        // Extract topic if mentioned
         let newTitle = "Intermediate Milestone";
+        let desc = `Workflow stage inserted between ${prevMilestone.title} and ${nextMilestone.title}`;
+        let checkpoints: { title: string }[] = [
+          { title: "Define technical specifications and architecture design" },
+          { title: "Implement core service logic and database migrations" },
+          { title: "Build client user interface and state hooks" },
+          { title: "Execute integration tests and verify boundary conditions" },
+          { title: "Review telemetry, audit logs, and performance metrics" },
+        ];
+
         if (lowerPrompt.includes("qa") || lowerPrompt.includes("testing")) {
-          newTitle = "Quality Assurance & Testing";
+          newTitle = "Quality Assurance & Automated Testing";
+          desc = "Comprehensive test suites, integration tests, and edge-case validation";
+          checkpoints = [
+            { title: "Write unit tests for business logic edge cases" },
+            { title: "Develop Playwright end-to-end user workflow tests" },
+            { title: "Execute stress test verifying API response latency" },
+            { title: "Validate accessibility (a11y) and responsive viewport compliance" },
+            { title: "Review automated test coverage reports in CI" },
+          ];
         } else if (lowerPrompt.includes("security") || lowerPrompt.includes("audit")) {
           newTitle = "Security & Compliance Audit";
-        } else if (lowerPrompt.includes("analytics") || lowerPrompt.includes("monitoring")) {
-          newTitle = "Analytics & System Monitoring";
+          desc = "Vulnerability assessment, permission matrix verification, and penetration testing";
+          checkpoints = [
+            { title: "Audit PostgreSQL Row-Level Security policies" },
+            { title: "Perform static application security testing (SAST)" },
+            { title: "Verify cryptographic password hashing and token rotation" },
+            { title: "Inspect CORS headers and Content Security Policy" },
+            { title: "Review third-party dependency vulnerabilities (npm audit)" },
+          ];
         } else if (lowerPrompt.includes("cache") || lowerPrompt.includes("redis")) {
-          newTitle = "Caching & Performance Optimization";
+          newTitle = "Redis Caching & Performance Layer";
+          desc = "Distributed caching, cache invalidation strategies, and latency reduction";
+          checkpoints = [
+            { title: "Deploy Redis cluster with connection pooling" },
+            { title: "Implement read-through caching for high-frequency database queries" },
+            { title: "Build smart cache invalidation on resource mutations" },
+            { title: "Configure sliding-window API rate limiting" },
+            { title: "Benchmark latency before and after caching layer" },
+          ];
+        } else if (lowerPrompt.includes("analytics") || lowerPrompt.includes("monitoring")) {
+          newTitle = "Telemetry & System Monitoring";
+          desc = "Real-time metrics, OpenTelemetry tracing, and alerting thresholds";
+          checkpoints = [
+            { title: "Configure OpenTelemetry distributed request tracing" },
+            { title: "Build admin metrics dashboard for active users and error rates" },
+            { title: "Set up automated PagerDuty alert triggers for 5xx spikes" },
+            { title: "Implement structured JSON application logging" },
+            { title: "Create scheduled healthcheck ping endpoints" },
+          ];
         } else {
           newTitle = `Inserted Step ${insertAfterIndex + 1}`;
         }
@@ -124,14 +406,10 @@ export function generateFallbackWorkflow(
         const newMilestone: AIProcessedMilestone = {
           tempId: newTempId,
           title: newTitle,
-          description: `Intermediate workflow stage inserted between ${prevMilestone.title} and ${nextMilestone.title}`,
+          description: desc,
           color: "amber",
           sortOrder: insertAfterIndex,
-          checkpoints: [
-            { title: "Define validation criteria and requirements" },
-            { title: "Execute test suites and verify benchmarks" },
-            { title: "Review telemetry and sign off" },
-          ],
+          checkpoints,
         };
 
         const updatedMilestones: AIProcessedMilestone[] = [];
@@ -164,10 +442,8 @@ export function generateFallbackWorkflow(
 
         // Re-wire edges
         const updatedEdges: AIProcessedEdge[] = [];
-        // Keep edges that don't connect prevMilestone directly to nextMilestone
         for (const e of existingEdges) {
           if (e.sourceId === prevMilestone.id && e.targetId === nextMilestone.id) {
-            // Replaced by 2 new edges
             continue;
           }
           updatedEdges.push({ fromId: e.sourceId, toId: e.targetId });
@@ -216,250 +492,36 @@ export function generateFallbackWorkflow(
     }
   }
 
-  // Scenario 2: Create new pipeline (Canvas is empty or user requested new pipeline)
-  const titleSummary = cleanPrompt.length > 50 ? `${cleanPrompt.slice(0, 50)}...` : cleanPrompt;
+  // Scenario 2: Create new deep, branching pipeline matching domain keywords
+  let domainKey = "saas";
+  if (lowerPrompt.includes("shop") || lowerPrompt.includes("ecommerce") || lowerPrompt.includes("product") || lowerPrompt.includes("order")) {
+    domainKey = "ecommerce";
+  } else if (lowerPrompt.includes("realtime") || lowerPrompt.includes("collaborat") || lowerPrompt.includes("websocket") || lowerPrompt.includes("chat")) {
+    domainKey = "realtime";
+  } else if (lowerPrompt.includes("api") || lowerPrompt.includes("microservice") || lowerPrompt.includes("backend") || lowerPrompt.includes("grpc")) {
+    domainKey = "api_backend";
+  } else if (lowerPrompt.includes("mobile") || lowerPrompt.includes("ios") || lowerPrompt.includes("android") || lowerPrompt.includes("react native")) {
+    domainKey = "mobile_cloud";
+  }
+
+  const { milestones, edges } = buildDomainFallbackMilestones(cleanPrompt, domainKey);
+  const titleSummary = cleanPrompt.length > 60 ? `${cleanPrompt.slice(0, 60)}…` : cleanPrompt;
 
   return {
     intent: "create_pipeline",
-    summary: `Workflow pipeline generated for: ${titleSummary}`,
-    milestones: [
-      {
-        tempId: "m1",
-        title: "Foundation & Architecture",
-        description: "Set up repository, PostgreSQL schemas, and security policies",
-        color: "default",
-        sortOrder: 0,
-        checkpoints: [
-          { title: "Initialize Next.js & Tailwind workspace" },
-          { title: "Configure database schema and RLS policies" },
-          { title: "Set up environment credentials and healthcheck" },
-        ],
-      },
-      {
-        tempId: "m2",
-        title: "Core Service & API Layer",
-        description: "Implement primary API endpoints and domain business logic",
-        color: "purple",
-        sortOrder: 1,
-        checkpoints: [
-          { title: "Build secure server action handlers" },
-          { title: "Implement validation middleware and rate limits" },
-          { title: "Write service unit and integration tests" },
-        ],
-      },
-      {
-        tempId: "m3",
-        title: "Interactive Client Interface",
-        description: "Build reactive UI components and state management",
-        color: "amber",
-        sortOrder: 2,
-        checkpoints: [
-          { title: "Develop responsive dashboard and viewports" },
-          { title: "Hook up realtime WebSocket subscriptions" },
-          { title: "Add user notification toasts and feedback modals" },
-        ],
-      },
-      {
-        tempId: "m4",
-        title: "Validation & Launch",
-        description: "End-to-end verification, performance tuning, and rollout",
-        color: "rose",
-        sortOrder: 3,
-        checkpoints: [
-          { title: "Conduct security audit and edge-case testing" },
-          { title: "Optimize query performance and asset bundles" },
-          { title: "Deploy to production environment" },
-        ],
-      },
-    ],
-    edges: [
-      { fromId: "m1", toId: "m2" },
-      { fromId: "m2", toId: "m3" },
-      { fromId: "m3", toId: "m4" },
-    ],
+    summary: `Comprehensive workflow pipeline generated for: ${titleSummary}`,
+    milestones,
+    edges,
   };
 }
 
 /**
- * Call Google Gemini 2.0 / 3.7 Flash API to generate or update structured workflow JSON
+ * Backward compatibility wrapper delegating to the new pipeline orchestrator
  */
 export async function generateWorkflowWithGemini(
   prompt: string,
   context?: CanvasAIContext
 ): Promise<AIWorkflowResult> {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-
-  if (!apiKey) {
-    console.warn(
-      "[Gemini AI] GEMINI_API_KEY is not configured. Utilizing safe fallback workflow generator."
-    );
-    return generateFallbackWorkflow(prompt, context);
-  }
-
-  // Format existing canvas context into clear text for Gemini
-  let contextDescription = "The canvas is currently empty.";
-  if (context?.existingMilestones && context.existingMilestones.length > 0) {
-    const simplifiedMilestones = context.existingMilestones.map((m, idx) => ({
-      id: m.id,
-      stepNumber: idx + 1,
-      order: m.order,
-      title: m.title,
-      description: m.description,
-      color: m.color,
-      status: m.status,
-      checkpoints: m.checkpoints.map((cp) => ({
-        id: cp.id,
-        title: cp.title,
-        isCompleted: cp.is_completed,
-      })),
-    }));
-
-    const simplifiedEdges = (context.existingEdges || []).map((e) => ({
-      fromId: e.sourceId,
-      toId: e.targetId,
-    }));
-
-    contextDescription = `Current Canvas Graph State:\n${JSON.stringify(
-      {
-        existingMilestones: simplifiedMilestones,
-        existingEdges: simplifiedEdges,
-      },
-      null,
-      2
-    )}`;
-  }
-
-  const userContent = `${SYSTEM_INSTRUCTION}\n\n${contextDescription}\n\nUser Request: "${prompt}"`;
-
-  const payload = {
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: userContent }],
-      },
-    ],
-    generationConfig: {
-      temperature: 0.2,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "OBJECT",
-        properties: {
-          intent: {
-            type: "STRING",
-            enum: ["create_pipeline", "update_pipeline", "create_parallel"],
-          },
-          summary: { type: "STRING" },
-          milestones: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                id: { type: "STRING" },
-                tempId: { type: "STRING" },
-                title: { type: "STRING" },
-                description: { type: "STRING" },
-                color: {
-                  type: "STRING",
-                  enum: ["default", "amber", "purple", "rose"],
-                },
-                sortOrder: { type: "INTEGER" },
-                checkpoints: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      id: { type: "STRING" },
-                      title: { type: "STRING" },
-                      isCompleted: { type: "BOOLEAN" },
-                    },
-                    required: ["title"],
-                  },
-                },
-              },
-              required: ["title", "checkpoints"],
-            },
-          },
-          edges: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                fromId: { type: "STRING" },
-                toId: { type: "STRING" },
-              },
-              required: ["fromId", "toId"],
-            },
-          },
-          deletedMilestoneIds: {
-            type: "ARRAY",
-            items: { type: "STRING" },
-          },
-        },
-        required: ["intent", "summary", "milestones", "edges"],
-      },
-    },
-  };
-
-  const primaryModel = process.env.GEMINI_MODEL?.trim() || "gemini-3.7-flash";
-  const candidateModels = [
-    primaryModel,
-    "gemini-3.6-flash",
-    "gemini-flash-latest",
-    "gemini-2.5-pro",
-    "gemini-pro-latest",
-  ].filter((v, i, a) => a.indexOf(v) === i);
-
-  let lastErrorMsg = "";
-
-  for (const model of candidateModels) {
-    try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (textContent) {
-          try {
-            const parsed = JSON.parse(textContent) as AIWorkflowResult;
-            if (
-              parsed.milestones &&
-              Array.isArray(parsed.milestones) &&
-              parsed.milestones.length > 0
-            ) {
-              return parsed;
-            }
-          } catch {
-            console.warn(
-              `[Gemini AI] Model ${model} returned malformed JSON, trying next model...`
-            );
-          }
-        }
-      } else {
-        const errBody = await response.text().catch(() => "");
-        lastErrorMsg = `Model ${model} (${response.status}): ${errBody || response.statusText}`;
-        console.warn(
-          `[Gemini AI] ${model} unavailable (status ${response.status}). Seamlessly switching to next model...`
-        );
-      }
-    } catch (fetchErr: unknown) {
-      const msg = fetchErr instanceof Error ? fetchErr.message : "Network error";
-      lastErrorMsg = `Model ${model} fetch exception: ${msg}`;
-      console.warn(`[Gemini AI] Network issue on ${model}. Trying next model...`);
-    }
-  }
-
-  // Graceful final fallback
-  console.warn(
-    `[Gemini AI] All candidate models encountered high demand or errors (${lastErrorMsg}). Activating safe fallback workflow generator.`
-  );
-  return generateFallbackWorkflow(prompt, context);
+  const { executeAIPipeline } = await import("./pipeline");
+  return executeAIPipeline(prompt, context);
 }

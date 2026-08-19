@@ -25,7 +25,6 @@ import {
   Users,
   UserX,
   X,
-  XCircle,
 } from "lucide-react";
 import { fetcher } from "@/lib/fetcher";
 import { createClient } from "@/lib/supabase/client";

@@ -1,9 +1,11 @@
 /**
  * AI Canvas Workflow Types & Data Contracts
- * Defines context payloads, intent classifications, and structured graph results.
+ * Defines context payloads, intent classifications, prompt decompositions, and structured graph results.
  */
 
 export type AIWorkflowIntent = "create_pipeline" | "update_pipeline" | "create_parallel";
+
+export type MilestonePhase = "planning" | "architecture" | "implementation" | "testing" | "deployment" | "operations";
 
 export interface CanvasContextCheckpoint {
   id: string;
@@ -34,6 +36,27 @@ export interface CanvasAIContext {
   selectedMilestoneId?: string | null;
 }
 
+export interface ConcernArea {
+  name: string;
+  category: "core" | "auth" | "billing" | "data" | "infrastructure" | "ui_ux" | "security" | "testing" | "operations";
+  priority: "critical" | "high" | "medium";
+  description: string;
+  dependencies: string[];
+  suggestedCheckpointCount?: number;
+}
+
+export interface PromptDecomposition {
+  projectType: string;
+  domainTags: string[];
+  complexityTier: "standard" | "advanced" | "enterprise";
+  concernAreas: ConcernArea[];
+  techStackHints: string[];
+  riskFactors: string[];
+  targetMilestoneCount: { min: number; max: number };
+  suggestedParallelTracks: string[][];
+  summary: string;
+}
+
 export interface AIProcessedCheckpoint {
   id?: string; // Existing checkpoint UUID if retaining/modifying, or undefined for new
   title: string;
@@ -47,6 +70,8 @@ export interface AIProcessedMilestone {
   title: string;
   description?: string;
   color?: "default" | "amber" | "purple" | "rose";
+  phase?: MilestonePhase;
+  parallelGroup?: string;
   sortOrder?: number;
   checkpoints: AIProcessedCheckpoint[];
 }
@@ -67,4 +92,6 @@ export interface AIWorkflowResult {
   edges: AIProcessedEdge[];
   /** Optional array of existing milestone IDs explicitly removed */
   deletedMilestoneIds?: string[];
+  /** Optional decomposition metadata */
+  decomposition?: PromptDecomposition;
 }
