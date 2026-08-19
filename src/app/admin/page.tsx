@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Clock3,
+  Sparkles,
   UsersRound,
   XCircle,
 } from "lucide-react";
@@ -58,6 +59,13 @@ export default async function AdminOverviewPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/admin/ai-limits"
+            className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-800 shadow-xs transition-all duration-150 hover:border-neutral-300 hover:bg-neutral-50 active:scale-[0.98]"
+          >
+            <Sparkles className="h-4 w-4 text-amber-500" aria-hidden="true" />
+            <span>AI Limits</span>
+          </Link>
           <Link
             href="/admin/waitlist"
             className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-sm transition-all duration-150 hover:bg-neutral-700 active:scale-[0.98]"

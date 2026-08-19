@@ -2,7 +2,8 @@ import { CanvasNode, CanvasEdge } from "./types";
 
 export function autoLayoutNodes(
   nodes: CanvasNode[],
-  edges: CanvasEdge[]
+  edges: CanvasEdge[],
+  options?: { startX?: number; startY?: number }
 ): CanvasNode[] {
   if (nodes.length === 0) return [];
 
@@ -57,8 +58,8 @@ export function autoLayoutNodes(
   // Position nodes
   const HORIZONTAL_SPACING = 380;
   const VERTICAL_SPACING = 240;
-  const START_X = 120;
-  const START_Y = 120;
+  const START_X = options?.startX ?? 120;
+  const START_Y = options?.startY ?? 120;
 
   const updatedNodes: CanvasNode[] = [];
 

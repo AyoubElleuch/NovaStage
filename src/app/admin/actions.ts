@@ -198,3 +198,113 @@ export async function disapproveWaitlistEntry(email: string): Promise<AdminActio
   }
 }
 
+export interface UserAiLimitRecord {
+  id: string;
+  email: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  role: string;
+  ai_requests_count: number;
+  ai_requests_remaining: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Fetches all user profiles with their AI quota usage.
+ */
+export async function getUserAiLimits(): Promise<{ data?: UserAiLimitRecord[]; error?: string }> {
+  try {
+    await assertPermission("users:read");
+    const adminClient = createAdminClient();
+
+    const { data: profiles, error } = await adminClient
+      .from("profiles")
+      .select("id, email, full_name, username, avatar_url, role, ai_requests_count, created_at, updated_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    const records: UserAiLimitRecord[] = (profiles || []).map((row) => {
+      const used = typeof row.ai_requests_count === "number" ? row.ai_requests_count : 0;
+      const remaining = Math.max(0, 10 - used);
+      return {
+        id: row.id,
+        email: row.email,
+        full_name: row.full_name || null,
+        username: row.username || null,
+        avatar_url: row.avatar_url || null,
+        role: row.role || "developer",
+        ai_requests_count: used,
+        ai_requests_remaining: remaining,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      };
+    });
+
+    return { data: records };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Failed to load user AI limits." };
+  }
+}
+
+/**
+ * Resets AI request quota for a single user back to 10 out of 10 (ai_requests_count = 0).
+ */
+export async function resetUserAiQuota(userId: string): Promise<AdminActionResult> {
+  try {
+    await assertPermission("users:manage");
+    const adminClient = createAdminClient();
+
+    const { error } = await adminClient
+      .from("profiles")
+      .update({
+        ai_requests_count: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    revalidatePath("/admin/ai-limits");
+    revalidatePath("/admin");
+    return { success: true, message: "User AI quota reset to 10/10 successfully." };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Failed to reset user AI quota." };
+  }
+}
+
+/**
+ * Resets AI request quota for all users across the platform back to 10 out of 10 (ai_requests_count = 0).
+ */
+export async function resetAllUsersAiQuota(): Promise<AdminActionResult> {
+  try {
+    await assertPermission("users:manage");
+    const adminClient = createAdminClient();
+
+    const { error } = await adminClient
+      .from("profiles")
+      .update({
+        ai_requests_count: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    revalidatePath("/admin/ai-limits");
+    revalidatePath("/admin");
+    return { success: true, message: "All users' AI quotas have been reset to 10/10." };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Failed to reset all users' AI quotas." };
+  }
+}
+
+

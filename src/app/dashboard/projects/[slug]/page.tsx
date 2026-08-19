@@ -40,11 +40,19 @@ export default async function ProjectPage({
   const myMembership = (memberRows || []).find((m) => m.user_id === user.id);
   const isOwner = myMembership?.role === "owner" || project.created_by === user.id;
 
+  const { data: profile } = await adminClient
+    .from("profiles")
+    .select("ai_requests_count, full_name, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const aiRequestsRemaining = Math.max(0, 10 - (profile?.ai_requests_count ?? 0));
+
   const currentUser = {
     id: user.id,
     email: user.email || "",
-    fullName: session?.profile?.full_name || user.email?.split("@")[0] || "Developer",
-    avatarUrl: session?.profile?.avatar_url || null,
+    fullName: profile?.full_name || session?.profile?.full_name || user.email?.split("@")[0] || "Developer",
+    avatarUrl: profile?.avatar_url || session?.profile?.avatar_url || null,
   };
 
   return (
@@ -55,6 +63,7 @@ export default async function ProjectPage({
       initialClaimRequests={canvasData.claimRequests}
       currentUser={currentUser}
       isOwner={isOwner}
+      initialAiRequestsRemaining={aiRequestsRemaining}
     />
   );
 }

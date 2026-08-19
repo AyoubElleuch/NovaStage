@@ -31,6 +31,7 @@ import CanvasDrawer from "@/components/canvas/canvas-drawer";
 import CanvasHud from "@/components/canvas/canvas-hud";
 import CanvasCursors from "@/components/canvas/canvas-cursors";
 import CanvasClaimModal from "@/components/canvas/canvas-claim-modal";
+import CanvasAIAssistant from "@/components/canvas/canvas-ai-assistant";
 import { useNotifications } from "@/components/notifications/notification-provider";
 
 interface ProjectCanvasClientProps {
@@ -52,6 +53,7 @@ interface ProjectCanvasClientProps {
     avatarUrl?: string | null;
   };
   isOwner: boolean;
+  initialAiRequestsRemaining?: number;
 }
 
 type DragState = {
@@ -73,12 +75,15 @@ export default function ProjectCanvasClient({
   initialEdges,
   currentUser,
   isOwner,
+  initialAiRequestsRemaining = 10,
 }: ProjectCanvasClientProps) {
   const router = useRouter();
   const { notify } = useNotifications();
   const supabase = useMemo(() => createClient(), []);
   const canvasChannelRef = useRef<RealtimeChannel | null>(null);
   const [isEvicted, setIsEvicted] = useState(false);
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [aiRequestsRemaining, setAiRequestsRemaining] = useState(initialAiRequestsRemaining);
 
   const handleEviction = useCallback(() => {
     setIsEvicted(true);
@@ -635,6 +640,74 @@ export default function ProjectCanvasClient({
     [broadcastEvent, notify, project.slug, secureFetch]
   );
 
+  // Generate Visual Workflow Pipeline with AI
+  const handleGenerateAIWorkflow = useCallback(
+    async (promptText: string) => {
+      const res = await secureFetch(
+        `/api/dashboard/projects/${project.slug}/canvas/ai-generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: promptText }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Failed to generate workflow with AI");
+      }
+
+      if (data.success && data.nodes) {
+        // Merge generated nodes
+        setNodes((prev) => {
+          const existingIds = new Set(prev.map((n) => n.id));
+          const newNodes = data.nodes.filter((n: CanvasNode) => !existingIds.has(n.id));
+          return [...prev, ...newNodes];
+        });
+
+        // Merge generated edges
+        if (data.edges) {
+          setEdges((prev) => {
+            const existingIds = new Set(prev.map((e) => e.id));
+            const newEdges = data.edges.filter((e: CanvasEdge) => !existingIds.has(e.id));
+            return [...prev, ...newEdges];
+          });
+        }
+
+        // Update remaining requests
+        if (typeof data.requests_remaining === "number") {
+          setAiRequestsRemaining(data.requests_remaining);
+        }
+
+        // Broadcast to collaborators
+        broadcastEvent("canvas:batch_created", {
+          nodes: data.nodes,
+          edges: data.edges,
+          creatorName: currentUser.fullName || currentUser.email,
+        });
+
+        // Smoothly center the canvas viewport on the new milestones
+        if (data.nodes.length > 0) {
+          const firstNode = data.nodes[0];
+          setViewport((prev) => ({
+            ...prev,
+            x: Math.round(-firstNode.position_x * prev.zoom + window.innerWidth / 2 - 140),
+            y: Math.round(-firstNode.position_y * prev.zoom + window.innerHeight / 2 - 100),
+          }));
+        }
+
+        notify({
+          title: "Workflow Generated",
+          message: data.summary || "New AI workflow pipeline added to canvas.",
+        });
+
+        setIsAIAssistantOpen(false);
+      }
+    },
+    [broadcastEvent, currentUser.email, currentUser.fullName, notify, project.slug, secureFetch]
+  );
+
   // ---------------------------------------------------------------------------
   // 1. Supabase Realtime Subscription & Network Health Monitoring
   // ---------------------------------------------------------------------------
@@ -760,6 +833,26 @@ export default function ProjectCanvasClient({
             message: `${payload.requester_name || "A collaborator"} wants to edit "${payload.node_title || "Milestone"}"`,
           });
         }
+      })
+      .on("broadcast", { event: "canvas:batch_created" }, ({ payload }) => {
+        if (payload?.nodes && Array.isArray(payload.nodes)) {
+          setNodes((prev) => {
+            const existingIds = new Set(prev.map((n) => n.id));
+            const newNodes = payload.nodes.filter((n: CanvasNode) => !existingIds.has(n.id));
+            return [...prev, ...newNodes];
+          });
+        }
+        if (payload?.edges && Array.isArray(payload.edges)) {
+          setEdges((prev) => {
+            const existingIds = new Set(prev.map((e) => e.id));
+            const newEdges = payload.edges.filter((e: CanvasEdge) => !existingIds.has(e.id));
+            return [...prev, ...newEdges];
+          });
+        }
+        notify({
+          title: "AI Workflow Added",
+          message: `${payload?.creatorName || "A collaborator"} generated new milestones with AI.`,
+        });
       })
       .on("broadcast", { event: "edge:created" }, ({ payload }) => {
         if (payload?.edge) {
@@ -1608,30 +1701,40 @@ export default function ProjectCanvasClient({
         />
       )}
 
-      {/* Floating Action Dock */}
-      <CanvasDock
-        activeTool={activeTool}
-        onSelectTool={setActiveTool}
-        viewport={viewport}
-        onZoomIn={() =>
-          setViewport((prev) => ({
-            ...prev,
-            zoom: Math.min(prev.zoom * 1.2, 2.5),
-          }))
-        }
-        onZoomOut={() =>
-          setViewport((prev) => ({
-            ...prev,
-            zoom: Math.max(prev.zoom * 0.8, 0.15),
-          }))
-        }
-        onResetZoom={() => setViewport((prev) => ({ ...prev, zoom: 1.0 }))}
-        onFitView={handleFitView}
-        onAddNode={() => handleAddNode()}
-        onTidyLayout={handleTidyLayout}
-        snapGrid={snapGrid}
-        onToggleSnapGrid={() => setSnapGrid((v) => !v)}
-      />
+      {/* Bottom Floating Control Bar (Canvas Tools Dock + AI Assistant) */}
+      <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2.5">
+        <CanvasDock
+          activeTool={activeTool}
+          onSelectTool={setActiveTool}
+          viewport={viewport}
+          onZoomIn={() =>
+            setViewport((prev) => ({
+              ...prev,
+              zoom: Math.min(prev.zoom * 1.2, 2.5),
+            }))
+          }
+          onZoomOut={() =>
+            setViewport((prev) => ({
+              ...prev,
+              zoom: Math.max(prev.zoom * 0.8, 0.15),
+            }))
+          }
+          onResetZoom={() => setViewport((prev) => ({ ...prev, zoom: 1.0 }))}
+          onFitView={handleFitView}
+          onAddNode={() => handleAddNode()}
+          onTidyLayout={handleTidyLayout}
+          snapGrid={snapGrid}
+          onToggleSnapGrid={() => setSnapGrid((v) => !v)}
+        />
+
+        <CanvasAIAssistant
+          isOpen={isAIAssistantOpen}
+          onToggle={() => setIsAIAssistantOpen((prev) => !prev)}
+          onClose={() => setIsAIAssistantOpen(false)}
+          requestsRemaining={aiRequestsRemaining}
+          onSubmitPrompt={handleGenerateAIWorkflow}
+        />
+      </div>
 
       {/* Realtime Claim Handoff Modal Prompt */}
       <CanvasClaimModal

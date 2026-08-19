@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasClaimRequest, HandlePosition, NodeStatus } from "./types";
+import { autoLayoutNodes } from "./auto-layout";
+import { GeneratedWorkflow } from "@/lib/ai/gemini";
 
 export async function getProjectCanvasData(projectId: string): Promise<{
   nodes: CanvasNode[];
@@ -455,3 +457,182 @@ export async function releaseCanvasNodeDirect(
 
   return { success: !error };
 }
+
+export async function createBatchCanvasWorkflow(
+  projectId: string,
+  workflow: GeneratedWorkflow
+): Promise<{ nodes: CanvasNode[]; edges: CanvasEdge[] }> {
+  const adminClient = createAdminClient();
+
+  // 1. Fetch current nodes to find max X offset if existing nodes are present
+  const { data: existingNodes } = await adminClient
+    .from("canvas_nodes")
+    .select("position_x, position_y, width")
+    .eq("project_id", projectId);
+
+  let offsetX = 100;
+  const offsetY = 100;
+  if (existingNodes && existingNodes.length > 0) {
+    const maxX = Math.max(...existingNodes.map((n) => (n.position_x || 0) + (n.width || 280)));
+    offsetX = maxX + 180;
+  }
+
+  // 2. Prepare node insert data
+  const tempIdToUuid: Record<string, string> = {};
+  const initialNodesToInsert = workflow.milestones.map((m, idx) => {
+    return {
+      project_id: projectId,
+      title: m.title || "Milestone",
+      description: m.description || "",
+      position_x: offsetX + idx * 380,
+      position_y: offsetY,
+      width: 280,
+      height: 170,
+      color: m.color || "default",
+      claimed_by: null,
+      sort_order: idx,
+    };
+  });
+
+  const { data: insertedNodes, error: nodesErr } = await adminClient
+    .from("canvas_nodes")
+    .insert(initialNodesToInsert)
+    .select();
+
+  if (nodesErr || !insertedNodes) {
+    console.error("Error creating AI batch canvas nodes:", nodesErr);
+    throw new Error("Failed to insert AI workflow nodes");
+  }
+
+  // Map tempId to real inserted node ID
+  workflow.milestones.forEach((m, idx) => {
+    if (insertedNodes[idx]) {
+      tempIdToUuid[m.tempId] = insertedNodes[idx].id;
+    }
+  });
+
+  // 3. Prepare checkpoints
+  const checkpointInserts: Array<{
+    node_id: string;
+    project_id: string;
+    title: string;
+    is_completed: boolean;
+    sort_order: number;
+  }> = [];
+
+  workflow.milestones.forEach((m) => {
+    const nodeId = tempIdToUuid[m.tempId];
+    if (nodeId && Array.isArray(m.checkpoints)) {
+      m.checkpoints.forEach((cpTitle, cpIdx) => {
+        checkpointInserts.push({
+          node_id: nodeId,
+          project_id: projectId,
+          title: cpTitle,
+          is_completed: false,
+          sort_order: cpIdx,
+        });
+      });
+    }
+  });
+
+  let createdCheckpoints: CanvasCheckpoint[] = [];
+  if (checkpointInserts.length > 0) {
+    const { data: cps, error: cpErr } = await adminClient
+      .from("canvas_checkpoints")
+      .insert(checkpointInserts)
+      .select();
+    if (!cpErr && cps) {
+      createdCheckpoints = cps as CanvasCheckpoint[];
+    }
+  }
+
+  // 4. Prepare edges
+  const edgeInserts: Array<{
+    project_id: string;
+    source_node_id: string;
+    target_node_id: string;
+    source_handle: string;
+    target_handle: string;
+  }> = [];
+
+  for (const edge of workflow.edges || []) {
+    const sourceId = tempIdToUuid[edge.fromTempId];
+    const targetId = tempIdToUuid[edge.toTempId];
+    if (sourceId && targetId && sourceId !== targetId) {
+      edgeInserts.push({
+        project_id: projectId,
+        source_node_id: sourceId,
+        target_node_id: targetId,
+        source_handle: "right",
+        target_handle: "left",
+      });
+    }
+  }
+
+  let createdEdges: CanvasEdge[] = [];
+  if (edgeInserts.length > 0) {
+    const { data: edges, error: edgeErr } = await adminClient
+      .from("canvas_edges")
+      .insert(edgeInserts)
+      .select();
+    if (!edgeErr && edges) {
+      createdEdges = edges.map((e) => ({
+        id: e.id,
+        project_id: e.project_id,
+        source_node_id: e.source_node_id,
+        target_node_id: e.target_node_id,
+        source_handle: (e.source_handle || "right") as HandlePosition,
+        target_handle: (e.target_handle || "left") as HandlePosition,
+        created_at: e.created_at,
+      }));
+    }
+  }
+
+  // 5. Assemble nodes and calculate DAG auto-layout
+  const cpMap: Record<string, CanvasCheckpoint[]> = {};
+  createdCheckpoints.forEach((cp) => {
+    if (!cpMap[cp.node_id]) cpMap[cp.node_id] = [];
+    cpMap[cp.node_id].push(cp);
+  });
+
+  const rawNodeObjects: CanvasNode[] = insertedNodes.map((n) => ({
+    id: n.id,
+    project_id: n.project_id,
+    title: n.title,
+    description: n.description || "",
+    status: n.status || "draft",
+    position_x: n.position_x,
+    position_y: n.position_y,
+    width: n.width,
+    height: n.height,
+    color: n.color,
+    sort_order: n.sort_order,
+    claimed_by: n.claimed_by || null,
+    claim_holder: null,
+    version: n.version ?? 1,
+    checkpoints: cpMap[n.id] || [],
+    created_at: n.created_at,
+    updated_at: n.updated_at,
+  }));
+
+  // Run DAG layout
+  const layoutedNodes = autoLayoutNodes(rawNodeObjects, createdEdges, {
+    startX: offsetX,
+    startY: offsetY,
+  });
+
+  // Update node coordinates in database
+  for (const node of layoutedNodes) {
+    await adminClient
+      .from("canvas_nodes")
+      .update({
+        position_x: node.position_x,
+        position_y: node.position_y,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", node.id);
+  }
+
+  return { nodes: layoutedNodes, edges: createdEdges };
+}
+

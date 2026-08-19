@@ -15,6 +15,7 @@ import {
 import { CanvasTool, CanvasViewport } from "@/lib/canvas/types";
 
 interface CanvasDockProps {
+  className?: string;
   activeTool: CanvasTool;
   onSelectTool: (tool: CanvasTool) => void;
   viewport: CanvasViewport;
@@ -33,6 +34,7 @@ interface CanvasDockProps {
 }
 
 export default function CanvasDock({
+  className,
   activeTool,
   onSelectTool,
   viewport,
@@ -54,7 +56,10 @@ export default function CanvasDock({
   return (
     <nav
       aria-label="Canvas control dock"
-      className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-xl backdrop-blur-xl transition-all"
+      className={
+        className ||
+        "flex items-center gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-xl backdrop-blur-xl transition-all"
+      }
     >
       {/* Primary Interaction Tools */}
       <div className="flex items-center gap-1 border-r border-neutral-200/80 pr-1.5">

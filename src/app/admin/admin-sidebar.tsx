@@ -12,6 +12,7 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  Sparkles,
   UsersRound,
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
@@ -25,7 +26,9 @@ interface AdminSidebarProps {
 const navigation = [
   { href: "/admin", label: "Overview", icon: LayoutGrid },
   { href: "/admin/waitlist", label: "Waitlist", icon: UsersRound },
+  { href: "/admin/ai-limits", label: "AI Limits", icon: Sparkles },
 ];
+
 
 function SignOutButton({ collapsed }: { collapsed: boolean }) {
   const { pending } = useFormStatus();
