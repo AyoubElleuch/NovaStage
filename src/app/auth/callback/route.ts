@@ -73,7 +73,7 @@ export async function GET(request: Request) {
       // Mode === "login": Check if user is approved or an admin before granting access
       const { data: profile } = await adminClient
         .from("profiles")
-        .select("role")
+        .select("role, full_name, username")
         .eq("id", user.id)
         .single();
 
@@ -102,8 +102,17 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/login?error=not_approved`);
       }
 
-      const destination =
-        next !== "/dashboard" ? next : isAdmin ? "/admin" : "/dashboard";
+      const fullName = typeof profile?.full_name === "string" ? profile.full_name.trim() : "";
+      const username = typeof profile?.username === "string" ? profile.username.trim() : "";
+      const isProfileComplete = Boolean(fullName && username);
+
+      const destination = !isProfileComplete
+        ? "/onboarding"
+        : next !== "/dashboard"
+          ? next
+          : isAdmin
+            ? "/admin"
+            : "/dashboard";
 
       return NextResponse.redirect(`${origin}${destination}`);
     }

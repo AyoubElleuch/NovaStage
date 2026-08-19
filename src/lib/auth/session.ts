@@ -156,8 +156,65 @@ export async function requirePermission(
     redirect(loginUrl);
   }
 
+  if (!isProfileComplete(session.profile)) {
+    redirect("/onboarding");
+  }
+
   if (!hasPermission(session.permissions, required)) {
     redirect("/dashboard");
+  }
+
+  return session;
+}
+
+/**
+ * Checks if a profile has both full_name and username configured.
+ * New users or users who have not completed onboarding return false.
+ */
+export function isProfileComplete(
+  profile?: Pick<UserProfile, "full_name" | "username"> | null
+): boolean {
+  if (!profile) return false;
+  const fullName = typeof profile.full_name === "string" ? profile.full_name.trim() : "";
+  const username = typeof profile.username === "string" ? profile.username.trim() : "";
+  return Boolean(fullName && username);
+}
+
+/**
+ * Server utility to enforce authentication and complete profile setup.
+ * If user is not authenticated, redirects to /login.
+ * If user profile is incomplete, redirects to /onboarding.
+ */
+export async function requireCompleteProfile(redirectTo = "/onboarding"): Promise<AuthSessionContext> {
+  const session = await getAuthenticatedProfile();
+
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
+  if (!isProfileComplete(session.profile)) {
+    redirect(redirectTo);
+  }
+
+  return session;
+}
+
+/**
+ * Server utility for the onboarding page.
+ * If user is not authenticated, redirects to /login.
+ * If user profile is already complete, redirects to /dashboard (or /admin).
+ */
+export async function requireIncompleteProfile(): Promise<AuthSessionContext> {
+  const session = await getAuthenticatedProfile();
+
+  if (!session || !session.user) {
+    redirect("/login");
+  }
+
+  if (isProfileComplete(session.profile)) {
+    const isAdmin =
+      isAdminRole(session.roles) || isAdminRole(session.profile?.role);
+    redirect(isAdmin ? "/admin" : "/dashboard");
   }
 
   return session;
@@ -174,6 +231,10 @@ export async function requireAdmin(redirectTo = "/admin"): Promise<AuthSessionCo
     redirect(loginUrl);
   }
 
+  if (!isProfileComplete(session.profile)) {
+    redirect("/onboarding");
+  }
+
   const isAuthorized =
     hasPermission(session.permissions, "admin:access") ||
     isAdminRole(session.roles) ||
@@ -185,3 +246,4 @@ export async function requireAdmin(redirectTo = "/admin"): Promise<AuthSessionCo
 
   return session;
 }
+

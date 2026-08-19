@@ -124,32 +124,40 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
   resetRateLimit(emailRateLimitKey);
 
   let destination = "/dashboard";
-  if (
-    typeof requestedRedirect === "string" &&
-    requestedRedirect.startsWith("/") &&
-    !requestedRedirect.startsWith("//") &&
-    requestedRedirect !== "/dashboard"
-  ) {
-    destination = requestedRedirect;
-  } else if (authData.user) {
+  if (authData.user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, full_name, username")
       .eq("id", authData.user.id)
       .single();
 
-    const { data: userRoles } = await supabase
-      .from("user_roles")
-      .select("role_id")
-      .eq("user_id", authData.user.id);
+    const fullName = typeof profile?.full_name === "string" ? profile.full_name.trim() : "";
+    const username = typeof profile?.username === "string" ? profile.username.trim() : "";
+    const isProfileComplete = Boolean(fullName && username);
 
-    const isUserAdmin =
-      profile?.role === "admin" ||
-      profile?.role === "super_admin" ||
-      userRoles?.some((r) => r.role_id === "admin" || r.role_id === "super_admin");
+    if (!isProfileComplete) {
+      destination = "/onboarding";
+    } else if (
+      typeof requestedRedirect === "string" &&
+      requestedRedirect.startsWith("/") &&
+      !requestedRedirect.startsWith("//") &&
+      requestedRedirect !== "/dashboard"
+    ) {
+      destination = requestedRedirect;
+    } else {
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("role_id")
+        .eq("user_id", authData.user.id);
 
-    if (isUserAdmin) {
-      destination = "/admin";
+      const isUserAdmin =
+        profile?.role === "admin" ||
+        profile?.role === "super_admin" ||
+        userRoles?.some((r) => r.role_id === "admin" || r.role_id === "super_admin");
+
+      if (isUserAdmin) {
+        destination = "/admin";
+      }
     }
   }
 

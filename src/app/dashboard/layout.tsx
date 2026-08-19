@@ -1,4 +1,5 @@
-import { requireAuth, getAuthenticatedProfile } from "@/lib/auth/session";
+import { requireAuth, getAuthenticatedProfile, isProfileComplete } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 import { getUserProjects } from "@/lib/projects";
 import DashboardSidebar from "./dashboard-sidebar";
 import DashboardDataProvider from "./dashboard-data-provider";
@@ -11,6 +12,11 @@ export default async function DashboardLayout({
 }) {
   const user = await requireAuth("/login");
   const session = await getAuthenticatedProfile();
+
+  if (!isProfileComplete(session?.profile)) {
+    redirect("/onboarding");
+  }
+
   const userEmail = user.email;
   const userRole = session?.profile?.role || session?.roles?.[0] || "developer";
   const userProjects = await getUserProjects(user.id);
