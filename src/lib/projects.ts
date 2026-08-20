@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeRedisGet, safeRedisSet, safeRedisDel } from "@/lib/redis/client";
 import type {
   DashboardProject,
   ProjectMemberInfo,
@@ -486,6 +487,8 @@ export async function leaveProject(params: {
     return { success: false, error: "Failed to leave the project. Please try again." };
   }
 
+  await invalidateProjectMembershipCache(projectId, userId);
+
   return { success: true };
 }
 
@@ -529,6 +532,8 @@ export async function deleteProject(params: {
     console.error("Error deleting project:", deleteError);
     return { success: false, error: "Failed to delete the project. Please try again." };
   }
+
+  await invalidateProjectMembershipCache(projectId, userId);
 
   return { success: true };
 }
@@ -658,6 +663,8 @@ export async function kickProjectMember(params: {
       },
       { onConflict: "project_id,user_id" }
     );
+
+  await invalidateProjectMembershipCache(projectId, targetUserId);
 
   return { success: true };
 }
@@ -800,6 +807,8 @@ export async function resolveProjectJoinRequest(params: {
       .eq("id", projectId)
       .maybeSingle();
 
+    await invalidateProjectMembershipCache(projectId, req.user_id);
+
     return {
       success: true,
       status: "approved",
@@ -902,6 +911,8 @@ export async function unbanProjectMember(params: {
     return { success: false, error: "Failed to unblock collaborator." };
   }
 
+  await invalidateProjectMembershipCache(projectId, targetUserId);
+
   return { success: true };
 }
 
@@ -920,9 +931,27 @@ export async function getProjectBySlug(slug: string) {
 }
 
 /**
- * Checks if a user is a member or creator of a project.
+ * Invalidates cached membership status in Redis for a project and user.
+ */
+export async function invalidateProjectMembershipCache(projectId: string, userId?: string): Promise<void> {
+  if (userId) {
+    await safeRedisDel([
+      `cache:pm:${projectId}:${userId}`,
+      `cache:po:${projectId}:${userId}`,
+    ]);
+  }
+}
+
+/**
+ * Checks if a user is a member or creator of a project (cached in Redis with 120s TTL).
  */
 export async function isProjectMember(projectId: string, userId: string): Promise<boolean> {
+  const cacheKey = `cache:pm:${projectId}:${userId}`;
+  const cached = await safeRedisGet<boolean>(cacheKey);
+  if (typeof cached === "boolean") {
+    return cached;
+  }
+
   const adminClient = createAdminClient();
 
   // If user is banned/kicked from this project, immediately return false
@@ -933,7 +962,10 @@ export async function isProjectMember(projectId: string, userId: string): Promis
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (banned) return false;
+  if (banned) {
+    await safeRedisSet(cacheKey, false, { ex: 120 });
+    return false;
+  }
 
   const { data: member } = await adminClient
     .from("project_members")
@@ -942,7 +974,10 @@ export async function isProjectMember(projectId: string, userId: string): Promis
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (member) return true;
+  if (member) {
+    await safeRedisSet(cacheKey, true, { ex: 120 });
+    return true;
+  }
 
   const { data: project } = await adminClient
     .from("projects")
@@ -950,13 +985,21 @@ export async function isProjectMember(projectId: string, userId: string): Promis
     .eq("id", projectId)
     .maybeSingle();
 
-  return project?.created_by === userId;
+  const isMember = project?.created_by === userId;
+  await safeRedisSet(cacheKey, isMember, { ex: 120 });
+  return isMember;
 }
 
 /**
- * Checks if a user is the owner of a project.
+ * Checks if a user is the owner of a project (cached in Redis with 120s TTL).
  */
 export async function isProjectOwner(projectId: string, userId: string): Promise<boolean> {
+  const cacheKey = `cache:po:${projectId}:${userId}`;
+  const cached = await safeRedisGet<boolean>(cacheKey);
+  if (typeof cached === "boolean") {
+    return cached;
+  }
+
   const adminClient = createAdminClient();
 
   // If user is banned/kicked, cannot be owner
@@ -967,7 +1010,10 @@ export async function isProjectOwner(projectId: string, userId: string): Promise
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (banned) return false;
+  if (banned) {
+    await safeRedisSet(cacheKey, false, { ex: 120 });
+    return false;
+  }
 
   const { data: member } = await adminClient
     .from("project_members")
@@ -977,7 +1023,10 @@ export async function isProjectOwner(projectId: string, userId: string): Promise
     .eq("role", "owner")
     .maybeSingle();
 
-  if (member) return true;
+  if (member) {
+    await safeRedisSet(cacheKey, true, { ex: 120 });
+    return true;
+  }
 
   const { data: project } = await adminClient
     .from("projects")
@@ -985,6 +1034,8 @@ export async function isProjectOwner(projectId: string, userId: string): Promise
     .eq("id", projectId)
     .maybeSingle();
 
-  return project?.created_by === userId;
+  const isOwner = project?.created_by === userId;
+  await safeRedisSet(cacheKey, isOwner, { ex: 120 });
+  return isOwner;
 }
 

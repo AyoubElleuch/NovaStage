@@ -1,11 +1,12 @@
 import { headers } from "next/headers";
+import { getRedis } from "@/lib/redis/client";
 
 interface RateLimitRecord {
   timestamps: number[];
   lockedUntil?: number;
 }
 
-// In-memory store for rate limiting (keyed by action:ip or action:identifier)
+// In-memory store for rate limiting fallback (keyed by action:ip or action:identifier)
 const rateLimitStore = new Map<string, RateLimitRecord>();
 
 // Clean up stale entries every 10 minutes to prevent memory leak
@@ -41,7 +42,7 @@ export interface RateLimitResult {
 }
 
 /**
- * Checks and records an attempt for a specific key
+ * Synchronous in-memory rate limiting check (fast local fallback).
  */
 export function checkRateLimit(
   key: string,
@@ -95,10 +96,91 @@ export function checkRateLimit(
 }
 
 /**
+ * Distributed rate limiting check using Upstash Redis sliding window,
+ * with automatic, seamless fallback to in-memory store.
+ */
+export async function checkRateLimitAsync(
+  key: string,
+  options: RateLimitOptions = { maxAttempts: 5, windowSeconds: 60, lockoutSeconds: 30 }
+): Promise<RateLimitResult> {
+  const redis = getRedis();
+
+  if (!redis) {
+    return checkRateLimit(key, options);
+  }
+
+  const now = Date.now();
+  const windowMs = options.windowSeconds * 1000;
+  const lockoutSeconds = options.lockoutSeconds || options.windowSeconds;
+  const lockKey = `ratelimit:lock:${key}`;
+  const setKey = `ratelimit:set:${key}`;
+
+  try {
+    // 1. Check if lockout key exists
+    const isLocked = await redis.get(lockKey);
+    if (isLocked) {
+      const ttl = await redis.ttl(lockKey);
+      return {
+        allowed: false,
+        remaining: 0,
+        retryAfterSeconds: ttl > 0 ? ttl : lockoutSeconds,
+      };
+    }
+
+    // 2. Sliding window via Redis Sorted Set
+    const clearBefore = now - windowMs;
+    const memberId = `${now}-${Math.random().toString(36).substring(2, 8)}`;
+
+    const p = redis.pipeline();
+    p.zremrangebyscore(setKey, 0, clearBefore);
+    p.zcard(setKey);
+    p.zadd(setKey, { score: now, member: memberId });
+    p.expire(setKey, options.windowSeconds * 2);
+
+    const results = await p.exec<[number, number, number, number]>();
+    const currentCount = (results[1] as number) || 0;
+
+    if (currentCount >= options.maxAttempts) {
+      // Set lockout key
+      await redis.set(lockKey, "1", { ex: lockoutSeconds });
+      return {
+        allowed: false,
+        remaining: 0,
+        retryAfterSeconds: lockoutSeconds,
+      };
+    }
+
+    const remaining = Math.max(0, options.maxAttempts - currentCount - 1);
+    return {
+      allowed: true,
+      remaining,
+    };
+  } catch (err) {
+    console.warn(`[Redis RateLimit] Error checking key "${key}", falling back to in-memory:`, err);
+    return checkRateLimit(key, options);
+  }
+}
+
+/**
  * Resets rate limit for a key (e.g., upon successful login)
  */
 export function resetRateLimit(key: string): void {
   rateLimitStore.delete(key);
+}
+
+/**
+ * Resets rate limit for a key asynchronously in both Redis and in-memory.
+ */
+export async function resetRateLimitAsync(key: string): Promise<void> {
+  rateLimitStore.delete(key);
+  const redis = getRedis();
+  if (redis) {
+    try {
+      await redis.del(`ratelimit:lock:${key}`, `ratelimit:set:${key}`);
+    } catch (err) {
+      console.warn(`[Redis RateLimit] Failed to reset key "${key}":`, err);
+    }
+  }
 }
 
 /**

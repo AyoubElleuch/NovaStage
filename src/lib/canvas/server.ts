@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeRedisSet, safeRedisDel, safeRedisExpire } from "@/lib/redis/client";
 import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasClaimRequest, HandlePosition, NodeStatus } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
 import { GeneratedWorkflow } from "@/lib/ai/gemini";
@@ -415,8 +416,9 @@ export async function claimCanvasNodeDirect(
   const adminClient = createAdminClient();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
+  const lockKey = `canvas:lock:${projectId}:${nodeId}`;
 
-  // Try atomic update
+  // Try atomic update in PostgreSQL
   const { data: updated, error } = await adminClient
     .from("canvas_nodes")
     .update({
@@ -435,6 +437,9 @@ export async function claimCanvasNodeDirect(
     return { success: false, error: "Box is currently claimed by another collaborator" };
   }
 
+  // Set atomic Redis lock with 300-second TTL
+  await safeRedisSet(lockKey, userId, { ex: 300 });
+
   return { success: true, expiresAt };
 }
 
@@ -444,6 +449,8 @@ export async function releaseCanvasNodeDirect(
   userId: string
 ): Promise<{ success: boolean }> {
   const adminClient = createAdminClient();
+  const lockKey = `canvas:lock:${projectId}:${nodeId}`;
+
   const { error } = await adminClient
     .from("canvas_nodes")
     .update({
@@ -455,6 +462,9 @@ export async function releaseCanvasNodeDirect(
     .eq("id", nodeId)
     .eq("project_id", projectId)
     .eq("claimed_by", userId);
+
+  // Clear Redis lock
+  await safeRedisDel(lockKey);
 
   return { success: !error };
 }

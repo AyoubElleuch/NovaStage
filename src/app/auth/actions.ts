@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { checkRateLimit, resetRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync, resetRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { sendWaitlistJoinedEmail, sendPasswordResetEmail } from "@/lib/email/resend";
@@ -25,7 +25,7 @@ export async function joinWaitlist(formData: FormData): Promise<AuthActionResult
   const clientIp = await getClientIp();
   const ipRateLimitKey = `waitlist:ip:${clientIp}`;
   const emailRateLimitKey = `waitlist:email:${email}`;
-  const rateCheck = checkRateLimit(ipRateLimitKey, {
+  const rateCheck = await checkRateLimitAsync(ipRateLimitKey, {
     maxAttempts: 5,
     windowSeconds: 60,
     lockoutSeconds: 30,
@@ -38,7 +38,7 @@ export async function joinWaitlist(formData: FormData): Promise<AuthActionResult
     };
   }
 
-  const emailRateCheck = checkRateLimit(emailRateLimitKey, {
+  const emailRateCheck = await checkRateLimitAsync(emailRateLimitKey, {
     maxAttempts: 3,
     windowSeconds: 60,
     lockoutSeconds: 30,
@@ -62,8 +62,8 @@ export async function joinWaitlist(formData: FormData): Promise<AuthActionResult
     return { error: "We could not add you right now. Please try again." };
   }
 
-  resetRateLimit(ipRateLimitKey);
-  resetRateLimit(emailRateLimitKey);
+  await resetRateLimitAsync(ipRateLimitKey);
+  await resetRateLimitAsync(emailRateLimitKey);
 
   // Send waitlist confirmation email
   await sendWaitlistJoinedEmail({ email });
@@ -83,7 +83,7 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
   const clientIp = await getClientIp();
   const ipRateLimitKey = `login:ip:${clientIp}`;
   const emailRateLimitKey = `login:email:${email}`;
-  const rateCheck = checkRateLimit(ipRateLimitKey, {
+  const rateCheck = await checkRateLimitAsync(ipRateLimitKey, {
     maxAttempts: 5,
     windowSeconds: 60,
     lockoutSeconds: 30, // 30 seconds lockout after 5 consecutive failures
@@ -96,7 +96,7 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
     };
   }
 
-  const emailRateCheck = checkRateLimit(emailRateLimitKey, {
+  const emailRateCheck = await checkRateLimitAsync(emailRateLimitKey, {
     maxAttempts: 5,
     windowSeconds: 60,
     lockoutSeconds: 30,
@@ -121,8 +121,8 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
   }
 
   // Reset rate limit key on successful login
-  resetRateLimit(ipRateLimitKey);
-  resetRateLimit(emailRateLimitKey);
+  await resetRateLimitAsync(ipRateLimitKey);
+  await resetRateLimitAsync(emailRateLimitKey);
 
   let destination = "/dashboard";
   if (authData.user) {
@@ -201,7 +201,7 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
   // Check rate limit for sign up (3 signups per 10 minutes per IP)
   const clientIp = await getClientIp();
   const rateLimitKey = `signup:${clientIp}`;
-  const rateCheck = checkRateLimit(rateLimitKey, {
+  const rateCheck = await checkRateLimitAsync(rateLimitKey, {
     maxAttempts: 4,
     windowSeconds: 60,
     lockoutSeconds: 30,
@@ -255,7 +255,7 @@ export async function signInWithOAuth(
 ) {
   const clientIp = await getClientIp();
   const rateLimitKey = `oauth:${mode}:ip:${clientIp}`;
-  const rateCheck = checkRateLimit(rateLimitKey, {
+  const rateCheck = await checkRateLimitAsync(rateLimitKey, {
     maxAttempts: 5,
     windowSeconds: 60,
     lockoutSeconds: 30,
@@ -300,7 +300,7 @@ export async function requestPasswordReset(formData: FormData): Promise<AuthActi
   // 1. IP-based Abuse Prevention (5 attempts per 15 minutes)
   const clientIp = await getClientIp();
   const ipRateLimitKey = `password-reset:ip:${clientIp}`;
-  const ipCheck = checkRateLimit(ipRateLimitKey, {
+  const ipCheck = await checkRateLimitAsync(ipRateLimitKey, {
     maxAttempts: 5,
     windowSeconds: 15 * 60,
     lockoutSeconds: 15 * 60,
@@ -315,7 +315,7 @@ export async function requestPasswordReset(formData: FormData): Promise<AuthActi
 
   // 2. Email-based Abuse Prevention: Max 2 resets per 24 hours (86,400 seconds)
   const emailRateLimitKey = `password-reset:email:${email}`;
-  const emailCheck = checkRateLimit(emailRateLimitKey, {
+  const emailCheck = await checkRateLimitAsync(emailRateLimitKey, {
     maxAttempts: 2,
     windowSeconds: 24 * 60 * 60,
     lockoutSeconds: 24 * 60 * 60,

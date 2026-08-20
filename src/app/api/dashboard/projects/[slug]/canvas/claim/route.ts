@@ -3,6 +3,7 @@ import { getProjectBySlug, isProjectMember, isProjectOwner } from "@/lib/project
 import { getAuthenticatedProfile } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { claimCanvasNodeDirect, releaseCanvasNodeDirect } from "@/lib/canvas/server";
+import { safeRedisSet, safeRedisDel, safeRedisExpire } from "@/lib/redis/client";
 
 export async function POST(
   request: NextRequest,
@@ -53,6 +54,10 @@ export async function POST(
         .eq("id", node_id)
         .eq("project_id", project.id)
         .eq("claimed_by", session.user.id);
+
+      if (!error) {
+        await safeRedisExpire(`canvas:lock:${project.id}:${node_id}`, 300);
+      }
 
       return NextResponse.json({ success: !error, expiresAt });
     }
@@ -142,6 +147,9 @@ export async function POST(
           })
           .eq("id", request_id);
 
+        // Update Redis lock holder
+        await safeRedisSet(`canvas:lock:${project.id}:${claimReq.node_id}`, claimReq.requester_id, { ex: 300 });
+
         return NextResponse.json({ success: true, status: "granted", new_holder_id: claimReq.requester_id });
       } else {
         await adminClient
@@ -173,6 +181,9 @@ export async function POST(
         })
         .eq("id", node_id)
         .eq("project_id", project.id);
+
+      // Delete Redis lock
+      await safeRedisDel(`canvas:lock:${project.id}:${node_id}`);
 
       return NextResponse.json({ success: true, unlocked: true });
     }

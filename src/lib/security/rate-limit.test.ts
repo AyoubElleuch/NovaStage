@@ -1,11 +1,17 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { checkRateLimit, resetRateLimit } from "./rate-limit";
+import {
+  checkRateLimit,
+  resetRateLimit,
+  checkRateLimitAsync,
+  resetRateLimitAsync,
+} from "./rate-limit";
 
 describe("Rate Limiter & Abuse Prevention", () => {
   const testKey = "test:ip:192.168.1.100";
 
-  beforeEach(() => {
+  beforeEach(async () => {
     resetRateLimit(testKey);
+    await resetRateLimitAsync(testKey);
   });
 
   it("allows initial requests within the max limit", () => {
@@ -79,5 +85,25 @@ describe("Rate Limiter & Abuse Prevention", () => {
     const att3 = checkRateLimit(resetKey, { maxAttempts: 2, windowSeconds: 86400, lockoutSeconds: 86400 });
     expect(att3.allowed).toBe(false);
     expect(att3.retryAfterSeconds).toBeGreaterThan(0);
+  });
+
+  it("supports checkRateLimitAsync and fallback seamlessly", async () => {
+    const asyncKey = "test:async:key";
+    await resetRateLimitAsync(asyncKey);
+
+    const res1 = await checkRateLimitAsync(asyncKey, { maxAttempts: 2, windowSeconds: 60 });
+    expect(res1.allowed).toBe(true);
+    expect(res1.remaining).toBe(1);
+
+    const res2 = await checkRateLimitAsync(asyncKey, { maxAttempts: 2, windowSeconds: 60 });
+    expect(res2.allowed).toBe(true);
+    expect(res2.remaining).toBe(0);
+
+    const res3 = await checkRateLimitAsync(asyncKey, { maxAttempts: 2, windowSeconds: 60 });
+    expect(res3.allowed).toBe(false);
+
+    await resetRateLimitAsync(asyncKey);
+    const resAfterReset = await checkRateLimitAsync(asyncKey, { maxAttempts: 2, windowSeconds: 60 });
+    expect(resAfterReset.allowed).toBe(true);
   });
 });
