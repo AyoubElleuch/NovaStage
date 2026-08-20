@@ -10,6 +10,10 @@ import {
   calculateBezierPath,
   getUserColor,
   canConnectMilestones,
+  detectCycle,
+  findNearestHandle,
+  getCanvasBoundingBox,
+  exportToMermaid,
 } from "./coordinate-math";
 import type { CanvasCheckpoint, CanvasNode, CanvasViewport } from "./types";
 
@@ -238,4 +242,189 @@ describe("Canvas Coordinate Math & Utilities", () => {
       expect(canConnectMilestones(nodeA, nodeB, "user-1", true)).toBe(true);
     });
   });
+
+  describe("detectCycle", () => {
+    const edges = [
+      { id: "e1", project_id: "p1", source_node_id: "n1", target_node_id: "n2", source_handle: "right" as const, target_handle: "left" as const },
+      { id: "e2", project_id: "p1", source_node_id: "n2", target_node_id: "n3", source_handle: "right" as const, target_handle: "left" as const },
+    ];
+
+    it("detects self-loop as a cycle", () => {
+      expect(detectCycle(edges, { sourceNodeId: "n1", targetNodeId: "n1" })).toBe(true);
+    });
+
+    it("detects indirect circular dependencies (n3 -> n1)", () => {
+      expect(detectCycle(edges, { sourceNodeId: "n3", targetNodeId: "n1" })).toBe(true);
+    });
+
+    it("allows valid downstream non-cyclic edges (n3 -> n4)", () => {
+      expect(detectCycle(edges, { sourceNodeId: "n3", targetNodeId: "n4" })).toBe(false);
+    });
+
+    it("allows branch merging without cycles", () => {
+      const branchEdges = [
+        ...edges,
+        { id: "e3", project_id: "p1", source_node_id: "n1", target_node_id: "n4", source_handle: "right" as const, target_handle: "left" as const },
+      ];
+      expect(detectCycle(branchEdges, { sourceNodeId: "n4", targetNodeId: "n3" })).toBe(false);
+    });
+  });
+
+  describe("findNearestHandle", () => {
+    const mockNodes: CanvasNode[] = [
+      {
+        id: "n1",
+        project_id: "p1",
+        title: "Node 1",
+        description: "",
+        status: "draft",
+        position_x: 100,
+        position_y: 100,
+        width: 280,
+        height: 170,
+        color: "default",
+        sort_order: 0,
+        claimed_by: null,
+        version: 1,
+        created_at: "",
+        updated_at: "",
+        checkpoints: [],
+      },
+    ];
+
+    it("finds left handle when pointer is close to left side", () => {
+      // Node 1 left handle is at (100, 185)
+      const hit = findNearestHandle({ x: 105, y: 188 }, mockNodes, undefined, 30);
+      expect(hit).not.toBeNull();
+      expect(hit?.handle).toBe("left");
+      expect(hit?.node.id).toBe("n1");
+    });
+
+    it("excludes specified node id from snapping", () => {
+      const hit = findNearestHandle({ x: 105, y: 188 }, mockNodes, "n1", 30);
+      expect(hit).toBeNull();
+    });
+
+    it("returns null when pointer is outside threshold", () => {
+      const hit = findNearestHandle({ x: 500, y: 500 }, mockNodes, undefined, 30);
+      expect(hit).toBeNull();
+    });
+  });
+
+  describe("getCanvasBoundingBox", () => {
+    it("returns default box for empty nodes array", () => {
+      const box = getCanvasBoundingBox([]);
+      expect(box.width).toBeGreaterThan(0);
+      expect(box.height).toBeGreaterThan(0);
+    });
+
+    it("computes accurate bounding box with padding", () => {
+      const mockNodes: CanvasNode[] = [
+        {
+          id: "n1",
+          project_id: "p1",
+          title: "Node 1",
+          description: "",
+          status: "draft",
+          position_x: 100,
+          position_y: 100,
+          width: 200,
+          height: 100,
+          color: "default",
+          sort_order: 0,
+          claimed_by: null,
+          version: 1,
+          created_at: "",
+          updated_at: "",
+          checkpoints: [],
+        },
+        {
+          id: "n2",
+          project_id: "p1",
+          title: "Node 2",
+          description: "",
+          status: "draft",
+          position_x: 400,
+          position_y: 300,
+          width: 200,
+          height: 100,
+          color: "default",
+          sort_order: 1,
+          claimed_by: null,
+          version: 1,
+          created_at: "",
+          updated_at: "",
+          checkpoints: [],
+        },
+      ];
+
+      const box = getCanvasBoundingBox(mockNodes, 50);
+      // minX = 100 - 50 = 50
+      // maxX = 400 + 200 + 50 = 650
+      // minY = 100 - 50 = 50
+      // maxY = 300 + 100 + 50 = 450
+      expect(box.minX).toBe(50);
+      expect(box.maxX).toBe(650);
+      expect(box.minY).toBe(50);
+      expect(box.maxY).toBe(450);
+      expect(box.width).toBe(600);
+      expect(box.height).toBe(400);
+    });
+  });
+
+  describe("exportToMermaid", () => {
+    it("exports nodes and edges to valid Mermaid graph LR markdown", () => {
+      const mockNodes: CanvasNode[] = [
+        {
+          id: "node_1",
+          project_id: "p1",
+          title: "Auth Setup",
+          description: "",
+          status: "completed",
+          position_x: 0,
+          position_y: 0,
+          width: 280,
+          height: 170,
+          color: "default",
+          sort_order: 0,
+          claimed_by: null,
+          version: 1,
+          created_at: "",
+          updated_at: "",
+          checkpoints: [
+            { id: "c1", node_id: "node_1", project_id: "p1", title: "RLS", is_completed: true, sort_order: 0, completed_at: null, completed_by: null, created_at: "", updated_at: "" }
+          ],
+        },
+        {
+          id: "node_2",
+          project_id: "p1",
+          title: "Dashboard UI",
+          description: "",
+          status: "draft",
+          position_x: 300,
+          position_y: 0,
+          width: 280,
+          height: 170,
+          color: "default",
+          sort_order: 1,
+          claimed_by: null,
+          version: 1,
+          created_at: "",
+          updated_at: "",
+          checkpoints: [],
+        },
+      ];
+
+      const mockEdges = [
+        { id: "e1", project_id: "p1", source_node_id: "node_1", target_node_id: "node_2", source_handle: "right" as const, target_handle: "left" as const }
+      ];
+
+      const mermaid = exportToMermaid(mockNodes, mockEdges);
+      expect(mermaid).toContain("graph LR");
+      expect(mermaid).toContain('node_1["Auth Setup (100%)"]');
+      expect(mermaid).toContain('node_2["Dashboard UI (0%)"]');
+      expect(mermaid).toContain("node_1 --> node_2");
+    });
+  });
 });
+

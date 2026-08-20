@@ -333,7 +333,7 @@ function MilestoneDrawerContent({
                   )}
                 </button>
 
-                {/* Checkpoint Text Content - Fully Readable & Selectable without Accidental Toggles */}
+                {/* Checkpoint Text Content */}
                 <div className="flex-1 min-w-0 pr-1">
                   <p
                     className={`text-xs leading-relaxed break-words select-text ${

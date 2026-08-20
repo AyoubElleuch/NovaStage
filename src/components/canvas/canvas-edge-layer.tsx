@@ -21,6 +21,8 @@ interface CanvasEdgeLayerProps {
   onDeleteEdge: (edgeId: string) => void;
   currentUserId?: string;
   isOwner?: boolean;
+  isCycleDetected?: boolean;
+  snappedHandle?: { node: CanvasNode; handle: HandlePosition } | null;
 }
 
 export default function CanvasEdgeLayer({
@@ -30,6 +32,8 @@ export default function CanvasEdgeLayer({
   onDeleteEdge,
   currentUserId,
   isOwner,
+  isCycleDetected = false,
+  snappedHandle = null,
 }: CanvasEdgeLayerProps) {
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const padding = 200;
@@ -188,23 +192,44 @@ export default function CanvasEdgeLayer({
               draftEdge.sourceHandle
             );
             const p2 = draftEdge.currentPos;
+            const targetHandle = snappedHandle?.handle || "left";
             const pathData = calculateBezierPath(
               p1.x,
               p1.y,
               p2.x,
               p2.y,
               draftEdge.sourceHandle,
-              "left"
+              targetHandle
             );
+
+            const strokeColor = isCycleDetected
+              ? "#ef4444"
+              : snappedHandle
+              ? "#10b981"
+              : "#3b82f6";
+
             return (
-              <path
-                d={pathData}
-                fill="none"
-                stroke="#3b82f6"
-                strokeWidth="2.5"
-                strokeDasharray="4 4"
-                className="animate-[dash-flow_1s_linear_infinite]"
-              />
+              <>
+                <path
+                  d={pathData}
+                  fill="none"
+                  stroke={strokeColor}
+                  strokeWidth="2.5"
+                  strokeDasharray="4 4"
+                  className="animate-[dash-flow_1s_linear_infinite]"
+                />
+                {snappedHandle && (
+                  <circle
+                    cx={p2.x}
+                    cy={p2.y}
+                    r="8"
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth="2"
+                    className="animate-ping opacity-75"
+                  />
+                )}
+              </>
             );
           })()}
         </g>

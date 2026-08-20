@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   CheckCircle2,
   Circle,
@@ -20,21 +20,24 @@ interface CanvasNodeComponentProps {
   node: CanvasNode;
   stepIndex: number;
   isSelected: boolean;
+  isMultiSelected?: boolean;
   isLinking: boolean;
   currentUserId: string;
-  onSelect: (node: CanvasNode) => void;
+  onSelect: (node: CanvasNode, isShiftKey?: boolean) => void;
   onDragStart: (node: CanvasNode, e: React.PointerEvent) => void;
   onDragEnd: () => void;
   onStartLink: (node: CanvasNode, handle: HandlePosition, e: React.PointerEvent) => void;
   onToggleCheckpoint: (checkpointId: string, nodeId: string, nextCompleted: boolean) => void;
   onRequestClaim: (node: CanvasNode) => void;
   onClaimNode?: (nodeId: string) => void;
+  onUpdateTitle?: (nodeId: string, newTitle: string) => void;
 }
 
 export default function CanvasNodeComponent({
   node,
   stepIndex,
   isSelected,
+  isMultiSelected = false,
   isLinking,
   currentUserId,
   onSelect,
@@ -44,9 +47,24 @@ export default function CanvasNodeComponent({
   onToggleCheckpoint,
   onRequestClaim,
   onClaimNode,
+  onUpdateTitle,
 }: CanvasNodeComponentProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(node.title);
   const cardRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditedTitle(node.title);
+  }, [node.title]);
+
+  useEffect(() => {
+    if (isEditingTitle) {
+      titleInputRef.current?.focus();
+      titleInputRef.current?.select();
+    }
+  }, [isEditingTitle]);
 
   const completionPct = calculateCompletionPercentage(node.checkpoints);
   const isComplete = isNodeFullyComplete(node);
@@ -63,13 +81,13 @@ export default function CanvasNodeComponent({
   const handles: HandlePosition[] = ["top", "right", "bottom", "left"];
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    // If clicking on an interactive element like checkpoint checkbox or handle, don't trigger drag
+    // If clicking on an interactive element like checkpoint checkbox or handle or editing title, don't trigger drag
     if ((e.target as HTMLElement).closest("[data-no-drag]")) {
       return;
     }
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
-    onSelect(node);
+    onSelect(node, e.shiftKey);
     onDragStart(node, e);
   };
 
@@ -94,6 +112,16 @@ export default function CanvasNodeComponent({
     }
   };
 
+  const handleCommitTitle = () => {
+    setIsEditingTitle(false);
+    const trimmed = editedTitle.trim();
+    if (trimmed && trimmed !== node.title && onUpdateTitle) {
+      onUpdateTitle(node.id, trimmed);
+    } else {
+      setEditedTitle(node.title);
+    }
+  };
+
   return (
     <div
       ref={cardRef}
@@ -107,7 +135,7 @@ export default function CanvasNodeComponent({
         width: `${node.width}px`,
       }}
       className={`group absolute top-0 left-0 cursor-move rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur-md transition-shadow duration-150 select-none ${
-        isSelected
+        isSelected || isMultiSelected
           ? "border-neutral-900 ring-2 ring-neutral-900/20 shadow-md"
           : isComplete
           ? "border-emerald-300/80 hover:border-emerald-400 hover:shadow-md"
@@ -207,13 +235,43 @@ export default function CanvasNodeComponent({
         </div>
       </div>
 
-      {/* Node Title */}
-      <h3
-        className="mt-2.5 text-[13px] font-semibold text-neutral-900 line-clamp-1 leading-snug"
-        title={node.title}
-      >
-        {node.title}
-      </h3>
+      {/* Node Title (Double-click to inline edit when claimed or free) */}
+      {isEditingTitle ? (
+        <div data-no-drag="true" className="mt-2">
+          <input
+            ref={titleInputRef}
+            type="text"
+            value={editedTitle}
+            onChange={(e) => setEditedTitle(e.target.value)}
+            onBlur={handleCommitTitle}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleCommitTitle();
+              } else if (e.key === "Escape") {
+                setIsEditingTitle(false);
+                setEditedTitle(node.title);
+              }
+            }}
+            className="w-full rounded border border-neutral-900 bg-white px-1.5 py-0.5 text-[13px] font-semibold text-neutral-900 outline-none shadow-2xs"
+          />
+        </div>
+      ) : (
+        <h3
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            if (isClaimedByMe || !node.claimed_by) {
+              if (!node.claimed_by && onClaimNode) {
+                onClaimNode(node.id);
+              }
+              setIsEditingTitle(true);
+            }
+          }}
+          className="mt-2.5 text-[13px] font-semibold text-neutral-900 line-clamp-1 leading-snug cursor-text"
+          title={`${node.title} (Double-click to rename)`}
+        >
+          {node.title}
+        </h3>
+      )}
 
       {/* Progress Section or Empty State */}
       {node.checkpoints.length > 0 ? (

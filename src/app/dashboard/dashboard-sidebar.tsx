@@ -89,6 +89,16 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
     return () => mediaQuery.removeEventListener("change", update);
   }, []);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      collapsed ? "68px" : "240px"
+    );
+    return () => {
+      document.documentElement.style.removeProperty("--sidebar-width");
+    };
+  }, [collapsed]);
+
   const navigate = (href: string) => {
     if (href !== pathname) {
       setPendingHref(href);

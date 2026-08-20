@@ -9,9 +9,13 @@ interface CanvasViewportProps {
   onViewportChange: (newViewport: CanvasViewport) => void;
   activeTool: CanvasTool;
   isDraggingNode: boolean;
+  selectionMarquee?: { startX: number; startY: number; currentX: number; currentY: number } | null;
   children: React.ReactNode;
   onCanvasClick?: (worldPos: { x: number; y: number }) => void;
   onPointerMove?: (worldPos: { x: number; y: number }, screenPos: { x: number; y: number }) => void;
+  onMarqueeStart?: (worldPos: { x: number; y: number }, screenPos: { x: number; y: number }) => void;
+  onMarqueeChange?: (worldPos: { x: number; y: number }, screenPos: { x: number; y: number }) => void;
+  onMarqueeEnd?: () => void;
 }
 
 export default function CanvasViewportContainer({
@@ -19,14 +23,19 @@ export default function CanvasViewportContainer({
   onViewportChange,
   activeTool,
   isDraggingNode,
+  selectionMarquee,
   children,
   onCanvasClick,
   onPointerMove,
+  onMarqueeStart,
+  onMarqueeChange,
+  onMarqueeEnd,
 }: CanvasViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [isSpacePressed, setIsSpacePressed] = useState(false);
+  const [isMarqueeDragging, setIsMarqueeDragging] = useState(false);
 
   // Keyboard Spacebar for Pan
   useEffect(() => {
@@ -89,18 +98,30 @@ export default function CanvasViewportContainer({
   );
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    // Only pan if clicking on the background canvas (not a node/button)
+    // Only pan or marquee if clicking on the background canvas (not a node/button)
     const isBackground =
       e.target === containerRef.current ||
       (e.target as HTMLElement).getAttribute("data-canvas-bg") === "true";
 
+    if (!isBackground) return;
+
     const shouldPan =
-      isBackground &&
-      (activeTool === "hand" || isSpacePressed || e.button === 1 || e.button === 0);
+      activeTool === "hand" || isSpacePressed || e.button === 1 || (e.button === 0 && e.altKey);
 
     if (shouldPan) {
       setIsPanning(true);
       setPanStart({ x: e.clientX - viewport.x, y: e.clientY - viewport.y });
+      containerRef.current?.setPointerCapture(e.pointerId);
+    } else if (e.button === 0 && (activeTool === "select" || e.shiftKey)) {
+      // Marquee selection start
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      const worldPos = screenToWorld(screenX, screenY, viewport);
+
+      setIsMarqueeDragging(true);
+      onMarqueeStart?.(worldPos, { x: e.clientX, y: e.clientY });
       containerRef.current?.setPointerCapture(e.pointerId);
     }
   };
@@ -120,12 +141,21 @@ export default function CanvasViewportContainer({
         x: e.clientX - panStart.x,
         y: e.clientY - panStart.y,
       });
+    } else if (isMarqueeDragging) {
+      onMarqueeChange?.(worldPos, { x: e.clientX, y: e.clientY });
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     if (isPanning) {
       setIsPanning(false);
+      try {
+        containerRef.current?.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+    if (isMarqueeDragging) {
+      setIsMarqueeDragging(false);
+      onMarqueeEnd?.();
       try {
         containerRef.current?.releasePointerCapture(e.pointerId);
       } catch {}
@@ -137,7 +167,7 @@ export default function CanvasViewportContainer({
       e.target === containerRef.current ||
       (e.target as HTMLElement).getAttribute("data-canvas-bg") === "true";
 
-    if (isBackground && !isPanning && containerRef.current) {
+    if (isBackground && !isPanning && !isMarqueeDragging && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const screenX = e.clientX - rect.left;
       const screenY = e.clientY - rect.top;
@@ -162,6 +192,21 @@ export default function CanvasViewportContainer({
   const gridOffsetX = viewport.x % gridSize;
   const gridOffsetY = viewport.y % gridSize;
 
+  // Compute selection marquee world box if present
+  let marqueeStyle: React.CSSProperties | null = null;
+  if (selectionMarquee) {
+    const minX = Math.min(selectionMarquee.startX, selectionMarquee.currentX);
+    const minY = Math.min(selectionMarquee.startY, selectionMarquee.currentY);
+    const w = Math.abs(selectionMarquee.currentX - selectionMarquee.startX);
+    const h = Math.abs(selectionMarquee.currentY - selectionMarquee.startY);
+    marqueeStyle = {
+      left: `${minX}px`,
+      top: `${minY}px`,
+      width: `${w}px`,
+      height: `${h}px`,
+    };
+  }
+
   return (
     <div
       ref={containerRef}
@@ -171,7 +216,7 @@ export default function CanvasViewportContainer({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onClick={handleClick}
-      className={`relative h-full w-full select-none overflow-hidden bg-[#faf8f5] ${cursorClass}`}
+      className={`relative h-full w-full select-none overflow-hidden bg-[#faf8f5] touch-none ${cursorClass}`}
       style={{
         backgroundImage: `
           radial-gradient(circle, rgba(160, 150, 140, ${Math.min(0.25, Math.max(0.08, viewport.zoom * 0.18))}) 1px, transparent 1px)
@@ -191,6 +236,14 @@ export default function CanvasViewportContainer({
       >
         <div className="relative h-0 w-0 pointer-events-auto">
           {children}
+
+          {/* Marquee Selection Rectangle Box */}
+          {marqueeStyle && (
+            <div
+              style={marqueeStyle}
+              className="absolute rounded-sm border border-blue-500 bg-blue-500/10 pointer-events-none shadow-xs z-30"
+            />
+          )}
         </div>
       </div>
     </div>

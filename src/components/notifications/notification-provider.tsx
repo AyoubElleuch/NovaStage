@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AlertCircle, Check, CheckCircle2, Copy, X } from "lucide-react";
 
 const MAX_VISIBLE_NOTIFICATIONS = 2;
@@ -8,6 +9,7 @@ const NOTIFICATION_DURATION = 3000;
 const EXIT_DURATION = 220;
 
 type NotificationTone = "success" | "error";
+export type NotificationPosition = "bottom-left" | "bottom-right";
 
 export interface NotificationOptions {
   tone?: NotificationTone;
@@ -15,6 +17,7 @@ export interface NotificationOptions {
   message?: string;
   detail?: string;
   copyText?: string;
+  position?: NotificationPosition;
 }
 
 interface NotificationItem extends NotificationOptions {
@@ -126,6 +129,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const dismissedIds = useRef(new Set<string>());
   const hoveredIds = useRef(new Set<string>());
 
+  let pathname: string | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    pathname = usePathname();
+  } catch {
+    pathname = null;
+  }
+
+  // Detect whether current page is the canvas view (/dashboard/projects/[slug])
+  const isCanvasRoute = Boolean(
+    pathname &&
+    pathname.startsWith("/dashboard/projects/") &&
+    !pathname.endsWith("/settings") &&
+    !pathname.endsWith("/deployments")
+  );
+
   const dismiss = useCallback((id: string) => {
     if (dismissedIds.current.has(id)) return;
     dismissedIds.current.add(id);
@@ -194,10 +213,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     exitTimers.current.forEach((timer) => window.clearTimeout(timer));
   }, []);
 
+  const isLeft = isCanvasRoute || notifications.some((n) => n.position === "bottom-left");
+
   return (
     <NotificationContext.Provider value={{ notify, dismiss }}>
       {children}
-      <div className="site-notifications" aria-label="Notifications" aria-live="polite">
+      <div
+        className={`site-notifications ${isLeft ? "site-notifications--left" : ""}`}
+        aria-label="Notifications"
+        aria-live="polite"
+      >
         {notifications.map((notification) => (
           <NotificationToast
             key={notification.id}

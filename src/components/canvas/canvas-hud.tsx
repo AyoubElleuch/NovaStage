@@ -6,9 +6,14 @@ import {
   ArrowLeft,
   Check,
   Crown,
+  Download,
+  Eye,
+  FileCode2,
+  FileJson,
   Share2,
   Wifi,
   WifiOff,
+  X,
 } from "lucide-react";
 import { CollaboratorPresence, CanvasNetworkStatus } from "@/lib/canvas/types";
 
@@ -22,7 +27,11 @@ interface CanvasHudProps {
   currentUserId: string;
   networkStatus?: CanvasNetworkStatus;
   latencyMs?: number | null;
+  followingUserId?: string | null;
   onCopyInvite: () => void;
+  onToggleFollowUser?: (userId: string) => void;
+  onExportMermaid?: () => void;
+  onExportJSON?: () => void;
 }
 
 export default function CanvasHud({
@@ -35,9 +44,14 @@ export default function CanvasHud({
   currentUserId,
   networkStatus = "online",
   latencyMs = null,
+  followingUserId = null,
   onCopyInvite,
+  onToggleFollowUser,
+  onExportMermaid,
+  onExportJSON,
 }: CanvasHudProps) {
   const [copied, setCopied] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const handleCopy = () => {
     onCopyInvite();
@@ -48,8 +62,10 @@ export default function CanvasHud({
   const overallProgress =
     totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0;
 
+  const followedUser = collaborators.find((c) => c.userId === followingUserId);
+
   return (
-    <header className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 sm:p-5">
+    <header className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 sm:p-5 select-none">
       {/* Top Left: Project Identity & Breadcrumb */}
       <div className="pointer-events-auto flex items-center gap-3">
         <Link
@@ -86,10 +102,71 @@ export default function CanvasHud({
             </div>
           </div>
         </div>
+
+        {/* Follow Mode Pill */}
+        {followedUser && (
+          <div className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/90 px-3 py-1.5 text-xs font-semibold text-blue-800 shadow-sm backdrop-blur-md animate-pulse">
+            <Eye className="h-3.5 w-3.5 text-blue-600" />
+            <span>Following {followedUser.fullName || "Collaborator"}</span>
+            {onToggleFollowUser && (
+              <button
+                type="button"
+                onClick={() => onToggleFollowUser(followedUser.userId)}
+                title="Stop following"
+                className="ml-1 rounded-full p-0.5 hover:bg-blue-100 text-blue-700 cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Top Right: Network Status, Live Collaborators Stack & Invite Code */}
+      {/* Top Right: Export, Network Status, Live Collaborators Stack & Invite Code */}
       <div className="pointer-events-auto flex items-center gap-2">
+        {/* Export Dropdown */}
+        {(onExportMermaid || onExportJSON) && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsExportOpen((prev) => !prev)}
+              title="Export Roadmap"
+              className="flex h-9 items-center gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-3 text-xs font-semibold text-neutral-700 shadow-sm backdrop-blur-md hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer"
+            >
+              <Download className="h-3.5 w-3.5 text-neutral-500" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+
+            {isExportOpen && (
+              <div
+                className="absolute right-0 mt-2 w-48 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl backdrop-blur-xl z-30 space-y-1"
+                onClick={() => setIsExportOpen(false)}
+              >
+                {onExportMermaid && (
+                  <button
+                    type="button"
+                    onClick={onExportMermaid}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer text-left"
+                  >
+                    <FileCode2 className="h-3.5 w-3.5 text-neutral-500" />
+                    <span>Copy Mermaid.js</span>
+                  </button>
+                )}
+                {onExportJSON && (
+                  <button
+                    type="button"
+                    onClick={onExportJSON}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer text-left"
+                  >
+                    <FileJson className="h-3.5 w-3.5 text-neutral-500" />
+                    <span>Download JSON</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Network Quality / Connection Pill */}
         <div
           title={
@@ -141,20 +218,41 @@ export default function CanvasHud({
           )}
         </div>
 
-        {/* Collaborators Avatar Stack */}
+        {/* Collaborators Avatar Stack with Follow Mode Click */}
         {collaborators.length > 0 && (
           <div className="flex items-center -space-x-1.5 rounded-xl border border-neutral-200/80 bg-white/90 p-1 shadow-sm backdrop-blur-md">
-            {collaborators.slice(0, 5).map((c) => (
-              <span
-                key={c.userId}
-                title={`${c.fullName || c.email} ${c.userId === currentUserId ? "(You)" : ""}`}
-                className="relative grid h-7 w-7 place-items-center rounded-full text-[10px] font-bold text-white ring-2 ring-white shadow-2xs"
-                style={{ backgroundColor: c.color }}
-              >
-                {(c.fullName?.[0] || c.email?.[0] || "U").toUpperCase()}
-                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-1 ring-white" />
-              </span>
-            ))}
+            {collaborators.slice(0, 5).map((c) => {
+              const isMe = c.userId === currentUserId;
+              const isFollowingThis = followingUserId === c.userId;
+
+              return (
+                <button
+                  key={c.userId}
+                  type="button"
+                  onClick={() => {
+                    if (!isMe && onToggleFollowUser) {
+                      onToggleFollowUser(c.userId);
+                    }
+                  }}
+                  title={
+                    isMe
+                      ? `${c.fullName || c.email} (You)`
+                      : isFollowingThis
+                      ? `Following ${c.fullName || c.email}. Click to stop.`
+                      : `Click to follow ${c.fullName || c.email}`
+                  }
+                  className={`relative grid h-7 w-7 place-items-center rounded-full text-[10px] font-bold text-white ring-2 shadow-2xs transition-transform cursor-pointer ${
+                    isFollowingThis
+                      ? "ring-blue-500 scale-115 z-10"
+                      : "ring-white hover:scale-110"
+                  }`}
+                  style={{ backgroundColor: c.color }}
+                >
+                  {(c.fullName?.[0] || c.email?.[0] || "U").toUpperCase()}
+                  <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-1 ring-white" />
+                </button>
+              );
+            })}
             {collaborators.length > 5 && (
               <span className="grid h-7 w-7 place-items-center rounded-full bg-neutral-100 text-[10px] font-semibold text-neutral-600 ring-2 ring-white">
                 +{collaborators.length - 5}

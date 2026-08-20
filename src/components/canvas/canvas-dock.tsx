@@ -4,6 +4,7 @@ import React from "react";
 import {
   Grid,
   Hand,
+  MapPin,
   Maximize2,
   Minus,
   MousePointer,
@@ -31,6 +32,8 @@ interface CanvasDockProps {
   canRedo?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
+  isMinimapOpen?: boolean;
+  onToggleMinimap?: () => void;
 }
 
 export default function CanvasDock({
@@ -50,6 +53,8 @@ export default function CanvasDock({
   canRedo,
   onUndo,
   onRedo,
+  isMinimapOpen,
+  onToggleMinimap,
 }: CanvasDockProps) {
   const zoomPct = Math.round(viewport.zoom * 100);
 
@@ -58,7 +63,7 @@ export default function CanvasDock({
       aria-label="Canvas control dock"
       className={
         className ||
-        "flex items-center gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-xl backdrop-blur-xl transition-all"
+        "flex items-center gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-xl backdrop-blur-xl transition-all select-none"
       }
     >
       {/* Primary Interaction Tools */}
@@ -66,7 +71,7 @@ export default function CanvasDock({
         <button
           type="button"
           onClick={() => onSelectTool("select")}
-          title="Select tool (V)"
+          title="Select & Marquee tool (V)"
           className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
             activeTool === "select"
               ? "bg-neutral-900 text-white shadow-xs"
@@ -101,7 +106,7 @@ export default function CanvasDock({
         <span>Add Node</span>
       </button>
 
-      {/* Graph Helpers: Auto-Layout & Snap Grid */}
+      {/* Graph Helpers: Auto-Layout & Snap Grid & Radar Toggle */}
       <div className="flex items-center gap-1 border-l border-neutral-200/80 pl-1.5">
         <button
           type="button"
@@ -125,6 +130,21 @@ export default function CanvasDock({
         >
           <Grid className="h-4 w-4" />
         </button>
+
+        {onToggleMinimap && (
+          <button
+            type="button"
+            onClick={onToggleMinimap}
+            title={isMinimapOpen ? "Radar Minimap: Visible" : "Radar Minimap: Hidden"}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
+              isMinimapOpen
+                ? "bg-neutral-100 text-neutral-900 font-semibold"
+                : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+            }`}
+          >
+            <MapPin className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Zoom Controls */}

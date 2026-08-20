@@ -1,4 +1,4 @@
-import { CanvasCheckpoint, CanvasNode, CanvasViewport, HandlePosition } from "./types";
+import { CanvasCheckpoint, CanvasEdge, CanvasNode, CanvasViewport, HandlePosition } from "./types";
 
 const COLLABORATOR_COLORS = [
   "#10b981", // Emerald
@@ -201,4 +201,169 @@ export function canConnectMilestones(
   };
   return isClaimActive(nodeA) || isClaimActive(nodeB);
 }
+
+/**
+ * Checks if adding a proposed directed edge (source -> target) creates a cycle in the DAG.
+ */
+export function detectCycle(
+  edges: CanvasEdge[],
+  proposedEdge: { sourceNodeId: string; targetNodeId: string }
+): boolean {
+  if (proposedEdge.sourceNodeId === proposedEdge.targetNodeId) {
+    return true; // Self-loop is an immediate cycle
+  }
+
+  // Build adjacency list including existing edges
+  const adj = new Map<string, string[]>();
+  for (const edge of edges) {
+    const list = adj.get(edge.source_node_id) || [];
+    list.push(edge.target_node_id);
+    adj.set(edge.source_node_id, list);
+  }
+
+  // Add the proposed edge
+  const sourceList = adj.get(proposedEdge.sourceNodeId) || [];
+  sourceList.push(proposedEdge.targetNodeId);
+  adj.set(proposedEdge.sourceNodeId, sourceList);
+
+  // DFS cycle detector from targetNodeId back to sourceNodeId
+  const visited = new Set<string>();
+  const inStack = new Set<string>();
+
+  const hasCycleDfs = (nodeId: string): boolean => {
+    visited.add(nodeId);
+    inStack.add(nodeId);
+
+    const neighbors = adj.get(nodeId) || [];
+    for (const neighbor of neighbors) {
+      if (!visited.has(neighbor)) {
+        if (hasCycleDfs(neighbor)) return true;
+      } else if (inStack.has(neighbor)) {
+        return true;
+      }
+    }
+
+    inStack.delete(nodeId);
+    return false;
+  };
+
+  for (const startNode of adj.keys()) {
+    if (!visited.has(startNode)) {
+      if (hasCycleDfs(startNode)) return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Finds the nearest handle on any node within threshold distance of a world position.
+ * Returns the node, handle position, and world coordinate of the handle.
+ */
+export function findNearestHandle(
+  worldPos: { x: number; y: number },
+  nodes: CanvasNode[],
+  excludeNodeId?: string,
+  threshold = 28
+): { node: CanvasNode; handle: HandlePosition; position: { x: number; y: number } } | null {
+  const handles: HandlePosition[] = ["top", "right", "bottom", "left"];
+  let closest: {
+    node: CanvasNode;
+    handle: HandlePosition;
+    position: { x: number; y: number };
+    distSq: number;
+  } | null = null;
+
+  const thresholdSq = threshold * threshold;
+
+  for (const node of nodes) {
+    if (excludeNodeId && node.id === excludeNodeId) continue;
+
+    for (const handle of handles) {
+      const pos = getNodeHandlePosition(node, handle);
+      const dx = pos.x - worldPos.x;
+      const dy = pos.y - worldPos.y;
+      const distSq = dx * dx + dy * dy;
+
+      if (distSq <= thresholdSq) {
+        if (!closest || distSq < closest.distSq) {
+          closest = { node, handle, position: pos, distSq };
+        }
+      }
+    }
+  }
+
+  return closest ? { node: closest.node, handle: closest.handle, position: closest.position } : null;
+}
+
+/**
+ * Computes bounding rectangle enclosing all nodes on the canvas.
+ */
+export function getCanvasBoundingBox(
+  nodes: CanvasNode[],
+  padding = 60
+): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  width: number;
+  height: number;
+} {
+  if (nodes.length === 0) {
+    return { minX: 0, minY: 0, maxX: 800, maxY: 600, width: 800, height: 600 };
+  }
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const node of nodes) {
+    minX = Math.min(minX, node.position_x);
+    minY = Math.min(minY, node.position_y);
+    maxX = Math.max(maxX, node.position_x + (node.width || 280));
+    maxY = Math.max(maxY, node.position_y + (node.height || 170));
+  }
+
+  minX -= padding;
+  minY -= padding;
+  maxX += padding;
+  maxY += padding;
+
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: Math.max(100, maxX - minX),
+    height: Math.max(100, maxY - minY),
+  };
+}
+
+/**
+ * Exports the current roadmap graph to Mermaid.js diagram format.
+ */
+export function exportToMermaid(nodes: CanvasNode[], edges: CanvasEdge[]): string {
+  const lines: string[] = ["graph LR"];
+
+  const sanitize = (str: string) =>
+    str.replace(/["\n\r]/g, " ").trim();
+
+  // Nodes definition
+  for (const node of nodes) {
+    const safeTitle = sanitize(node.title || "Milestone");
+    const completion = calculateCompletionPercentage(node.checkpoints);
+    const label = `${safeTitle} (${completion}%)`;
+    lines.push(`  ${node.id}["${label}"]`);
+  }
+
+  // Edges definition
+  for (const edge of edges) {
+    lines.push(`  ${edge.source_node_id} --> ${edge.target_node_id}`);
+  }
+
+  return lines.join("\n");
+}
+
 

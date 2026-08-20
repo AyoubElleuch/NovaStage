@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import CanvasHud from "./canvas-hud";
 
@@ -52,5 +52,44 @@ describe("CanvasHud Component", () => {
     render(<CanvasHud {...baseProps} networkStatus="offline" />);
 
     expect(screen.getByText("Offline")).not.toBeNull();
+  });
+
+  it("renders follow mode pill when following a collaborator", () => {
+    const mockCollabs = [
+      {
+        userId: "user-2",
+        email: "alice@example.com",
+        fullName: "Alice Dev",
+        color: "#10b981",
+        lastActive: Date.now(),
+      },
+    ];
+
+    render(
+      <CanvasHud
+        {...baseProps}
+        collaborators={mockCollabs}
+        followingUserId="user-2"
+      />
+    );
+
+    expect(screen.getByText(/following alice dev/i)).not.toBeNull();
+  });
+
+  it("renders export button and triggers Mermaid export", () => {
+    const onExportMermaid = vi.fn();
+    render(
+      <CanvasHud
+        {...baseProps}
+        onExportMermaid={onExportMermaid}
+      />
+    );
+
+    const exportBtn = screen.getByTitle("Export Roadmap");
+    fireEvent.click(exportBtn);
+
+    const mermaidOption = screen.getByText(/copy mermaid\.js/i);
+    fireEvent.click(mermaidOption);
+    expect(onExportMermaid).toHaveBeenCalled();
   });
 });

@@ -525,3 +525,4 @@ export async function generateWorkflowWithGemini(
   const { executeAIPipeline } = await import("./pipeline");
   return executeAIPipeline(prompt, context);
 }
+
