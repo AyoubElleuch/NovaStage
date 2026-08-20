@@ -291,10 +291,17 @@ function MilestoneDrawerContent({
             {node.checkpoints.map((cp) => (
               <div
                 key={cp.id}
-                className="group flex items-center justify-between gap-2.5 rounded-lg border border-neutral-200/80 bg-white p-2.5 transition-colors hover:border-neutral-300"
+                className={`group relative flex items-start justify-between gap-3 rounded-xl border p-3 transition-all ${
+                  cp.is_completed
+                    ? "border-emerald-100 bg-emerald-50/30"
+                    : "border-neutral-200/90 bg-white hover:border-neutral-300 hover:shadow-2xs"
+                }`}
               >
-                <div
-                  onClick={() => {
+                {/* Dedicated Checkbox Toggle Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (isClaimedByMe) {
                       onToggleCheckpoint(cp.id, node.id, !cp.is_completed);
                     } else if (isClaimedByOther) {
@@ -303,39 +310,52 @@ function MilestoneDrawerContent({
                       onClaimNode(node.id);
                     }
                   }}
+                  aria-label={cp.is_completed ? "Mark checkpoint as incomplete" : "Mark checkpoint as complete"}
                   title={
                     isClaimedByMe
-                      ? "Toggle checkpoint"
+                      ? cp.is_completed
+                        ? "Click to mark as incomplete"
+                        : "Click to mark as complete"
                       : isClaimedByOther
                       ? "Claimed by collaborator. Click to request edit."
-                      : "Unclaimed box. Click to claim edit lock to check steps."
+                      : "Unclaimed milestone. Click to claim edit lock."
                   }
-                  className={`flex flex-1 items-center gap-2.5 min-w-0 ${
-                    isClaimedByMe ? "cursor-pointer" : "cursor-pointer opacity-80"
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/20 ${
+                    cp.is_completed
+                      ? "text-emerald-600 hover:text-emerald-700 hover:scale-110"
+                      : "text-neutral-300 hover:text-neutral-600 hover:scale-110"
                   }`}
                 >
                   {cp.is_completed ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
                   ) : (
-                    <Circle className="h-4 w-4 shrink-0 text-neutral-300 group-hover:text-neutral-400" />
+                    <Circle className="h-4 w-4 shrink-0" />
                   )}
-                  <span
-                    className={`text-xs leading-snug truncate ${
+                </button>
+
+                {/* Checkpoint Text Content - Fully Readable & Selectable without Accidental Toggles */}
+                <div className="flex-1 min-w-0 pr-1">
+                  <p
+                    className={`text-xs leading-relaxed break-words select-text ${
                       cp.is_completed
-                        ? "text-neutral-400 line-through"
+                        ? "text-neutral-400 line-through decoration-neutral-300"
                         : "text-neutral-800 font-medium"
                     }`}
                   >
                     {cp.title}
-                  </span>
+                  </p>
                 </div>
 
+                {/* Delete Checkpoint Button - Only when Claimed */}
                 {isClaimedByMe && (
                   <button
                     type="button"
-                    onClick={() => onDeleteCheckpoint(cp.id, node.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteCheckpoint(cp.id, node.id);
+                    }}
                     title="Delete checkpoint"
-                    className="opacity-0 group-hover:opacity-100 flex h-6 w-6 items-center justify-center rounded text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer"
+                    className="opacity-0 group-hover:opacity-100 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

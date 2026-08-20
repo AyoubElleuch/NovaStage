@@ -263,38 +263,50 @@ export default function CanvasNodeComponent({
             <div
               key={cp.id}
               data-no-drag="true"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isClaimedByMe) {
-                  onToggleCheckpoint(cp.id, node.id, !cp.is_completed);
-                } else if (isClaimedByOther) {
-                  onRequestClaim(node);
-                } else if (onClaimNode) {
-                  onClaimNode(node.id);
-                } else {
-                  onSelect(node);
-                }
-              }}
-              title={
-                isClaimedByMe
-                  ? "Toggle checkpoint"
-                  : isClaimedByOther
-                  ? "Claimed by collaborator. Click to request edit."
-                  : "Unclaimed box. Click to claim edit lock to check steps."
-              }
-              className={`flex items-center gap-2 rounded px-1.5 py-0.5 text-[11px] transition-colors ${
-                isClaimedByMe
-                  ? "cursor-pointer hover:bg-neutral-50"
-                  : "cursor-pointer opacity-75 hover:bg-neutral-100"
-              }`}
+              className="flex items-center gap-2 rounded px-1.5 py-0.5 text-[11px] transition-colors hover:bg-neutral-100/70"
             >
-              {cp.is_completed ? (
-                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-              ) : (
-                <Circle className="h-3.5 w-3.5 shrink-0 text-neutral-300" />
-              )}
+              {/* Checkbox Toggle Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isClaimedByMe) {
+                    onToggleCheckpoint(cp.id, node.id, !cp.is_completed);
+                  } else if (isClaimedByOther) {
+                    onRequestClaim(node);
+                  } else if (onClaimNode) {
+                    onClaimNode(node.id);
+                  } else {
+                    onSelect(node);
+                  }
+                }}
+                aria-label={cp.is_completed ? `Mark "${cp.title}" as incomplete` : `Mark "${cp.title}" as complete`}
+                title={
+                  isClaimedByMe
+                    ? cp.is_completed
+                      ? "Click to mark as incomplete"
+                      : "Click to mark as complete"
+                    : isClaimedByOther
+                    ? "Claimed by collaborator. Click to request edit."
+                    : "Unclaimed box. Click to claim edit lock to check steps."
+                }
+                className="flex h-4 w-4 shrink-0 items-center justify-center cursor-pointer transition-transform hover:scale-110 focus-visible:outline-none"
+              >
+                {cp.is_completed ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                ) : (
+                  <Circle className="h-3.5 w-3.5 text-neutral-300 hover:text-neutral-500" />
+                )}
+              </button>
+
+              {/* Text label with tooltip */}
               <span
-                className={`truncate ${
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(node);
+                }}
+                title={cp.title}
+                className={`truncate flex-1 cursor-pointer select-none ${
                   cp.is_completed
                     ? "text-neutral-400 line-through"
                     : "text-neutral-700"
