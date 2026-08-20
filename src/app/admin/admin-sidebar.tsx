@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
+import { TermsOfServiceTrigger } from "@/components/terms/terms-of-service-modal";
 
 interface AdminSidebarProps {
   userEmail: string | undefined;
@@ -186,7 +187,8 @@ export default function AdminSidebar({ userEmail, userRole }: AdminSidebarProps)
           </Link>
         </div>
 
-        <div className="mt-auto pt-4">
+        <div className="mt-auto pt-4 space-y-1">
+          <TermsOfServiceTrigger variant="sidebar-button" collapsed={collapsed} />
           <PrivacyPolicyTrigger variant="sidebar-button" collapsed={collapsed} />
         </div>
       </nav>

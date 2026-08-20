@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, isAdminRole, isProfileComplete } from "@/lib/auth/session";
 import LoginForm from "./login-form";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
+import { TermsOfServiceTrigger } from "@/components/terms/terms-of-service-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,9 @@ export default async function LoginPage() {
           </Suspense>
         </div>
 
-        <div className="flex items-center justify-center pt-4">
+        <div className="flex items-center justify-center gap-3 text-xs text-neutral-400 pt-4">
+          <TermsOfServiceTrigger />
+          <span>&bull;</span>
           <PrivacyPolicyTrigger />
         </div>
       </div>

@@ -20,6 +20,7 @@ import { fetcher } from "@/lib/fetcher";
 import type { DashboardProjectsData } from "@/lib/dashboard-data";
 import useSWR from "swr";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
+import { TermsOfServiceTrigger } from "@/components/terms/terms-of-service-modal";
 
 interface DashboardSidebarProps {
   userEmail: string | undefined;
@@ -268,7 +269,8 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
           )}
         </div>
 
-        <div className="mt-auto pt-4">
+        <div className="mt-auto pt-4 space-y-1">
+          <TermsOfServiceTrigger variant="sidebar-button" collapsed={collapsed} />
           <PrivacyPolicyTrigger variant="sidebar-button" collapsed={collapsed} />
         </div>
       </nav>
