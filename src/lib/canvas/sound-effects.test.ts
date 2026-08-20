@@ -8,10 +8,38 @@ import {
   canvasSounds,
 } from "./sound-effects";
 
+type MockOscillator = {
+  type: string;
+  frequency: {
+    setValueAtTime: ReturnType<typeof vi.fn>;
+    exponentialRampToValueAtTime: ReturnType<typeof vi.fn>;
+  };
+  connect: ReturnType<typeof vi.fn>;
+  start: ReturnType<typeof vi.fn>;
+  stop: ReturnType<typeof vi.fn>;
+};
+
+type MockGain = {
+  gain: {
+    setValueAtTime: ReturnType<typeof vi.fn>;
+    exponentialRampToValueAtTime: ReturnType<typeof vi.fn>;
+  };
+  connect: ReturnType<typeof vi.fn>;
+};
+
+type MockAudioContext = {
+  currentTime: number;
+  state: AudioContextState;
+  destination: unknown;
+  createOscillator: ReturnType<typeof vi.fn>;
+  createGain: ReturnType<typeof vi.fn>;
+  resume: ReturnType<typeof vi.fn>;
+};
+
 describe("Canvas Web Audio Sound Effects Synthesizer", () => {
-  let mockAudioContext: any;
-  let mockOscillator: any;
-  let mockGain: any;
+  let mockAudioContext: MockAudioContext;
+  let mockOscillator: MockOscillator;
+  let mockGain: MockGain;
 
   beforeEach(() => {
     mockOscillator = {
@@ -42,13 +70,14 @@ describe("Canvas Web Audio Sound Effects Synthesizer", () => {
       resume: vi.fn().mockResolvedValue(undefined),
     };
 
-    setAudioContextForTesting(mockAudioContext);
+    setAudioContextForTesting(mockAudioContext as unknown as AudioContext);
   });
 
   it("safely handles environments where AudioContext is undefined without throwing", () => {
     setAudioContextForTesting(null);
-    (window as any).AudioContext = undefined;
-    (window as any).webkitAudioContext = undefined;
+    const win = window as unknown as Record<string, unknown>;
+    win.AudioContext = undefined;
+    win.webkitAudioContext = undefined;
 
     expect(() => playAddNodeSound()).not.toThrow();
     expect(() => playLinkSound()).not.toThrow();

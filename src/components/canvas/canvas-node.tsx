@@ -52,12 +52,14 @@ export default function CanvasNodeComponent({
   const [isHovered, setIsHovered] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(node.title);
+  const [prevNodeTitle, setPrevNodeTitle] = useState(node.title);
   const cardRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  if (prevNodeTitle !== node.title) {
+    setPrevNodeTitle(node.title);
     setEditedTitle(node.title);
-  }, [node.title]);
+  }
 
   useEffect(() => {
     if (isEditingTitle) {
