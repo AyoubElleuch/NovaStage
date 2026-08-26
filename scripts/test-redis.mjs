@@ -60,7 +60,7 @@ async function runBenchmark() {
 
       // Measure GET
       const t2 = performance.now();
-      const readVal = await redis.get(testKey);
+      await redis.get(testKey);
       readTimes.push(performance.now() - t2);
 
       // Clean up

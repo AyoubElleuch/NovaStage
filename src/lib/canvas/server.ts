@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { safeRedisSet, safeRedisDel, safeRedisExpire } from "@/lib/redis/client";
+import { safeRedisSet, safeRedisDel } from "@/lib/redis/client";
 import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasClaimRequest, HandlePosition, NodeStatus } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
 import { GeneratedWorkflow } from "@/lib/ai/gemini";
