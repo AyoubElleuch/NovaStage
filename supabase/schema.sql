@@ -567,17 +567,28 @@ alter table public.projects
   add column if not exists ai_generating_by uuid references auth.users(id) on delete set null,
   add column if not exists ai_generating_at timestamp with time zone;
 
-create or replace function public.consume_user_ai_quota(p_user_id uuid)
+-- Drop previous signatures that accepted caller-supplied user IDs
+drop function if exists public.consume_user_ai_quota(uuid);
+drop function if exists public.restore_user_ai_quota(uuid);
+drop function if exists public.acquire_project_ai_lock(uuid, uuid);
+drop function if exists public.release_project_ai_lock(uuid, uuid);
+
+create or replace function public.consume_user_ai_quota()
 returns jsonb
 security definer
 set search_path = public
 as $$
 declare
+  v_user_id uuid := auth.uid();
   v_count int;
 begin
+  if v_user_id is null then
+    return jsonb_build_object('success', false, 'error', 'Unauthorized');
+  end if;
+
   select ai_requests_count into v_count
   from public.profiles
-  where id = p_user_id
+  where id = v_user_id
   for update;
 
   if not found then
@@ -596,7 +607,7 @@ begin
   update public.profiles
   set ai_requests_count = v_count + 1,
       updated_at = timezone('utc'::text, now())
-  where id = p_user_id;
+  where id = v_user_id;
 
   return jsonb_build_object(
     'success', true,
@@ -606,24 +617,29 @@ begin
 end;
 $$ language plpgsql;
 
-create or replace function public.restore_user_ai_quota(p_user_id uuid)
+create or replace function public.restore_user_ai_quota()
 returns jsonb
 security definer
 set search_path = public
 as $$
 declare
+  v_user_id uuid := auth.uid();
   v_count int;
 begin
+  if v_user_id is null then
+    return jsonb_build_object('success', false, 'error', 'Unauthorized');
+  end if;
+
   select ai_requests_count into v_count
   from public.profiles
-  where id = p_user_id
+  where id = v_user_id
   for update;
 
   if found and v_count > 0 then
     update public.profiles
     set ai_requests_count = v_count - 1,
         updated_at = timezone('utc'::text, now())
-    where id = p_user_id;
+    where id = v_user_id;
 
     return jsonb_build_object(
       'success', true,
@@ -636,16 +652,21 @@ begin
 end;
 $$ language plpgsql;
 
-create or replace function public.acquire_project_ai_lock(p_project_id uuid, p_user_id uuid)
+create or replace function public.acquire_project_ai_lock(p_project_id uuid)
 returns jsonb
 security definer
 set search_path = public
 as $$
 declare
+  v_user_id uuid := auth.uid();
   v_project record;
   v_now timestamp with time zone := timezone('utc'::text, now());
   v_active_user record;
 begin
+  if v_user_id is null then
+    return jsonb_build_object('success', false, 'error', 'Unauthorized');
+  end if;
+
   select * into v_project
   from public.projects
   where id = p_project_id
@@ -656,7 +677,7 @@ begin
   end if;
 
   if v_project.ai_generating_by is not null
-     and v_project.ai_generating_by != p_user_id
+     and v_project.ai_generating_by != v_user_id
      and v_project.ai_generating_at is not null
      and v_project.ai_generating_at > (v_now - interval '45 seconds') then
     
@@ -672,7 +693,7 @@ begin
   end if;
 
   update public.projects
-  set ai_generating_by = p_user_id,
+  set ai_generating_by = v_user_id,
       ai_generating_at = v_now
   where id = p_project_id;
 
@@ -680,16 +701,22 @@ begin
 end;
 $$ language plpgsql;
 
-create or replace function public.release_project_ai_lock(p_project_id uuid, p_user_id uuid)
+create or replace function public.release_project_ai_lock(p_project_id uuid)
 returns jsonb
 security definer
 set search_path = public
 as $$
+declare
+  v_user_id uuid := auth.uid();
 begin
+  if v_user_id is null then
+    return jsonb_build_object('success', false, 'error', 'Unauthorized');
+  end if;
+
   update public.projects
   set ai_generating_by = null,
       ai_generating_at = null
-  where id = p_project_id and (ai_generating_by = p_user_id or created_by = p_user_id);
+  where id = p_project_id and (ai_generating_by = v_user_id or created_by = v_user_id);
 
   return jsonb_build_object('success', true);
 end;
@@ -701,6 +728,10 @@ security definer
 set search_path = public
 as $$
 begin
+  if auth.uid() is null or not public.has_permission(auth.uid(), 'roles:manage') then
+    return jsonb_build_object('success', false, 'error', 'Forbidden: Insufficient permissions');
+  end if;
+
   update public.profiles
   set ai_requests_count = 0,
       updated_at = timezone('utc'::text, now())
@@ -727,6 +758,10 @@ as $$
 declare
   v_updated_count int;
 begin
+  if auth.uid() is null or not public.has_permission(auth.uid(), 'roles:manage') then
+    return jsonb_build_object('success', false, 'error', 'Forbidden: Insufficient permissions');
+  end if;
+
   update public.profiles
   set ai_requests_count = 0,
       updated_at = timezone('utc'::text, now());

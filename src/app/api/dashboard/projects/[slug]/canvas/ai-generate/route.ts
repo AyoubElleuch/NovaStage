@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProjectBySlug, isProjectMember } from "@/lib/projects";
 import { getAuthenticatedProfile } from "@/lib/auth/session";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { executeAIPipeline } from "@/lib/ai/pipeline";
 import { CanvasAIContext } from "@/lib/ai/types";
 import { getProjectCanvasData, applyAIWorkflowResult } from "@/lib/canvas/server";
@@ -11,7 +11,6 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   let projectToUnlock: string | null = null;
-  let userToUnlock: string | null = null;
   let quotaConsumed = false;
 
   try {
@@ -41,14 +40,13 @@ export async function POST(
       );
     }
 
-    const adminClient = createAdminClient();
+    const supabase = await createClient();
 
     // 1. Acquire Project AI Generation Collision Lock
-    const { data: lockResult, error: lockErr } = await adminClient.rpc(
+    const { data: lockResult, error: lockErr } = await supabase.rpc(
       "acquire_project_ai_lock",
       {
         p_project_id: project.id,
-        p_user_id: session.user.id,
       }
     );
 
@@ -75,14 +73,10 @@ export async function POST(
 
     // Set lock tracking for cleanup in finally block
     projectToUnlock = project.id;
-    userToUnlock = session.user.id;
 
     // 2. Atomically consume user AI quota (hard 10 requests limit enforced at DB level)
-    const { data: quotaResult, error: quotaErr } = await adminClient.rpc(
-      "consume_user_ai_quota",
-      {
-        p_user_id: session.user.id,
-      }
+    const { data: quotaResult, error: quotaErr } = await supabase.rpc(
+      "consume_user_ai_quota"
     );
 
     if (quotaErr) {
@@ -142,9 +136,7 @@ export async function POST(
 
       // Rollback consumed quota on AI API failure
       if (quotaConsumed) {
-        await adminClient.rpc("restore_user_ai_quota", {
-          p_user_id: session.user.id,
-        });
+        await supabase.rpc("restore_user_ai_quota");
         quotaConsumed = false;
       }
 
@@ -180,22 +172,27 @@ export async function POST(
     console.error("AI Workflow route error:", err);
 
     // Rollback quota if error happened after consumption
-    if (quotaConsumed && userToUnlock) {
-      const adminClient = createAdminClient();
-      await adminClient.rpc("restore_user_ai_quota", {
-        p_user_id: userToUnlock,
-      });
+    if (quotaConsumed) {
+      try {
+        const supabase = await createClient();
+        await supabase.rpc("restore_user_ai_quota");
+      } catch (restoreErr) {
+        console.error("Failed to restore AI quota on error:", restoreErr);
+      }
     }
 
     return NextResponse.json({ error: errorMsg }, { status: 500 });
   } finally {
     // 6. Always release project lock when done
-    if (projectToUnlock && userToUnlock) {
-      const adminClient = createAdminClient();
-      await adminClient.rpc("release_project_ai_lock", {
-        p_project_id: projectToUnlock,
-        p_user_id: userToUnlock,
-      });
+    if (projectToUnlock) {
+      try {
+        const supabase = await createClient();
+        await supabase.rpc("release_project_ai_lock", {
+          p_project_id: projectToUnlock,
+        });
+      } catch (releaseErr) {
+        console.error("Failed to release AI lock on complete:", releaseErr);
+      }
     }
   }
 }

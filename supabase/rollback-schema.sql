@@ -50,6 +50,12 @@ drop function if exists public.is_project_member(uuid, uuid);
 drop function if exists public.is_project_owner(uuid, uuid);
 drop function if exists public.set_project_updated_at();
 drop function if exists public.promote_next_project_owner();
+drop function if exists public.consume_user_ai_quota();
+drop function if exists public.restore_user_ai_quota();
+drop function if exists public.acquire_project_ai_lock(uuid);
+drop function if exists public.release_project_ai_lock(uuid);
+drop function if exists public.reset_user_ai_quota(uuid);
+drop function if exists public.reset_all_users_ai_quota();
 
 -- Drop dependent tables before the tables they reference.
 drop table if exists public.project_members;
