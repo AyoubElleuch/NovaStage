@@ -10,6 +10,7 @@ import {
   FolderGit2,
   Loader2,
   LogOut,
+  Megaphone,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
@@ -29,6 +30,7 @@ interface DashboardSidebarProps {
 
 const navigation = [
   { href: "/dashboard", label: "Projects", icon: FolderGit2 },
+  { href: "/dashboard/updates", label: "Updates", icon: Megaphone },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

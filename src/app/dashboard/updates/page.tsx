@@ -1,0 +1,117 @@
+import { Check, Sparkles } from "lucide-react";
+
+const releases = [
+  {
+    version: "v1.4.0",
+    date: "August 31, 2026",
+    title: "Canvas notebook",
+    summary: "Keep planning context close to the roadmap without adding more nodes.",
+    changes: [
+      "Added a project notebook directly to the canvas dock.",
+      "Separated roadmap notes and open questions into focused tabs.",
+      "Added automatic private browser saving for each project.",
+      "Added the Updates tab with a dated product release history.",
+    ],
+  },
+  {
+    version: "v1.3.0",
+    date: "August 20, 2026",
+    title: "A faster collaborative canvas",
+    summary: "Made large roadmaps easier to navigate and edit together.",
+    changes: [
+      "Added a minimap, multi-selection, audio feedback, and a refreshed canvas experience.",
+      "Introduced distributed Redis-backed rate limiting and claim locks.",
+      "Improved checkpoint readability and interaction targets.",
+    ],
+  },
+  {
+    version: "v1.2.0",
+    date: "August 19, 2026",
+    title: "AI workflow generation",
+    summary: "Turn a prompt into a structured roadmap, then refine it in place.",
+    changes: [
+      "Launched the AI workflow assistant with usage controls.",
+      "Added in-place roadmap updates and step insertion.",
+      "Upgraded generation to a modular three-phase DAG pipeline.",
+    ],
+  },
+  {
+    version: "v1.1.0",
+    date: "August 19, 2026",
+    title: "Project collaboration",
+    summary: "Added the controls teams need to share a live project safely.",
+    changes: [
+      "Added join approvals, a five-member project limit, and live member eviction.",
+      "Improved edge linking, realtime synchronization, and network health feedback.",
+      "Added onboarding and password recovery flows.",
+    ],
+  },
+  {
+    version: "v1.0.0",
+    date: "August 18, 2026",
+    title: "NovaStage workspace launch",
+    summary: "The first complete workspace for planning and shipping project roadmaps.",
+    changes: [
+      "Launched projects, invite codes, and collaborator management.",
+      "Added the realtime canvas with claim locking and multiplayer presence.",
+      "Introduced account settings, the admin console, RBAC, and automated tests.",
+    ],
+  },
+] as const;
+
+export default function UpdatesPage() {
+  return (
+    <div className="mx-auto max-w-3xl">
+      <header className="dash-enter border-b border-neutral-200 pb-8">
+        <div className="flex items-center gap-2 text-neutral-500">
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">Release notes</p>
+        </div>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">Updates</h1>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500">
+          The meaningful changes shaping NovaStage, from the first workspace release to today.
+        </p>
+      </header>
+
+      <div className="relative py-3 before:absolute before:bottom-8 before:left-1.75 before:top-8 before:w-px before:bg-neutral-200">
+        {releases.map((release, index) => (
+          <article
+            key={release.version}
+            className="dash-enter relative grid grid-cols-[16px_1fr] gap-5 py-7"
+            style={{ "--dash-delay": `${70 + index * 55}ms` } as React.CSSProperties}
+          >
+            <span
+              className={`relative z-10 mt-1 h-3.75 w-3.75 rounded-full border-4 border-white ${
+                index === 0 ? "bg-neutral-900" : "bg-neutral-300"
+              }`}
+              aria-hidden="true"
+            />
+            <div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="font-mono text-xs font-semibold text-neutral-900">
+                  {release.version}
+                </span>
+                <time className="text-xs text-neutral-400">{release.date}</time>
+                {index === 0 && (
+                  <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+                    Latest
+                  </span>
+                )}
+              </div>
+              <h2 className="mt-3 text-lg font-semibold text-neutral-900">{release.title}</h2>
+              <p className="mt-1 text-sm leading-6 text-neutral-500">{release.summary}</p>
+              <ul className="mt-4 space-y-2">
+                {release.changes.map((change) => (
+                  <li key={change} className="flex gap-2.5 text-[13px] leading-5 text-neutral-600">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden="true" />
+                    <span>{change}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}

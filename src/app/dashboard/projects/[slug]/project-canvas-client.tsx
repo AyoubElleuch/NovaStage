@@ -35,6 +35,7 @@ import CanvasClaimModal from "@/components/canvas/canvas-claim-modal";
 import CanvasAIAssistant from "@/components/canvas/canvas-ai-assistant";
 import CanvasAIAura from "@/components/canvas/canvas-ai-aura";
 import CanvasMinimap from "@/components/canvas/canvas-minimap";
+import CanvasNotebook from "@/components/canvas/canvas-notebook";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
 
@@ -98,6 +99,7 @@ export default function ProjectCanvasClient({
   const [isAIGenerating, setIsAIGenerating] = useState(false);
   const [aiGeneratingUser, setAiGeneratingUser] = useState<string | null>(null);
   const [isAuraExiting, setIsAuraExiting] = useState(false);
+  const [isNotebookOpen, setIsNotebookOpen] = useState(false);
 
   const handleEviction = useCallback(() => {
     setIsEvicted(true);
@@ -1728,6 +1730,7 @@ export default function ProjectCanvasClient({
     const target = nodes.find((n) => n.id === targetNodeId);
     if (!target) return;
 
+    setIsNotebookOpen(false);
     setSelectedNodeId(target.id);
     setSelectedNodeIds(new Set([target.id]));
     const screenW = window.innerWidth / 2;
@@ -1877,6 +1880,7 @@ export default function ProjectCanvasClient({
                   return copy;
                 });
               } else {
+                setIsNotebookOpen(false);
                 setSelectedNodeId(n.id);
                 setSelectedNodeIds(new Set([n.id]));
               }
@@ -2016,10 +2020,24 @@ export default function ProjectCanvasClient({
 
         <CanvasAIAssistant
           isOpen={isAIAssistantOpen}
-          onToggle={() => setIsAIAssistantOpen((prev) => !prev)}
+          onToggle={() => {
+            setIsNotebookOpen(false);
+            setIsAIAssistantOpen((prev) => !prev);
+          }}
           onClose={() => setIsAIAssistantOpen(false)}
           requestsRemaining={aiRequestsRemaining}
           onSubmitPrompt={handleGenerateAIWorkflow}
+        />
+
+        <CanvasNotebook
+          projectId={project.id}
+          isOpen={isNotebookOpen}
+          onToggle={() => {
+            setSelectedNodeId(null);
+            setIsAIAssistantOpen(false);
+            setIsNotebookOpen((open) => !open);
+          }}
+          onClose={() => setIsNotebookOpen(false)}
         />
       </div>
 
