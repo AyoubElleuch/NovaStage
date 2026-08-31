@@ -67,12 +67,13 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
   const projects = data?.projects || [];
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(
     pathname === "/dashboard" || pathname.startsWith("/dashboard/projects/")
   );
   const isAdmin = userRole === "admin" || userRole === "super_admin";
-  const collapsed = isCollapsed || isMobile;
+  const collapsed = isMobile ? !isMobileOpen : isCollapsed;
   const activePendingHref = pendingHref !== pathname ? pendingHref : null;
 
   const [prevPathname, setPrevPathname] = useState(pathname);
@@ -85,7 +86,10 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 768px)");
-    const update = () => setIsMobile(mediaQuery.matches);
+    const update = () => {
+      setIsMobile(mediaQuery.matches);
+      setIsMobileOpen(false);
+    };
     update();
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
@@ -102,6 +106,7 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
   }, [collapsed]);
 
   const navigate = (href: string) => {
+    if (isMobile) setIsMobileOpen(false);
     if (href !== pathname) {
       setPendingHref(href);
       setTimeout(() => {
@@ -118,9 +123,18 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
       : "text-neutral-500 hover:bg-neutral-100/70 hover:text-neutral-900";
 
   return (
+    <>
+    {isMobileOpen && (
+      <button
+        type="button"
+        aria-label="Close navigation"
+        className="fixed inset-0 z-20 bg-neutral-950/20 backdrop-blur-[1px] md:hidden"
+        onClick={() => setIsMobileOpen(false)}
+      />
+    )}
     <aside
-      className={`relative z-30 flex h-dvh shrink-0 flex-col border-r border-neutral-200 bg-white transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-        collapsed ? "w-[68px]" : "w-60"
+      className={`fixed inset-y-0 left-0 z-30 flex h-dvh shrink-0 flex-col border-r border-neutral-200 bg-white shadow-[8px_0_30px_rgba(0,0,0,0.06)] transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:relative md:shadow-none ${
+        collapsed ? "w-17" : "w-60"
       }`}
     >
       <div
@@ -312,17 +326,26 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
 
       <button
         type="button"
-        onClick={() => setIsCollapsed((value) => !value)}
-        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="absolute top-1/2 -right-3.5 z-20 hidden h-7 w-7 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-neutral-200/90 bg-white text-neutral-600 shadow-md transition-all hover:bg-neutral-900 hover:text-white md:grid"
+        onClick={() => {
+          if (isMobile) {
+            setIsMobileOpen((value) => !value);
+          } else {
+            setIsCollapsed((value) => !value);
+          }
+        }}
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        className="absolute top-5 -right-5 z-20 grid h-10 w-10 cursor-pointer place-items-center rounded-full border border-neutral-200/90 bg-white text-neutral-600 shadow-md transition-all hover:bg-neutral-900 hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 md:top-1/2 md:-right-3.5 md:h-7 md:w-7 md:-translate-y-1/2"
       >
-        {isCollapsed ? (
+        {collapsed ? (
           <PanelLeftOpen className="h-3.5 w-3.5" aria-hidden="true" />
         ) : (
           <PanelLeftClose className="h-3.5 w-3.5" aria-hidden="true" />
         )}
       </button>
     </aside>
+    <div className="w-17 shrink-0 md:hidden" aria-hidden="true" />
+    </>
   );
 }

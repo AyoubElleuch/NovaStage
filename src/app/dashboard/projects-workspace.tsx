@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import {
   ArrowLeft,
@@ -80,7 +80,16 @@ export default function ProjectsWorkspace() {
   const [unbanningUserId, setUnbanningUserId] = useState<string | null>(null);
 
   const menuRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogTriggerRef = useRef<HTMLElement | null>(null);
   const activePendingSlug = pendingSlug && !pathname.includes(pendingSlug) ? pendingSlug : null;
+  const isDialogInteractionLocked = useEffectEvent(
+    () =>
+      isSubmitting ||
+      isKickingMember ||
+      Boolean(resolvingRequestId) ||
+      Boolean(unbanningUserId)
+  );
 
   // Close three-dots dropdown when clicking outside
   useEffect(() => {
@@ -92,6 +101,64 @@ export default function ProjectsWorkspace() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!activeModal) return;
+
+    dialogTriggerRef.current = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusInitialElement = window.requestAnimationFrame(() => {
+      const dialog = dialogRef.current;
+      const autofocusTarget = dialog?.querySelector<HTMLElement>("[autofocus]");
+      const firstFocusable = dialog?.querySelector<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      );
+      (autofocusTarget || firstFocusable || dialog)?.focus();
+    });
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isDialogInteractionLocked()) {
+        event.preventDefault();
+        setActiveModal(null);
+        setConfirmKickTarget(null);
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleDialogKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusInitialElement);
+      document.removeEventListener("keydown", handleDialogKeyDown);
+      document.body.style.overflow = previousOverflow;
+      dialogTriggerRef.current?.focus();
+      dialogTriggerRef.current = null;
+    };
+  }, [activeModal]);
 
   // Fetch members, requests, and banned lists when members modal opens
   const openMembersModal = async (
@@ -907,10 +974,12 @@ export default function ProjectsWorkspace() {
           }}
         >
           <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="project-dialog-title"
-            className="dash-pop relative w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-7 shadow-2xl"
+            tabIndex={-1}
+            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-7"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button
@@ -1071,17 +1140,23 @@ export default function ProjectsWorkspace() {
           className="dash-fade fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm"
           role="presentation"
           onMouseDown={() => {
-            if (!isKickingMember) {
+            if (
+              !isKickingMember &&
+              !resolvingRequestId &&
+              !unbanningUserId
+            ) {
               setActiveModal(null);
               setConfirmKickTarget(null);
             }
           }}
         >
           <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="members-dialog-title"
-            className="dash-pop relative w-full max-w-lg rounded-2xl border border-neutral-200 bg-white p-7 shadow-2xl transition-all duration-300"
+            tabIndex={-1}
+            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl transition-all duration-300 sm:p-7"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button
@@ -1090,8 +1165,9 @@ export default function ProjectsWorkspace() {
                 setActiveModal(null);
                 setConfirmKickTarget(null);
               }}
+              disabled={isKickingMember || Boolean(resolvingRequestId) || Boolean(unbanningUserId)}
               aria-label="Close dialog"
-              className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+              className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:cursor-wait disabled:opacity-50"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -1191,7 +1267,7 @@ export default function ProjectsWorkspace() {
 
                 {/* Owner Sub-Tabs for Members, Requests, Blocked */}
                 {selectedProject.role === "owner" && (
-                  <div className="flex items-center gap-1.5 border-b border-neutral-100 pb-3">
+                  <div className="flex items-center gap-1.5 overflow-x-auto border-b border-neutral-100 pb-3">
                     <button
                       type="button"
                       onClick={() => setMemberTab("members")}
@@ -1543,6 +1619,7 @@ export default function ProjectsWorkspace() {
                   <button
                     type="button"
                     onClick={() => setActiveModal(null)}
+                    disabled={isKickingMember || Boolean(resolvingRequestId) || Boolean(unbanningUserId)}
                     className={`${secondaryButton} h-9 text-xs px-4`}
                   >
                     Done
@@ -1564,10 +1641,12 @@ export default function ProjectsWorkspace() {
           }}
         >
           <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="leave-dialog-title"
-            className="dash-pop relative w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-7 shadow-2xl"
+            tabIndex={-1}
+            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-7"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button
@@ -1627,10 +1706,12 @@ export default function ProjectsWorkspace() {
           }}
         >
           <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-dialog-title"
-            className="dash-pop relative w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-7 shadow-2xl"
+            tabIndex={-1}
+            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-7"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button

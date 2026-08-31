@@ -11,6 +11,7 @@ const releases = [
       "Highlighted the longest unfinished dependency path and highest-impact blockers.",
       "Surfaced milestones that are actionable now with direct navigation back to the canvas.",
       "Improved the canvas toolbar on small screens with stable controls and horizontal scrolling.",
+      "Polished mobile navigation, project dialogs, and keyboard accessibility across the dashboard.",
     ],
   },
   {

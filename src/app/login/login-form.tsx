@@ -442,7 +442,9 @@ export default function LoginForm({ initialWaitlistSuccess = false }: LoginFormP
                       disabled={isPending}
                       aria-label={showPassword ? "Hide password" : "Show password"}
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      className={`absolute right-1.5 top-1/2 grid h-10 w-10 -translate-y-1/2 cursor-pointer place-items-center rounded-md transition-colors hover:bg-neutral-50 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 ${
+                        passwordError ? "text-red-500" : "text-neutral-400"
+                      }`}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -500,7 +502,7 @@ export default function LoginForm({ initialWaitlistSuccess = false }: LoginFormP
                 if (lockoutSeconds !== null) setLockoutSeconds(null);
                 setIsSuccess(false);
               }}
-              className="cursor-pointer font-medium text-neutral-900 underline decoration-neutral-300 underline-offset-4 transition-colors hover:decoration-neutral-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100"
+              className="inline-flex min-h-10 cursor-pointer items-center rounded px-1 font-medium text-neutral-900 underline decoration-neutral-300 underline-offset-4 transition-colors hover:decoration-neutral-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100"
             >
               {isLoginMode ? "Join the waitlist" : "Log in"}
             </button>
