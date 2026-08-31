@@ -2,7 +2,19 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
-    version: "v1.4.0",
+    version: "v1.3.0",
+    date: "September 1, 2026",
+    title: "Release Pulse",
+    summary: "Turn the live roadmap into a clear signal for what is ready, blocked, and critical.",
+    changes: [
+      "Added a live, task-weighted release readiness score.",
+      "Highlighted the longest unfinished dependency path and highest-impact blockers.",
+      "Surfaced milestones that are actionable now with direct navigation back to the canvas.",
+      "Improved the canvas toolbar on small screens with stable controls and horizontal scrolling.",
+    ],
+  },
+  {
+    version: "v1.2.2",
     date: "August 31, 2026",
     title: "Canvas notebook",
     summary: "Keep planning context close to the roadmap without adding more nodes.",
@@ -14,7 +26,7 @@ const releases = [
     ],
   },
   {
-    version: "v1.3.0",
+    version: "v1.2.1",
     date: "August 20, 2026",
     title: "A faster collaborative canvas",
     summary: "Made large roadmaps easier to navigate and edit together.",

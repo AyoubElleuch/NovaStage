@@ -34,6 +34,7 @@ Read this file before changing the project. Keep it current when architecture, d
 - **Frontend & Navigation**:
   - `src/app/dashboard/projects/[slug]/page.tsx`: Full-bleed collaborative infinite canvas workspace.
   - `src/components/canvas/`: Viewport, nodes, bezier edge layer with neon filters, floating action dock, right-hand milestone inspector drawer, network health pill, and physics-interpolated multiplayer cursors.
+  - Release Pulse derives a live, task-weighted readiness score, longest unfinished dependency path, highest-impact blockers, and currently actionable milestones entirely from the in-memory canvas graph.
   - The canvas project notebook provides separate Notes and Questions tabs. Entries are private to the current browser and stored in `localStorage` by project ID.
   - `/dashboard/updates` is the authenticated product release timeline and is linked from the dashboard sidebar.
 

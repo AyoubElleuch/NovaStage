@@ -2,6 +2,7 @@
 
 import React from "react";
 import {
+  Activity,
   Grid,
   Hand,
   MapPin,
@@ -34,6 +35,8 @@ interface CanvasDockProps {
   onRedo?: () => void;
   isMinimapOpen?: boolean;
   onToggleMinimap?: () => void;
+  isReleasePulseOpen?: boolean;
+  onToggleReleasePulse?: () => void;
 }
 
 export default function CanvasDock({
@@ -55,6 +58,8 @@ export default function CanvasDock({
   onRedo,
   isMinimapOpen,
   onToggleMinimap,
+  isReleasePulseOpen,
+  onToggleReleasePulse,
 }: CanvasDockProps) {
   const zoomPct = Math.round(viewport.zoom * 100);
 
@@ -63,7 +68,7 @@ export default function CanvasDock({
       aria-label="Canvas control dock"
       className={
         className ||
-        "flex items-center gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-xl backdrop-blur-xl transition-all select-none"
+        "flex shrink-0 items-center gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all select-none"
       }
     >
       {/* Primary Interaction Tools */}
@@ -100,9 +105,9 @@ export default function CanvasDock({
         type="button"
         onClick={onAddNode}
         title="Add Milestone Node (N)"
-        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 hover:scale-[1.02] cursor-pointer"
+        className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 hover:scale-[1.02] cursor-pointer"
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus className="h-3.5 w-3.5 shrink-0" />
         <span>Add Node</span>
       </button>
 
@@ -145,6 +150,23 @@ export default function CanvasDock({
             <MapPin className="h-4 w-4" />
           </button>
         )}
+
+        {onToggleReleasePulse && (
+          <button
+            type="button"
+            onClick={onToggleReleasePulse}
+            title={isReleasePulseOpen ? "Close Release Pulse" : "Open Release Pulse"}
+            aria-label={isReleasePulseOpen ? "Close Release Pulse" : "Open Release Pulse"}
+            aria-expanded={isReleasePulseOpen}
+            className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl transition-colors ${
+              isReleasePulseOpen
+                ? "bg-emerald-600 text-white shadow-xs"
+                : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+            }`}
+          >
+            <Activity className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Zoom Controls */}
@@ -162,7 +184,7 @@ export default function CanvasDock({
           type="button"
           onClick={onResetZoom}
           title="Reset Zoom to 100%"
-          className="min-w-[44px] px-1 py-1 text-center font-mono text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 rounded-md transition-colors cursor-pointer"
+          className="min-w-11 px-1 py-1 text-center font-mono text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 rounded-md transition-colors cursor-pointer"
         >
           {zoomPct}%
         </button>

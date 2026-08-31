@@ -8,7 +8,7 @@ A production-grade infinite canvas built for technical teams to scaffold, coordi
 
 [![Live Application](https://img.shields.io/badge/Live_App-novastage.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://novastage.app/)
 [![Engineering Case Study](https://img.shields.io/badge/Case_Study-mohamedayoubeleuch.com-111111?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://www.mohamedayoubeleuch.com/web-projects/novastage)
-[![Tests Passing](https://img.shields.io/badge/Vitest-173_Passed-22c55e?style=for-the-badge&logo=vitest&logoColor=white)](#automated-testing--quality-assurance)
+[![Tests Passing](https://img.shields.io/badge/Vitest-181_Passed-22c55e?style=for-the-badge&logo=vitest&logoColor=white)](#automated-testing--quality-assurance)
 [![TypeScript Strict](https://img.shields.io/badge/TypeScript-Strict_5.x-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](#tech-stack)
 
 </div>
@@ -71,6 +71,7 @@ Instead of relying on single unconstrained LLM calls that hallucinate invalid gr
 ### 6. Tactile UI & Sensory Engineering
 - **Web Audio Synthesis:** Custom synthetic audio feedback generated through the Web Audio API for milestone creations, deletions, and checkpoint completions.
 - **Interactive Tooling:** Marquee multi-selection, zoom/pan infinite stage, contextual milestone drawer, radar minimap, and instant Mermaid.js diagram export.
+- **Release Pulse:** A live execution-intelligence panel calculates task-weighted readiness, the longest unfinished dependency chain, high-impact blockers, and milestones that are actionable now. Every insight links directly back to its canvas node.
 
 ---
 
@@ -102,14 +103,17 @@ npm test
  ✓ src/components/canvas/canvas-node.test.tsx (4 tests)
  ✓ src/lib/canvas/auto-layout.test.ts (4 tests)
  ✓ src/components/canvas/canvas-minimap.test.tsx (3 tests)
+ ✓ src/components/canvas/canvas-notebook.test.tsx (3 tests)
  ✓ src/components/notifications/notification-provider.test.tsx (3 tests)
  ✓ src/app/api/dashboard/projects/[slug]/canvas/ai-generate/route.test.ts (3 tests)
  ✓ src/lib/canvas/ai-reconcile.test.ts (2 tests)
+ ✓ src/lib/canvas/release-pulse.test.ts (4 tests)
+ ✓ src/components/canvas/canvas-release-pulse.test.tsx (1 test)
  ✓ src/components/icons.test.tsx (2 tests)
  ✓ src/app/api/ping/ping.test.ts (2 tests)
 
-Test Files  24 passed (24)
-     Tests  173 passed (173)
+Test Files  27 passed (27)
+    Tests  181 passed (181)
 ```
 
 ---

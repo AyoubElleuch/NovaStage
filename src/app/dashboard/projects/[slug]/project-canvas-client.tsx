@@ -36,6 +36,7 @@ import CanvasAIAssistant from "@/components/canvas/canvas-ai-assistant";
 import CanvasAIAura from "@/components/canvas/canvas-ai-aura";
 import CanvasMinimap from "@/components/canvas/canvas-minimap";
 import CanvasNotebook from "@/components/canvas/canvas-notebook";
+import CanvasReleasePulse from "@/components/canvas/canvas-release-pulse";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
 
@@ -93,6 +94,7 @@ export default function ProjectCanvasClient({
   const { notify } = useNotifications();
   const supabase = useMemo(() => createClient(), []);
   const canvasChannelRef = useRef<RealtimeChannel | null>(null);
+  const [canvasRootElement, setCanvasRootElement] = useState<HTMLDivElement | null>(null);
   const [isEvicted, setIsEvicted] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [aiRequestsRemaining, setAiRequestsRemaining] = useState(initialAiRequestsRemaining);
@@ -100,6 +102,7 @@ export default function ProjectCanvasClient({
   const [aiGeneratingUser, setAiGeneratingUser] = useState<string | null>(null);
   const [isAuraExiting, setIsAuraExiting] = useState(false);
   const [isNotebookOpen, setIsNotebookOpen] = useState(false);
+  const [isReleasePulseOpen, setIsReleasePulseOpen] = useState(false);
 
   const handleEviction = useCallback(() => {
     setIsEvicted(true);
@@ -1793,7 +1796,7 @@ export default function ProjectCanvasClient({
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden select-none">
+    <div ref={setCanvasRootElement} className="relative h-full w-full overflow-hidden select-none">
       {/* Top Floating HUD with Follow Mode and Export */}
       <CanvasHud
         projectName={project.name}
@@ -1987,59 +1990,83 @@ export default function ProjectCanvasClient({
       )}
 
       {/* Bottom Floating Control Bar (Canvas Tools Dock + AI Assistant) */}
-      <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2.5">
-        <CanvasDock
-          activeTool={activeTool}
-          onSelectTool={setActiveTool}
-          viewport={viewport}
-          onZoomIn={() =>
-            setViewport((prev) => ({
-              ...prev,
-              zoom: Math.min(prev.zoom * 1.2, 2.5),
-            }))
-          }
-          onZoomOut={() =>
-            setViewport((prev) => ({
-              ...prev,
-              zoom: Math.max(prev.zoom * 0.8, 0.15),
-            }))
-          }
-          onResetZoom={() => setViewport((prev) => ({ ...prev, zoom: 1.0 }))}
-          onFitView={handleFitView}
-          onAddNode={() => handleAddNode()}
-          onTidyLayout={handleTidyLayout}
-          snapGrid={snapGrid}
-          onToggleSnapGrid={() => setSnapGrid((v) => !v)}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          isMinimapOpen={isMinimapOpen}
-          onToggleMinimap={() => setIsMinimapOpen((v) => !v)}
-        />
+      <div className="scrollbar-none absolute inset-x-0 bottom-6 z-20 overflow-x-auto px-3 pb-2">
+        <div className="mx-auto flex w-max items-center gap-2.5">
+          <CanvasDock
+            activeTool={activeTool}
+            onSelectTool={setActiveTool}
+            viewport={viewport}
+            onZoomIn={() =>
+              setViewport((prev) => ({
+                ...prev,
+                zoom: Math.min(prev.zoom * 1.2, 2.5),
+              }))
+            }
+            onZoomOut={() =>
+              setViewport((prev) => ({
+                ...prev,
+                zoom: Math.max(prev.zoom * 0.8, 0.15),
+              }))
+            }
+            onResetZoom={() => setViewport((prev) => ({ ...prev, zoom: 1.0 }))}
+            onFitView={handleFitView}
+            onAddNode={() => handleAddNode()}
+            onTidyLayout={handleTidyLayout}
+            snapGrid={snapGrid}
+            onToggleSnapGrid={() => setSnapGrid((v) => !v)}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            isMinimapOpen={isMinimapOpen}
+            onToggleMinimap={() => setIsMinimapOpen((v) => !v)}
+            isReleasePulseOpen={isReleasePulseOpen}
+            onToggleReleasePulse={() => {
+              setSelectedNodeId(null);
+              setIsAIAssistantOpen(false);
+              setIsNotebookOpen(false);
+              setIsReleasePulseOpen((open) => !open);
+            }}
+          />
 
-        <CanvasAIAssistant
-          isOpen={isAIAssistantOpen}
-          onToggle={() => {
-            setIsNotebookOpen(false);
-            setIsAIAssistantOpen((prev) => !prev);
-          }}
-          onClose={() => setIsAIAssistantOpen(false)}
-          requestsRemaining={aiRequestsRemaining}
-          onSubmitPrompt={handleGenerateAIWorkflow}
-        />
+          <CanvasAIAssistant
+            isOpen={isAIAssistantOpen}
+            portalContainer={canvasRootElement}
+            onToggle={() => {
+              setIsNotebookOpen(false);
+              setIsReleasePulseOpen(false);
+              setIsAIAssistantOpen((prev) => !prev);
+            }}
+            onClose={() => setIsAIAssistantOpen(false)}
+            requestsRemaining={aiRequestsRemaining}
+            onSubmitPrompt={handleGenerateAIWorkflow}
+          />
 
-        <CanvasNotebook
-          projectId={project.id}
-          isOpen={isNotebookOpen}
-          onToggle={() => {
-            setSelectedNodeId(null);
-            setIsAIAssistantOpen(false);
-            setIsNotebookOpen((open) => !open);
-          }}
-          onClose={() => setIsNotebookOpen(false)}
-        />
+          <CanvasNotebook
+            projectId={project.id}
+            isOpen={isNotebookOpen}
+            onToggle={() => {
+              setSelectedNodeId(null);
+              setIsAIAssistantOpen(false);
+              setIsReleasePulseOpen(false);
+              setIsNotebookOpen((open) => !open);
+            }}
+            onClose={() => setIsNotebookOpen(false)}
+          />
+        </div>
       </div>
+
+      {isReleasePulseOpen && (
+        <CanvasReleasePulse
+          nodes={nodes}
+          edges={edges}
+          onClose={() => setIsReleasePulseOpen(false)}
+          onJumpToNode={(nodeId) => {
+            setIsReleasePulseOpen(false);
+            handleJumpToNode(nodeId);
+          }}
+        />
+      )}
 
       {/* Realtime Claim Handoff Modal Prompt */}
       <CanvasClaimModal

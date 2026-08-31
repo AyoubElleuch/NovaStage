@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertCircle,
   ArrowUp,
@@ -18,6 +19,7 @@ interface CanvasAIAssistantProps {
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
+  portalContainer?: HTMLElement | null;
   requestsRemaining?: number;
   onSubmitPrompt?: (prompt: string) => Promise<void> | void;
 }
@@ -68,10 +70,7 @@ interface SpeechRecognitionEvent {
   results: {
     length: number;
     [index: number]: {
-      isFinal: boolean;
-      [index: number]: {
-        transcript: string;
-      };
+      [index: number]: { transcript: string };
     };
   };
 }
@@ -95,6 +94,7 @@ export default function CanvasAIAssistant({
   isOpen,
   onToggle,
   onClose,
+  portalContainer,
   requestsRemaining = 10,
   onSubmitPrompt,
 }: CanvasAIAssistantProps) {
@@ -274,7 +274,7 @@ export default function CanvasAIAssistant({
         onClick={onToggle}
         title={isOpen ? "Close AI Assistant" : "Open AI Assistant"}
         aria-label="Toggle AI Assistant"
-        className={`group relative flex h-12 items-center gap-2 rounded-2xl border px-3.5 shadow-xl backdrop-blur-xl transition-all cursor-pointer select-none ${
+        className={`group relative flex h-12 items-center gap-2 rounded-2xl border px-3.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all cursor-pointer select-none ${
           isOpen
             ? "border-neutral-900 bg-neutral-900 text-white shadow-neutral-900/20 scale-[1.03]"
             : "border-neutral-200/80 bg-white/95 text-neutral-800 hover:border-neutral-300 hover:bg-white hover:scale-[1.02]"
@@ -299,12 +299,12 @@ export default function CanvasAIAssistant({
       </button>
 
       {/* Floating Chat / Prompt Popup Panel (Positioned right above tools dock) */}
-      {isOpen && (
+      {isOpen && createPortal(
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="ai-assistant-title"
-          className="dash-pop absolute bottom-[72px] left-1/2 z-30 flex w-[92vw] max-w-lg -translate-x-1/2 flex-col rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-2xl transition-all sm:max-w-xl"
+          className="dash-pop absolute bottom-24 left-1/2 z-30 flex w-[calc(100%-24px)] max-w-lg -translate-x-1/2 flex-col rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-2xl transition-all sm:max-w-xl"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-neutral-100 px-1 pb-2.5">
@@ -421,7 +421,7 @@ export default function CanvasAIAssistant({
                   <button
                     type="submit"
                     disabled={!prompt.trim() || isThinking || isQuotaDepleted}
-                    className="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-40 min-w-[92px]"
+                    className="flex h-8 min-w-23 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {isThinking ? (
                       <>
@@ -503,7 +503,8 @@ export default function CanvasAIAssistant({
               </div>
             )}
           </form>
-        </div>
+        </div>,
+        portalContainer ?? document.body
       )}
     </>
   );

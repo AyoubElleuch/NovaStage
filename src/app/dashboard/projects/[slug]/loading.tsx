@@ -1,12 +1,18 @@
 import React from "react";
 import {
+  Activity,
   ArrowLeft,
   Grid,
   Hand,
+  HelpCircle,
+  MapPin,
   Maximize2,
   Minus,
   MousePointer,
   Plus,
+  Redo2,
+  Sparkles,
+  Undo2,
   Waypoints,
 } from "lucide-react";
 
@@ -41,55 +47,76 @@ export default function ProjectCanvasLoading() {
         </div>
       </header>
 
-      {/* Floating Action Dock & AI Button at Bottom */}
-      <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2.5">
-        <nav
-          aria-label="Canvas control dock"
-          className="flex items-center gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-xl backdrop-blur-xl"
-        >
-          <div className="flex items-center gap-1 border-r border-neutral-200/80 pr-1.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-900 text-white shadow-xs">
-              <MousePointer className="h-4 w-4" />
+      {/* Floating Action Dock, AI Assistant, and Notes at Bottom */}
+      <div className="scrollbar-none absolute inset-x-0 bottom-6 z-20 overflow-x-auto px-3 pb-2">
+        <div className="mx-auto flex w-max items-center gap-2.5">
+          <nav
+            aria-label="Canvas control dock"
+            className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-1 border-r border-neutral-200/80 pr-1.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-900 text-white shadow-xs">
+                <MousePointer className="h-4 w-4" />
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-400">
+                <Hand className="h-4 w-4" />
+              </div>
             </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-400">
-              <Hand className="h-4 w-4" />
+
+            <div className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs">
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span>Add Node</span>
             </div>
+
+            <div className="flex items-center gap-1 border-l border-neutral-200/80 pl-1.5">
+              <div className="flex h-9 items-center gap-1 rounded-xl px-2 text-xs font-medium text-neutral-400">
+                <Waypoints className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Tidy</span>
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500">
+                <Grid className="h-4 w-4" />
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500">
+                <MapPin className="h-4 w-4" />
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-400">
+                <Activity className="h-4 w-4" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-0.5 border-l border-neutral-200/80 pl-1.5">
+              <div className="flex h-8 w-8 items-center justify-center text-neutral-400">
+                <Minus className="h-3.5 w-3.5" />
+              </div>
+              <span className="min-w-11 px-1 py-1 text-center font-mono text-[11px] font-semibold text-neutral-600">
+                100%
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center text-neutral-400">
+                <Plus className="h-3.5 w-3.5" />
+              </div>
+              <div className="flex h-8 w-8 items-center justify-center text-neutral-400">
+                <Maximize2 className="h-3.5 w-3.5" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-0.5 border-l border-neutral-200/80 pl-1.5">
+              <div className="flex h-8 w-8 items-center justify-center text-neutral-300">
+                <Undo2 className="h-3.5 w-3.5" />
+              </div>
+              <div className="flex h-8 w-8 items-center justify-center text-neutral-300">
+                <Redo2 className="h-3.5 w-3.5" />
+              </div>
+            </div>
+          </nav>
+
+          <div className="flex h-12 shrink-0 items-center gap-2 rounded-2xl border border-neutral-200/80 bg-white/95 px-3.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl">
+            <Sparkles className="h-4 w-4 text-neutral-500" />
+            <span className="text-xs font-semibold text-neutral-700">AI Assistant</span>
           </div>
 
-          <div className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs">
-            <Plus className="h-3.5 w-3.5" />
-            <span>Add Node</span>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-neutral-200/80 bg-white/95 text-neutral-500 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl">
+            <HelpCircle className="h-4 w-4" />
           </div>
-
-          <div className="flex items-center gap-1 border-l border-neutral-200/80 pl-1.5">
-            <div className="flex h-9 items-center gap-1 rounded-xl px-2 text-xs font-medium text-neutral-400">
-              <Waypoints className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Tidy</span>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-400">
-              <Grid className="h-4 w-4" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-0.5 border-l border-neutral-200/80 pl-1.5">
-            <div className="flex h-8 w-8 items-center justify-center text-neutral-400">
-              <Minus className="h-3.5 w-3.5" />
-            </div>
-            <span className="min-w-[44px] px-1 py-1 text-center font-mono text-[11px] font-semibold text-neutral-600">
-              100%
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center text-neutral-400">
-              <Plus className="h-3.5 w-3.5" />
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center text-neutral-400">
-              <Maximize2 className="h-3.5 w-3.5" />
-            </div>
-          </div>
-        </nav>
-
-        <div className="flex h-12 items-center gap-2 rounded-2xl border border-neutral-200/80 bg-white/95 px-3.5 shadow-xl backdrop-blur-xl">
-          <div className="h-4 w-4 rounded-full bg-neutral-200 animate-pulse" />
-          <div className="h-3 w-16 rounded bg-neutral-200 animate-pulse" />
         </div>
       </div>
 
