@@ -1,5 +1,5 @@
 import { render, screen, act } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { ThemeProvider, useTheme } from "./theme-context";
 
 function TestConsumer() {

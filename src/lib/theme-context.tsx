@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useCallback, useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 
 export type Theme = "light" | "dark";
@@ -31,44 +31,68 @@ function applyThemeToDocument(theme: Theme) {
   }
 }
 
+const listeners = new Set<() => void>();
+
+function notifyThemeListeners() {
+  listeners.forEach((listener) => listener());
+}
+
+function subscribeTheme(callback: () => void) {
+  listeners.add(callback);
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY) {
+      callback();
+    }
+  };
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", handleStorage);
+  }
+  return () => {
+    listeners.delete(callback);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("storage", handleStorage);
+    }
+  };
+}
+
+function getThemeSnapshot(): Theme {
+  if (typeof window === "undefined") return "light";
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "dark" || stored === "light") return stored;
+  } catch {}
+  return "light";
+}
+
+function getServerThemeSnapshot(): Theme {
+  return "light";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Light mode is the default
-  const [theme, setThemeState] = useState<Theme>("light");
+  const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getServerThemeSnapshot);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-      if (stored === "dark" || stored === "light") {
-        setThemeState(stored);
-        applyThemeToDocument(stored);
-      } else {
-        // Default is light mode
-        applyThemeToDocument("light");
-      }
-    } catch {
-      applyThemeToDocument("light");
-    }
-  }, []);
+    applyThemeToDocument(theme);
+  }, [theme]);
 
   const setTheme = useCallback((newTheme: Theme) => {
-    setThemeState(newTheme);
     applyThemeToDocument(newTheme);
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
       document.cookie = `${STORAGE_KEY}=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
     } catch {}
+    notifyThemeListeners();
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setThemeState((current) => {
-      const nextTheme: Theme = current === "dark" ? "light" : "dark";
-      applyThemeToDocument(nextTheme);
-      try {
-        localStorage.setItem(STORAGE_KEY, nextTheme);
-        document.cookie = `${STORAGE_KEY}=${nextTheme}; path=/; max-age=31536000; SameSite=Lax`;
-      } catch {}
-      return nextTheme;
-    });
+    const current = getThemeSnapshot();
+    const nextTheme: Theme = current === "dark" ? "light" : "dark";
+    applyThemeToDocument(nextTheme);
+    try {
+      localStorage.setItem(STORAGE_KEY, nextTheme);
+      document.cookie = `${STORAGE_KEY}=${nextTheme}; path=/; max-age=31536000; SameSite=Lax`;
+    } catch {}
+    notifyThemeListeners();
   }, []);
 
   return (

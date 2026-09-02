@@ -50,10 +50,6 @@ export default function ProjectsWorkspace() {
     fetcher<DashboardProjectsData>
   );
 
-  if (isLoading && !data) {
-    return <DashboardLoading />;
-  }
-
   const projects = data?.projects || [];
   const userName = data?.userName || "Developer";
 
@@ -651,6 +647,9 @@ export default function ProjectsWorkspace() {
     "inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 shadow-sm transition-all duration-150 hover:border-neutral-300 hover:bg-neutral-50 active:scale-[0.98] dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-200 dark:hover:bg-[#1e2634] dark:hover:border-[#384961]";
   const dangerButton =
     "inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 text-sm font-medium text-white shadow-sm transition-all duration-150 hover:bg-rose-700 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 dark:bg-rose-600 dark:hover:bg-rose-500";
+  if (isLoading && !data) {
+    return <DashboardLoading />;
+  }
 
   return (
     <div className="space-y-10">
