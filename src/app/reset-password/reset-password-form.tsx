@@ -26,10 +26,10 @@ function PasswordStrength({ password }: { password: string }) {
     strength === "Strong" ? "bg-emerald-500" : strength === "Medium" ? "bg-amber-500" : "bg-red-500";
 
   return (
-    <div className="mt-2.5 border-t border-neutral-100 pt-2.5" aria-live="polite">
+    <div className="mt-2.5 border-t border-neutral-100 dark:border-[#283548] pt-2.5" aria-live="polite">
       <div className="flex items-center justify-between gap-3 text-xs">
-        <span className="text-neutral-400">Password strength</span>
-        <span className={`font-semibold ${password ? strengthTone : "text-neutral-400"}`}>
+        <span className="text-neutral-400 dark:text-neutral-500">Password strength</span>
+        <span className={`font-semibold ${password ? strengthTone : "text-neutral-400 dark:text-neutral-500"}`}>
           {password ? strength : "Not set"}
         </span>
       </div>
@@ -37,13 +37,13 @@ function PasswordStrength({ password }: { password: string }) {
         {passwordRequirements.map(({ label, test }) => (
           <span
             key={label}
-            className={`h-1 rounded-full ${password && test(password) ? barTone : "bg-neutral-200"}`}
+            className={`h-1 rounded-full ${password && test(password) ? barTone : "bg-neutral-200 dark:bg-[#283548]"}`}
           />
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-neutral-400">
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-neutral-400 dark:text-neutral-500">
         {passwordRequirements.map(({ label, test }) => (
-          <span key={label} className={password && test(password) ? "text-neutral-700" : undefined}>
+          <span key={label} className={password && test(password) ? "text-neutral-700 dark:text-neutral-200" : undefined}>
             {label}
           </span>
         ))}
@@ -114,10 +114,10 @@ export default function ResetPasswordForm() {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-600 text-white shadow-[0_8px_24px_rgba(5,150,105,0.2)]">
           <Check className="h-8 w-8" strokeWidth={2.5} />
         </div>
-        <h1 className="mt-7 text-3xl font-semibold tracking-tight text-neutral-900">
+        <h1 className="mt-7 text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">
           Password updated
         </h1>
-        <p className="mt-3 max-w-xs text-sm leading-6 text-neutral-600">
+        <p className="mt-3 max-w-xs text-sm leading-6 text-neutral-600 dark:text-neutral-300">
           Your password has been changed successfully. Redirecting you to your workspace...
         </p>
       </section>
@@ -125,17 +125,17 @@ export default function ResetPasswordForm() {
   }
 
   return (
-    <div className="w-full max-w-sm selection:bg-neutral-200 selection:text-neutral-900">
+    <div className="w-full max-w-sm selection:bg-neutral-200 selection:text-neutral-900 dark:selection:bg-emerald-900 dark:selection:text-emerald-100">
       <div className="login-mode-transition">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-300">
             <LockKeyhole className="h-4 w-4" />
           </span>
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
             Create new password
           </h1>
         </div>
-        <p className="mt-2 text-sm text-neutral-500">
+        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
           Enter and confirm your new secure password below.
         </p>
 
@@ -143,7 +143,7 @@ export default function ResetPasswordForm() {
           <div>
             <label
               htmlFor="new-password"
-              className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700"
+              className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
             >
               New password
             </label>
@@ -161,10 +161,10 @@ export default function ResetPasswordForm() {
                 }}
                 placeholder="••••••••"
                 aria-invalid={Boolean(error)}
-                className={`h-11 w-full rounded-lg border px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 ${
+                className={`h-11 w-full rounded-lg border px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 dark:text-white dark:placeholder-neutral-500 ${
                   error
-                    ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10"
-                    : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100"
+                    ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10 dark:border-red-800 dark:bg-red-950/20"
+                    : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100 dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/15"
                 }`}
               />
               <button
@@ -172,7 +172,7 @@ export default function ResetPasswordForm() {
                 disabled={isPending}
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -183,7 +183,7 @@ export default function ResetPasswordForm() {
           <div>
             <label
               htmlFor="confirm-password"
-              className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700"
+              className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
             >
               Confirm password
             </label>
@@ -200,10 +200,10 @@ export default function ResetPasswordForm() {
                 }}
                 placeholder="••••••••"
                 aria-invalid={Boolean(error)}
-                className={`h-11 w-full rounded-lg border px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 ${
+                className={`h-11 w-full rounded-lg border px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 dark:text-white dark:placeholder-neutral-500 ${
                   error
-                    ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10"
-                    : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100"
+                    ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10 dark:border-red-800 dark:bg-red-950/20"
+                    : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100 dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/15"
                 }`}
               />
               <button
@@ -211,7 +211,7 @@ export default function ResetPasswordForm() {
                 disabled={isPending}
                 aria-label={showConfirmation ? "Hide password" : "Show password"}
                 onClick={() => setShowConfirmation(!showConfirmation)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {showConfirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -219,7 +219,7 @@ export default function ResetPasswordForm() {
           </div>
 
           {error && (
-            <p className="login-error-transition flex items-center gap-1.5 text-xs font-medium text-red-600">
+            <p className="login-error-transition flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
               <span>{error}</span>
             </p>
@@ -228,7 +228,7 @@ export default function ResetPasswordForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
+            className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             <span>Update password</span>

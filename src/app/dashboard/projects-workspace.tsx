@@ -37,16 +37,23 @@ import type {
   ProjectBannedMemberInfo,
 } from "@/lib/dashboard-data";
 
+import DashboardLoading from "./(projects)/loading";
+
 export default function ProjectsWorkspace() {
   const pathname = usePathname();
   const router = useRouter();
   const { mutate } = useSWRConfig();
   const { notify } = useNotifications();
 
-  const { data } = useSWR<DashboardProjectsData>(
+  const { data, isLoading } = useSWR<DashboardProjectsData>(
     "/api/dashboard/projects",
     fetcher<DashboardProjectsData>
   );
+
+  if (isLoading && !data) {
+    return <DashboardLoading />;
+  }
+
   const projects = data?.projects || [];
   const userName = data?.userName || "Developer";
 
@@ -639,23 +646,23 @@ export default function ProjectsWorkspace() {
   };
 
   const primaryButton =
-    "inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-sm transition-all duration-150 hover:bg-neutral-700 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70";
+    "inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-sm transition-all duration-150 hover:bg-neutral-700 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 dark:bg-emerald-600 dark:hover:bg-emerald-500";
   const secondaryButton =
-    "inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 shadow-sm transition-all duration-150 hover:border-neutral-300 hover:bg-neutral-50 active:scale-[0.98]";
+    "inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 shadow-sm transition-all duration-150 hover:border-neutral-300 hover:bg-neutral-50 active:scale-[0.98] dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-200 dark:hover:bg-[#1e2634] dark:hover:border-[#384961]";
   const dangerButton =
-    "inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 text-sm font-medium text-white shadow-sm transition-all duration-150 hover:bg-rose-700 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70";
+    "inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 text-sm font-medium text-white shadow-sm transition-all duration-150 hover:bg-rose-700 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 dark:bg-rose-600 dark:hover:bg-rose-500";
 
   return (
     <div className="space-y-10">
       <header className="dash-enter flex flex-wrap items-end justify-between gap-6">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">
             Workspace
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900">
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">
             Projects
           </h1>
-          <p className="mt-2 text-sm text-neutral-500">
+          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
             Turn your next website or app into a clear, collaborative plan.
           </p>
         </div>
@@ -692,10 +699,10 @@ export default function ProjectsWorkspace() {
         style={{ "--dash-delay": "90ms" } as React.CSSProperties}
       >
         <div className="mb-4 flex items-end justify-between">
-          <h2 id="project-list-title" className="text-sm font-semibold text-neutral-900">
+          <h2 id="project-list-title" className="text-sm font-semibold text-neutral-900 dark:text-white">
             Your projects
           </h2>
-          <span className="text-xs text-neutral-400">
+          <span className="text-xs text-neutral-400 dark:text-neutral-500">
             {projects.length} {projects.length === 1 ? "project" : "projects"}
           </span>
         </div>
@@ -721,14 +728,14 @@ export default function ProjectsWorkspace() {
                       if (pathname !== href) setPendingSlug(project.slug);
                     }}
                     aria-disabled={isPending}
-                    className={`group relative flex cursor-pointer flex-col rounded-xl border bg-white p-5 transition-all duration-200 ${
+                    className={`group relative flex cursor-pointer flex-col rounded-xl border bg-white p-5 transition-all duration-200 dark:border-[#283548] dark:bg-[#161d27] ${
                       isPending
-                        ? "pointer-events-none border-neutral-200 opacity-70"
-                        : "border-neutral-200 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
+                        ? "pointer-events-none border-neutral-200 opacity-70 dark:border-[#283548]"
+                        : "border-neutral-200 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.06)] dark:border-[#283548] dark:hover:border-[#384961] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-500 transition-colors duration-200 group-hover:bg-neutral-900 group-hover:text-white">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-500 transition-colors duration-200 group-hover:bg-neutral-900 group-hover:text-white dark:bg-[#1e2634] dark:text-neutral-400 dark:group-hover:bg-emerald-600">
                         <GitBranch className="h-4 w-4" aria-hidden="true" />
                       </span>
 
@@ -780,7 +787,7 @@ export default function ProjectsWorkspace() {
                             }}
                             title="More options"
                             aria-label="Project actions menu"
-                            className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+                            className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-[#1e2634] dark:hover:text-white"
                           >
                             <MoreVertical className="h-4 w-4" aria-hidden="true" />
                           </button>
@@ -794,7 +801,7 @@ export default function ProjectsWorkspace() {
                                 e.preventDefault();
                                 e.stopPropagation();
                               }}
-                              className="dash-pop absolute right-0 top-8 z-30 w-48 rounded-xl border border-neutral-200 bg-white py-1.5 shadow-xl"
+                              className="dash-pop absolute right-0 top-8 z-30 w-48 rounded-xl border border-neutral-200 bg-white py-1.5 shadow-xl dark:border-[#283548] dark:bg-[#161d27] dark:shadow-2xl"
                             >
                               {isOwner ? (
                                 <>
@@ -803,13 +810,13 @@ export default function ProjectsWorkspace() {
                                       type="button"
                                       role="menuitem"
                                       onClick={() => openMembersModal(project, "requests")}
-                                      className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-xs font-semibold text-neutral-900 transition-colors hover:bg-neutral-50"
+                                      className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-xs font-semibold text-neutral-900 transition-colors hover:bg-neutral-50 dark:text-white dark:hover:bg-[#1e2634]"
                                     >
                                       <div className="flex items-center gap-2.5">
-                                        <Clock className="h-3.5 w-3.5 text-neutral-600" aria-hidden="true" />
+                                        <Clock className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />
                                         <span>Review requests</span>
                                       </div>
-                                      <span className="grid h-4.5 min-w-4.5 place-items-center rounded-full bg-neutral-900 px-1 text-[10px] font-bold text-white">
+                                      <span className="grid h-4.5 min-w-4.5 place-items-center rounded-full bg-neutral-900 dark:bg-emerald-600 px-1 text-[10px] font-bold text-white">
                                         {project.pendingRequestsCount}
                                       </span>
                                     </button>
@@ -818,12 +825,12 @@ export default function ProjectsWorkspace() {
                                     type="button"
                                     role="menuitem"
                                     onClick={() => openMembersModal(project, "members")}
-                                    className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-neutral-900"
+                                    className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"
                                   >
                                     <Users className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
                                     <span>See all members</span>
                                   </button>
-                                  <div className="my-1 border-t border-neutral-100" />
+                                  <div className="my-1 border-t border-neutral-100 dark:border-[#283548]" />
                                   <button
                                     type="button"
                                     role="menuitem"
@@ -832,7 +839,7 @@ export default function ProjectsWorkspace() {
                                       setActiveModal("delete");
                                       setMenuOpenProjectId(null);
                                     }}
-                                    className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50"
+                                    className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                                   >
                                     <Trash2 className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" />
                                     <span>Delete project</span>
@@ -847,7 +854,7 @@ export default function ProjectsWorkspace() {
                                     setActiveModal("leave");
                                     setMenuOpenProjectId(null);
                                   }}
-                                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50"
+                                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                                 >
                                   <LogOut className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" />
                                   <span>Leave project</span>
@@ -864,36 +871,36 @@ export default function ProjectsWorkspace() {
                           />
                         ) : (
                           <ArrowUpRight
-                            className="h-4 w-4 -translate-x-1 translate-y-1 text-neutral-300 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:translate-y-0 group-hover:text-neutral-900 group-hover:opacity-100"
+                            className="h-4 w-4 -translate-x-1 translate-y-1 text-neutral-300 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:translate-y-0 group-hover:text-neutral-900 group-hover:opacity-100 dark:text-neutral-500 dark:group-hover:text-white"
                             aria-hidden="true"
                           />
                         )}
                       </div>
                     </div>
 
-                    <h3 className="mt-4 text-sm font-semibold tracking-tight text-neutral-900 truncate">
+                    <h3 className="mt-4 text-sm font-semibold tracking-tight text-neutral-900 truncate dark:text-white">
                       {project.name}
                     </h3>
 
-                    <p className="mt-1 text-[13px] leading-5 text-neutral-500 line-clamp-2 min-h-[40px]">
+                    <p className="mt-1 text-[13px] leading-5 text-neutral-500 line-clamp-2 min-h-[40px] dark:text-neutral-400">
                       {project.description || "No description provided."}
                     </p>
 
                     {project.inviteCode && (
-                      <div className="mt-3 flex items-center justify-between rounded-lg bg-neutral-50 px-2.5 py-1.5 text-xs text-neutral-500 border border-neutral-100">
-                        <span className="text-[11px] font-mono tracking-wider font-medium text-neutral-700">
+                      <div className="mt-3 flex items-center justify-between rounded-lg bg-neutral-50 px-2.5 py-1.5 text-xs text-neutral-500 border border-neutral-100 dark:bg-[#121721] dark:border-[#283548] dark:text-neutral-400">
+                        <span className="text-[11px] font-mono tracking-wider font-medium text-neutral-700 dark:text-neutral-300">
                           {project.inviteCode}
                         </span>
                         <button
                           type="button"
                           onClick={(e) => handleCopyCode(e, project.inviteCode!)}
                           title="Copy invite code to share"
-                          className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-medium text-neutral-500 hover:text-neutral-900 transition-colors"
+                          className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-medium text-neutral-500 hover:text-neutral-900 transition-colors dark:text-neutral-400 dark:hover:text-white"
                         >
                           {isCopied ? (
                             <>
-                              <Check className="h-3 w-3 text-emerald-600" aria-hidden="true" />
-                              <span className="text-emerald-600">Copied</span>
+                              <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                              <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
                             </>
                           ) : (
                             <>
@@ -905,13 +912,13 @@ export default function ProjectsWorkspace() {
                       </div>
                     )}
 
-                    <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-xs text-neutral-400">
-                      <span className="inline-flex items-center gap-1.5 text-neutral-500">
+                    <div className="mt-4 flex items-center justify-between border-t border-neutral-100 dark:border-[#283548] pt-3 text-xs text-neutral-400 dark:text-neutral-500">
+                      <span className="inline-flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
                         <Users className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
                         <span>
                           {project.members}/5 members
                           {project.members >= 5 && (
-                            <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-amber-600">
+                            <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                               (Full)
                             </span>
                           )}
@@ -925,14 +932,14 @@ export default function ProjectsWorkspace() {
             })}
           </div>
         ) : (
-          <div className="flex flex-col items-center rounded-xl border border-dashed border-neutral-300 bg-white px-6 py-16 text-center">
-            <span className="grid h-11 w-11 place-items-center rounded-xl bg-neutral-100 text-neutral-500">
+          <div className="flex flex-col items-center rounded-xl border border-dashed border-neutral-300 bg-white px-6 py-16 text-center dark:border-[#283548] dark:bg-[#161d27]">
+            <span className="grid h-11 w-11 place-items-center rounded-xl bg-neutral-100 text-neutral-500 dark:bg-[#1e2634] dark:text-neutral-400">
               <FolderPlus className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h3 className="mt-5 text-sm font-semibold text-neutral-900">
+            <h3 className="mt-5 text-sm font-semibold text-neutral-900 dark:text-white">
               Your first project starts here
             </h3>
-            <p className="mt-1.5 text-[13px] text-neutral-500">
+            <p className="mt-1.5 text-[13px] text-neutral-500 dark:text-neutral-400">
               Set up a shared workspace for your app plan or join an existing team.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -979,7 +986,7 @@ export default function ProjectsWorkspace() {
             aria-modal="true"
             aria-labelledby="project-dialog-title"
             tabIndex={-1}
-            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-7"
+            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-7 dark:border-[#283548] dark:bg-[#161d27]"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button
@@ -987,12 +994,12 @@ export default function ProjectsWorkspace() {
               onClick={() => setActiveModal(null)}
               disabled={isSubmitting}
               aria-label="Close dialog"
-              className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-50"
+              className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-50 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
 
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-neutral-100 text-neutral-600">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-neutral-100 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-300">
               {activeModal === "create" ? (
                 <FolderPlus className="h-5 w-5" aria-hidden="true" />
               ) : (
@@ -1001,11 +1008,11 @@ export default function ProjectsWorkspace() {
             </span>
             <h2
               id="project-dialog-title"
-              className="mt-5 text-xl font-semibold tracking-tight text-neutral-900"
+              className="mt-5 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white"
             >
               {activeModal === "create" ? "Create a new project" : "Join a project"}
             </h2>
-            <p className="mt-1.5 text-sm leading-6 text-neutral-500">
+            <p className="mt-1.5 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
               {activeModal === "create"
                 ? `Set up a workspace for ${userName}'s next big idea.`
                 : "Enter the invite code your teammate shared with you."}
@@ -1016,7 +1023,7 @@ export default function ProjectsWorkspace() {
                 <div>
                   <label
                     htmlFor="project-name"
-                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700"
+                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
                   >
                     Project name
                   </label>
@@ -1030,16 +1037,16 @@ export default function ProjectsWorkspace() {
                     onChange={(e) => setProjectName(e.target.value)}
                     disabled={isSubmitting}
                     placeholder="e.g. Storefront Redesign"
-                    className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 shadow-xs transition-colors duration-150 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100 focus:outline-none disabled:opacity-50"
+                    className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 shadow-xs transition-colors duration-150 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100 focus:outline-none disabled:opacity-50 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:placeholder:text-neutral-500 dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="project-description"
-                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700"
+                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
                   >
-                    Description <span className="text-neutral-400 font-normal">(optional)</span>
+                    Description <span className="text-neutral-400 dark:text-neutral-500 font-normal">(optional)</span>
                   </label>
                   <textarea
                     id="project-description"
@@ -1050,7 +1057,7 @@ export default function ProjectsWorkspace() {
                     onChange={(e) => setProjectDescription(e.target.value)}
                     disabled={isSubmitting}
                     placeholder="Short summary of the product or service architecture..."
-                    className="w-full rounded-lg border border-neutral-200 bg-white p-3 text-sm text-neutral-900 shadow-xs transition-colors duration-150 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100 focus:outline-none disabled:opacity-50 resize-none"
+                    className="w-full rounded-lg border border-neutral-200 bg-white p-3 text-sm text-neutral-900 shadow-xs transition-colors duration-150 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100 focus:outline-none disabled:opacity-50 resize-none dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:placeholder:text-neutral-500 dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
                   />
                 </div>
 
@@ -1065,15 +1072,15 @@ export default function ProjectsWorkspace() {
               </form>
             ) : joinPendingProject ? (
               <div className="mt-6 space-y-5 dash-fade">
-                <div className="rounded-2xl border border-neutral-200/80 bg-neutral-50/70 p-5 text-center shadow-xs">
-                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white border border-neutral-200/80 text-neutral-800 shadow-2xs">
-                    <Clock className="h-5 w-5 text-neutral-700" aria-hidden="true" />
+                <div className="rounded-2xl border border-neutral-200/80 bg-neutral-50/70 p-5 text-center shadow-xs dark:border-[#283548] dark:bg-[#121721]">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white border border-neutral-200/80 text-neutral-800 shadow-2xs dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-200">
+                    <Clock className="h-5 w-5 text-neutral-700 dark:text-neutral-300" aria-hidden="true" />
                   </div>
-                  <h3 className="mt-3.5 text-sm font-semibold text-neutral-900">
+                  <h3 className="mt-3.5 text-sm font-semibold text-neutral-900 dark:text-white">
                     Request Sent — Waiting for Owner Approval
                   </h3>
-                  <p className="mt-1.5 text-xs text-neutral-500 leading-relaxed max-w-xs mx-auto">
-                    Your request to join <span className="font-semibold text-neutral-800">{joinPendingProject.name}</span> has been submitted to the project owner. You will gain access as soon as they accept.
+                  <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-xs mx-auto">
+                    Your request to join <span className="font-semibold text-neutral-800 dark:text-neutral-200">{joinPendingProject.name}</span> has been submitted to the project owner. You will gain access as soon as they accept.
                   </p>
                 </div>
 
@@ -1094,7 +1101,7 @@ export default function ProjectsWorkspace() {
                 <div>
                   <label
                     htmlFor="invite-code"
-                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700"
+                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
                   >
                     Invite code
                   </label>
@@ -1107,9 +1114,9 @@ export default function ProjectsWorkspace() {
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                     disabled={isSubmitting}
                     placeholder="e.g. NS-8A3F1"
-                    className="h-11 w-full font-mono uppercase tracking-wider rounded-lg border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 shadow-xs transition-colors duration-150 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100 focus:outline-none disabled:opacity-50"
+                    className="h-11 w-full font-mono uppercase tracking-wider rounded-lg border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 shadow-xs transition-colors duration-150 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100 focus:outline-none disabled:opacity-50 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:placeholder:text-neutral-500 dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
                   />
-                  <p className="mt-1.5 text-xs text-neutral-400">
+                  <p className="mt-1.5 text-xs text-neutral-400 dark:text-neutral-500">
                     Invite codes begin with <span className="font-mono font-medium">NS-</span> followed by 5 characters.
                   </p>
                 </div>
@@ -1125,7 +1132,7 @@ export default function ProjectsWorkspace() {
               </form>
             )}
 
-            <p className="mt-5 text-xs leading-5 text-neutral-400">
+            <p className="mt-5 text-xs leading-5 text-neutral-400 dark:text-neutral-500">
               {activeModal === "create"
                 ? "You will be set as the project owner with a unique invite code to share with collaborators."
                 : "Entering the invite code submits a join request to the project owner for approval."}
@@ -1137,7 +1144,7 @@ export default function ProjectsWorkspace() {
       {/* SEE ALL MEMBERS & CONFIRM REMOVAL MODAL (Single Animated Modal) */}
       {activeModal === "members" && selectedProject && (
         <div
-          className="dash-fade fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm"
+          className="dash-fade fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm dark:bg-black/60"
           role="presentation"
           onMouseDown={() => {
             if (
@@ -1156,7 +1163,7 @@ export default function ProjectsWorkspace() {
             aria-modal="true"
             aria-labelledby="members-dialog-title"
             tabIndex={-1}
-            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl transition-all duration-300 sm:p-7"
+            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl transition-all duration-300 sm:p-7 dark:border-[#283548] dark:bg-[#161d27]"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button
@@ -1167,7 +1174,7 @@ export default function ProjectsWorkspace() {
               }}
               disabled={isKickingMember || Boolean(resolvingRequestId) || Boolean(unbanningUserId)}
               aria-label="Close dialog"
-              className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:cursor-wait disabled:opacity-50"
+              className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:cursor-wait disabled:opacity-50 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -1180,52 +1187,52 @@ export default function ProjectsWorkspace() {
                   type="button"
                   onClick={() => setConfirmKickTarget(null)}
                   disabled={isKickingMember}
-                  className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50"
+                  className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors disabled:opacity-50 dark:text-neutral-400 dark:hover:text-white"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>Back to all members</span>
                 </button>
 
                 <div className="flex items-start gap-3.5 pt-1">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-950/40 dark:border-rose-900/50 dark:text-rose-400">
                     <UserMinus className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <div>
                     <h2
                       id="members-dialog-title"
-                      className="text-lg font-semibold tracking-tight text-neutral-900"
+                      className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-white"
                     >
                       Remove {confirmKickTarget.fullName || confirmKickTarget.email?.split("@")[0] || "collaborator"}?
                     </h2>
-                    <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
-                      Are you sure you want to remove this collaborator from <span className="font-medium text-neutral-800">{selectedProject.name}</span>? They will immediately lose access and be <span className="font-semibold text-rose-700">blocked from rejoining with the invite code</span>.
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                      Are you sure you want to remove this collaborator from <span className="font-medium text-neutral-800 dark:text-neutral-200">{selectedProject.name}</span>? They will immediately lose access and be <span className="font-semibold text-rose-700 dark:text-rose-400">blocked from rejoining with the invite code</span>.
                     </p>
                   </div>
                 </div>
 
                 {/* Target Collaborator Summary Card */}
-                <div className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3.5">
+                <div className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3.5 dark:border-[#283548] dark:bg-[#121721]">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase dark:bg-emerald-600">
                       {(confirmKickTarget.fullName || confirmKickTarget.email || "C")[0]}
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-neutral-900 truncate">
+                      <p className="text-xs font-semibold text-neutral-900 dark:text-white truncate">
                         {confirmKickTarget.fullName || confirmKickTarget.email?.split("@")[0] || "Collaborator"}
                       </p>
-                      <p className="text-[11px] text-neutral-500 truncate">
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
                         {confirmKickTarget.email || (confirmKickTarget.username ? `@${confirmKickTarget.username}` : "")}
                       </p>
                     </div>
                   </div>
                   {confirmKickTarget.joinedAt && (
-                    <span className="text-[11px] text-neutral-400 shrink-0">
+                    <span className="text-[11px] text-neutral-400 dark:text-neutral-500 shrink-0">
                       {confirmKickTarget.joinedAt}
                     </span>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-neutral-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <div className="pt-3 border-t border-neutral-100 dark:border-[#283548] flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                   <button
                     type="button"
                     disabled={isKickingMember}
@@ -1249,32 +1256,32 @@ export default function ProjectsWorkspace() {
               /* VIEW B: ALL COLLABORATORS & REQUESTS VIEW */
               <div className="dash-fade space-y-5">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-neutral-100 text-neutral-700">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-neutral-100 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-300">
                     <Users className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <div>
                     <h2
                       id="members-dialog-title"
-                      className="text-xl font-semibold tracking-tight text-neutral-900"
+                      className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-white"
                     >
-                      Project Collaborators
+                      Team & Collaborators
                     </h2>
-                    <p className="text-xs text-neutral-500">
-                      {selectedProject.name}
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Manage who has access to <span className="font-semibold text-neutral-800 dark:text-neutral-200">{selectedProject.name}</span>.
                     </p>
                   </div>
                 </div>
 
                 {/* Owner Sub-Tabs for Members, Requests, Blocked */}
                 {selectedProject.role === "owner" && (
-                  <div className="flex items-center gap-1.5 overflow-x-auto border-b border-neutral-100 pb-3">
+                  <div className="flex items-center gap-1.5 overflow-x-auto border-b border-neutral-100 dark:border-[#283548] pb-3">
                     <button
                       type="button"
                       onClick={() => setMemberTab("members")}
                       className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                         memberTab === "members"
-                          ? "bg-neutral-900 text-white shadow-2xs"
-                          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                          ? "bg-neutral-900 text-white shadow-2xs dark:bg-emerald-600 dark:text-white"
+                          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
                       }`}
                     >
                       <Users className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1286,8 +1293,8 @@ export default function ProjectsWorkspace() {
                       onClick={() => setMemberTab("requests")}
                       className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                         memberTab === "requests"
-                          ? "bg-neutral-900 text-white shadow-2xs"
-                          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                          ? "bg-neutral-900 text-white shadow-2xs dark:bg-emerald-600 dark:text-white"
+                          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
                       }`}
                     >
                       <Clock className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1296,8 +1303,8 @@ export default function ProjectsWorkspace() {
                         <span
                           className={`grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] font-bold ${
                             memberTab === "requests"
-                              ? "bg-white text-neutral-950"
-                              : "bg-neutral-200 text-neutral-800"
+                              ? "bg-white text-neutral-950 dark:bg-white dark:text-neutral-950"
+                              : "bg-neutral-200 text-neutral-800 dark:bg-[#283548] dark:text-neutral-200"
                           }`}
                         >
                           {projectRequests.length}
@@ -1310,8 +1317,8 @@ export default function ProjectsWorkspace() {
                       onClick={() => setMemberTab("banned")}
                       className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                         memberTab === "banned"
-                          ? "bg-neutral-900 text-white shadow-2xs"
-                          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                          ? "bg-neutral-900 text-white shadow-2xs dark:bg-emerald-600 dark:text-white"
+                          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
                       }`}
                     >
                       <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1325,26 +1332,26 @@ export default function ProjectsWorkspace() {
                   <div className="space-y-4">
                     {/* Invite code banner inside members modal */}
                     {selectedProject.inviteCode && (
-                      <div className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-neutral-50 p-3.5">
+                      <div className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-neutral-50 p-3.5 dark:border-[#283548] dark:bg-[#121721]">
                         <div>
-                          <p className="text-xs font-medium text-neutral-700">Invite new teammate</p>
-                          <p className="font-mono text-xs font-semibold tracking-wider text-neutral-900 mt-0.5">
+                          <p className="text-xs font-medium text-neutral-700 dark:text-neutral-300">Invite new teammate</p>
+                          <p className="font-mono text-xs font-semibold tracking-wider text-neutral-900 dark:text-white mt-0.5">
                             {selectedProject.inviteCode}
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={(e) => handleCopyCode(e, selectedProject.inviteCode!)}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:bg-neutral-50"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:bg-neutral-50 dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-200 dark:hover:bg-[#1e2634]"
                         >
                           {copiedCode === selectedProject.inviteCode ? (
                             <>
-                              <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" />
-                              <span className="text-emerald-600">Copied</span>
+                              <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                              <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
                             </>
                           ) : (
                             <>
-                              <Copy className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
+                              <Copy className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" aria-hidden="true" />
                               <span>Copy code</span>
                             </>
                           )}
@@ -1354,7 +1361,7 @@ export default function ProjectsWorkspace() {
 
                     {/* Members List */}
                     <div>
-                      <div className="mb-2.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                      <div className="mb-2.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                         <span>Members ({projectMembers.length}/5)</span>
                         <span>Role</span>
                       </div>
@@ -1362,20 +1369,20 @@ export default function ProjectsWorkspace() {
                       {isLoadingMembers ? (
                         <div className="space-y-2 py-4">
                           {[1, 2].map((i) => (
-                            <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50">
+                            <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50 dark:bg-[#121721]">
                               <div className="flex items-center gap-3">
-                                <div className="h-9 w-9 rounded-full bg-neutral-200" />
+                                <div className="h-9 w-9 rounded-full bg-neutral-200 dark:bg-[#283548]" />
                                 <div className="space-y-1.5">
-                                  <div className="h-3 w-28 rounded bg-neutral-200" />
-                                  <div className="h-2.5 w-20 rounded bg-neutral-200" />
+                                  <div className="h-3 w-28 rounded bg-neutral-200 dark:bg-[#283548]" />
+                                  <div className="h-2.5 w-20 rounded bg-neutral-200 dark:bg-[#283548]" />
                                 </div>
                               </div>
-                              <div className="h-6 w-16 rounded-full bg-neutral-200" />
+                              <div className="h-6 w-16 rounded-full bg-neutral-200 dark:bg-[#283548]" />
                             </div>
                           ))}
                         </div>
                       ) : projectMembers.length > 0 ? (
-                        <div className="max-h-64 overflow-y-auto space-y-1 divide-y divide-neutral-100 pr-1">
+                        <div className="max-h-64 overflow-y-auto space-y-1 divide-y divide-neutral-100 dark:divide-[#283548] pr-1">
                           {projectMembers.map((member) => {
                             const isMemberOwner = member.role === "owner";
                             const displayName = member.fullName || member.email?.split("@")[0] || "User";
@@ -1384,17 +1391,17 @@ export default function ProjectsWorkspace() {
                             return (
                               <div
                                 key={member.userId}
-                                className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 rounded-lg"
+                                className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 dark:hover:bg-[#1e2634]/60 rounded-lg"
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase">
+                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase dark:bg-emerald-600">
                                     {displayName[0]}
                                   </span>
                                   <div className="min-w-0">
-                                    <p className="text-sm font-medium text-neutral-900 truncate">
+                                    <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
                                       {displayName}
                                     </p>
-                                    <p className="text-xs text-neutral-400 truncate">
+                                    <p className="text-xs text-neutral-400 dark:text-neutral-500 truncate">
                                       {displaySub} {member.joinedAt ? `• ${member.joinedAt}` : ""}
                                     </p>
                                   </div>
@@ -1404,8 +1411,8 @@ export default function ProjectsWorkspace() {
                                   <span
                                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
                                       isMemberOwner
-                                        ? "bg-amber-50 text-amber-700 border border-amber-200/60"
-                                        : "bg-neutral-100 text-neutral-600 border border-neutral-200/60"
+                                        ? "bg-amber-50 text-amber-700 border border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60"
+                                        : "bg-neutral-100 text-neutral-600 border border-neutral-200/60 dark:bg-[#1e2634] dark:text-neutral-300 dark:border-[#283548]"
                                     }`}
                                   >
                                     {isMemberOwner && <Crown className="h-3 w-3" aria-hidden="true" />}
@@ -1419,7 +1426,7 @@ export default function ProjectsWorkspace() {
                                       onClick={() => setConfirmKickTarget(member)}
                                       title={`Remove and block ${displayName}`}
                                       aria-label={`Remove ${displayName}`}
-                                      className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                                      className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-neutral-500 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
                                     >
                                       <UserMinus className="h-3.5 w-3.5" aria-hidden="true" />
                                     </button>
@@ -1430,7 +1437,7 @@ export default function ProjectsWorkspace() {
                           })}
                         </div>
                       ) : (
-                        <p className="py-6 text-center text-xs text-neutral-400">
+                        <p className="py-6 text-center text-xs text-neutral-400 dark:text-neutral-500">
                           No members found.
                         </p>
                       )}
@@ -1441,17 +1448,17 @@ export default function ProjectsWorkspace() {
                 {/* TAB 2: JOIN REQUESTS */}
                 {memberTab === "requests" && (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                       <span>Pending Join Requests ({projectRequests.length})</span>
                       <span>Action</span>
                     </div>
 
                     {/* Capacity limit warning banner if project full */}
                     {projectMembers.length >= 5 && (
-                      <div className="flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 text-xs text-neutral-600">
-                        <ShieldAlert className="h-4 w-4 shrink-0 text-neutral-700" aria-hidden="true" />
+                      <div className="flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 text-xs text-neutral-600 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-300">
+                        <ShieldAlert className="h-4 w-4 shrink-0 text-neutral-700 dark:text-neutral-400" aria-hidden="true" />
                         <p>
-                          <span className="font-semibold text-neutral-900">Project capacity reached (5/5 members).</span> Remove an existing member before accepting new requests.
+                          <span className="font-semibold text-neutral-900 dark:text-white">Project capacity reached (5/5 members).</span> Remove an existing member before accepting new requests.
                         </p>
                       </div>
                     )}
@@ -1459,20 +1466,20 @@ export default function ProjectsWorkspace() {
                     {isLoadingRequests ? (
                       <div className="space-y-2 py-4">
                         {[1, 2].map((i) => (
-                          <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50">
+                          <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50 dark:bg-[#121721]">
                             <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 rounded-full bg-neutral-200" />
+                              <div className="h-9 w-9 rounded-full bg-neutral-200 dark:bg-[#283548]" />
                               <div className="space-y-1.5">
-                                <div className="h-3 w-28 rounded bg-neutral-200" />
-                                <div className="h-2.5 w-20 rounded bg-neutral-200" />
+                                <div className="h-3 w-28 rounded bg-neutral-200 dark:bg-[#283548]" />
+                                <div className="h-2.5 w-20 rounded bg-neutral-200 dark:bg-[#283548]" />
                               </div>
                             </div>
-                            <div className="h-7 w-24 rounded bg-neutral-200" />
+                            <div className="h-7 w-24 rounded bg-neutral-200 dark:bg-[#283548]" />
                           </div>
                         ))}
                       </div>
                     ) : projectRequests.length > 0 ? (
-                      <div className="max-h-64 overflow-y-auto space-y-2 divide-y divide-neutral-100 pr-1">
+                      <div className="max-h-64 overflow-y-auto space-y-2 divide-y divide-neutral-100 dark:divide-[#283548] pr-1">
                         {projectRequests.map((req) => {
                           const displayName = req.fullName || req.email?.split("@")[0] || "User";
                           const displaySub = req.email || (req.username ? `@${req.username}` : "");
@@ -1482,17 +1489,17 @@ export default function ProjectsWorkspace() {
                           return (
                             <div
                               key={req.id}
-                              className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 rounded-lg"
+                              className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 dark:hover:bg-[#1e2634]/60 rounded-lg"
                             >
                               <div className="flex items-center gap-3 min-w-0">
-                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase">
+                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase dark:bg-emerald-600">
                                   {displayName[0]}
                                 </span>
                                 <div className="min-w-0">
-                                  <p className="text-sm font-medium text-neutral-900 truncate">
+                                  <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
                                     {displayName}
                                   </p>
-                                  <p className="text-xs text-neutral-400 truncate">
+                                  <p className="text-xs text-neutral-400 dark:text-neutral-500 truncate">
                                     {displaySub} {req.createdAt ? `• ${req.createdAt}` : ""}
                                   </p>
                                 </div>
@@ -1504,7 +1511,7 @@ export default function ProjectsWorkspace() {
                                   disabled={isBusy || isProjectFull}
                                   onClick={() => handleResolveRequest(req.id, "approve")}
                                   title={isProjectFull ? "Project is at maximum capacity (5/5 members)" : "Approve join request"}
-                                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-2xs transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-2xs transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                                 >
                                   {isBusy ? (
                                     <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -1517,7 +1524,7 @@ export default function ProjectsWorkspace() {
                                   type="button"
                                   disabled={isBusy}
                                   onClick={() => handleResolveRequest(req.id, "decline")}
-                                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-600 shadow-2xs transition-colors hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 disabled:opacity-50"
+                                  className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-600 shadow-2xs transition-colors hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 disabled:opacity-50 dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 dark:hover:border-rose-900/50"
                                 >
                                   <UserX className="h-3.5 w-3.5" aria-hidden="true" />
                                   <span>Decline</span>
@@ -1529,9 +1536,9 @@ export default function ProjectsWorkspace() {
                       </div>
                     ) : (
                       <div className="py-8 text-center">
-                        <CheckCircle2 className="mx-auto h-7 w-7 text-neutral-300" aria-hidden="true" />
-                        <p className="mt-2 text-xs font-medium text-neutral-600">No pending join requests</p>
-                        <p className="text-[11px] text-neutral-400">When someone uses your invite code, their request will appear here.</p>
+                        <CheckCircle2 className="mx-auto h-7 w-7 text-neutral-300 dark:text-neutral-600" aria-hidden="true" />
+                        <p className="mt-2 text-xs font-medium text-neutral-600 dark:text-neutral-300">No pending join requests</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">When someone uses your invite code, their request will appear here.</p>
                       </div>
                     )}
                   </div>
@@ -1540,7 +1547,7 @@ export default function ProjectsWorkspace() {
                 {/* TAB 3: BLOCKED / REMOVED */}
                 {memberTab === "banned" && (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                       <span>Blocked Collaborators ({projectBanned.length})</span>
                       <span>Action</span>
                     </div>
@@ -1548,20 +1555,20 @@ export default function ProjectsWorkspace() {
                     {isLoadingBanned ? (
                       <div className="space-y-2 py-4">
                         {[1, 2].map((i) => (
-                          <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50">
+                          <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50 dark:bg-[#121721]">
                             <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 rounded-full bg-neutral-200" />
+                              <div className="h-9 w-9 rounded-full bg-neutral-200 dark:bg-[#283548]" />
                               <div className="space-y-1.5">
-                                <div className="h-3 w-28 rounded bg-neutral-200" />
-                                <div className="h-2.5 w-20 rounded bg-neutral-200" />
+                                <div className="h-3 w-28 rounded bg-neutral-200 dark:bg-[#283548]" />
+                                <div className="h-2.5 w-20 rounded bg-neutral-200 dark:bg-[#283548]" />
                               </div>
                             </div>
-                            <div className="h-7 w-20 rounded bg-neutral-200" />
+                            <div className="h-7 w-20 rounded bg-neutral-200 dark:bg-[#283548]" />
                           </div>
                         ))}
                       </div>
                     ) : projectBanned.length > 0 ? (
-                      <div className="max-h-64 overflow-y-auto space-y-2 divide-y divide-neutral-100 pr-1">
+                      <div className="max-h-64 overflow-y-auto space-y-2 divide-y divide-neutral-100 dark:divide-[#283548] pr-1">
                         {projectBanned.map((banned) => {
                           const displayName = banned.fullName || banned.email?.split("@")[0] || "User";
                           const displaySub = banned.email || (banned.username ? `@${banned.username}` : "");
@@ -1570,17 +1577,17 @@ export default function ProjectsWorkspace() {
                           return (
                             <div
                               key={banned.id}
-                              className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 rounded-lg"
+                              className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 dark:hover:bg-[#1e2634]/60 rounded-lg"
                             >
                               <div className="flex items-center gap-3 min-w-0">
-                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase">
+                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase dark:bg-emerald-600">
                                   {displayName[0]}
                                 </span>
                                 <div className="min-w-0">
-                                  <p className="text-sm font-medium text-neutral-900 truncate">
+                                  <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
                                     {displayName}
                                   </p>
-                                  <p className="text-xs text-neutral-400 truncate">
+                                  <p className="text-xs text-neutral-400 dark:text-neutral-500 truncate">
                                     {displaySub} {banned.bannedAt ? `• ${banned.bannedAt}` : ""}
                                   </p>
                                 </div>
@@ -1591,12 +1598,12 @@ export default function ProjectsWorkspace() {
                                   type="button"
                                   disabled={isBusy}
                                   onClick={() => handleUnbanUser(banned.userId)}
-                                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:bg-neutral-50 disabled:opacity-50"
+                                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:bg-neutral-50 dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-200 dark:hover:bg-[#1e2634] disabled:opacity-50"
                                 >
                                   {isBusy ? (
                                     <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                                   ) : (
-                                    <Check className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
+                                    <Check className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" aria-hidden="true" />
                                   )}
                                   <span>Unblock</span>
                                 </button>
@@ -1607,15 +1614,15 @@ export default function ProjectsWorkspace() {
                       </div>
                     ) : (
                       <div className="py-8 text-center">
-                        <ShieldAlert className="mx-auto h-7 w-7 text-neutral-300" aria-hidden="true" />
-                        <p className="mt-2 text-xs font-medium text-neutral-600">No blocked collaborators</p>
-                        <p className="text-[11px] text-neutral-400">Collaborators you remove from this project will appear here.</p>
+                        <ShieldAlert className="mx-auto h-7 w-7 text-neutral-300 dark:text-neutral-600" aria-hidden="true" />
+                        <p className="mt-2 text-xs font-medium text-neutral-600 dark:text-neutral-300">No blocked collaborators</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">Collaborators you remove from this project will appear here.</p>
                       </div>
                     )}
                   </div>
                 )}
 
-                <div className="border-t border-neutral-100 pt-4 flex justify-end">
+                <div className="border-t border-neutral-100 dark:border-[#283548] pt-4 flex justify-end">
                   <button
                     type="button"
                     onClick={() => setActiveModal(null)}
@@ -1634,7 +1641,7 @@ export default function ProjectsWorkspace() {
       {/* LEAVE PROJECT CONFIRMATION MODAL */}
       {activeModal === "leave" && selectedProject && (
         <div
-          className="dash-fade fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm"
+          className="dash-fade fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm dark:bg-black/60"
           role="presentation"
           onMouseDown={() => {
             if (!isSubmitting) setActiveModal(null);
@@ -1646,7 +1653,7 @@ export default function ProjectsWorkspace() {
             aria-modal="true"
             aria-labelledby="leave-dialog-title"
             tabIndex={-1}
-            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-7"
+            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-7 dark:border-[#283548] dark:bg-[#161d27]"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button
@@ -1654,22 +1661,22 @@ export default function ProjectsWorkspace() {
               onClick={() => setActiveModal(null)}
               disabled={isSubmitting}
               aria-label="Close dialog"
-              className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-50"
+              className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-50 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
 
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-neutral-100 text-neutral-700">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-neutral-100 text-neutral-700 dark:bg-[#1e2634] dark:text-neutral-300">
               <LogOut className="h-5 w-5" aria-hidden="true" />
             </span>
 
             <h2
               id="leave-dialog-title"
-              className="mt-5 text-xl font-semibold tracking-tight text-neutral-900"
+              className="mt-5 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white"
             >
               Leave {selectedProject.name}?
             </h2>
-            <p className="mt-2 text-sm leading-6 text-neutral-500">
+            <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
               Are you sure you want to leave this project? You will no longer have access to the planning canvas unless you are invited back.
             </p>
 
@@ -1699,7 +1706,7 @@ export default function ProjectsWorkspace() {
       {/* DELETE PROJECT CONFIRMATION MODAL */}
       {activeModal === "delete" && selectedProject && (
         <div
-          className="dash-fade fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm"
+          className="dash-fade fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm dark:bg-black/60"
           role="presentation"
           onMouseDown={() => {
             if (!isSubmitting) setActiveModal(null);
@@ -1711,7 +1718,7 @@ export default function ProjectsWorkspace() {
             aria-modal="true"
             aria-labelledby="delete-dialog-title"
             tabIndex={-1}
-            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-7"
+            className="dash-pop relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-7 dark:border-[#283548] dark:bg-[#161d27]"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button
@@ -1719,22 +1726,22 @@ export default function ProjectsWorkspace() {
               onClick={() => setActiveModal(null)}
               disabled={isSubmitting}
               aria-label="Close dialog"
-              className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-50"
+              className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-50 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
 
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-950/40 dark:border-rose-900/50 dark:text-rose-400">
               <Trash2 className="h-5 w-5" aria-hidden="true" />
             </span>
 
             <h2
               id="delete-dialog-title"
-              className="mt-5 text-xl font-semibold tracking-tight text-neutral-900"
+              className="mt-5 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white"
             >
               Delete {selectedProject.name}?
             </h2>
-            <p className="mt-2 text-sm leading-6 text-neutral-500">
+            <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
               This will permanently remove this project and revoke access for all collaborators. This action cannot be undone.
             </p>
 

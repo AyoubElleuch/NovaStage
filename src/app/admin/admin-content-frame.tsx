@@ -26,13 +26,13 @@ export default function AdminContentFrame({
   return (
     <main className="min-w-0 flex-1 overflow-y-auto flex flex-col">
       {/* Mobile Admin App Bar */}
-      <header className="sticky top-0 z-20 flex min-h-16 w-full items-center justify-between border-b border-neutral-200/80 bg-white/95 px-4.5 py-3.5 backdrop-blur-md md:hidden">
+      <header className="sticky top-0 z-20 flex min-h-16 w-full items-center justify-between border-b border-neutral-200/80 bg-white/95 px-4.5 py-3.5 backdrop-blur-md md:hidden dark:border-[#283548] dark:bg-[#161d27]/95">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={toggle}
             aria-label="Open admin navigation"
-            className="grid h-9 w-9 cursor-pointer place-items-center rounded-lg border border-neutral-200 bg-white text-neutral-700 shadow-2xs hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+            className="grid h-9 w-9 cursor-pointer place-items-center rounded-lg border border-neutral-200 bg-white text-neutral-700 shadow-2xs hover:bg-neutral-100 hover:text-neutral-900 transition-colors dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-200 dark:hover:bg-[#283548]"
           >
             <Menu className="h-4 w-4" />
           </button>
@@ -43,11 +43,11 @@ export default function AdminContentFrame({
               width={92}
               height={37}
               priority
-              className="h-6 w-auto"
+              className="h-6 w-auto dark:brightness-0 dark:invert"
             />
           </Link>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full bg-neutral-900 px-2.5 py-0.5 text-[11px] font-medium text-white">
+        <div className="flex items-center gap-1.5 rounded-full bg-neutral-900 px-2.5 py-0.5 text-[11px] font-medium text-white dark:bg-[#1e2634] dark:text-neutral-200">
           <ShieldCheck className="h-3 w-3 text-amber-400" />
           <span>{pageTitle}</span>
         </div>

@@ -61,8 +61,10 @@ function NotificationToast({
 
   return (
     <article
-      className={`site-notification ${notification.isExiting ? "site-notification--exiting" : ""} flex items-start gap-3 rounded-2xl border bg-white p-4 shadow-xl transition-all duration-200 ${
-        isError ? "border-red-200 text-red-950" : "border-neutral-200 text-neutral-900"
+      className={`site-notification ${notification.isExiting ? "site-notification--exiting" : ""} flex items-start gap-3 rounded-2xl border bg-white p-4 shadow-xl transition-all duration-200 dark:bg-[#161d27] ${
+        isError
+          ? "border-red-200 text-red-950 dark:border-red-900/60 dark:text-red-200"
+          : "border-neutral-200 text-neutral-900 dark:border-[#283548] dark:text-[#f1f5f9]"
       }`}
       role={isError ? "alert" : "status"}
       onMouseEnter={() => onPause(notification.id)}
@@ -70,32 +72,34 @@ function NotificationToast({
     >
       <span
         className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${
-          isError ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"
+          isError
+            ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
+            : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
         }`}
       >
         <Icon className="h-4 w-4" aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
-        <strong className="block text-xs font-semibold leading-5 text-neutral-900">
+        <strong className="block text-xs font-semibold leading-5 text-neutral-900 dark:text-white">
           {notification.title}
         </strong>
         {notification.message && (
-          <p className="mt-0.5 text-xs leading-4 text-neutral-500">{notification.message}</p>
+          <p className="mt-0.5 text-xs leading-4 text-neutral-500 dark:text-neutral-400">{notification.message}</p>
         )}
         {notification.detail && (
-          <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-neutral-200/80 bg-neutral-50 px-2.5 py-1.5 font-mono text-[11px] text-neutral-700">
+          <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-neutral-200/80 bg-neutral-50 px-2.5 py-1.5 font-mono text-[11px] text-neutral-700 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-300">
             <span className="truncate">{notification.detail}</span>
             {notification.copyText && (
               <button
                 type="button"
                 onClick={handleCopy}
-                className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-medium text-neutral-500 transition-colors hover:text-neutral-900"
+                className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-medium text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
                 title="Copy notification detail"
               >
                 {isCopied ? (
                   <>
-                    <Check className="h-3 w-3 text-emerald-600" aria-hidden="true" />
-                    <span className="text-emerald-600">Copied</span>
+                    <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                    <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
                   </>
                 ) : (
                   <>
@@ -110,7 +114,7 @@ function NotificationToast({
       </div>
       <button
         type="button"
-        className="grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+        className="grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-500 dark:hover:bg-[#1e2634] dark:hover:text-white"
         onClick={() => onDismiss(notification.id)}
         aria-label="Dismiss notification"
         title="Dismiss notification"

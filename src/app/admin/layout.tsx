@@ -14,7 +14,7 @@ export default async function AdminLayout({
 
   return (
     <MobileNavProvider>
-      <div className="dashboard-v2 flex h-dvh overflow-hidden bg-[#fafafa] text-neutral-900 antialiased">
+      <div className="dashboard-v2 flex h-dvh overflow-hidden bg-[#fafafa] text-neutral-900 antialiased dark:bg-[#0f141c] dark:text-[#f1f5f9]">
         <AdminSidebar userEmail={userEmail} userRole={userRole} />
         <AdminContentFrame>{children}</AdminContentFrame>
       </div>

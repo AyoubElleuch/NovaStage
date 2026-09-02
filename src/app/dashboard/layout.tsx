@@ -42,7 +42,7 @@ export default async function DashboardLayout({
 
   return (
     <MobileNavProvider>
-      <div className="dashboard-v2 flex h-dvh overflow-hidden bg-[#fafafa] text-neutral-900 antialiased">
+      <div className="dashboard-v2 flex h-dvh overflow-hidden bg-[#fafafa] text-neutral-900 dark:bg-[#0f141c] dark:text-[#f1f5f9] antialiased">
         <DashboardSidebar userEmail={userEmail} userRole={userRole} />
         <DashboardDataProvider projects={projects} settings={settings}>
           <DashboardContentFrame>{children}</DashboardContentFrame>

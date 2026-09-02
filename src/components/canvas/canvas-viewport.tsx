@@ -3,6 +3,7 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { CanvasViewport, CanvasTool } from "@/lib/canvas/types";
 import { screenToWorld } from "@/lib/canvas/coordinate-math";
+import { useTheme } from "@/lib/theme-context";
 
 interface CanvasViewportProps {
   viewport: CanvasViewport;
@@ -294,6 +295,12 @@ export default function CanvasViewportContainer({
     };
   }
 
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const dotColor = isDark
+    ? `rgba(255, 255, 255, ${Math.min(0.2, Math.max(0.06, viewport.zoom * 0.12))})`
+    : `rgba(160, 150, 140, ${Math.min(0.25, Math.max(0.08, viewport.zoom * 0.18))})`;
+
   return (
     <div
       ref={containerRef}
@@ -303,10 +310,10 @@ export default function CanvasViewportContainer({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onClick={handleClick}
-      className={`relative h-full w-full select-none overflow-hidden bg-[#faf8f5] touch-none ${cursorClass}`}
+      className={`relative h-full w-full select-none overflow-hidden bg-[#faf8f5] dark:bg-[#10151f] touch-none ${cursorClass}`}
       style={{
         backgroundImage: `
-          radial-gradient(circle, rgba(160, 150, 140, ${Math.min(0.25, Math.max(0.08, viewport.zoom * 0.18))}) 1px, transparent 1px)
+          radial-gradient(circle, ${dotColor} 1px, transparent 1px)
         `,
         backgroundSize: `${gridSize}px ${gridSize}px`,
         backgroundPosition: `${gridOffsetX}px ${gridOffsetY}px`,

@@ -42,7 +42,7 @@ export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProp
 
   const modalContent = (
     <div
-      className="dash-fade fixed inset-0 z-[90] flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm"
+      className="dash-fade fixed inset-0 z-[90] flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm dark:bg-black/60"
       role="presentation"
       onMouseDown={onClose}
     >
@@ -50,7 +50,7 @@ export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProp
         role="dialog"
         aria-modal="true"
         aria-labelledby="terms-of-service-title"
-        className="dash-pop relative flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8"
+        className="dash-pop relative flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-[#283548] dark:bg-[#161d27]"
         onMouseDown={(event) => event.stopPropagation()}
       >
         {/* Close Button */}
@@ -58,24 +58,24 @@ export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProp
           type="button"
           onClick={onClose}
           aria-label="Close terms of service dialog"
-          className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200"
+          className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-[#1e2634] dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
 
         {/* Modal Header */}
-        <div className="flex items-start gap-4 border-b border-neutral-100 pb-5 pr-8">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-neutral-100 text-neutral-800">
+        <div className="flex items-start gap-4 border-b border-neutral-100 dark:border-[#283548] pb-5 pr-8">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-neutral-100 text-neutral-800 dark:bg-[#1e2634] dark:text-neutral-200">
             <FileText className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
             <h2
               id="terms-of-service-title"
-              className="text-xl font-semibold tracking-tight text-neutral-900"
+              className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white"
             >
               Terms of Use
             </h2>
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               NovaStage Platform Terms &amp; User Agreement
             </p>
           </div>
@@ -84,17 +84,17 @@ export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProp
         {/* Modal Content */}
         <div
           tabIndex={0}
-          className="flex-1 overflow-y-auto py-5 pr-4 text-[13px] leading-relaxed text-neutral-600 focus-visible:outline-none"
+          className="flex-1 overflow-y-auto py-5 pr-4 text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300 focus-visible:outline-none"
         >
           <TermsOfServiceContent />
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-end border-t border-neutral-100 pt-4">
+        <div className="flex items-center justify-end border-t border-neutral-100 dark:border-[#283548] pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 cursor-pointer items-center justify-center rounded-lg bg-neutral-900 px-4 text-xs font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200"
+            className="flex h-9 cursor-pointer items-center justify-center rounded-lg bg-neutral-900 px-4 text-xs font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200"
           >
             Close
           </button>
@@ -130,7 +130,7 @@ export function TermsOfServiceTrigger({
           title={collapsed ? "Terms of Use" : undefined}
           className={
             className ||
-            `group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-neutral-500 transition-colors duration-150 hover:bg-neutral-100 hover:text-neutral-900 ${
+            `group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-neutral-500 transition-colors duration-150 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white ${
               collapsed ? "justify-center px-0" : ""
             }`
           }
@@ -150,7 +150,7 @@ export function TermsOfServiceTrigger({
         onClick={() => setIsOpen(true)}
         className={
           className ||
-          "cursor-pointer text-xs font-medium text-neutral-400 underline decoration-neutral-300 underline-offset-4 transition-colors hover:text-neutral-700 hover:decoration-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded"
+          "cursor-pointer text-xs font-medium text-neutral-400 underline decoration-neutral-300 underline-offset-4 transition-colors hover:text-neutral-700 hover:decoration-neutral-500 dark:text-neutral-500 dark:decoration-neutral-700 dark:hover:text-neutral-300 dark:hover:decoration-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded"
         }
       >
         {children || "Terms of Use"}

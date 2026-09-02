@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { completeOnboarding } from "./actions";
 import { TermsOfServiceContent } from "@/components/terms/terms-of-service-content";
+import { ThemeToggle } from "@/lib/theme-context";
 
 interface OnboardingFlowProps {
   initialFullName?: string;
@@ -36,18 +37,18 @@ function PasswordStrength({ password }: { password: string }) {
   const strength = passedRequirements <= 2 ? "Weak" : passedRequirements <= 4 ? "Medium" : "Strong";
   const strengthTone =
     strength === "Strong"
-      ? "text-emerald-600"
+      ? "text-emerald-600 dark:text-emerald-400"
       : strength === "Medium"
-        ? "text-amber-600"
-        : "text-red-600";
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-red-600 dark:text-red-400";
   const barTone =
     strength === "Strong" ? "bg-emerald-500" : strength === "Medium" ? "bg-amber-500" : "bg-red-500";
 
   return (
-    <div className="mt-2.5 border-t border-neutral-100 pt-2.5" aria-live="polite">
+    <div className="mt-2.5 border-t border-neutral-100 dark:border-[#283548] pt-2.5" aria-live="polite">
       <div className="flex items-center justify-between gap-3 text-xs">
-        <span className="text-neutral-400">Password strength</span>
-        <span className={`font-semibold ${password ? strengthTone : "text-neutral-400"}`}>
+        <span className="text-neutral-400 dark:text-neutral-500">Password strength</span>
+        <span className={`font-semibold ${password ? strengthTone : "text-neutral-400 dark:text-neutral-500"}`}>
           {password ? strength : "Not set"}
         </span>
       </div>
@@ -55,13 +56,13 @@ function PasswordStrength({ password }: { password: string }) {
         {passwordRequirements.map(({ label, test }) => (
           <span
             key={label}
-            className={`h-1 rounded-full ${password && test(password) ? barTone : "bg-neutral-200"}`}
+            className={`h-1 rounded-full ${password && test(password) ? barTone : "bg-neutral-200 dark:bg-[#283548]"}`}
           />
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-neutral-400">
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-neutral-400 dark:text-neutral-500">
         {passwordRequirements.map(({ label, test }) => (
-          <span key={label} className={password && test(password) ? "text-neutral-700" : undefined}>
+          <span key={label} className={password && test(password) ? "text-neutral-700 dark:text-neutral-200" : undefined}>
             {label}
           </span>
         ))}
@@ -193,7 +194,11 @@ export default function OnboardingFlow({
   };
 
   return (
-    <main className="login-surface flex min-h-screen w-full flex-col items-center justify-center bg-[#fdfdfc] px-4 py-8 sm:px-6 sm:py-12 selection:bg-neutral-200 selection:text-neutral-900">
+    <main className="login-surface flex min-h-screen w-full flex-col items-center justify-center bg-[#fdfdfc] dark:bg-[#0f141c] px-4 py-8 sm:px-6 sm:py-12 selection:bg-neutral-200 selection:text-neutral-900 dark:selection:bg-emerald-900 dark:selection:text-emerald-100 relative">
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
+
       <div className="w-full max-w-sm">
         {/* NovaStage Brand Logo */}
         <div className="mb-8 flex justify-center">
@@ -203,7 +208,7 @@ export default function OnboardingFlow({
             width={110}
             height={45}
             priority
-            className="h-auto w-27.5"
+            className="h-auto w-27.5 dark:brightness-0 dark:invert"
           />
         </div>
 
@@ -212,10 +217,10 @@ export default function OnboardingFlow({
           {step === 1 ? (
             <div>
               <header>
-                <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
+                <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">
                   Welcome to NovaStage
                 </h1>
-                <p className="mt-2 text-sm text-neutral-500">
+                <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
                   Please enter your full name.
                 </p>
               </header>
@@ -224,7 +229,7 @@ export default function OnboardingFlow({
                 <div>
                   <label
                     htmlFor="fullName"
-                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700"
+                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
                   >
                     Full name
                   </label>
@@ -242,16 +247,16 @@ export default function OnboardingFlow({
                     placeholder="e.g. Alex Morgan"
                     aria-invalid={Boolean(fullNameError)}
                     aria-describedby={fullNameError ? "fullName-error" : undefined}
-                    className={`h-11 w-full rounded-lg border px-3.5 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 ${
+                    className={`h-11 w-full rounded-lg border px-3.5 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 dark:text-white dark:placeholder-neutral-500 ${
                       fullNameError
-                        ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10"
-                        : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100"
+                        ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10 dark:border-red-800 dark:bg-red-950/20"
+                        : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100 dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/15"
                     }`}
                   />
                   {fullNameError && (
                     <p
                       id="fullName-error"
-                      className="login-error-transition mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600"
+                      className="login-error-transition mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400"
                     >
                       <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                       <span>{fullNameError}</span>
@@ -261,7 +266,7 @@ export default function OnboardingFlow({
 
                 <button
                   type="submit"
-                  className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 active:scale-[0.99]"
+                  className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 active:scale-[0.99]"
                 >
                   <span>Next</span>
                   <ArrowRight className="h-4 w-4" />
@@ -279,16 +284,16 @@ export default function OnboardingFlow({
                       setUsernameError("");
                       setServerError("");
                     }}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     <span>Back</span>
                   </button>
                 </div>
-                <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
+                <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">
                   Choose your username
                 </h1>
-                <p className="mt-2 text-sm text-neutral-500">
+                <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
                   Please enter your username.
                 </p>
               </header>
@@ -297,7 +302,7 @@ export default function OnboardingFlow({
                 <div>
                   <label
                     htmlFor="username"
-                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700"
+                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
                   >
                     Username
                   </label>
@@ -315,16 +320,16 @@ export default function OnboardingFlow({
                     placeholder="e.g. alexmorgan"
                     aria-invalid={Boolean(usernameError)}
                     aria-describedby={usernameError ? "username-error" : undefined}
-                    className={`h-11 w-full rounded-lg border px-3.5 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 ${
+                    className={`h-11 w-full rounded-lg border px-3.5 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 dark:text-white dark:placeholder-neutral-500 ${
                       usernameError
-                        ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10"
-                        : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100"
+                        ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10 dark:border-red-800 dark:bg-red-950/20"
+                        : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100 dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/15"
                     }`}
                   />
                   {usernameError && (
                     <p
                       id="username-error"
-                      className="login-error-transition mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600"
+                      className="login-error-transition mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400"
                     >
                       <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                       <span>{usernameError}</span>
@@ -334,7 +339,7 @@ export default function OnboardingFlow({
 
                 <button
                   type="submit"
-                  className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 active:scale-[0.99]"
+                  className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 active:scale-[0.99]"
                 >
                   <span>Next</span>
                   <ArrowRight className="h-4 w-4" />
@@ -353,21 +358,21 @@ export default function OnboardingFlow({
                       setPasswordError("");
                       setServerError("");
                     }}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded disabled:opacity-50"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded disabled:opacity-50"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     <span>Back</span>
                   </button>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-300">
                     <LockKeyhole className="h-4 w-4" />
                   </span>
-                  <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+                  <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
                     Update password
                   </h1>
                 </div>
-                <p className="mt-2 text-sm text-neutral-500">
+                <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
                   Keep your NovaStage account secure.
                 </p>
               </header>
@@ -376,7 +381,7 @@ export default function OnboardingFlow({
                 <div>
                   <label
                     htmlFor="password"
-                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700"
+                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
                   >
                     New password
                   </label>
@@ -396,10 +401,10 @@ export default function OnboardingFlow({
                       placeholder="••••••••"
                       aria-invalid={Boolean(passwordError)}
                       aria-describedby={passwordError ? "password-error" : undefined}
-                      className={`h-11 w-full rounded-lg border px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 ${
+                      className={`h-11 w-full rounded-lg border px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 dark:text-white dark:placeholder-neutral-500 ${
                         passwordError || serverError
-                          ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10"
-                          : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100"
+                          ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10 dark:border-red-800 dark:bg-red-950/20"
+                          : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100 dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/15"
                       }`}
                     />
                     <button
@@ -407,7 +412,7 @@ export default function OnboardingFlow({
                       disabled={isPending || isCompleted}
                       aria-label={showPassword ? "Hide password" : "Show password"}
                       onClick={() => setShowPassword((visible) => !visible)}
-                      className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -422,7 +427,7 @@ export default function OnboardingFlow({
                 <div>
                   <label
                     htmlFor="confirmation"
-                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700"
+                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
                   >
                     Confirm password
                   </label>
@@ -440,10 +445,10 @@ export default function OnboardingFlow({
                       }}
                       placeholder="••••••••"
                       aria-invalid={Boolean(passwordError)}
-                      className={`h-11 w-full rounded-lg border px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 ${
+                      className={`h-11 w-full rounded-lg border px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 dark:text-white dark:placeholder-neutral-500 ${
                         passwordError || serverError
-                          ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10"
-                          : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100"
+                          ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10 dark:border-red-800 dark:bg-red-950/20"
+                          : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100 dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/15"
                       }`}
                     />
                     <button
@@ -451,7 +456,7 @@ export default function OnboardingFlow({
                       disabled={isPending || isCompleted}
                       aria-label={showConfirmation ? "Hide password" : "Show password"}
                       onClick={() => setShowConfirmation((visible) => !visible)}
-                      className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-neutral-400 transition-colors hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {showConfirmation ? (
                         <EyeOff className="h-4 w-4" />
@@ -465,7 +470,7 @@ export default function OnboardingFlow({
                 {passwordError && (
                   <p
                     id="password-error"
-                    className="login-error-transition flex items-center gap-1.5 text-xs font-medium text-red-600"
+                    className="login-error-transition flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400"
                   >
                     <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                     <span>{passwordError}</span>
@@ -475,16 +480,16 @@ export default function OnboardingFlow({
                 {serverError && (
                   <div
                     role="alert"
-                    className="login-error-transition flex items-center gap-2.5 rounded-lg border border-red-200/80 bg-red-50/70 px-3.5 py-2.5 text-[13px] font-medium leading-snug text-red-700 shadow-2xs"
+                    className="login-error-transition flex items-center gap-2.5 rounded-lg border border-red-200/80 bg-red-50/70 px-3.5 py-2.5 text-[13px] font-medium leading-snug text-red-700 shadow-2xs dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
                   >
-                    <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                     <span>{serverError}</span>
                   </div>
                 )}
 
                 <button
                   type="submit"
-                  className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 active:scale-[0.99]"
+                  className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 active:scale-[0.99]"
                 >
                   <span>Next</span>
                   <ArrowRight className="h-4 w-4" />
@@ -503,21 +508,21 @@ export default function OnboardingFlow({
                       setTermsError("");
                       setServerError("");
                     }}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded disabled:opacity-50"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded disabled:opacity-50"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     <span>Back</span>
                   </button>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-300">
                     <FileText className="h-4 w-4" />
                   </span>
-                  <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+                  <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
                     Terms of Service
                   </h1>
                 </div>
-                <p className="mt-2 text-sm text-neutral-500">
+                <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
                   Please review and agree to our terms to finish setup.
                 </p>
               </header>
@@ -529,16 +534,16 @@ export default function OnboardingFlow({
                     tabIndex={0}
                     onScroll={handleTermsScroll}
                     aria-label="Terms of Service Agreement"
-                    className="h-48 sm:h-52 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white p-3.5 shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200"
+                    className="h-48 sm:h-52 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white p-3.5 shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 dark:border-[#283548] dark:bg-[#121721] dark:focus-visible:ring-neutral-700"
                   >
                     <TermsOfServiceContent />
                   </div>
                   {!hasScrolledToBottom ? (
-                    <p className="mt-2 text-[11.5px] text-neutral-400">
+                    <p className="mt-2 text-[11.5px] text-neutral-400 dark:text-neutral-500">
                       &darr; Please scroll to the bottom of the terms to enable the agreement checkbox.
                     </p>
                   ) : (
-                    <p className="mt-2 flex items-center gap-1 text-[11.5px] font-medium text-emerald-600">
+                    <p className="mt-2 flex items-center gap-1 text-[11.5px] font-medium text-emerald-600 dark:text-emerald-400">
                       <Check className="h-3.5 w-3.5" />
                       <span>You have reviewed the terms.</span>
                     </p>
@@ -558,14 +563,14 @@ export default function OnboardingFlow({
                         if (termsError) setTermsError("");
                         if (serverError) setServerError("");
                       }}
-                      className="mt-0.5 h-4 w-4 cursor-pointer rounded border-neutral-300 text-neutral-900 accent-neutral-900 focus:ring-2 focus:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="mt-0.5 h-4 w-4 cursor-pointer rounded border-neutral-300 text-neutral-900 accent-neutral-900 focus:ring-2 focus:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-[#283548] dark:bg-[#121721] dark:accent-emerald-600"
                     />
                     <label
                       htmlFor="terms-agreement-checkbox"
                       className={`text-xs font-medium leading-tight select-none ${
                         !hasScrolledToBottom
-                          ? "cursor-not-allowed text-neutral-400"
-                          : "cursor-pointer text-neutral-700 hover:text-neutral-900"
+                          ? "cursor-not-allowed text-neutral-400 dark:text-neutral-500"
+                          : "cursor-pointer text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
                       }`}
                     >
                       I have read and agree to the Terms of Service and Privacy Policy
@@ -574,7 +579,7 @@ export default function OnboardingFlow({
                   {termsError && (
                     <p
                       id="terms-error"
-                      className="login-error-transition mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600"
+                      className="login-error-transition mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400"
                     >
                       <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                       <span>{termsError}</span>
@@ -585,9 +590,9 @@ export default function OnboardingFlow({
                 {serverError && (
                   <div
                     role="alert"
-                    className="login-error-transition flex items-center gap-2.5 rounded-lg border border-red-200/80 bg-red-50/70 px-3.5 py-2.5 text-[13px] font-medium leading-snug text-red-700 shadow-2xs"
+                    className="login-error-transition flex items-center gap-2.5 rounded-lg border border-red-200/80 bg-red-50/70 px-3.5 py-2.5 text-[13px] font-medium leading-snug text-red-700 shadow-2xs dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
                   >
-                    <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                     <span>{serverError}</span>
                   </div>
                 )}
@@ -595,7 +600,7 @@ export default function OnboardingFlow({
                 <button
                   type="submit"
                   disabled={!agreedToTerms || isPending || isCompleted}
-                  className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isPending || isCompleted ? (
                     isCompleted ? (
@@ -622,8 +627,8 @@ export default function OnboardingFlow({
         </div>
 
         {/* Progress Bar at the Bottom */}
-        <div className="mt-10 border-t border-neutral-100 pt-6">
-          <div className="mb-2 flex items-center justify-between text-xs text-neutral-400">
+        <div className="mt-10 border-t border-neutral-100 dark:border-[#283548] pt-6">
+          <div className="mb-2 flex items-center justify-between text-xs text-neutral-400 dark:text-neutral-500">
             <span>
               {isCompleted
                 ? "Setup complete"
@@ -638,14 +643,14 @@ export default function OnboardingFlow({
             <span className="font-mono">{progressPercent}%</span>
           </div>
           <div
-            className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100"
+            className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-[#1e2634]"
             role="progressbar"
             aria-valuenow={progressPercent}
             aria-valuemin={0}
             aria-valuemax={100}
           >
             <div
-              className="h-full bg-neutral-900 transition-all duration-500 ease-out"
+              className="h-full bg-neutral-900 dark:bg-emerald-500 transition-all duration-500 ease-out"
               style={{ width: `${progressPercent}%` }}
             />
           </div>

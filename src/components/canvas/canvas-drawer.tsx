@@ -110,22 +110,22 @@ function MilestoneDrawerContent({
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs md:hidden"
+        className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs md:hidden dark:bg-black/60"
         onClick={onClose}
         aria-hidden="true"
       />
       <aside
         aria-label="Milestone inspector drawer"
-        className="fixed top-0 right-0 z-50 flex h-dvh w-full sm:max-w-[420px] flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        className="fixed top-0 right-0 z-50 flex h-dvh w-full sm:max-w-[420px] flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-[#283548] dark:bg-[#161d27]/95"
       >
       {/* Drawer Header */}
-      <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
+      <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4 dark:border-[#283548]">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-400">
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">
             Milestone Details
           </span>
           {isComplete && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200/60">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60">
               <Sparkles className="h-3 w-3" /> Complete
             </span>
           )}
@@ -135,14 +135,14 @@ function MilestoneDrawerContent({
           type="button"
           onClick={onClose}
           title="Close drawer (Esc)"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:hover:bg-[#1e2634] dark:hover:text-white"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
       {/* Claim Lock Notification Banner */}
-      <div className="border-b border-neutral-100 bg-neutral-50/60 px-5 py-3">
+      <div className="border-b border-neutral-100 bg-neutral-50/60 px-5 py-3 dark:border-[#283548] dark:bg-[#121721]/60">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             {isClaimedByMe ? (
@@ -151,23 +151,23 @@ function MilestoneDrawerContent({
                 style={{ backgroundColor: claimColor }}
               />
             ) : isClaimedByOther ? (
-              <Lock className="h-4 w-4 shrink-0 text-amber-600" />
+              <Lock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
             ) : (
               <Unlock className="h-4 w-4 shrink-0 text-neutral-400" />
             )}
 
             <div className="min-w-0 text-xs">
               {isClaimedByMe ? (
-                <p className="font-semibold text-emerald-700 truncate">
+                <p className="font-semibold text-emerald-700 dark:text-emerald-400 truncate">
                   You are editing this box
                 </p>
               ) : isClaimedByOther ? (
-                <p className="font-medium text-amber-800 truncate">
+                <p className="font-medium text-amber-800 dark:text-amber-300 truncate">
                   Claimed by{" "}
                   <strong>{otherClaimName}</strong>
                 </p>
               ) : (
-                <p className="font-medium text-neutral-500 truncate">
+                <p className="font-medium text-neutral-500 dark:text-neutral-400 truncate">
                   Unclaimed milestone
                 </p>
               )}
@@ -180,7 +180,7 @@ function MilestoneDrawerContent({
               <button
                 type="button"
                 onClick={() => onReleaseNode(node.id)}
-                className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer shadow-2xs"
+                className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer shadow-2xs dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300 dark:hover:bg-[#283548]"
               >
                 Release
               </button>
@@ -198,7 +198,7 @@ function MilestoneDrawerContent({
                     type="button"
                     onClick={() => onForceUnlock(node.id)}
                     title="Owner Override: Force unlock"
-                    className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-600 hover:bg-red-100 transition-colors cursor-pointer"
+                    className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-600 hover:bg-red-100 transition-colors cursor-pointer dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400"
                   >
                     Force Free
                   </button>
@@ -208,7 +208,7 @@ function MilestoneDrawerContent({
               <button
                 type="button"
                 onClick={() => onClaimNode(node.id)}
-                className="rounded-lg bg-neutral-900 px-3 py-1 text-[11px] font-semibold text-white hover:bg-neutral-800 transition-colors cursor-pointer shadow-2xs"
+                className="rounded-lg bg-neutral-900 px-3 py-1 text-[11px] font-semibold text-white hover:bg-neutral-800 transition-colors cursor-pointer shadow-2xs dark:bg-emerald-600 dark:hover:bg-emerald-500"
               >
                 Claim to Edit
               </button>
@@ -221,7 +221,7 @@ function MilestoneDrawerContent({
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
         {/* Title Input */}
         <div>
-          <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 block mb-1.5">
+          <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
             Step Title
           </label>
           <input
@@ -231,26 +231,26 @@ function MilestoneDrawerContent({
             onChange={(e) => setTitle(e.target.value)}
             onBlur={handleTitleBlur}
             placeholder="e.g. Setup Supabase Database"
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed"
+            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20 dark:disabled:bg-[#161d27] dark:disabled:text-neutral-500"
           />
         </div>
 
         {/* Progress Bar & Readout */}
         {node.checkpoints.length > 0 && (
-          <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
+          <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4 dark:border-[#283548] dark:bg-[#121721]">
             <div className="flex items-center justify-between text-xs font-semibold mb-2">
-              <span className="text-neutral-700">Milestone Completion</span>
-              <span className={isComplete ? "text-emerald-600 font-bold" : "text-neutral-900"}>
+              <span className="text-neutral-700 dark:text-neutral-300">Milestone Completion</span>
+              <span className={isComplete ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-neutral-900 dark:text-white"}>
                 {completionPct}% ({node.checkpoints.filter((c) => c.is_completed).length}/{node.checkpoints.length})
               </span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-[#1e2634]">
               <div
                 className={`h-full transition-all duration-300 ease-out rounded-full ${
                   isComplete
                     ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.7)]"
                     : completionPct > 0
-                    ? "bg-neutral-900"
+                    ? "bg-neutral-900 dark:bg-emerald-500"
                     : "bg-transparent"
                 }`}
                 style={{ width: `${completionPct}%` }}
@@ -261,7 +261,7 @@ function MilestoneDrawerContent({
 
         {/* Description Field */}
         <div>
-          <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 block mb-1.5">
+          <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
             Description & Notes
           </label>
           <textarea
@@ -271,18 +271,18 @@ function MilestoneDrawerContent({
             onChange={(e) => setDescription(e.target.value)}
             onBlur={handleDescriptionBlur}
             placeholder="Document technical requirements, schema links, or guidelines for this milestone…"
-            className="w-full rounded-lg border border-neutral-200 bg-white p-3 text-xs leading-relaxed text-neutral-800 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed resize-none"
+            className="w-full rounded-lg border border-neutral-200 bg-white p-3 text-xs leading-relaxed text-neutral-800 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed resize-none dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20 dark:disabled:bg-[#161d27] dark:disabled:text-neutral-500"
           />
         </div>
 
         {/* Checkpoints Checklist */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
               Checkpoints ({node.checkpoints.length})
             </label>
             {!isClaimedByMe && (
-              <span className="text-[10px] text-neutral-400 font-medium italic">
+              <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium italic">
                 (View-only)
               </span>
             )}
@@ -290,7 +290,7 @@ function MilestoneDrawerContent({
 
           <div className="space-y-2">
             {node.checkpoints.length === 0 && (
-              <p className="text-xs text-neutral-400 italic py-1">
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 italic py-1">
                 No checkpoints yet. {isClaimedByMe ? "Add your first step below." : "Claim this milestone to add checklist steps."}
               </p>
             )}
@@ -299,8 +299,8 @@ function MilestoneDrawerContent({
                 key={cp.id}
                 className={`group relative flex items-start justify-between gap-3 rounded-xl border p-3 transition-all ${
                   cp.is_completed
-                    ? "border-emerald-100 bg-emerald-50/30"
-                    : "border-neutral-200/90 bg-white hover:border-neutral-300 hover:shadow-2xs"
+                    ? "border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/40 dark:bg-emerald-950/20"
+                    : "border-neutral-200/90 bg-white hover:border-neutral-300 hover:shadow-2xs dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961]"
                 }`}
               >
                 {/* Dedicated Checkbox Toggle Button */}
@@ -326,10 +326,10 @@ function MilestoneDrawerContent({
                       ? "Claimed by collaborator. Click to request edit."
                       : "Unclaimed milestone. Click to claim edit lock."
                   }
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/20 ${
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/20 dark:focus-visible:ring-emerald-500/20 ${
                     cp.is_completed
-                      ? "text-emerald-600 hover:text-emerald-700 hover:scale-110"
-                      : "text-neutral-300 hover:text-neutral-600 hover:scale-110"
+                      ? "text-emerald-600 hover:text-emerald-700 hover:scale-110 dark:text-emerald-400"
+                      : "text-neutral-300 hover:text-neutral-600 hover:scale-110 dark:text-neutral-600 dark:hover:text-neutral-400"
                   }`}
                 >
                   {cp.is_completed ? (
@@ -344,8 +344,8 @@ function MilestoneDrawerContent({
                   <p
                     className={`text-xs leading-relaxed break-words select-text ${
                       cp.is_completed
-                        ? "text-neutral-400 line-through decoration-neutral-300"
-                        : "text-neutral-800 font-medium"
+                        ? "text-neutral-400 line-through decoration-neutral-300 dark:text-neutral-500 dark:decoration-neutral-600"
+                        : "text-neutral-800 font-medium dark:text-neutral-200"
                     }`}
                   >
                     {cp.title}
@@ -361,7 +361,7 @@ function MilestoneDrawerContent({
                       onDeleteCheckpoint(cp.id, node.id);
                     }}
                     title="Delete checkpoint"
-                    className="opacity-0 group-hover:opacity-100 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer"
+                    className="opacity-0 group-hover:opacity-100 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer dark:hover:bg-red-950/40 dark:hover:text-red-400"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -378,12 +378,12 @@ function MilestoneDrawerContent({
                     value={newCheckpointTitle}
                     onChange={(e) => setNewCheckpointTitle(e.target.value)}
                     placeholder="Add new checkpoint item (press Enter)…"
-                    className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+                    className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
                   />
                   <button
                     type="submit"
                     disabled={!newCheckpointTitle.trim()}
-                    className="inline-flex h-8 items-center justify-center rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="inline-flex h-8 items-center justify-center rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
@@ -394,19 +394,19 @@ function MilestoneDrawerContent({
         </div>
 
         {/* Dependency Chain Section */}
-        <div className="border-t border-neutral-100 pt-5">
-          <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 block mb-3">
+        <div className="border-t border-neutral-100 dark:border-[#283548] pt-5">
+          <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-3">
             Dependency Flow
           </label>
 
           {/* Prerequisites */}
           <div className="mb-3">
-            <p className="text-[11px] font-semibold text-neutral-500 flex items-center gap-1.5 mb-1.5">
-              <ArrowLeft className="h-3 w-3 text-neutral-400" />
+            <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
+              <ArrowLeft className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
               Prerequisites ({prerequisiteNodes.length})
             </p>
             {prerequisiteNodes.length === 0 ? (
-              <p className="text-xs text-neutral-400 italic pl-4">No prerequisites (Root step)</p>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No prerequisites (Root step)</p>
             ) : (
               <div className="space-y-1.5 pl-2">
                 {prerequisiteNodes.map((pn) => {
@@ -415,14 +415,14 @@ function MilestoneDrawerContent({
                     <div
                       key={pn.id}
                       onClick={() => onJumpToNode(pn.id)}
-                      className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer"
+                      className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
                     >
-                      <span className="font-medium text-neutral-800 truncate">{pn.title}</span>
+                      <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{pn.title}</span>
                       <span
                         className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
                           prereqComplete
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-neutral-200 text-neutral-600"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                            : "bg-neutral-200 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-400"
                         }`}
                       >
                         {prereqComplete ? "Done" : "Pending"}
@@ -436,22 +436,22 @@ function MilestoneDrawerContent({
 
           {/* Unlocked Downstream Steps */}
           <div>
-            <p className="text-[11px] font-semibold text-neutral-500 flex items-center gap-1.5 mb-1.5">
-              <ArrowRight className="h-3 w-3 text-neutral-400" />
+            <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
+              <ArrowRight className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
               Unlocks Downstream ({unlockedNodes.length})
             </p>
             {unlockedNodes.length === 0 ? (
-              <p className="text-xs text-neutral-400 italic pl-4">No downstream steps</p>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No downstream steps</p>
             ) : (
               <div className="space-y-1.5 pl-2">
                 {unlockedNodes.map((un) => (
                   <div
                     key={un.id}
                     onClick={() => onJumpToNode(un.id)}
-                    className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer"
+                    className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
                   >
-                    <span className="font-medium text-neutral-800 truncate">{un.title}</span>
-                    <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{un.title}</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                       {isComplete ? "Wire Glowing" : "Waiting"}
                     </span>
                   </div>
@@ -464,11 +464,11 @@ function MilestoneDrawerContent({
 
       {/* Drawer Footer Actions - Only available if claimed or owner */}
       {(isClaimedByMe || isProjectOwner) && (
-        <div className="border-t border-neutral-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-neutral-50/50">
+        <div className="border-t border-neutral-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-neutral-50/50 dark:border-[#283548] dark:bg-[#121721]/50">
           <button
             type="button"
             onClick={() => onDeleteNode(node.id)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white py-2 text-xs font-semibold text-red-600 shadow-2xs hover:bg-red-50 transition-colors cursor-pointer"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white py-2 text-xs font-semibold text-red-600 shadow-2xs hover:bg-red-50 transition-colors cursor-pointer dark:border-red-900/50 dark:bg-[#161d27] dark:text-red-400 dark:hover:bg-red-950/30"
           >
             <Trash2 className="h-3.5 w-3.5" />
             <span>Delete Milestone Box</span>

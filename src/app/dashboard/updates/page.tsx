@@ -2,6 +2,15 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
+    version: "v1.4.1",
+    date: "September 3, 2026",
+    title: "Eye-Friendly Dark Mode",
+    summary: "Complete workspace-wide dark mode with a balanced slate palette, instant switching, and light mode by default.",
+    changes: [
+      "Introduced system-wide dark mode with an eye-friendly, high-contrast palette and instant switching across all pages and canvas tools.",
+    ],
+  },
+  {
     version: "v1.4.0",
     date: "September 2, 2026",
     title: "Mobile-Native Workspace & Canvas",
@@ -10,9 +19,7 @@ const releases = [
       "Engineered multi-touch gesture engine supporting fluid 1-finger canvas panning and 2-finger pinch-to-zoom.",
       "Added two-tier mobile canvas layout elevating AI Assistant and Project Notebook cleanly above the bottom toolbar.",
       "Introduced mobile quick-action card for milestones with instant lock claim/release, task toggles, and detail inspection.",
-      "Replaced fixed desktop rails with smooth off-canvas navigation drawers and comfortable mobile app bars.",
-      "Enlarged milestone connection handles with 36px touch targets for effortless mobile diagram linking.",
-      "Optimized safe-area insets, padding, and modals across login, onboarding, settings, and admin console.",
+      "Optimized responsive navigation drawers, comfortable app bars, and touch targets across all workspaces and dialogs.",
     ],
   },
   {
@@ -89,18 +96,18 @@ const releases = [
 export default function UpdatesPage() {
   return (
     <div className="mx-auto max-w-3xl">
-      <header className="dash-enter border-b border-neutral-200 pb-8">
-        <div className="flex items-center gap-2 text-neutral-500">
-          <Sparkles className="h-4 w-4" aria-hidden="true" />
+      <header className="dash-enter border-b border-neutral-200 dark:border-[#283548] pb-8">
+        <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
+          <Sparkles className="h-4 w-4 text-amber-500 dark:text-amber-400" aria-hidden="true" />
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">Release notes</p>
         </div>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">Updates</h1>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500">
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">Updates</h1>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
           The meaningful changes shaping NovaStage, from the first workspace release to today.
         </p>
       </header>
 
-      <div className="relative py-3 before:absolute before:bottom-8 before:left-1.75 before:top-8 before:w-px before:bg-neutral-200">
+      <div className="relative py-3 before:absolute before:bottom-8 before:left-1.75 before:top-8 before:w-px before:bg-neutral-200 dark:before:bg-[#283548]">
         {releases.map((release, index) => (
           <article
             key={release.version}
@@ -108,29 +115,29 @@ export default function UpdatesPage() {
             style={{ "--dash-delay": `${70 + index * 55}ms` } as React.CSSProperties}
           >
             <span
-              className={`relative z-10 mt-1 h-3.75 w-3.75 rounded-full border-4 border-white ${
-                index === 0 ? "bg-neutral-900" : "bg-neutral-300"
+              className={`relative z-10 mt-1 h-3.75 w-3.75 rounded-full border-4 border-white dark:border-[#0f141c] ${
+                index === 0 ? "bg-neutral-900 dark:bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600"
               }`}
               aria-hidden="true"
             />
             <div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="font-mono text-xs font-semibold text-neutral-900">
+                <span className="font-mono text-xs font-semibold text-neutral-900 dark:text-white">
                   {release.version}
                 </span>
-                <time className="text-xs text-neutral-400">{release.date}</time>
+                <time className="text-xs text-neutral-400 dark:text-neutral-500">{release.date}</time>
                 {index === 0 && (
-                  <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="rounded-full bg-neutral-900 dark:bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold text-white">
                     Latest
                   </span>
                 )}
               </div>
-              <h2 className="mt-3 text-lg font-semibold text-neutral-900">{release.title}</h2>
-              <p className="mt-1 text-sm leading-6 text-neutral-500">{release.summary}</p>
+              <h2 className="mt-3 text-lg font-semibold text-neutral-900 dark:text-white">{release.title}</h2>
+              <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">{release.summary}</p>
               <ul className="mt-4 space-y-2">
                 {release.changes.map((change) => (
-                  <li key={change} className="flex gap-2.5 text-[13px] leading-5 text-neutral-600">
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden="true" />
+                  <li key={change} className="flex gap-2.5 text-[13px] leading-5 text-neutral-600 dark:text-neutral-300">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
                     <span>{change}</span>
                   </li>
                 ))}

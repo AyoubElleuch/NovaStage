@@ -41,7 +41,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
 
   const modalContent = (
     <div
-      className="dash-fade fixed inset-0 z-[90] flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm"
+      className="dash-fade fixed inset-0 z-[90] flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm dark:bg-black/60"
       role="presentation"
       onMouseDown={onClose}
     >
@@ -49,7 +49,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
         role="dialog"
         aria-modal="true"
         aria-labelledby="privacy-policy-title"
-        className="dash-pop relative flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8"
+        className="dash-pop relative flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-[#283548] dark:bg-[#161d27]"
         onMouseDown={(event) => event.stopPropagation()}
       >
         {/* Close Button */}
@@ -57,24 +57,24 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
           type="button"
           onClick={onClose}
           aria-label="Close privacy policy dialog"
-          className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200"
+          className="absolute top-5 right-5 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-[#1e2634] dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
 
         {/* Modal Header */}
-        <div className="flex items-start gap-4 border-b border-neutral-100 pb-5 pr-8">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-neutral-100 text-neutral-800">
+        <div className="flex items-start gap-4 border-b border-neutral-100 dark:border-[#283548] pb-5 pr-8">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-neutral-100 text-neutral-800 dark:bg-[#1e2634] dark:text-neutral-200">
             <Shield className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
             <h2
               id="privacy-policy-title"
-              className="text-xl font-semibold tracking-tight text-neutral-900"
+              className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white"
             >
               Privacy Policy
             </h2>
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
               NovaStage Data Commitment &amp; Privacy Standards
             </p>
           </div>
@@ -83,71 +83,71 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
         {/* Modal Content */}
         <div
           tabIndex={0}
-          className="flex-1 space-y-6 overflow-y-auto py-5 pr-4 text-[13px] leading-relaxed text-neutral-600 focus-visible:outline-none"
+          className="flex-1 space-y-6 overflow-y-auto py-5 pr-4 text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300 focus-visible:outline-none"
         >
           {/* Key Principles Banner */}
-          <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/70 p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-700">
+          <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/70 p-4 dark:border-[#283548] dark:bg-[#1e2634]/60">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-700 dark:text-neutral-200">
               Our Core Privacy Principles
             </h3>
-            <p className="mt-1.5 text-xs text-neutral-600 leading-normal">
+            <p className="mt-1.5 text-xs text-neutral-600 dark:text-neutral-300 leading-normal">
               We do not sell your personal or project data. We do not track your behavior across the web, we do not record session replays, and we collect only the minimum data required to deliver NovaStage.
             </p>
           </div>
 
           {/* Section 1: Data We Collect */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900">1. Information We Collect</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">1. Information We Collect</h3>
             <p>
               We only collect data that you voluntarily provide to us when creating an account, joining our waitlist, or collaborating on projects:
             </p>
-            <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600">
+            <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600 dark:text-neutral-300">
               <li>
-                <strong className="font-medium text-neutral-800">Account &amp; Identity:</strong> Email address, username, full name, and optional avatar image (supplied directly or via GitHub OAuth).
+                <strong className="font-medium text-neutral-800 dark:text-white">Account &amp; Identity:</strong> Email address, username, full name, and optional avatar image (supplied directly or via GitHub OAuth).
               </li>
               <li>
-                <strong className="font-medium text-neutral-800">Waitlist Information:</strong> Email address and authentication provider when applying for access.
+                <strong className="font-medium text-neutral-800 dark:text-white">Waitlist Information:</strong> Email address and authentication provider when applying for access.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800">Workspace &amp; Project Data:</strong> Project titles, descriptions, milestone nodes, checklist items, and workflow dependency links that you create or edit.
+                <strong className="font-medium text-neutral-800 dark:text-white">Workspace &amp; Project Data:</strong> Project titles, descriptions, milestone nodes, checklist items, and workflow dependency links that you create or edit.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800">AI Usage Quotas:</strong> An aggregate counter tracking the number of AI workflow requests used per account (<code className="rounded bg-neutral-100 px-1 py-0.5 font-mono text-[11px] text-neutral-700">ai_requests_count</code>) to enforce generation limits.
+                <strong className="font-medium text-neutral-800 dark:text-white">AI Usage Quotas:</strong> An aggregate counter tracking the number of AI workflow requests used per account (<code className="rounded bg-neutral-100 px-1 py-0.5 font-mono text-[11px] text-neutral-700 dark:bg-[#121721] dark:text-neutral-300">ai_requests_count</code>) to enforce generation limits.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800">Transactional Communications:</strong> Operational emails necessary for waitlist confirmations, invitation notices, and password resets.
+                <strong className="font-medium text-neutral-800 dark:text-white">Transactional Communications:</strong> Operational emails necessary for waitlist confirmations, invitation notices, and password resets.
               </li>
             </ul>
           </section>
 
           {/* Section 2: Artificial Intelligence & Workflow Generation */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900">2. Artificial Intelligence &amp; Workflow Generation</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">2. Artificial Intelligence &amp; Workflow Generation</h3>
             <p>
               NovaStage includes an integrated Canvas AI Assistant that transforms natural language descriptions and voice input into structured Directed Acyclic Graph (DAG) workflows containing milestone boxes, checkpoint tasks, and dependency links.
             </p>
-            <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600">
+            <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600 dark:text-neutral-300">
               <li>
-                <strong className="font-medium text-neutral-800">Platform-Managed AI &amp; API Keys:</strong> AI workflow generation is powered by Google Gemini generative AI models through NovaStage&apos;s own platform-managed API infrastructure. Users do not need to provide, manage, or expose personal API keys.
+                <strong className="font-medium text-neutral-800 dark:text-white">Platform-Managed AI &amp; API Keys:</strong> AI workflow generation is powered by Google Gemini generative AI models through NovaStage&apos;s own platform-managed API infrastructure. Users do not need to provide, manage, or expose personal API keys.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800">Voice Dictation (Web Speech API):</strong> When voice dictation is used, speech-to-text conversion is handled locally via your browser&apos;s native Web Speech API. NovaStage never records, stores, or transmits your microphone audio streams to our backend servers.
+                <strong className="font-medium text-neutral-800 dark:text-white">Voice Dictation (Web Speech API):</strong> When voice dictation is used, speech-to-text conversion is handled locally via your browser&apos;s native Web Speech API. NovaStage never records, stores, or transmits your microphone audio streams to our backend servers.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800">Zero Prompt Logging or Storage:</strong> When you submit a prompt to generate a workflow, the prompt text and schema requirements are sent via secure TLS encryption directly to the Google Gemini API solely to compute the milestone structure. NovaStage <strong>does not log, archive, or retain your raw prompts or conversational interactions</strong> in our database or server logs.
+                <strong className="font-medium text-neutral-800 dark:text-white">Zero Prompt Logging or Storage:</strong> When you submit a prompt to generate a workflow, the prompt text and schema requirements are sent via secure TLS encryption directly to the Google Gemini API solely to compute the milestone structure. NovaStage <strong>does not log, archive, or retain your raw prompts or conversational interactions</strong> in our database or server logs.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800">Canvas Artifact Storage:</strong> Only the structured project elements that you generate and place onto the canvas (milestone nodes, checkpoints, and edge connections) are stored in our PostgreSQL database, exactly like manually created nodes.
+                <strong className="font-medium text-neutral-800 dark:text-white">Canvas Artifact Storage:</strong> Only the structured project elements that you generate and place onto the canvas (milestone nodes, checkpoints, and edge connections) are stored in our PostgreSQL database, exactly like manually created nodes.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800">No AI Model Training:</strong> Neither NovaStage nor Google uses your private prompts or project canvas data to train public foundation AI models.
+                <strong className="font-medium text-neutral-800 dark:text-white">No AI Model Training:</strong> Neither NovaStage nor Google uses your private prompts or project canvas data to train public foundation AI models.
               </li>
             </ul>
           </section>
 
           {/* Section 3: Ephemeral Real-Time Collaboration */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900">3. Ephemeral Real-Time Collaboration</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">3. Ephemeral Real-Time Collaboration</h3>
             <p>
               NovaStage features interactive multi-user canvas collaboration. Real-time events — such as active milestone edit locks, AI generation collision locks, and live multiplayer cursor positions — are streamed ephemerally over secure WebSocket channels between connected project collaborators. This transient collaboration state is held in-memory and is <strong>never recorded or stored permanently</strong>.
             </p>
@@ -155,27 +155,27 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
 
           {/* Section 4: What We Never Do */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900">4. Zero Selling &amp; Zero Behavioral Tracking</h3>
-            <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600">
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">4. Zero Selling &amp; Zero Behavioral Tracking</h3>
+            <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600 dark:text-neutral-300">
               <li>
-                <strong className="font-medium text-neutral-800">No Data Selling:</strong> We never sell, monetize, rent, or trade your personal information, AI prompts, or workspace content with third parties or data brokers.
+                <strong className="font-medium text-neutral-800 dark:text-white">No Data Selling:</strong> We never sell, monetize, rent, or trade your personal information, AI prompts, or workspace content with third parties or data brokers.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800">No Telemetry or Tracking:</strong> We do not deploy third-party advertising cookies, session replay recording software, or cross-site tracking scripts.
+                <strong className="font-medium text-neutral-800 dark:text-white">No Telemetry or Tracking:</strong> We do not deploy third-party advertising cookies, session replay recording software, or cross-site tracking scripts.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800">No Third-Party Analytics:</strong> Your keystrokes, sessions, and workflows remain completely private to your authorized workspace members.
+                <strong className="font-medium text-neutral-800 dark:text-white">No Third-Party Analytics:</strong> Your keystrokes, sessions, and workflows remain completely private to your authorized workspace members.
               </li>
             </ul>
           </section>
 
           {/* Section 5: Account Deletion */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900">5. Account Deletion &amp; Total Data Purge</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">5. Account Deletion &amp; Total Data Purge</h3>
             <p>
               You maintain full ownership of your data and have an absolute right to be forgotten. When you choose to delete your account from your Account Settings:
             </p>
-            <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600">
+            <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600 dark:text-neutral-300">
               <li>
                 Your authentication record is permanently purged from our identity service.
               </li>
@@ -189,14 +189,14 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
                 For shared projects with other active team members, ownership is safely transferred to remaining collaborators while your personal association is completely erased.
               </li>
             </ul>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
               Once deleted, no shadow profiles, retained backups of your credentials, or lingering records remain.
             </p>
           </section>
 
           {/* Section 6: Security */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900">6. Data Security &amp; Isolation</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">6. Data Security &amp; Isolation</h3>
             <p>
               Your data is protected with PostgreSQL Row-Level Security (RLS) policies and Role-Based Access Controls (RBAC), ensuring that only verified project members can access project resources. Passwords and credentials are encrypted using industry-standard hashing algorithms.
             </p>
@@ -204,11 +204,11 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-end border-t border-neutral-100 pt-4">
+        <div className="flex items-center justify-end border-t border-neutral-100 dark:border-[#283548] pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 cursor-pointer items-center justify-center rounded-lg bg-neutral-900 px-4 text-xs font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200"
+            className="flex h-9 cursor-pointer items-center justify-center rounded-lg bg-neutral-900 px-4 text-xs font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200"
           >
             Close
           </button>
@@ -244,7 +244,7 @@ export function PrivacyPolicyTrigger({
           title={collapsed ? "Privacy Policy" : undefined}
           className={
             className ||
-            `group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-neutral-500 transition-colors duration-150 hover:bg-neutral-100 hover:text-neutral-900 ${
+            `group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-neutral-500 transition-colors duration-150 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white ${
               collapsed ? "justify-center px-0" : ""
             }`
           }
@@ -264,7 +264,7 @@ export function PrivacyPolicyTrigger({
         onClick={() => setIsOpen(true)}
         className={
           className ||
-          "cursor-pointer text-xs font-medium text-neutral-400 underline decoration-neutral-300 underline-offset-4 transition-colors hover:text-neutral-700 hover:decoration-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded"
+          "cursor-pointer text-xs font-medium text-neutral-400 underline decoration-neutral-300 underline-offset-4 transition-colors hover:text-neutral-700 hover:decoration-neutral-500 dark:text-neutral-500 dark:decoration-neutral-700 dark:hover:text-neutral-300 dark:hover:decoration-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded"
         }
       >
         {children || "Privacy Policy"}

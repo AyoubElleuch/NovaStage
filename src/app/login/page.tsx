@@ -6,6 +6,7 @@ import { getAuthenticatedProfile, isAdminRole, isProfileComplete } from "@/lib/a
 import LoginForm from "./login-form";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
 import { TermsOfServiceTrigger } from "@/components/terms/terms-of-service-modal";
+import { ThemeToggle } from "@/lib/theme-context";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +26,8 @@ export default async function LoginPage() {
   const initialWaitlistSuccess = requestHeaders.get("x-waitlist-success") === "1";
 
   return (
-    <div className="grid min-h-screen bg-white lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden bg-neutral-100 lg:block">
+    <div className="grid min-h-screen bg-white dark:bg-[#0f141c] lg:grid-cols-2">
+      <div className="relative hidden overflow-hidden bg-neutral-100 dark:bg-neutral-900 lg:block">
         <video
           className="absolute inset-0 h-full w-full object-cover"
           src="/videos/login_page.mp4"
@@ -37,25 +38,26 @@ export default async function LoginPage() {
         />
       </div>
 
-      <div className="login-surface flex flex-col justify-between bg-[#fdfdfc] px-4 py-6 sm:px-12 sm:py-10 min-h-screen">
-        <div>
+      <div className="login-surface flex flex-col justify-between bg-[#fdfdfc] dark:bg-[#0f141c] px-4 py-6 sm:px-12 sm:py-10 min-h-screen">
+        <div className="flex items-center justify-between">
           <Image
             src="/images/logo.svg"
             alt="NovaStage"
             width={110}
             height={45}
             priority
-            className="h-auto w-27.5"
+            className="h-auto w-27.5 dark:brightness-0 dark:invert"
           />
+          <ThemeToggle />
         </div>
 
         <div className="flex flex-1 items-center justify-center py-12">
-          <Suspense fallback={<div className="text-sm text-neutral-400">Loading...</div>}>
+          <Suspense fallback={<div className="text-sm text-neutral-400 dark:text-neutral-500">Loading...</div>}>
             <LoginForm initialWaitlistSuccess={initialWaitlistSuccess} />
           </Suspense>
         </div>
 
-        <div className="flex items-center justify-center gap-3 text-xs text-neutral-400 pt-4">
+        <div className="flex items-center justify-center gap-3 text-xs text-neutral-400 dark:text-neutral-500 pt-4">
           <TermsOfServiceTrigger />
           <span>&bull;</span>
           <PrivacyPolicyTrigger />

@@ -276,15 +276,15 @@ export default function CanvasAIAssistant({
         aria-label="Toggle AI Assistant"
         className={`group relative flex h-9 sm:h-12 items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl border px-2.5 sm:px-3.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all cursor-pointer select-none ${
           isOpen
-            ? "border-neutral-900 bg-neutral-900 text-white shadow-neutral-900/20 scale-[1.03]"
-            : "border-neutral-200/80 bg-white/95 text-neutral-800 hover:border-neutral-300 hover:bg-white hover:scale-[1.02]"
+            ? "border-neutral-900 bg-neutral-900 text-white shadow-neutral-900/20 scale-[1.03] dark:border-emerald-600 dark:bg-emerald-600"
+            : "border-neutral-200/80 bg-white/95 text-neutral-800 hover:border-neutral-300 hover:bg-white hover:scale-[1.02] dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-neutral-200 dark:hover:border-[#384961] dark:hover:bg-[#1e2634]"
         }`}
       >
         <span
           className={`grid h-6 w-6 sm:h-7 sm:w-7 place-items-center rounded-lg sm:rounded-xl transition-colors ${
             isOpen
               ? "bg-white/20 text-white"
-              : "bg-neutral-100 text-neutral-800 group-hover:bg-neutral-200/80"
+              : "bg-neutral-100 text-neutral-800 group-hover:bg-neutral-200/80 dark:bg-[#1e2634] dark:text-neutral-200"
           }`}
         >
           <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -303,7 +303,7 @@ export default function CanvasAIAssistant({
       {isOpen && createPortal(
         <>
           <div
-            className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs sm:hidden"
+            className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs sm:hidden dark:bg-black/60"
             onClick={onClose}
             aria-hidden="true"
           />
@@ -311,29 +311,29 @@ export default function CanvasAIAssistant({
             role="dialog"
             aria-modal="true"
             aria-labelledby="ai-assistant-title"
-            className="dash-pop fixed bottom-20 inset-x-3 sm:inset-x-auto z-50 max-h-[85vh] overflow-y-auto sm:bottom-24 sm:left-1/2 flex w-auto sm:w-[calc(100%-24px)] max-w-lg sm:-translate-x-1/2 flex-col rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-2xl transition-all sm:max-w-xl"
+            className="dash-pop fixed bottom-20 inset-x-3 sm:inset-x-auto z-50 max-h-[85vh] overflow-y-auto sm:bottom-24 sm:left-1/2 flex w-auto sm:w-[calc(100%-24px)] max-w-lg sm:-translate-x-1/2 flex-col rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-2xl transition-all sm:max-w-xl dark:border-[#283548] dark:bg-[#161d27]/95"
           >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-neutral-100 px-1 pb-2.5">
+          <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#283548] px-1 pb-2.5">
             <div>
               <div className="flex items-center gap-2">
                 <h3
                   id="ai-assistant-title"
-                  className="text-sm font-semibold tracking-tight text-neutral-900"
+                  className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white"
                 >
                   Generate or Update Workflow with AI
                 </h3>
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
                     isQuotaDepleted
-                      ? "bg-red-50 text-red-700 border-red-200"
-                      : "bg-neutral-100 text-neutral-600 border-neutral-200/80"
+                      ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/50"
+                      : "bg-neutral-100 text-neutral-600 border-neutral-200/80 dark:bg-[#1e2634] dark:text-neutral-300 dark:border-[#283548]"
                   }`}
                 >
                   {isQuotaDepleted ? "0 / 10 remaining" : `${requestsRemaining} of 10 requests left`}
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-500">
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
                 Describe a pipeline to build, or ask to update the current one
               </p>
             </div>
@@ -342,7 +342,7 @@ export default function CanvasAIAssistant({
               type="button"
               onClick={onClose}
               aria-label="Close AI Assistant"
-              className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200"
+              className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>
@@ -350,7 +350,7 @@ export default function CanvasAIAssistant({
 
           {/* Form & Input Area */}
           <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
-            <div className="rounded-xl border border-neutral-200 bg-white shadow-2xs transition-all focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/5">
+            <div className="rounded-xl border border-neutral-200 bg-white shadow-2xs transition-all focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/5 dark:border-[#283548] dark:bg-[#121721] dark:focus-within:border-emerald-500 dark:focus-within:ring-emerald-500/10">
               <textarea
                 ref={textareaRef}
                 value={prompt}
@@ -362,7 +362,7 @@ export default function CanvasAIAssistant({
                 }
                 disabled={isThinking || isQuotaDepleted}
                 style={{ height: "68px", overflowY: "hidden" }}
-                className="w-full resize-none bg-transparent px-3.5 pt-3 pb-2 text-[13px] leading-relaxed text-neutral-900 placeholder-neutral-400 focus:outline-none disabled:opacity-50 transition-[height] duration-200 ease-out"
+                className="w-full resize-none bg-transparent px-3.5 pt-3 pb-2 text-[13px] leading-relaxed text-neutral-900 placeholder-neutral-400 focus:outline-none disabled:opacity-50 transition-[height] duration-200 ease-out dark:text-white dark:placeholder-neutral-500"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
@@ -372,7 +372,7 @@ export default function CanvasAIAssistant({
               />
 
               {/* Bottom Controls Bar cleanly separated below Textarea */}
-              <div className="flex items-center justify-between gap-2 border-t border-neutral-100 px-3 py-2">
+              <div className="flex items-center justify-between gap-2 border-t border-neutral-100 dark:border-[#283548] px-3 py-2">
                 {/* Voice / Mic Button */}
                 <div className="flex items-center gap-1.5">
                   <button
@@ -389,7 +389,7 @@ export default function CanvasAIAssistant({
                     className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                       isListening
                         ? "bg-red-500 text-white shadow-xs animate-pulse"
-                        : "border border-neutral-200 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
+                        : "border border-neutral-200 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
                     }`}
                   >
                     {isListening ? (
@@ -406,7 +406,7 @@ export default function CanvasAIAssistant({
                   </button>
 
                   {isListening && (
-                    <span className="flex items-center gap-1 text-[11px] font-medium text-red-600">
+                    <span className="flex items-center gap-1 text-[11px] font-medium text-red-600 dark:text-red-400">
                       <Volume2 className="h-3.5 w-3.5 animate-bounce" />
                       <span>Speak now</span>
                     </span>
@@ -419,7 +419,7 @@ export default function CanvasAIAssistant({
                     <button
                       type="button"
                       onClick={() => setPrompt("")}
-                      className="text-[11px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
+                      className="text-[11px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer dark:hover:text-neutral-200"
                     >
                       Clear
                     </button>
@@ -428,7 +428,7 @@ export default function CanvasAIAssistant({
                   <button
                     type="submit"
                     disabled={!prompt.trim() || isThinking || isQuotaDepleted}
-                    className="flex h-8 min-w-23 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex h-8 min-w-23 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                   >
                     {isThinking ? (
                       <>
@@ -452,17 +452,17 @@ export default function CanvasAIAssistant({
             </div>
 
             {/* AI Transparency & Privacy Note */}
-            <div className="flex items-center justify-between px-1 text-[11px] text-neutral-400">
+            <div className="flex items-center justify-between px-1 text-[11px] text-neutral-400 dark:text-neutral-500">
               <span>Google Gemini AI &bull; Prompts are not stored</span>
-              <PrivacyPolicyTrigger className="cursor-pointer text-[11px] text-neutral-400 underline decoration-neutral-300 underline-offset-2 transition-colors hover:text-neutral-700">
+              <PrivacyPolicyTrigger className="cursor-pointer text-[11px] text-neutral-400 dark:text-neutral-500 underline decoration-neutral-300 dark:decoration-neutral-600 underline-offset-2 transition-colors hover:text-neutral-700 dark:hover:text-neutral-300">
                 AI Privacy
               </PrivacyPolicyTrigger>
             </div>
 
             {/* Collision or API Error Notice */}
             {apiError && (
-              <div className="flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs font-medium text-amber-900 border border-amber-200">
-                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs font-medium text-amber-900 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
                 <div className="min-w-0 flex-1">
                   <p>{apiError}</p>
                 </div>
@@ -471,40 +471,40 @@ export default function CanvasAIAssistant({
 
             {/* Speech Error Notice */}
             {speechError && (
-              <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 border border-amber-200/70">
-                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+              <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                 <span>{speechError}</span>
               </div>
             )}
 
             {/* Progressive Thinking & Planning State Indicator */}
             {isThinking && (
-              <div className="dash-pop rounded-xl border border-neutral-200/90 bg-neutral-50/90 p-3 text-xs text-neutral-600 shadow-2xs space-y-2">
+              <div className="dash-pop rounded-xl border border-neutral-200/90 bg-neutral-50/90 p-3 text-xs text-neutral-600 shadow-2xs space-y-2 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-300">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-900 shrink-0" />
-                    <span className="font-semibold text-neutral-900 text-[12px]">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-900 dark:text-emerald-400 shrink-0" />
+                    <span className="font-semibold text-neutral-900 dark:text-white text-[12px]">
                       {currentStage.title}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono font-medium text-neutral-400">
+                  <span className="text-[10px] font-mono font-medium text-neutral-400 dark:text-neutral-500">
                     Step {thinkingStep + 1} of 4
                   </span>
                 </div>
 
-                <p className="text-[11px] text-neutral-500 leading-snug">
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-snug">
                   {currentStage.detail}
                 </p>
 
                 {/* Animated Progress Bar */}
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200/70">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200/70 dark:bg-[#1e2634]">
                   <div
-                    className="h-full bg-neutral-900 transition-all duration-700 ease-out rounded-full"
+                    className="h-full bg-neutral-900 dark:bg-emerald-500 transition-all duration-700 ease-out rounded-full"
                     style={{ width: currentStage.pct }}
                   />
                 </div>
 
-                <div className="truncate border-t border-neutral-200/60 pt-1.5 text-[11px] text-neutral-400 italic">
+                <div className="truncate border-t border-neutral-200/60 dark:border-[#283548] pt-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 italic">
                   “{submittedMessage}”
                 </div>
               </div>

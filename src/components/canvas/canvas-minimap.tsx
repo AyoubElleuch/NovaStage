@@ -128,9 +128,9 @@ export default function CanvasMinimap({
           type="button"
           onClick={onToggleOpen}
           title={isOpen ? "Collapse Minimap" : "Expand Minimap"}
-          className="flex items-center gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-neutral-700 shadow-sm backdrop-blur-md hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-neutral-700 shadow-sm backdrop-blur-md hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"
         >
-          <MapPin className="h-3 w-3 text-neutral-500" />
+          <MapPin className="h-3 w-3 text-neutral-500 dark:text-neutral-400" />
           <span>Radar</span>
           {isOpen ? (
             <ChevronDown className="h-3 w-3 text-neutral-400" />
@@ -148,7 +148,7 @@ export default function CanvasMinimap({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           style={{ width: `${MINIMAP_WIDTH}px`, height: `${MINIMAP_HEIGHT}px` }}
-          className="relative overflow-hidden rounded-2xl border border-neutral-200/90 bg-white/95 shadow-xl backdrop-blur-xl transition-all select-none cursor-crosshair"
+          className="relative overflow-hidden rounded-2xl border border-neutral-200/90 bg-white/95 shadow-xl backdrop-blur-xl transition-all select-none cursor-crosshair dark:border-[#283548] dark:bg-[#161d27]/95"
         >
           {/* Subtle grid background */}
           <div
@@ -183,7 +183,7 @@ export default function CanvasMinimap({
                     ? "bg-emerald-500 ring-1 ring-emerald-600/50"
                     : isClaimed
                     ? "bg-amber-400 ring-1 ring-amber-500/50"
-                    : "bg-neutral-800 ring-1 ring-neutral-900/30"
+                    : "bg-neutral-800 ring-1 ring-neutral-900/30 dark:bg-slate-400 dark:ring-slate-500/30"
                 }`}
               />
             );
@@ -197,7 +197,7 @@ export default function CanvasMinimap({
               width: `${viewMapW}px`,
               height: `${viewMapH}px`,
             }}
-            className="absolute rounded-sm border-2 border-blue-500 bg-blue-500/10 pointer-events-none shadow-xs transition-all duration-75 ease-out"
+            className="absolute rounded-sm border-2 border-blue-500 bg-blue-500/10 pointer-events-none shadow-xs transition-all duration-75 ease-out dark:border-emerald-400 dark:bg-emerald-400/15"
           />
         </div>
       )}
