@@ -1,7 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import LoadingScreen from "./loading-screen";
 import { NotificationProvider } from "@/components/notifications/notification-provider";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
+  themeColor: "#080b11",
+};
 
 export const metadata: Metadata = {
   title: "NovaStage — Collaborative System Architecture & Stack Designer",

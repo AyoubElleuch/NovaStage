@@ -147,26 +147,29 @@ export default function CanvasNodeComponent({
       }`}
     >
       {/* 4 Connection Ports / Anchor Handles */}
-      {handles.map((handle) => (
-        <div
-          key={handle}
-          data-no-drag="true"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            onStartLink(node, handle, e);
-          }}
-          className={`absolute z-20 flex h-5 w-5 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs transition-all duration-150 ${getHandlePositionStyles(
-            handle
-          )} ${
-            isHovered || isLinking
-              ? "opacity-100 scale-100 cursor-crosshair hover:bg-neutral-900 hover:text-white hover:scale-125 hover:border-neutral-900"
-              : "opacity-0 scale-75 pointer-events-none"
-          }`}
-          title={isLinking ? `Connect to ${handle} port` : `Link from ${handle} port`}
-        >
-          <Plus className="h-3 w-3 text-neutral-600 group-hover:text-white" />
-        </div>
-      ))}
+      {handles.map((handle) => {
+        const isPortVisible = isHovered || isLinking || isSelected;
+        return (
+          <div
+            key={handle}
+            data-no-drag="true"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onStartLink(node, handle, e);
+            }}
+            className={`absolute z-20 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs transition-all duration-150 before:absolute before:-inset-2 before:content-[''] ${getHandlePositionStyles(
+              handle
+            )} ${
+              isPortVisible
+                ? "opacity-100 scale-100 cursor-crosshair hover:bg-neutral-900 hover:text-white hover:scale-115 hover:border-neutral-900"
+                : "opacity-0 scale-75 pointer-events-none"
+            }`}
+            title={isLinking ? `Connect to ${handle} port` : `Link from ${handle} port`}
+          >
+            <Plus className="h-3.5 w-3.5 text-neutral-600 group-hover:text-white" />
+          </div>
+        );
+      })}
 
       {/* Header Row: Step Number & Claim Pill */}
       <div className="flex items-center justify-between gap-2">

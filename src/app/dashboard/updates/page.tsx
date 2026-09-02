@@ -2,6 +2,20 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
+    version: "v1.4.0",
+    date: "September 2, 2026",
+    title: "Mobile-Native Workspace & Canvas",
+    summary: "Complete mobile responsiveness overhaul with fluid touch gestures, multi-touch pinch-to-zoom, and responsive controls.",
+    changes: [
+      "Engineered multi-touch gesture engine supporting fluid 1-finger canvas panning and 2-finger pinch-to-zoom.",
+      "Added two-tier mobile canvas layout elevating AI Assistant and Project Notebook cleanly above the bottom toolbar.",
+      "Introduced mobile quick-action card for milestones with instant lock claim/release, task toggles, and detail inspection.",
+      "Replaced fixed desktop rails with smooth off-canvas navigation drawers and comfortable mobile app bars.",
+      "Enlarged milestone connection handles with 36px touch targets for effortless mobile diagram linking.",
+      "Optimized safe-area insets, padding, and modals across login, onboarding, settings, and admin console.",
+    ],
+  },
+  {
     version: "v1.3.0",
     date: "September 1, 2026",
     title: "Release Pulse",

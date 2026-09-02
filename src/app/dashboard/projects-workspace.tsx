@@ -659,7 +659,7 @@ export default function ProjectsWorkspace() {
             Turn your next website or app into a clear, collaborative plan.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2.5">
+        <div className="flex flex-wrap gap-2.5 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => {
@@ -667,7 +667,7 @@ export default function ProjectsWorkspace() {
               setProjectDescription("");
               setActiveModal("create");
             }}
-            className={primaryButton}
+            className={`${primaryButton} flex-1 sm:flex-initial justify-center`}
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             New project
@@ -678,7 +678,7 @@ export default function ProjectsWorkspace() {
               setInviteCode("");
               setActiveModal("join");
             }}
-            className={secondaryButton}
+            className={`${secondaryButton} flex-1 sm:flex-initial justify-center`}
           >
             <Users className="h-4 w-4" aria-hidden="true" />
             Join a project

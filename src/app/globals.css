@@ -147,12 +147,19 @@
   to { opacity: 0; transform: translateY(-8px) scale(0.97); }
 }
 
-@media (max-width: 760px) {
-  .site-notifications { bottom: 16px; right: 16px; }
+@media (max-width: 768px) {
+  .site-notifications {
+    bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    left: 16px;
+    right: 16px;
+    max-width: calc(100vw - 32px);
+    margin: 0 auto;
+  }
   .site-notifications--left {
-    bottom: 16px;
-    left: calc(var(--sidebar-width, 68px) + 16px);
-    right: auto;
+    bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    left: 16px;
+    right: 16px;
+    margin: 0 auto;
   }
 }
 

@@ -29,6 +29,7 @@ import CanvasNodeComponent from "@/components/canvas/canvas-node";
 import CanvasEdgeLayer from "@/components/canvas/canvas-edge-layer";
 import CanvasDock from "@/components/canvas/canvas-dock";
 import CanvasDrawer from "@/components/canvas/canvas-drawer";
+import CanvasMobileNodeBar from "@/components/canvas/canvas-mobile-node-bar";
 import CanvasHud from "@/components/canvas/canvas-hud";
 import CanvasCursors from "@/components/canvas/canvas-cursors";
 import CanvasClaimModal from "@/components/canvas/canvas-claim-modal";
@@ -129,6 +130,21 @@ export default function ProjectCanvasClient({
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [snapGrid, setSnapGrid] = useState(true);
   const [isMinimapOpen, setIsMinimapOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const update = () => {
+      setIsMobile(mq.matches);
+      if (mq.matches) {
+        setIsMinimapOpen(false);
+      }
+    };
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   // Marquee Selection State
   const [selectionMarquee, setSelectionMarquee] = useState<{
@@ -1967,17 +1983,41 @@ export default function ProjectCanvasClient({
         />
       )}
 
+      {/* Mobile Quick Node Action Bar */}
+      {selectedNode && isMobile && !isMobileDrawerOpen && (
+        <CanvasMobileNodeBar
+          node={selectedNode}
+          stepIndex={nodes.findIndex((n) => n.id === selectedNodeId)}
+          currentUserId={currentUser.id}
+          onOpenDrawer={() => setIsMobileDrawerOpen(true)}
+          onDeselect={() => setSelectedNodeId(null)}
+          onClaimNode={handleClaimNode}
+          onReleaseNode={handleReleaseNode}
+          onRequestClaim={handleRequestClaim}
+          onToggleCheckpoint={handleToggleCheckpoint}
+        />
+      )}
+
       {/* Slide-Out Right Milestone Detail Screen */}
-      {selectedNode && (
+      {selectedNode && (!isMobile || isMobileDrawerOpen) && (
         <CanvasDrawer
           node={selectedNode}
           allNodes={nodes}
           edges={edges}
           currentUserId={currentUser.id}
           isProjectOwner={isOwner}
-          onClose={() => setSelectedNodeId(null)}
+          onClose={() => {
+            if (isMobile) {
+              setIsMobileDrawerOpen(false);
+            } else {
+              setSelectedNodeId(null);
+            }
+          }}
           onUpdateNode={handleUpdateNode}
-          onDeleteNode={handleDeleteNode}
+          onDeleteNode={(nodeId) => {
+            setIsMobileDrawerOpen(false);
+            handleDeleteNode(nodeId);
+          }}
           onToggleCheckpoint={handleToggleCheckpoint}
           onAddCheckpoint={handleAddCheckpoint}
           onDeleteCheckpoint={handleDeleteCheckpoint}
@@ -1990,8 +2030,39 @@ export default function ProjectCanvasClient({
       )}
 
       {/* Bottom Floating Control Bar (Canvas Tools Dock + AI Assistant) */}
-      <div className="scrollbar-none absolute inset-x-0 bottom-6 z-20 overflow-x-auto px-3 pb-2">
-        <div className="mx-auto flex w-max items-center gap-2.5">
+      <div className="pointer-events-none absolute inset-x-0 bottom-3 sm:bottom-6 z-20 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-2.5 px-3">
+        {/* On mobile: AI Assistant & Notebook stack above toolbar (order-1). On desktop: sit alongside dock (sm:order-2) */}
+        {(!isMobile || !selectedNode) && (
+          <div className="order-1 sm:order-2 pointer-events-auto flex items-center justify-end sm:justify-start gap-2 w-full max-w-[340px] sm:w-auto sm:max-w-none">
+            <CanvasAIAssistant
+              isOpen={isAIAssistantOpen}
+              portalContainer={canvasRootElement}
+              onToggle={() => {
+                setIsNotebookOpen(false);
+                setIsReleasePulseOpen(false);
+                setIsAIAssistantOpen((prev) => !prev);
+              }}
+              onClose={() => setIsAIAssistantOpen(false)}
+              requestsRemaining={aiRequestsRemaining}
+              onSubmitPrompt={handleGenerateAIWorkflow}
+            />
+
+            <CanvasNotebook
+              projectId={project.id}
+              isOpen={isNotebookOpen}
+              onToggle={() => {
+                setSelectedNodeId(null);
+                setIsAIAssistantOpen(false);
+                setIsReleasePulseOpen(false);
+                setIsNotebookOpen((open) => !open);
+              }}
+              onClose={() => setIsNotebookOpen(false)}
+            />
+          </div>
+        )}
+
+        {/* Primary Canvas Dock: order-2 on mobile (at bottom), sm:order-1 on desktop (on left) */}
+        <div className="order-2 sm:order-1 pointer-events-auto flex items-center justify-center max-w-full">
           <CanvasDock
             activeTool={activeTool}
             onSelectTool={setActiveTool}
@@ -2027,31 +2098,6 @@ export default function ProjectCanvasClient({
               setIsNotebookOpen(false);
               setIsReleasePulseOpen((open) => !open);
             }}
-          />
-
-          <CanvasAIAssistant
-            isOpen={isAIAssistantOpen}
-            portalContainer={canvasRootElement}
-            onToggle={() => {
-              setIsNotebookOpen(false);
-              setIsReleasePulseOpen(false);
-              setIsAIAssistantOpen((prev) => !prev);
-            }}
-            onClose={() => setIsAIAssistantOpen(false)}
-            requestsRemaining={aiRequestsRemaining}
-            onSubmitPrompt={handleGenerateAIWorkflow}
-          />
-
-          <CanvasNotebook
-            projectId={project.id}
-            isOpen={isNotebookOpen}
-            onToggle={() => {
-              setSelectedNodeId(null);
-              setIsAIAssistantOpen(false);
-              setIsReleasePulseOpen(false);
-              setIsNotebookOpen((open) => !open);
-            }}
-            onClose={() => setIsNotebookOpen(false)}
           />
         </div>
       </div>

@@ -37,7 +37,7 @@ export default async function LoginPage() {
         />
       </div>
 
-      <div className="login-surface flex flex-col justify-between bg-[#fdfdfc] px-6 py-10 sm:px-12">
+      <div className="login-surface flex flex-col justify-between bg-[#fdfdfc] px-4 py-6 sm:px-12 sm:py-10 min-h-screen">
         <div>
           <Image
             src="/images/logo.svg"

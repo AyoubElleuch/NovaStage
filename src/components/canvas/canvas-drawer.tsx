@@ -108,10 +108,16 @@ function MilestoneDrawerContent({
   };
 
   return (
-    <aside
-      aria-label="Milestone inspector drawer"
-      className="fixed top-0 right-0 z-30 flex h-dvh w-full max-w-[420px] flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-    >
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs md:hidden"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside
+        aria-label="Milestone inspector drawer"
+        className="fixed top-0 right-0 z-50 flex h-dvh w-full sm:max-w-[420px] flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+      >
       {/* Drawer Header */}
       <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
         <div className="flex items-center gap-2">
@@ -458,7 +464,7 @@ function MilestoneDrawerContent({
 
       {/* Drawer Footer Actions - Only available if claimed or owner */}
       {(isClaimedByMe || isProjectOwner) && (
-        <div className="border-t border-neutral-100 p-4 bg-neutral-50/50">
+        <div className="border-t border-neutral-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-neutral-50/50">
           <button
             type="button"
             onClick={() => onDeleteNode(node.id)}
@@ -470,6 +476,7 @@ function MilestoneDrawerContent({
         </div>
       )}
     </aside>
+    </>
   );
 }
 

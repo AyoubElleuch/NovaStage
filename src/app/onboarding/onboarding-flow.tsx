@@ -193,7 +193,7 @@ export default function OnboardingFlow({
   };
 
   return (
-    <main className="login-surface flex min-h-screen w-full flex-col items-center justify-center bg-[#fdfdfc] px-6 py-12 selection:bg-neutral-200 selection:text-neutral-900">
+    <main className="login-surface flex min-h-screen w-full flex-col items-center justify-center bg-[#fdfdfc] px-4 py-8 sm:px-6 sm:py-12 selection:bg-neutral-200 selection:text-neutral-900">
       <div className="w-full max-w-sm">
         {/* NovaStage Brand Logo */}
         <div className="mb-8 flex justify-center">

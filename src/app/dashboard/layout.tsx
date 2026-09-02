@@ -4,6 +4,7 @@ import { getUserProjects } from "@/lib/projects";
 import DashboardSidebar from "./dashboard-sidebar";
 import DashboardDataProvider from "./dashboard-data-provider";
 import DashboardContentFrame from "./dashboard-content-frame";
+import { MobileNavProvider } from "@/lib/mobile-nav-context";
 
 export default async function DashboardLayout({
   children,
@@ -40,11 +41,13 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="dashboard-v2 flex h-dvh overflow-hidden bg-[#fafafa] text-neutral-900 antialiased">
-      <DashboardSidebar userEmail={userEmail} userRole={userRole} />
-      <DashboardDataProvider projects={projects} settings={settings}>
-        <DashboardContentFrame>{children}</DashboardContentFrame>
-      </DashboardDataProvider>
-    </div>
+    <MobileNavProvider>
+      <div className="dashboard-v2 flex h-dvh overflow-hidden bg-[#fafafa] text-neutral-900 antialiased">
+        <DashboardSidebar userEmail={userEmail} userRole={userRole} />
+        <DashboardDataProvider projects={projects} settings={settings}>
+          <DashboardContentFrame>{children}</DashboardContentFrame>
+        </DashboardDataProvider>
+      </div>
+    </MobileNavProvider>
   );
 }

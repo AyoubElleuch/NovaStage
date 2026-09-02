@@ -127,7 +127,16 @@ export default function CanvasNotebook({ projectId, isOpen, onToggle, onClose }:
     <>
       {isOpen &&
         createPortal(
-          <aside aria-label="Project notebook" className="canvas-panel-enter fixed top-0 right-0 z-30 flex h-dvh w-full max-w-105 flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl">
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs md:hidden"
+              onClick={onClose}
+              aria-hidden="true"
+            />
+            <aside
+              aria-label="Project notebook"
+              className="canvas-panel-enter fixed top-0 right-0 z-50 flex h-dvh w-full sm:max-w-105 flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl pb-[max(1rem,env(safe-area-inset-bottom))]"
+            >
             <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4">
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-neutral-500" aria-hidden="true" />
@@ -191,11 +200,12 @@ export default function CanvasNotebook({ projectId, isOpen, onToggle, onClose }:
                 )}
               </div>
             )}
-          </aside>,
-          document.body
-        )}
+          </aside>
+        </>,
+        document.body
+      )}
 
-      <button type="button" onClick={onToggle} title="Open project notebook" aria-label="Open project notebook" aria-expanded={isOpen} className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-2xl border shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-colors ${isOpen ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-200/80 bg-white/95 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"}`}>
+      <button type="button" onClick={onToggle} title="Open project notebook" aria-label="Open project notebook" aria-expanded={isOpen} className={`flex h-9 w-9 sm:h-12 sm:w-12 cursor-pointer items-center justify-center rounded-xl sm:rounded-2xl border shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-colors ${isOpen ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-200/80 bg-white/95 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"}`}>
         {isOpen ? <X className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />}
       </button>
     </>

@@ -274,22 +274,23 @@ export default function CanvasAIAssistant({
         onClick={onToggle}
         title={isOpen ? "Close AI Assistant" : "Open AI Assistant"}
         aria-label="Toggle AI Assistant"
-        className={`group relative flex h-12 items-center gap-2 rounded-2xl border px-3.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all cursor-pointer select-none ${
+        className={`group relative flex h-9 sm:h-12 items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl border px-2.5 sm:px-3.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all cursor-pointer select-none ${
           isOpen
             ? "border-neutral-900 bg-neutral-900 text-white shadow-neutral-900/20 scale-[1.03]"
             : "border-neutral-200/80 bg-white/95 text-neutral-800 hover:border-neutral-300 hover:bg-white hover:scale-[1.02]"
         }`}
       >
         <span
-          className={`grid h-7 w-7 place-items-center rounded-xl transition-colors ${
+          className={`grid h-6 w-6 sm:h-7 sm:w-7 place-items-center rounded-lg sm:rounded-xl transition-colors ${
             isOpen
               ? "bg-white/20 text-white"
               : "bg-neutral-100 text-neutral-800 group-hover:bg-neutral-200/80"
           }`}
         >
-          <Sparkles className="h-4 w-4" />
+          <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </span>
-        <span className="text-xs font-semibold tracking-tight">AI Assistant</span>
+        <span className="text-xs font-semibold tracking-tight hidden xs:inline">AI Assistant</span>
+        <span className="text-xs font-semibold tracking-tight xs:hidden">AI</span>
         {isListening && (
           <span className="absolute -top-1 -right-1 flex h-3 w-3">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
@@ -300,12 +301,18 @@ export default function CanvasAIAssistant({
 
       {/* Floating Chat / Prompt Popup Panel (Positioned right above tools dock) */}
       {isOpen && createPortal(
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="ai-assistant-title"
-          className="dash-pop absolute bottom-24 left-1/2 z-30 flex w-[calc(100%-24px)] max-w-lg -translate-x-1/2 flex-col rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-2xl transition-all sm:max-w-xl"
-        >
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs sm:hidden"
+            onClick={onClose}
+            aria-hidden="true"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ai-assistant-title"
+            className="dash-pop fixed bottom-20 inset-x-3 sm:inset-x-auto z-50 max-h-[85vh] overflow-y-auto sm:bottom-24 sm:left-1/2 flex w-auto sm:w-[calc(100%-24px)] max-w-lg sm:-translate-x-1/2 flex-col rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-2xl transition-all sm:max-w-xl"
+          >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-neutral-100 px-1 pb-2.5">
             <div>
@@ -503,7 +510,8 @@ export default function CanvasAIAssistant({
               </div>
             )}
           </form>
-        </div>,
+        </div>
+        </>,
         portalContainer ?? document.body
       )}
     </>

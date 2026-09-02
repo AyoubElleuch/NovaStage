@@ -15,6 +15,7 @@ import {
   PanelLeftOpen,
   Settings,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
 import { fetcher } from "@/lib/fetcher";
@@ -22,6 +23,7 @@ import type { DashboardProjectsData } from "@/lib/dashboard-data";
 import useSWR from "swr";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
 import { TermsOfServiceTrigger } from "@/components/terms/terms-of-service-modal";
+import { useMobileNav } from "@/lib/mobile-nav-context";
 
 interface DashboardSidebarProps {
   userEmail: string | undefined;
@@ -67,13 +69,13 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
   const projects = data?.projects || [];
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { isOpen: isMobileOpen, setIsOpen: setIsMobileOpen } = useMobileNav();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(
     pathname === "/dashboard" || pathname.startsWith("/dashboard/projects/")
   );
   const isAdmin = userRole === "admin" || userRole === "super_admin";
-  const collapsed = isMobile ? !isMobileOpen : isCollapsed;
+  const collapsed = isMobile ? false : isCollapsed;
   const activePendingHref = pendingHref !== pathname ? pendingHref : null;
 
   const [prevPathname, setPrevPathname] = useState(pathname);
@@ -88,22 +90,28 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
     const mediaQuery = window.matchMedia("(max-width: 768px)");
     const update = () => {
       setIsMobile(mediaQuery.matches);
-      setIsMobileOpen(false);
+      if (mediaQuery.matches) {
+        setIsMobileOpen(false);
+      }
     };
     update();
     mediaQuery.addEventListener("change", update);
     return () => mediaQuery.removeEventListener("change", update);
-  }, []);
+  }, [setIsMobileOpen]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--sidebar-width",
-      collapsed ? "68px" : "240px"
-    );
+    if (!isMobile) {
+      document.documentElement.style.setProperty(
+        "--sidebar-width",
+        collapsed ? "68px" : "240px"
+      );
+    } else {
+      document.documentElement.style.removeProperty("--sidebar-width");
+    }
     return () => {
       document.documentElement.style.removeProperty("--sidebar-width");
     };
-  }, [collapsed]);
+  }, [collapsed, isMobile]);
 
   const navigate = (href: string) => {
     if (isMobile) setIsMobileOpen(false);
@@ -124,22 +132,25 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
 
   return (
     <>
-    {isMobileOpen && (
-      <button
-        type="button"
-        aria-label="Close navigation"
-        className="fixed inset-0 z-20 bg-neutral-950/20 backdrop-blur-[1px] md:hidden"
+    {isMobile && isMobileOpen && (
+      <div
+        className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs md:hidden"
         onClick={() => setIsMobileOpen(false)}
+        aria-hidden="true"
       />
     )}
     <aside
-      className={`fixed inset-y-0 left-0 z-30 flex h-dvh shrink-0 flex-col border-r border-neutral-200 bg-white shadow-[8px_0_30px_rgba(0,0,0,0.06)] transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:relative md:shadow-none ${
-        collapsed ? "w-17" : "w-60"
+      className={`fixed inset-y-0 left-0 z-50 flex h-dvh shrink-0 flex-col border-r border-neutral-200 bg-white shadow-[8px_0_30px_rgba(0,0,0,0.06)] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:relative md:z-30 md:shadow-none ${
+        isMobile
+          ? `w-72 max-w-[85vw] ${isMobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"}`
+          : collapsed
+          ? "w-17"
+          : "w-60"
       }`}
     >
       <div
         className={`flex items-center border-b border-neutral-100 py-5 ${
-          collapsed ? "justify-center px-0" : "px-5"
+          collapsed && !isMobile ? "justify-center px-0" : "justify-between px-5"
         }`}
       >
         <Link
@@ -148,7 +159,7 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
           onClick={() => navigate("/dashboard")}
           className="block cursor-pointer"
         >
-          {collapsed ? (
+          {collapsed && !isMobile ? (
             <span className="flex h-8 w-8 overflow-hidden rounded-lg bg-white">
               <Image
                 src="/images/logo.svg"
@@ -170,6 +181,17 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
             />
           )}
         </Link>
+
+        {isMobile && (
+          <button
+            type="button"
+            onClick={() => setIsMobileOpen(false)}
+            aria-label="Close navigation"
+            className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       <nav aria-label="User navigation" className="flex flex-1 flex-col space-y-0.5 overflow-y-auto px-3 py-4">
@@ -326,17 +348,11 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
 
       <button
         type="button"
-        onClick={() => {
-          if (isMobile) {
-            setIsMobileOpen((value) => !value);
-          } else {
-            setIsCollapsed((value) => !value);
-          }
-        }}
+        onClick={() => setIsCollapsed((value) => !value)}
         aria-expanded={!collapsed}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="absolute top-5 -right-5 z-20 grid h-10 w-10 cursor-pointer place-items-center rounded-full border border-neutral-200/90 bg-white text-neutral-600 shadow-md transition-all hover:bg-neutral-900 hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 md:top-1/2 md:-right-3.5 md:h-7 md:w-7 md:-translate-y-1/2"
+        className="absolute top-1/2 -right-3.5 z-20 hidden h-7 w-7 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-neutral-200/90 bg-white text-neutral-600 shadow-md transition-all hover:bg-neutral-900 hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 md:grid"
       >
         {collapsed ? (
           <PanelLeftOpen className="h-3.5 w-3.5" aria-hidden="true" />
@@ -345,7 +361,6 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
         )}
       </button>
     </aside>
-    <div className="w-17 shrink-0 md:hidden" aria-hidden="true" />
     </>
   );
 }

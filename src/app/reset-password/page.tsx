@@ -13,7 +13,7 @@ export default async function ResetPasswordPage() {
   }
 
   return (
-    <main className="login-surface flex min-h-screen w-full flex-col items-center justify-center bg-[#fdfdfc] px-6 py-12 selection:bg-neutral-200 selection:text-neutral-900">
+    <main className="login-surface flex min-h-screen w-full flex-col items-center justify-center bg-[#fdfdfc] px-4 py-8 sm:px-6 sm:py-12 selection:bg-neutral-200 selection:text-neutral-900">
       <div className="mb-8 flex justify-center">
         <Image
           src="/images/logo.svg"

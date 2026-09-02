@@ -1,5 +1,7 @@
 import { requireAdmin } from "@/lib/auth/session";
 import AdminSidebar from "./admin-sidebar";
+import AdminContentFrame from "./admin-content-frame";
+import { MobileNavProvider } from "@/lib/mobile-nav-context";
 
 export default async function AdminLayout({
   children,
@@ -11,13 +13,11 @@ export default async function AdminLayout({
   const userRole = session.profile?.role || "admin";
 
   return (
-    <div className="dashboard-v2 flex h-dvh overflow-hidden bg-[#fafafa] text-neutral-900 antialiased">
-      <AdminSidebar userEmail={userEmail} userRole={userRole} />
-      <main className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl px-6 py-10 sm:px-10 sm:py-12">
-          {children}
-        </div>
-      </main>
-    </div>
+    <MobileNavProvider>
+      <div className="dashboard-v2 flex h-dvh overflow-hidden bg-[#fafafa] text-neutral-900 antialiased">
+        <AdminSidebar userEmail={userEmail} userRole={userRole} />
+        <AdminContentFrame>{children}</AdminContentFrame>
+      </div>
+    </MobileNavProvider>
   );
 }

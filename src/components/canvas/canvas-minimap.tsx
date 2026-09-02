@@ -118,7 +118,9 @@ export default function CanvasMinimap({
   return (
     <aside
       aria-label="Canvas Minimap Radar"
-      className="absolute bottom-6 right-6 z-20 flex flex-col items-end pointer-events-auto"
+      className={`absolute bottom-24 right-3 sm:bottom-6 sm:right-6 z-20 flex flex-col items-end pointer-events-auto ${
+        !isOpen ? "hidden sm:flex" : ""
+      }`}
     >
       {/* Header bar / toggle button */}
       <div className="flex items-center gap-1 mb-1.5">
