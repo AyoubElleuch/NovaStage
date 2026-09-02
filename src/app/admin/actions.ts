@@ -5,6 +5,7 @@ import { getAuthenticatedProfile, isAdminRole } from "@/lib/auth/session";
 import { hasPermission, Permission } from "@/lib/auth/permissions";
 import { revalidatePath } from "next/cache";
 import { sendWaitlistApprovedEmail } from "@/lib/email/resend";
+import { generateSecurePassword } from "@/lib/security/password";
 
 export interface WaitlistRecord {
   email: string;
@@ -117,7 +118,7 @@ export async function approveWaitlistEntry(
     // 1. Check if auth user already exists
     const { data: authUsersData } = await adminClient.auth.admin.listUsers();
     let authUser = authUsersData?.users.find((u) => u.email?.toLowerCase() === normalizedEmail);
-    const passwordToSet = initialPassword?.trim() || "NovaStage2026!";
+    const passwordToSet = initialPassword?.trim() || generateSecurePassword(16);
 
     if (!authUser) {
       // Create user with confirmed email
