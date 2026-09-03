@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 export interface UserAvatarProps {
   src?: string | null;
@@ -27,13 +27,8 @@ export default function UserAvatar({
   className = "",
   alt,
 }: UserAvatarProps) {
-  const [imgError, setImgError] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const trimmedSrc = src?.trim() || null;
-
-  // Reset error state if image source changes
-  useEffect(() => {
-    setImgError(false);
-  }, [trimmedSrc]);
 
   const displayName = name?.trim() || email?.trim() || "User";
   const initial = (displayName[0] || "U").toUpperCase();
@@ -43,7 +38,7 @@ export default function UserAvatar({
       ? { width: `${size}px`, height: `${size}px`, fontSize: `${Math.max(10, Math.floor(size * 0.4))}px` }
       : undefined;
 
-  const showImage = Boolean(trimmedSrc && !imgError);
+  const showImage = Boolean(trimmedSrc && failedSrc !== trimmedSrc);
 
   return (
     <div
@@ -57,7 +52,7 @@ export default function UserAvatar({
           src={trimmedSrc!}
           alt={alt || displayName}
           referrerPolicy="no-referrer"
-          onError={() => setImgError(true)}
+          onError={() => setFailedSrc(trimmedSrc)}
           className="h-full w-full object-cover"
         />
       ) : (

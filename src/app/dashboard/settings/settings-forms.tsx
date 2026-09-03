@@ -247,12 +247,14 @@ export function ProfileForm({
   email: string;
 }) {
   const [state, formAction, isPending] = useActionState(updateProfile, initialState);
+  const [prevProfileAvatar, setPrevProfileAvatar] = useState(profile.avatar_url);
   const [avatarUrlInput, setAvatarUrlInput] = useState(profile.avatar_url || "");
   const { mutate } = useSWRConfig();
 
-  useEffect(() => {
+  if (profile.avatar_url !== prevProfileAvatar) {
+    setPrevProfileAvatar(profile.avatar_url);
     setAvatarUrlInput(profile.avatar_url || "");
-  }, [profile.avatar_url]);
+  }
 
   useEffect(() => {
     if (state.success) {

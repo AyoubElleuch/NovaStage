@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { signUp, signIn, signInWithOAuth, requestPasswordReset } from "@/app/auth/actions";
 import { GitHubIcon } from "@/components/icons";
 import { AlertCircle, ArrowLeft, Check, Eye, EyeOff, Loader2 } from "lucide-react";
@@ -17,6 +17,7 @@ interface LoginFormProps {
 export default function LoginForm({
   initialMode = "login",
 }: LoginFormProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
   const urlMode = searchParams.get("mode");
@@ -141,7 +142,7 @@ export default function LoginForm({
         setIsSuccess(Boolean(result.success));
         if (result.success) {
           playSuccessChime();
-          window.location.href = "/dashboard";
+          router.push("/dashboard");
         }
       } catch (err: unknown) {
         if (

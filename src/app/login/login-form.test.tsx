@@ -5,6 +5,7 @@ import * as authActions from "@/app/auth/actions";
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }));
 
 vi.mock("@/app/auth/actions", () => ({
