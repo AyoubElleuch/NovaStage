@@ -2,6 +2,21 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
+    version: "v1.5.0",
+    date: "September 3, 2026",
+    title: "AWS Architecture & Advanced Canvas Power Tools",
+    summary:
+      "Interactive cloud infrastructure modeling (Alpha), synchronized multi-selection and dragging, container resizing, and 0ms optimistic node placement.",
+    changes: [
+      "AWS Cloud Modeling (Alpha Preview): Introduced official AWS cloud services across Compute, Storage, Database, Networking, Security, and Management with category badges and configuration tags. (Note: AWS integration is currently in Alpha and intended for testing purposes as topology features continue to evolve).",
+      "AI Architecture & Full-Stack Modes: Enhanced the AI pipeline to generate cohesive cloud topologies with VPCs, public/private subnets, and interlocking data flow bridges connecting infrastructure to delivery milestones.",
+      "Interactive Container Resizing: Added real-time drag-and-drop corner and edge resizing for VPCs, Subnets, and Custom groups with live dimension tooltips and zoom-compensated tracking.",
+      "Roomier Cloud Topology Layout: Expanded subnet and VPC layout spacing with generous padding to cleanly encapsulate contained service cards without border clipping.",
+      "Marquee Selection & Synchronized Dragging: Resolved canvas marquee drag selection and enabled synchronized multi-node moving and parallel database updates.",
+      "Instant 0ms Node Creation: Added optimistic client-side UUID generation for milestones, AWS services, and groups, eliminating network creation lag.",
+    ],
+  },
+  {
     version: "v1.4.1",
     date: "September 3, 2026",
     title: "Eye-Friendly Dark Mode",

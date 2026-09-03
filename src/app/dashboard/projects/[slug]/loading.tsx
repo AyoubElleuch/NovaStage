@@ -13,6 +13,7 @@ import {
   Plus,
   Redo2,
   Sparkles,
+  Square,
   Undo2,
   Waypoints,
 } from "lucide-react";
@@ -57,20 +58,29 @@ export default function ProjectCanvasLoading() {
         <div className="mx-auto flex w-max items-center gap-2.5">
           <nav
             aria-label="Canvas control dock"
-            className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:border-[#283548] dark:bg-[#161d27]/90"
+            className="flex shrink-0 items-center gap-1 sm:gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1 sm:p-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl dark:border-[#283548] dark:bg-[#161d27]/90"
           >
-            <div className="flex items-center gap-1 border-r border-neutral-200/80 dark:border-[#283548] pr-1.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-900 text-white shadow-xs dark:bg-emerald-600">
-                <MousePointer className="h-4 w-4" />
+            <div className="flex items-center gap-0.5 sm:gap-1 border-r border-neutral-200/80 dark:border-[#283548] pr-1 sm:pr-1.5">
+              <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-neutral-900 text-white shadow-xs dark:bg-emerald-600">
+                <MousePointer className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </div>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl text-neutral-400 dark:text-neutral-500">
-                <Hand className="h-4 w-4" />
+              <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl text-neutral-400 dark:text-neutral-500">
+                <Hand className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </div>
             </div>
 
-            <div className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs dark:bg-emerald-600">
+            <div className="inline-flex h-8 sm:h-9 shrink-0 items-center gap-1 sm:gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-2 sm:px-3 text-xs font-semibold text-white shadow-xs dark:bg-emerald-600">
               <Plus className="h-3.5 w-3.5 shrink-0" />
-              <span>Add Node</span>
+              <span className="hidden sm:inline">Add Node</span>
+            </div>
+
+            <div className="inline-flex h-8 sm:h-9 shrink-0 items-center gap-1 sm:gap-1.5 whitespace-nowrap rounded-xl border border-neutral-200/80 bg-white/90 px-2 sm:px-3 text-xs font-semibold text-neutral-700 shadow-[0_2px_5px_rgba(0,0,0,0.04)] dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300">
+              <Square className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Group</span>
+            </div>
+
+            <div className="inline-flex h-8 sm:h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-[#FF9900]/30 bg-[#FF9900]/10 px-2 sm:px-2.5 text-xs font-bold text-[#FF9900] shadow-[0_2px_5px_rgba(255,153,0,0.08)]">
+              AWS
             </div>
 
             <div className="flex items-center gap-1 border-l border-neutral-200/80 dark:border-[#283548] pl-1.5">
