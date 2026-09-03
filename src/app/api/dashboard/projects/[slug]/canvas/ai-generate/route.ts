@@ -4,7 +4,7 @@ import { getAuthenticatedProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { executeAIPipeline } from "@/lib/ai/pipeline";
 import { CanvasAIContext } from "@/lib/ai/types";
-import { getProjectCanvasData, applyAIWorkflowResult } from "@/lib/canvas/server";
+import { getProjectCanvasData, applyAIWorkflowResult, applyAWSServiceNodes } from "@/lib/canvas/server";
 
 export async function POST(
   request: NextRequest,
@@ -32,6 +32,7 @@ export async function POST(
 
     const body = await request.json().catch(() => ({}));
     const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
+    const mode = typeof body?.mode === "string" ? body.mode : "workflow";
 
     if (!prompt) {
       return NextResponse.json(
@@ -130,7 +131,7 @@ export async function POST(
     // 4. Call Multi-Phase AI Pipeline to generate or update structured DAG workflow
     let workflowResult;
     try {
-      workflowResult = await executeAIPipeline(prompt, aiContext);
+      workflowResult = await executeAIPipeline(prompt, mode, aiContext);
     } catch (aiErr: unknown) {
       console.error("Gemini AI Processing failed:", aiErr);
 
@@ -151,18 +152,45 @@ export async function POST(
     }
 
     // 5. Apply graph mutations, insertions, rewiring, or parallel generation
-    const reconciled = await applyAIWorkflowResult(
-      project.id,
-      workflowResult,
-      currentCanvasData
-    );
+    let finalNodes = currentCanvasData.nodes;
+    let finalEdges = currentCanvasData.edges;
+
+    // Apply milestone changes if present
+    let milestoneTempIdMap: Record<string, string> = {};
+    if (workflowResult.milestones && workflowResult.milestones.length > 0) {
+      const reconciled = await applyAIWorkflowResult(
+        project.id,
+        workflowResult,
+        currentCanvasData
+      );
+      finalNodes = reconciled.nodes;
+      finalEdges = reconciled.edges;
+      milestoneTempIdMap = reconciled.tempIdToUuid || {};
+    }
+
+    // Apply AWS architecture nodes if present
+    const hasAWSContent =
+      (workflowResult.serviceNodes && workflowResult.serviceNodes.length > 0) ||
+      (workflowResult.groups && workflowResult.groups.length > 0);
+
+    if (hasAWSContent) {
+      const awsReconciled = await applyAWSServiceNodes(
+        project.id,
+        workflowResult,
+        { nodes: finalNodes, edges: finalEdges },
+        milestoneTempIdMap
+      );
+      finalNodes = awsReconciled.nodes;
+      finalEdges = awsReconciled.edges;
+    }
 
     return NextResponse.json({
       success: true,
-      intent: reconciled.intent,
-      summary: reconciled.summary,
-      nodes: reconciled.nodes,
-      edges: reconciled.edges,
+      intent: workflowResult.intent,
+      mode: workflowResult.mode,
+      summary: workflowResult.summary,
+      nodes: finalNodes,
+      edges: finalEdges,
       requests_used: quotaResult.requests_used,
       requests_remaining: quotaResult.requests_remaining,
     });

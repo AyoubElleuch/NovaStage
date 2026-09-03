@@ -2,10 +2,11 @@
  * AI Canvas Graph Reconciliation Engine
  * Intelligently applies AI results: creating new pipelines, inserting intermediate steps,
  * shifting sort orders & coordinates, rewiring edges, and reconciling checkpoints.
+ * Extended to support AWS service nodes, group containers, and data flow edges.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CanvasNode, CanvasEdge, CanvasCheckpoint, HandlePosition } from "./types";
+import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasNodeType, HandlePosition } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
 import { AIWorkflowResult } from "@/lib/ai/types";
 import { getProjectCanvasData } from "./server";
@@ -19,8 +20,10 @@ export async function applyAIWorkflowResult(
   edges: CanvasEdge[];
   summary: string;
   intent: string;
+  tempIdToUuid?: Record<string, string>;
 }> {
   const adminClient = createAdminClient();
+  const tempIdToUuid: Record<string, string> = {};
   const isUpdate =
     result.intent === "update_pipeline" &&
     existingData.nodes.length > 0 &&
@@ -41,7 +44,6 @@ export async function applyAIWorkflowResult(
     }
 
     // 2. Insert new nodes
-    const tempIdToUuid: Record<string, string> = {};
     const nodesToInsert = result.milestones.map((m, idx) => ({
       project_id: projectId,
       title: m.title || "Milestone",
@@ -175,6 +177,7 @@ export async function applyAIWorkflowResult(
       claim_holder: null,
       version: n.version ?? 1,
       checkpoints: cpMap[n.id] || [],
+      node_type: (n.node_type || "milestone") as CanvasNodeType,
       created_at: n.created_at,
       updated_at: n.updated_at,
     }));
@@ -415,5 +418,395 @@ export async function applyAIWorkflowResult(
     edges: finalCanvas.edges,
     summary: result.summary,
     intent: result.intent,
+    tempIdToUuid,
   };
+}
+
+// =========================================================================
+// AWS Service Node & Group Reconciliation
+// =========================================================================
+
+/**
+ * Applies AI-generated AWS service nodes, groups, and data flow edges to the canvas.
+ * Implements a hierarchical spatial layout with interlocking bridges to milestones.
+ */
+export async function applyAWSServiceNodes(
+  projectId: string,
+  result: AIWorkflowResult,
+  existingData: { nodes: CanvasNode[]; edges: CanvasEdge[] },
+  initialTempIdToUuid?: Record<string, string>
+): Promise<{
+  nodes: CanvasNode[];
+  edges: CanvasEdge[];
+}> {
+  const adminClient = createAdminClient();
+  const tempIdToUuid: Record<string, string> = { ...(initialTempIdToUuid || {}) };
+
+  const isFullStack =
+    result.mode === "full_stack" ||
+    (result.milestones && result.milestones.length > 0);
+  const startX = 100;
+  const milestoneStartY = 100;
+  const infraStartY = isFullStack ? 420 : 100;
+
+  // 1. Separate services into edge, subnet-contained, management, and other
+  const groups = result.groups || [];
+  const serviceNodes = result.serviceNodes || [];
+
+  const vpcGroup = groups.find((g) => g.style === "vpc");
+  const subnetGroups = groups.filter(
+    (g) =>
+      g.style === "subnet" ||
+      (g.style !== "vpc" && g.parentGroupTempId === vpcGroup?.tempId)
+  );
+
+  // Sort subnets: Public first, Private second, Database third, other last
+  const getSubnetPriority = (g: typeof subnetGroups[0]) => {
+    const l = (g.label || "").toLowerCase();
+    if (l.includes("public") || l.includes("ingress")) return 1;
+    if (l.includes("private") || l.includes("app") || l.includes("compute")) return 2;
+    if (l.includes("db") || l.includes("data") || l.includes("isolated")) return 3;
+    return 4;
+  };
+  subnetGroups.sort((a, b) => getSubnetPriority(a) - getSubnetPriority(b));
+
+  const edgeServices = serviceNodes.filter((s) => {
+    if (s.parentGroupTempId) return false;
+    const sid = s.serviceId.toLowerCase();
+    return (
+      sid === "cloudfront" ||
+      sid === "route53" ||
+      sid === "waf" ||
+      sid === "api_gateway"
+    );
+  });
+
+  const mgmtServices = serviceNodes.filter((s) => {
+    if (s.parentGroupTempId) return false;
+    if (edgeServices.includes(s)) return false;
+    const cat = getServiceCategory(s.serviceId);
+    const sid = s.serviceId.toLowerCase();
+    return (
+      cat === "management" ||
+      cat === "security" ||
+      sid === "cloudwatch" ||
+      sid === "kms" ||
+      sid === "iam"
+    );
+  });
+
+  const remainingUngrouped = serviceNodes.filter(
+    (s) =>
+      !s.parentGroupTempId &&
+      !edgeServices.includes(s) &&
+      !mgmtServices.includes(s)
+  );
+
+  // Position mapping before inserting
+  interface NodePlacement {
+    tempId: string;
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+  }
+  const placements: Record<string, NodePlacement> = {};
+
+  let currentX = startX;
+
+  // Place Edge Services
+  if (edgeServices.length > 0) {
+    edgeServices.forEach((s, idx) => {
+      placements[s.tempId] = {
+        tempId: s.tempId,
+        x: currentX,
+        y: infraStartY + 40 + idx * 160,
+        width: 200,
+        height: 140,
+      };
+    });
+    currentX += 280; // Gap between Edge and VPC
+  }
+
+  // Place VPC and Subnets
+  if (vpcGroup || subnetGroups.length > 0) {
+    const vpcX = currentX;
+    let subnetCurrentX = vpcX + 40;
+    const subnetY = infraStartY + 50;
+
+    for (const sub of subnetGroups) {
+      const childServices = serviceNodes.filter(
+        (s) =>
+          s.parentGroupTempId === sub.tempId ||
+          sub.childTempIds?.includes(s.tempId)
+      );
+      const childCount = Math.max(1, childServices.length);
+      const subWidth = Math.max(280, childCount * 240 + 40);
+      const subHeight = 250;
+
+      placements[sub.tempId] = {
+        tempId: sub.tempId,
+        x: subnetCurrentX,
+        y: subnetY,
+        width: subWidth,
+        height: subHeight,
+      };
+
+      // Place child services inside subnet with generous padding
+      childServices.forEach((s, cIdx) => {
+        placements[s.tempId] = {
+          tempId: s.tempId,
+          x: subnetCurrentX + 25 + cIdx * 240,
+          y: subnetY + 45,
+          width: 200,
+          height: 140,
+        };
+      });
+
+      subnetCurrentX += subWidth + 30;
+    }
+
+    if (vpcGroup) {
+      const totalVpcWidth = Math.max(520, subnetCurrentX - vpcX + 10);
+      placements[vpcGroup.tempId] = {
+        tempId: vpcGroup.tempId,
+        x: vpcX,
+        y: infraStartY,
+        width: totalVpcWidth,
+        height: 340,
+      };
+      currentX = vpcX + totalVpcWidth + 60;
+    } else {
+      currentX = subnetCurrentX + 30;
+    }
+  }
+
+  // Place Management Services (CloudWatch, KMS)
+  if (mgmtServices.length > 0) {
+    mgmtServices.forEach((s, idx) => {
+      placements[s.tempId] = {
+        tempId: s.tempId,
+        x: currentX + idx * 230,
+        y: infraStartY + 40,
+        width: 200,
+        height: 140,
+      };
+    });
+    currentX += mgmtServices.length * 230 + 40;
+  }
+
+  // Place remaining ungrouped
+  if (remainingUngrouped.length > 0) {
+    remainingUngrouped.forEach((s, idx) => {
+      placements[s.tempId] = {
+        tempId: s.tempId,
+        x: currentX + idx * 230,
+        y: infraStartY + 40,
+        width: 200,
+        height: 140,
+      };
+    });
+    currentX += remainingUngrouped.length * 230 + 40;
+  }
+
+  // 2. Insert Groups
+  for (const group of groups) {
+    const pos = placements[group.tempId] || {
+      x: currentX,
+      y: infraStartY,
+      width: 400,
+      height: 280,
+    };
+    const { data: createdGroup, error: groupErr } = await adminClient
+      .from("canvas_nodes")
+      .insert({
+        project_id: projectId,
+        title: group.label,
+        description: "",
+        node_type: "group",
+        position_x: pos.x,
+        position_y: pos.y,
+        width: pos.width || 400,
+        height: pos.height || 280,
+        color: "default",
+        sort_order: 0,
+        claimed_by: null,
+        group_metadata: {
+          label: group.label,
+          style: group.style,
+          childNodeIds: [],
+        },
+      })
+      .select()
+      .single();
+
+    if (!groupErr && createdGroup) {
+      tempIdToUuid[group.tempId] = createdGroup.id;
+    }
+  }
+
+  // 3. Insert AWS Service Nodes
+  for (let sIdx = 0; sIdx < serviceNodes.length; sIdx++) {
+    const svc = serviceNodes[sIdx];
+    const pos = placements[svc.tempId] || {
+      x: startX + sIdx * 240,
+      y: infraStartY + 40,
+      width: 200,
+      height: 140,
+    };
+    const parentGroupUuid = svc.parentGroupTempId
+      ? tempIdToUuid[svc.parentGroupTempId]
+      : null;
+
+    const { data: createdNode, error: nodeErr } = await adminClient
+      .from("canvas_nodes")
+      .insert({
+        project_id: projectId,
+        title: svc.name || svc.serviceId.toUpperCase(),
+        description: svc.description || "",
+        node_type: "aws_service",
+        position_x: pos.x,
+        position_y: pos.y,
+        width: pos.width || 200,
+        height: pos.height || 140,
+        color: "default",
+        sort_order: sIdx,
+        claimed_by: null,
+        parent_group_id: parentGroupUuid,
+        aws_metadata: {
+          serviceId: svc.serviceId,
+          category: getServiceCategory(svc.serviceId),
+          region: svc.region || "us-east-1",
+          config: svc.config || {},
+        },
+      })
+      .select()
+      .single();
+
+    if (!nodeErr && createdNode) {
+      tempIdToUuid[svc.tempId] = createdNode.id;
+    }
+  }
+
+  // Update group childNodeIds
+  for (const group of groups) {
+    const groupUuid = tempIdToUuid[group.tempId];
+    if (!groupUuid) continue;
+    const resolvedChildIds = (group.childTempIds || [])
+      .map((tid) => tempIdToUuid[tid])
+      .filter(Boolean);
+    if (resolvedChildIds.length > 0) {
+      await adminClient
+        .from("canvas_nodes")
+        .update({
+          group_metadata: {
+            label: group.label,
+            style: group.style,
+            childNodeIds: resolvedChildIds,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", groupUuid);
+    }
+  }
+
+  // 4. In Full Stack Mode: Align Milestones along the Top Track!
+  if (isFullStack && result.milestones && result.milestones.length > 0) {
+    const totalInfraWidth = Math.max(
+      currentX - startX,
+      result.milestones.length * 360
+    );
+    const mSpacing = Math.max(340, totalInfraWidth / result.milestones.length);
+
+    for (let mIdx = 0; mIdx < result.milestones.length; mIdx++) {
+      const m = result.milestones[mIdx];
+      const mUuid = tempIdToUuid[m.tempId || m.id || ""];
+      if (mUuid) {
+        const mX = startX + mIdx * mSpacing;
+        const mY = milestoneStartY;
+        await adminClient
+          .from("canvas_nodes")
+          .update({
+            position_x: mX,
+            position_y: mY,
+            sort_order: mIdx,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", mUuid);
+      }
+    }
+  }
+
+  // 5. Insert Data Flow & Interlocking Bridges
+  if (result.dataFlowEdges && result.dataFlowEdges.length > 0) {
+    const edgeInserts: Array<{
+      project_id: string;
+      source_node_id: string;
+      target_node_id: string;
+      source_handle: string;
+      target_handle: string;
+      edge_type: string;
+      label: string | null;
+    }> = [];
+
+    for (const edge of result.dataFlowEdges) {
+      const sourceUuid = tempIdToUuid[edge.fromId] || edge.fromId;
+      const targetUuid = tempIdToUuid[edge.toId] || edge.toId;
+
+      if (sourceUuid && targetUuid && sourceUuid !== targetUuid) {
+        // Determine handles: if source is a milestone and target is an infra resource, flow top-to-bottom!
+        const isSourceMilestone = result.milestones?.some(
+          (m) => tempIdToUuid[m.tempId || m.id || ""] === sourceUuid
+        );
+        const sourceHandle = isSourceMilestone ? "bottom" : "right";
+        const targetHandle = isSourceMilestone ? "top" : "left";
+
+        edgeInserts.push({
+          project_id: projectId,
+          source_node_id: sourceUuid,
+          target_node_id: targetUuid,
+          source_handle: sourceHandle,
+          target_handle: targetHandle,
+          edge_type: edge.edgeType || "data_flow",
+          label: edge.label || edge.protocol || null,
+        });
+      }
+    }
+
+    if (edgeInserts.length > 0) {
+      await adminClient.from("canvas_edges").insert(edgeInserts);
+    }
+  }
+
+  // 6. Return complete refreshed canvas graph
+  const finalCanvas = await getProjectCanvasData(projectId);
+  return {
+    nodes: finalCanvas.nodes,
+    edges: finalCanvas.edges,
+  };
+}
+
+/**
+ * Resolve AWS service category from serviceId
+ */
+function getServiceCategory(serviceId: string): string {
+  const CATEGORY_MAP: Record<string, string> = {
+    ec2: "compute", lambda: "compute", ecs: "compute", eks: "compute",
+    fargate: "compute", elastic_beanstalk: "compute",
+    s3: "storage", ebs: "storage", efs: "storage", glacier: "storage",
+    rds: "database", dynamodb: "database", aurora: "database",
+    elasticache: "database", redshift: "database", documentdb: "database",
+    vpc: "networking", cloudfront: "networking", route53: "networking",
+    api_gateway: "networking", elb: "networking", direct_connect: "networking",
+    iam: "security", kms: "security", secrets_manager: "security",
+    waf: "security", shield: "security", cognito: "security",
+    certificate_manager: "security",
+    sqs: "integration", sns: "integration", eventbridge: "integration",
+    step_functions: "integration", mq: "integration",
+    cloudwatch: "management", cloudtrail: "management",
+    cloudformation: "management", systems_manager: "management",
+    sagemaker: "ai_ml", bedrock: "ai_ml", rekognition: "ai_ml",
+    comprehend: "ai_ml",
+  };
+  return CATEGORY_MAP[serviceId] || "compute";
 }

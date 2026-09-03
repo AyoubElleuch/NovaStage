@@ -121,6 +121,11 @@ export function buildFallbackDecomposition(prompt: string): PromptDecomposition 
     domainTags.push("api", "microservice", "queue", "cache");
     techStackHints.push("Fastify/Express", "BullMQ", "Redis", "OpenTelemetry");
     riskFactors.push("Rate-limit evasion", "Database connection pool exhaustion", "Dead letter queue accumulation");
+  } else if (lower.includes("aws") || lower.includes("ec2") || lower.includes("lambda") || lower.includes("s3") || lower.includes("cloud") || lower.includes("infrastructure") || lower.includes("vpc") || lower.includes("serverless")) {
+    projectType = "AWS Cloud Infrastructure";
+    domainTags.push("aws", "cloud-infrastructure", "vpc", "iam");
+    techStackHints.push("AWS VPC", "EC2/ECS/Lambda", "RDS/DynamoDB", "S3", "CloudWatch", "IAM", "CloudFormation");
+    riskFactors.push("IAM permission over-granting", "Cross-AZ latency", "Cost overrun from unmonitored resources", "Security group misconfiguration");
   } else {
     domainTags.push("web-app", "database", "ui", "testing");
   }

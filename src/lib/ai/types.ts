@@ -1,9 +1,16 @@
 /**
  * AI Canvas Workflow Types & Data Contracts
  * Defines context payloads, intent classifications, prompt decompositions, and structured graph results.
+ * Supports multi-mode generation: workflow, AWS architecture, and full stack.
  */
 
+import type { AWSServiceCategory, EdgeType } from "@/lib/canvas/types";
+export type { AWSServiceCategory, EdgeType };
+
 export type AIWorkflowIntent = "create_pipeline" | "update_pipeline" | "create_parallel";
+
+/** Generation mode selector for the AI pipeline */
+export type AIGenerationMode = "workflow" | "aws_architecture" | "full_stack";
 
 export type MilestonePhase = "planning" | "architecture" | "implementation" | "testing" | "deployment" | "operations";
 
@@ -38,7 +45,7 @@ export interface CanvasAIContext {
 
 export interface ConcernArea {
   name: string;
-  category: "core" | "auth" | "billing" | "data" | "infrastructure" | "ui_ux" | "security" | "testing" | "operations";
+  category: "core" | "auth" | "billing" | "data" | "infrastructure" | "ui_ux" | "security" | "testing" | "operations" | "cloud_infrastructure" | "networking" | "monitoring";
   priority: "critical" | "high" | "medium";
   description: string;
   dependencies: string[];
@@ -83,15 +90,73 @@ export interface AIProcessedEdge {
   toId: string;
 }
 
+// =========================================================================
+// AWS Architecture Generation Types
+// =========================================================================
+
+/** AI-generated AWS service node */
+export interface AIProcessedServiceNode {
+  tempId: string;
+  /** AWS service key from the service registry (e.g. "ec2", "rds", "lambda") */
+  serviceId: string;
+  /** Custom display name for this instance (e.g. "Web Server Fleet", "Primary Database") */
+  name?: string;
+  description?: string;
+  /** AWS region (e.g. "us-east-1") */
+  region?: string;
+  /** Service-specific configuration key-value pairs */
+  config?: Record<string, string>;
+  /** Parent group tempId if this service is inside a VPC/subnet */
+  parentGroupTempId?: string;
+}
+
+/** AI-generated grouping container (VPC, subnet, region, AZ) */
+export interface AIProcessedGroup {
+  tempId: string;
+  label: string;
+  style: "vpc" | "subnet" | "region" | "availability_zone" | "custom";
+  /** TempIds of services/groups contained within this group */
+  childTempIds: string[];
+  /** Parent group tempId for nested containment (e.g. subnet inside VPC) */
+  parentGroupTempId?: string;
+}
+
+/** AI-generated connection between services with protocol/port info */
+export interface AIProcessedDataFlowEdge {
+  fromId: string;
+  toId: string;
+  edgeType: EdgeType;
+  /** Connection label (e.g. "HTTPS", "port 5432", "gRPC") */
+  label?: string;
+  /** Protocol specification */
+  protocol?: string;
+}
+
+// =========================================================================
+// Unified AI Workflow Result
+// =========================================================================
+
 export interface AIWorkflowResult {
   intent: AIWorkflowIntent;
+  /** Generation mode that produced this result */
+  mode?: AIGenerationMode;
   summary: string;
-  /** Target list of milestones for the workflow being created or updated */
+
+  /** Milestone mode output — always present (may be empty array in aws_architecture mode) */
   milestones: AIProcessedMilestone[];
-  /** Target list of dependency edges connecting milestones */
+  /** Dependency edges connecting milestones */
   edges: AIProcessedEdge[];
+
+  /** AWS architecture mode output — present in aws_architecture and full_stack modes */
+  serviceNodes?: AIProcessedServiceNode[];
+  /** VPC/subnet/region groupings */
+  groups?: AIProcessedGroup[];
+  /** Data flow, network, and event connections between services */
+  dataFlowEdges?: AIProcessedDataFlowEdge[];
+
   /** Optional array of existing milestone IDs explicitly removed */
   deletedMilestoneIds?: string[];
   /** Optional decomposition metadata */
   decomposition?: PromptDecomposition;
 }
+

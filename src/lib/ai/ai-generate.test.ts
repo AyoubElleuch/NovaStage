@@ -284,4 +284,40 @@ describe("AI Workflow Generation & Multi-Phase Pipeline", () => {
     expect(layouted[0].position_x).toBe(100);
     expect(layouted[1].position_x).toBe(480); // startX + 380px HORIZONTAL_SPACING
   });
+
+  it("executeAIPipeline in full_stack mode generates interlocked milestones and AWS cloud architecture", async () => {
+    const result = await executeAIPipeline(
+      "Deploy scalable SaaS with Next.js frontend, ECS microservices, and Aurora PostgreSQL database",
+      "full_stack"
+    );
+
+    expect(result.mode).toBe("full_stack");
+    expect(result.milestones.length).toBeGreaterThan(0);
+    expect(result.serviceNodes).toBeDefined();
+    expect(result.serviceNodes!.length).toBeGreaterThan(0);
+    expect(result.groups).toBeDefined();
+    expect(result.groups!.length).toBeGreaterThan(0);
+    expect(result.dataFlowEdges).toBeDefined();
+
+    // Verify hierarchical groups (VPC containing subnets)
+    const vpcGroup = result.groups!.find((g) => g.style === "vpc");
+    expect(vpcGroup).toBeDefined();
+
+    const subnetGroups = result.groups!.filter((g) => g.style === "subnet");
+    expect(subnetGroups.length).toBeGreaterThanOrEqual(2);
+
+    // Verify interlocking cross-connecting bridge edges exist
+    const milestoneIds = new Set(result.milestones.map((m) => m.tempId || m.id));
+    const bridgeEdges = result.dataFlowEdges!.filter((e) =>
+      milestoneIds.has(e.fromId)
+    );
+    expect(bridgeEdges.length).toBeGreaterThan(0);
+
+    // Verify bridges have explicit technical IAC labels (e.g., "Provisions", "Configures", "Deploys")
+    for (const bridge of bridgeEdges) {
+      expect(bridge.label).toBeDefined();
+      expect(bridge.edgeType).toBe("dependency");
+    }
+  });
 });
+

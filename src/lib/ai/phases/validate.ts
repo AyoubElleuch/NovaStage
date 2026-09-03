@@ -265,8 +265,12 @@ export function validateAndRepairWorkflow(
 
   const repairedWorkflow: AIWorkflowResult = {
     ...workflow,
+    mode: workflow.mode || "workflow",
     milestones,
     edges: finalEdges,
+    serviceNodes: workflow.serviceNodes || [],
+    groups: workflow.groups || [],
+    dataFlowEdges: workflow.dataFlowEdges || [],
   };
 
   return { workflow: repairedWorkflow, report };

@@ -453,6 +453,7 @@ export function generateFallbackWorkflow(
 
         return {
           intent: "update_pipeline",
+          mode: "workflow" as const,
           summary: `Inserted "${newTitle}" between step ${insertAfterIndex} and step ${insertAfterIndex + 1}, shifted milestone order, and reconnected dependencies.`,
           milestones: updatedMilestones,
           edges: updatedEdges,
@@ -485,6 +486,7 @@ export function generateFallbackWorkflow(
 
       return {
         intent: "update_pipeline",
+        mode: "workflow" as const,
         summary: `Updated workflow with new checkpoint tasks and milestone refinements.`,
         milestones: updatedMilestones,
         edges: updatedEdges,
@@ -509,6 +511,7 @@ export function generateFallbackWorkflow(
 
   return {
     intent: "create_pipeline",
+    mode: "workflow" as const,
     summary: `Comprehensive workflow pipeline generated for: ${titleSummary}`,
     milestones,
     edges,
@@ -523,6 +526,6 @@ export async function generateWorkflowWithGemini(
   context?: CanvasAIContext
 ): Promise<AIWorkflowResult> {
   const { executeAIPipeline } = await import("./pipeline");
-  return executeAIPipeline(prompt, context);
+  return executeAIPipeline(prompt, "workflow", context);
 }
 

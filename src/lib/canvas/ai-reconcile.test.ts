@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { applyAIWorkflowResult } from "./ai-reconcile";
+import { applyAIWorkflowResult, applyAWSServiceNodes } from "./ai-reconcile";
 import { CanvasNode, CanvasEdge } from "./types";
 import { AIWorkflowResult } from "@/lib/ai/types";
 
@@ -287,4 +287,106 @@ describe("AI Canvas Graph Reconciliation Engine", () => {
     expect(result.nodes.length).toBe(4);
     expect(result.edges.length).toBe(3);
   });
+
+  it("applyAWSServiceNodes positions VPC enclosing subnets and wires vertical interlocking bridges", async () => {
+    const insertedGroups: Array<Record<string, unknown>> = [];
+    const insertedServices: Array<Record<string, unknown>> = [];
+    const insertedEdges: Array<Record<string, unknown>> = [];
+
+    vi.mocked(getProjectCanvasData).mockResolvedValue({
+      nodes: [
+        { id: "uuid-vpc", project_id: "p1", title: "Production VPC", description: "", status: "draft", position_x: 380, position_y: 420, width: 600, height: 310, color: "default", sort_order: 0, claimed_by: null, version: 1, checkpoints: [] },
+        { id: "uuid-public-sub", project_id: "p1", title: "Public Subnet", description: "", status: "draft", position_x: 420, position_y: 470, width: 280, height: 220, color: "default", sort_order: 0, claimed_by: null, version: 1, checkpoints: [] },
+        { id: "uuid-alb", project_id: "p1", title: "ALB", description: "", status: "draft", position_x: 440, position_y: 515, width: 200, height: 140, color: "default", sort_order: 0, claimed_by: null, version: 1, checkpoints: [] },
+      ],
+      edges: [
+        { id: "edge-bridge-1", project_id: "p1", source_node_id: "m_alb_uuid", target_node_id: "uuid-alb", source_handle: "bottom", target_handle: "top" }
+      ],
+      claimRequests: [],
+    });
+
+    mockAdminClient.from.mockImplementation((table: string) => {
+      if (table === "canvas_nodes") {
+        return {
+          insert: vi.fn().mockImplementation((payload) => ({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockImplementation(() => {
+                if (payload.node_type === "group") {
+                  const g = { id: `uuid-group-${insertedGroups.length + 1}`, ...payload };
+                  insertedGroups.push(g);
+                  return Promise.resolve({ data: g, error: null });
+                }
+                const s = { id: `uuid-svc-${insertedServices.length + 1}`, ...payload };
+                insertedServices.push(s);
+                return Promise.resolve({ data: s, error: null });
+              }),
+            }),
+          })),
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        };
+      }
+      if (table === "canvas_edges") {
+        return {
+          insert: vi.fn().mockImplementation((edges) => {
+            insertedEdges.push(...edges);
+            return Promise.resolve({ data: edges, error: null });
+          }),
+        };
+      }
+      return {};
+    });
+
+    const fullStackResult: AIWorkflowResult = {
+      intent: "create_pipeline",
+      mode: "full_stack",
+      summary: "Interlocked Full Stack App",
+      milestones: [
+        { tempId: "m_alb", title: "3. Ingress Routing & SSL Termination", checkpoints: [{ title: "Deploy ALB", isCompleted: false }] }
+      ],
+      edges: [],
+      groups: [
+        { tempId: "vpc_1", label: "Production VPC", style: "vpc", childTempIds: ["subnet_public"] },
+        { tempId: "subnet_public", parentGroupTempId: "vpc_1", label: "Public Ingress Subnet", style: "subnet", childTempIds: ["alb_1"] }
+      ],
+      serviceNodes: [
+        { tempId: "alb_1", parentGroupTempId: "subnet_public", serviceId: "alb", name: "Application Load Balancer" }
+      ],
+      dataFlowEdges: [
+        { fromId: "m_alb", toId: "alb_1", edgeType: "dependency", label: "Binds Listeners", protocol: "iac" }
+      ]
+    };
+
+    const initialTempIdMap = {
+      "m_alb": "m_alb_uuid"
+    };
+
+    const result = await applyAWSServiceNodes(
+      "p1",
+      fullStackResult,
+      { nodes: [], edges: [] },
+      initialTempIdMap
+    );
+
+    expect(result.nodes.length).toBe(3);
+    expect(insertedGroups.length).toBe(2);
+    expect(insertedServices.length).toBe(1);
+
+    // Verify VPC container starts at X and subnet sits inside it
+    const vpc = insertedGroups.find((g) => ((g.group_metadata as { style: string })?.style === "vpc"));
+    const subnet = insertedGroups.find((g) => ((g.group_metadata as { style: string })?.style === "subnet"));
+    expect(vpc).toBeDefined();
+    expect(subnet).toBeDefined();
+    expect((subnet?.position_x as number)).toBeGreaterThan((vpc?.position_x as number));
+    expect((subnet?.position_y as number)).toBeGreaterThan((vpc?.position_y as number));
+
+    // Verify interlocking bridge edge: source_handle: "bottom", target_handle: "top"
+    expect(insertedEdges.length).toBe(1);
+    expect(insertedEdges[0].source_node_id).toBe("m_alb_uuid");
+    expect(insertedEdges[0].source_handle).toBe("bottom");
+    expect(insertedEdges[0].target_handle).toBe("top");
+    expect(insertedEdges[0].label).toBe("Binds Listeners");
+  });
 });
+

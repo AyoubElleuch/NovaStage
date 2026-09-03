@@ -1,6 +1,6 @@
 /**
- * Phase 2: Deep Workflow Generation
- * Generates comprehensive branching DAG pipelines with domain-aware checkpoints and parallel groupings.
+ * Phase 2: AWS Architecture Generation
+ * Generates comprehensive AWS infrastructure DAGs with VPCs, Subnets, and service nodes.
  */
 
 import {
@@ -8,8 +8,9 @@ import {
   AIWorkflowResult,
   PromptDecomposition,
 } from "../types";
-import { buildGenerationSystemInstruction } from "../prompts/system-generate";
-import { callGemini, generateFallbackWorkflow } from "../gemini";
+import { buildAWSGenerationSystemInstruction } from "../prompts/system-generate-aws";
+import { callGemini } from "../gemini";
+import { AWS_WEB_APP_FEW_SHOT_EXAMPLE } from "../prompts/aws-few-shot-examples";
 
 const WORKFLOW_SCHEMA = {
   type: "OBJECT",
@@ -19,72 +20,75 @@ const WORKFLOW_SCHEMA = {
       enum: ["create_pipeline", "update_pipeline", "create_parallel"],
     },
     summary: { type: "STRING" },
-    milestones: {
+    serviceNodes: {
       type: "ARRAY",
       items: {
         type: "OBJECT",
         properties: {
-          id: { type: "STRING" },
           tempId: { type: "STRING" },
-          title: { type: "STRING" },
+          serviceId: { type: "STRING" },
+          name: { type: "STRING" },
           description: { type: "STRING" },
-          color: {
-            type: "STRING",
-            enum: ["default", "amber", "purple", "rose"],
+          region: { type: "STRING" },
+          config: {
+            type: "OBJECT",
+            additionalProperties: { type: "STRING" }
           },
-          phase: {
-            type: "STRING",
-            enum: ["planning", "architecture", "implementation", "testing", "deployment", "operations"],
-          },
-          parallelGroup: { type: "STRING" },
-          sortOrder: { type: "INTEGER" },
-          checkpoints: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                id: { type: "STRING" },
-                title: { type: "STRING" },
-                isCompleted: { type: "BOOLEAN" },
-              },
-              required: ["title"],
-            },
-          },
+          parentGroupTempId: { type: "STRING" }
         },
-        required: ["title", "checkpoints"],
-      },
+        required: ["tempId", "serviceId"]
+      }
     },
-    edges: {
+    groups: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          tempId: { type: "STRING" },
+          label: { type: "STRING" },
+          style: { 
+            type: "STRING",
+            enum: ["vpc", "subnet", "region", "availability_zone", "custom"]
+          },
+          childTempIds: {
+            type: "ARRAY",
+            items: { type: "STRING" }
+          },
+          parentGroupTempId: { type: "STRING" }
+        },
+        required: ["tempId", "label", "style", "childTempIds"]
+      }
+    },
+    dataFlowEdges: {
       type: "ARRAY",
       items: {
         type: "OBJECT",
         properties: {
           fromId: { type: "STRING" },
           toId: { type: "STRING" },
+          edgeType: { type: "STRING" },
+          label: { type: "STRING" },
+          protocol: { type: "STRING" }
         },
-        required: ["fromId", "toId"],
-      },
-    },
-    deletedMilestoneIds: {
-      type: "ARRAY",
-      items: { type: "STRING" },
-    },
+        required: ["fromId", "toId", "edgeType"]
+      }
+    }
   },
-  required: ["intent", "summary", "milestones", "edges"],
+  required: ["intent", "summary", "serviceNodes", "groups", "dataFlowEdges"],
 };
 
 /**
- * Execute Phase 2: Generate deep workflow DAG with Gemini
+ * Execute Phase 2: Generate AWS architecture DAG with Gemini
  */
-export async function generateDeepWorkflow(
+export async function generateAWSArchitecture(
   prompt: string,
   decomposition?: PromptDecomposition,
   context?: CanvasAIContext
 ): Promise<AIWorkflowResult> {
-  const systemInstruction = buildGenerationSystemInstruction(prompt, decomposition);
+  const systemInstruction = buildAWSGenerationSystemInstruction(prompt, decomposition);
 
   // Format existing canvas context into clear text
-  let contextDescription = "The canvas is currently empty. Generate a brand-new comprehensive pipeline.";
+  let contextDescription = "The canvas is currently empty. Generate a brand-new comprehensive AWS architecture.";
   if (context?.existingMilestones && context.existingMilestones.length > 0) {
     const simplifiedMilestones = context.existingMilestones.map((m, idx) => ({
       id: m.id,
@@ -148,22 +152,29 @@ export async function generateDeepWorkflow(
 
   if (
     result &&
-    Array.isArray(result.milestones) &&
-    result.milestones.length > 0 &&
-    Array.isArray(result.edges)
+    Array.isArray(result.serviceNodes) &&
+    result.serviceNodes.length > 0 &&
+    Array.isArray(result.dataFlowEdges)
   ) {
     return {
       ...result,
-      mode: "workflow" as const,
+      mode: "aws_architecture" as const,
+      milestones: [],
+      edges: [],
       decomposition,
     };
   }
 
   // Safe fallback if Gemini is offline or fails
-  const fallback = generateFallbackWorkflow(prompt, context);
   return {
-    ...fallback,
-    mode: "workflow" as const,
+    intent: "create_pipeline",
+    summary: "Generated fallback basic web app architecture.",
+    mode: "aws_architecture" as const,
+    milestones: [],
+    edges: [],
+    serviceNodes: AWS_WEB_APP_FEW_SHOT_EXAMPLE.serviceNodes || [],
+    groups: AWS_WEB_APP_FEW_SHOT_EXAMPLE.groups || [],
+    dataFlowEdges: AWS_WEB_APP_FEW_SHOT_EXAMPLE.dataFlowEdges || [],
     decomposition,
   };
 }
