@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { CanvasNode, CanvasEdge } from "@/lib/canvas/types";
+import { AwsIcon } from "./aws-icons";
 import {
   calculateCompletionPercentage,
   isNodeFullyComplete,
@@ -122,9 +123,15 @@ function MilestoneDrawerContent({
       <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4 dark:border-[#283548]">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">
-            Milestone Details
+            {node.node_type === "aws_service"
+              ? "AWS Service Details"
+              : node.node_type === "group"
+              ? "Group Container Details"
+              : node.node_type === "annotation"
+              ? "Annotation Details"
+              : "Milestone Details"}
           </span>
-          {isComplete && (
+          {isComplete && node.node_type !== "aws_service" && node.node_type !== "group" && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60">
               <Sparkles className="h-3 w-3" /> Complete
             </span>
@@ -235,8 +242,8 @@ function MilestoneDrawerContent({
           />
         </div>
 
-        {/* Progress Bar & Readout */}
-        {node.checkpoints.length > 0 && (
+        {/* Progress Bar & Readout (Milestones only) */}
+        {(!node.node_type || node.node_type === "milestone") && node.checkpoints.length > 0 && (
           <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4 dark:border-[#283548] dark:bg-[#121721]">
             <div className="flex items-center justify-between text-xs font-semibold mb-2">
               <span className="text-neutral-700 dark:text-neutral-300">Milestone Completion</span>
@@ -259,6 +266,229 @@ function MilestoneDrawerContent({
           </div>
         )}
 
+        {/* AWS Service Details & Configuration */}
+        {node.node_type === "aws_service" && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-3.5 dark:border-[#283548] dark:bg-[#121721]">
+              <AwsIcon serviceId={node.aws_metadata?.serviceId || ""} size={36} />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold text-neutral-900 dark:text-white truncate">
+                  {node.aws_metadata?.serviceId?.toUpperCase() || "AWS Service"}
+                </div>
+                <div className="text-[11px] text-neutral-500 dark:text-neutral-400 capitalize">
+                  Category: {node.aws_metadata?.category?.replace("_", " ") || "Compute"}
+                </div>
+              </div>
+            </div>
+
+            {/* Region Configuration */}
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
+                AWS Region
+              </label>
+              <input
+                type="text"
+                disabled={!isClaimedByMe}
+                value={node.aws_metadata?.region || "us-east-1"}
+                onChange={(e) => {
+                  if (isClaimedByMe) {
+                    onUpdateNode(node.id, {
+                      aws_metadata: {
+                        ...node.aws_metadata,
+                        serviceId: node.aws_metadata?.serviceId || "",
+                        category: node.aws_metadata?.category || "compute",
+                        region: e.target.value,
+                      },
+                    });
+                  }
+                }}
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 dark:border-[#283548] dark:bg-[#121721] dark:text-white"
+              />
+            </div>
+
+            {/* Configuration Key-Values */}
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
+                Resource Configuration
+              </label>
+              <div className="space-y-2 rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-3 dark:border-[#283548] dark:bg-[#121721]">
+                {node.aws_metadata?.config && Object.entries(node.aws_metadata.config).length > 0 ? (
+                  Object.entries(node.aws_metadata.config).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between text-xs py-1 border-b border-neutral-200/60 dark:border-[#283548] last:border-0">
+                      <span className="font-semibold text-neutral-600 dark:text-neutral-400">{key}</span>
+                      <span className="font-mono text-neutral-900 dark:text-neutral-200 bg-white dark:bg-[#161d27] px-2 py-0.5 rounded border border-neutral-200 dark:border-[#283548]">
+                        {value}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-neutral-400 dark:text-neutral-500 italic py-1">
+                    Standard AWS managed configuration defaults applied.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Group Container Configuration */}
+        {node.node_type === "group" && (
+          <div className="space-y-4">
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
+                Container Style & Boundary
+              </label>
+              <select
+                disabled={!isClaimedByMe}
+                value={node.group_metadata?.style || "vpc"}
+                onChange={(e) => {
+                  if (isClaimedByMe) {
+                    onUpdateNode(node.id, {
+                      group_metadata: {
+                        label: node.group_metadata?.label || node.title,
+                        style: e.target.value as "vpc" | "subnet" | "region" | "availability_zone" | "custom",
+                        childNodeIds: node.group_metadata?.childNodeIds || [],
+                      },
+                    });
+                  }
+                }}
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 dark:border-[#283548] dark:bg-[#121721] dark:text-white cursor-pointer"
+              >
+                <option value="vpc">Virtual Private Cloud (VPC)</option>
+                <option value="subnet">Subnet (Public / Private)</option>
+                <option value="region">AWS Region Boundary</option>
+                <option value="availability_zone">Availability Zone (AZ)</option>
+                <option value="custom">Custom Group</option>
+              </select>
+            </div>
+            <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-3 dark:border-[#283548] dark:bg-[#121721]">
+              <span className="text-xs text-neutral-600 dark:text-neutral-400">
+                Encapsulated resources: {node.group_metadata?.childNodeIds?.length || 0}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Checkpoints Checklist (Milestones only) */}
+        {(!node.node_type || node.node_type === "milestone") && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                Checkpoints ({node.checkpoints.length})
+              </label>
+              {!isClaimedByMe && (
+                <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium italic">
+                  (View-only)
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {node.checkpoints.length === 0 && (
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic py-1">
+                  No checkpoints yet. {isClaimedByMe ? "Add your first step below." : "Claim this milestone to add checklist steps."}
+                </p>
+              )}
+              {node.checkpoints.map((cp) => (
+                <div
+                  key={cp.id}
+                  className={`group relative flex items-start justify-between gap-3 rounded-xl border p-3 transition-all ${
+                    cp.is_completed
+                      ? "border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/40 dark:bg-emerald-950/20"
+                      : "border-neutral-200/90 bg-white hover:border-neutral-300 hover:shadow-2xs dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961]"
+                  }`}
+                >
+                  {/* Dedicated Checkbox Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isClaimedByMe) {
+                        onToggleCheckpoint(cp.id, node.id, !cp.is_completed);
+                      } else if (isClaimedByOther) {
+                        onRequestClaim(node);
+                      } else {
+                        onClaimNode(node.id);
+                      }
+                    }}
+                    aria-label={cp.is_completed ? "Mark checkpoint as incomplete" : "Mark checkpoint as complete"}
+                    title={
+                      isClaimedByMe
+                        ? cp.is_completed
+                          ? "Click to mark as incomplete"
+                          : "Click to mark as complete"
+                        : isClaimedByOther
+                        ? "Claimed by collaborator. Click to request edit."
+                        : "Unclaimed milestone. Click to claim edit lock."
+                    }
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/20 dark:focus-visible:ring-emerald-500/20 ${
+                      cp.is_completed
+                        ? "text-emerald-600 hover:text-emerald-700 hover:scale-110 dark:text-emerald-400"
+                        : "text-neutral-300 hover:text-neutral-600 hover:scale-110 dark:text-neutral-600 dark:hover:text-neutral-400"
+                    }`}
+                  >
+                    {cp.is_completed ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    ) : (
+                      <Circle className="h-4 w-4 shrink-0" />
+                    )}
+                  </button>
+
+                  {/* Checkpoint Text Content */}
+                  <div className="flex-1 min-w-0 pr-1">
+                    <p
+                      className={`text-xs leading-relaxed break-words select-text ${
+                        cp.is_completed
+                          ? "text-neutral-400 line-through decoration-neutral-300 dark:text-neutral-500 dark:decoration-neutral-600"
+                          : "text-neutral-800 font-medium dark:text-neutral-200"
+                      }`}
+                    >
+                      {cp.title}
+                    </p>
+                  </div>
+
+                  {/* Delete Checkpoint Button - Only when Claimed */}
+                  {isClaimedByMe && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteCheckpoint(cp.id, node.id);
+                      }}
+                      title="Delete checkpoint"
+                      className="opacity-0 group-hover:opacity-100 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {/* Inline Add Checkpoint Form - Only available to Claim holder */}
+              {isClaimedByMe && (
+                <form onSubmit={handleAddCheckpoint} className="mt-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newCheckpointTitle}
+                      onChange={(e) => setNewCheckpointTitle(e.target.value)}
+                      placeholder="Add new checkpoint item (press Enter)…"
+                      className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newCheckpointTitle.trim()}
+                      className="inline-flex h-8 items-center justify-center rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Description Field */}
         <div>
           <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
@@ -270,127 +500,9 @@ function MilestoneDrawerContent({
             disabled={!isClaimedByMe}
             onChange={(e) => setDescription(e.target.value)}
             onBlur={handleDescriptionBlur}
-            placeholder="Document technical requirements, schema links, or guidelines for this milestone…"
+            placeholder="Document technical requirements, schema links, or architecture guidelines…"
             className="w-full rounded-lg border border-neutral-200 bg-white p-3 text-xs leading-relaxed text-neutral-800 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed resize-none dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20 dark:disabled:bg-[#161d27] dark:disabled:text-neutral-500"
           />
-        </div>
-
-        {/* Checkpoints Checklist */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-              Checkpoints ({node.checkpoints.length})
-            </label>
-            {!isClaimedByMe && (
-              <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium italic">
-                (View-only)
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            {node.checkpoints.length === 0 && (
-              <p className="text-xs text-neutral-400 dark:text-neutral-500 italic py-1">
-                No checkpoints yet. {isClaimedByMe ? "Add your first step below." : "Claim this milestone to add checklist steps."}
-              </p>
-            )}
-            {node.checkpoints.map((cp) => (
-              <div
-                key={cp.id}
-                className={`group relative flex items-start justify-between gap-3 rounded-xl border p-3 transition-all ${
-                  cp.is_completed
-                    ? "border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/40 dark:bg-emerald-950/20"
-                    : "border-neutral-200/90 bg-white hover:border-neutral-300 hover:shadow-2xs dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961]"
-                }`}
-              >
-                {/* Dedicated Checkbox Toggle Button */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isClaimedByMe) {
-                      onToggleCheckpoint(cp.id, node.id, !cp.is_completed);
-                    } else if (isClaimedByOther) {
-                      onRequestClaim(node);
-                    } else {
-                      onClaimNode(node.id);
-                    }
-                  }}
-                  aria-label={cp.is_completed ? "Mark checkpoint as incomplete" : "Mark checkpoint as complete"}
-                  title={
-                    isClaimedByMe
-                      ? cp.is_completed
-                        ? "Click to mark as incomplete"
-                        : "Click to mark as complete"
-                      : isClaimedByOther
-                      ? "Claimed by collaborator. Click to request edit."
-                      : "Unclaimed milestone. Click to claim edit lock."
-                  }
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/20 dark:focus-visible:ring-emerald-500/20 ${
-                    cp.is_completed
-                      ? "text-emerald-600 hover:text-emerald-700 hover:scale-110 dark:text-emerald-400"
-                      : "text-neutral-300 hover:text-neutral-600 hover:scale-110 dark:text-neutral-600 dark:hover:text-neutral-400"
-                  }`}
-                >
-                  {cp.is_completed ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <Circle className="h-4 w-4 shrink-0" />
-                  )}
-                </button>
-
-                {/* Checkpoint Text Content */}
-                <div className="flex-1 min-w-0 pr-1">
-                  <p
-                    className={`text-xs leading-relaxed break-words select-text ${
-                      cp.is_completed
-                        ? "text-neutral-400 line-through decoration-neutral-300 dark:text-neutral-500 dark:decoration-neutral-600"
-                        : "text-neutral-800 font-medium dark:text-neutral-200"
-                    }`}
-                  >
-                    {cp.title}
-                  </p>
-                </div>
-
-                {/* Delete Checkpoint Button - Only when Claimed */}
-                {isClaimedByMe && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteCheckpoint(cp.id, node.id);
-                    }}
-                    title="Delete checkpoint"
-                    className="opacity-0 group-hover:opacity-100 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer dark:hover:bg-red-950/40 dark:hover:text-red-400"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            ))}
-
-            {/* Inline Add Checkpoint Form - Only available to Claim holder */}
-            {isClaimedByMe && (
-              <form onSubmit={handleAddCheckpoint} className="mt-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newCheckpointTitle}
-                    onChange={(e) => setNewCheckpointTitle(e.target.value)}
-                    placeholder="Add new checkpoint item (press Enter)…"
-                    className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newCheckpointTitle.trim()}
-                    className="inline-flex h-8 items-center justify-center rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
         </div>
 
         {/* Dependency Chain Section */}

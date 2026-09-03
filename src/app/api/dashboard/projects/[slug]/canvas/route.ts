@@ -73,11 +73,19 @@ export async function POST(
       const newNode = await createCanvasNode(
         project.id,
         {
+          id: body.id,
           title: body.title || "New Milestone",
           description: body.description || "",
           position_x: body.position_x ?? 100,
           position_y: body.position_y ?? 100,
+          width: body.width,
+          height: body.height,
           checkpoints: body.checkpoints,
+          node_type: body.node_type,
+          aws_metadata: body.aws_metadata,
+          group_metadata: body.group_metadata,
+          annotation_metadata: body.annotation_metadata,
+          parent_group_id: body.parent_group_id,
         },
         session.user.id
       );

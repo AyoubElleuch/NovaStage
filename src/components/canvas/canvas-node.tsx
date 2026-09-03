@@ -16,7 +16,11 @@ import {
   getUserColor,
 } from "@/lib/canvas/coordinate-math";
 
-interface CanvasNodeComponentProps {
+import CanvasServiceNode from "./canvas-service-node";
+import CanvasGroupNode from "./canvas-group-node";
+import CanvasAnnotationNode from "./canvas-annotation-node";
+
+export interface CanvasNodeComponentProps {
   node: CanvasNode;
   stepIndex: number;
   isSelected: boolean;
@@ -31,9 +35,27 @@ interface CanvasNodeComponentProps {
   onRequestClaim: (node: CanvasNode) => void;
   onClaimNode?: (nodeId: string) => void;
   onUpdateTitle?: (nodeId: string, newTitle: string) => void;
+  zoom?: number;
+  onResize?: (nodeId: string, width: number, height: number) => void;
 }
 
-export default function CanvasNodeComponent({
+export default function CanvasNodeComponent(props: CanvasNodeComponentProps) {
+  const type = props.node.node_type || "milestone";
+  
+  switch (type) {
+    case "aws_service":
+      return <CanvasServiceNode {...props} />;
+    case "group":
+      return <CanvasGroupNode {...props} />;
+    case "annotation":
+      return <CanvasAnnotationNode {...props} />;
+    case "milestone":
+    default:
+      return <CanvasMilestoneNode {...props} />;
+  }
+}
+
+function CanvasMilestoneNode({
   node,
   stepIndex,
   isSelected,

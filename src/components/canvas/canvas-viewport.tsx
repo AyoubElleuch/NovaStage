@@ -47,6 +47,8 @@ export default function CanvasViewportContainer({
     initialViewport: CanvasViewport;
   } | null>(null);
   const dragDistanceRef = useRef(0);
+  const marqueeDistanceRef = useRef(0);
+  const justFinishedMarqueeRef = useRef(false);
 
   // Keyboard Spacebar for Pan
   useEffect(() => {
@@ -163,6 +165,8 @@ export default function CanvasViewportContainer({
       const worldPos = screenToWorld(screenX, screenY, viewport);
 
       setIsMarqueeDragging(true);
+      marqueeDistanceRef.current = 0;
+      justFinishedMarqueeRef.current = false;
       onMarqueeStart?.(worldPos, { x: e.clientX, y: e.clientY });
       try {
         containerRef.current?.setPointerCapture(e.pointerId);
@@ -224,6 +228,7 @@ export default function CanvasViewportContainer({
         y: e.clientY - panStart.y,
       });
     } else if (isMarqueeDragging) {
+      marqueeDistanceRef.current += Math.hypot(e.movementX, e.movementY);
       onMarqueeChange?.(worldPos, { x: e.clientX, y: e.clientY });
     }
   };
@@ -244,6 +249,13 @@ export default function CanvasViewportContainer({
     if (isMarqueeDragging) {
       setIsMarqueeDragging(false);
       onMarqueeEnd?.();
+      if (marqueeDistanceRef.current > 4) {
+        justFinishedMarqueeRef.current = true;
+        setTimeout(() => {
+          justFinishedMarqueeRef.current = false;
+          marqueeDistanceRef.current = 0;
+        }, 120);
+      }
       try {
         containerRef.current?.releasePointerCapture(e.pointerId);
       } catch {}
@@ -254,6 +266,10 @@ export default function CanvasViewportContainer({
     const isBackground =
       e.target === containerRef.current ||
       (e.target as HTMLElement).getAttribute("data-canvas-bg") === "true";
+
+    if (justFinishedMarqueeRef.current || marqueeDistanceRef.current > 4) {
+      return;
+    }
 
     if (isBackground && !isPanning && !isMarqueeDragging && containerRef.current && dragDistanceRef.current < 8) {
       const rect = containerRef.current.getBoundingClientRect();

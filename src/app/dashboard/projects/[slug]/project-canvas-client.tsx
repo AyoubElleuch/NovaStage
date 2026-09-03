@@ -38,6 +38,8 @@ import CanvasAIAura from "@/components/canvas/canvas-ai-aura";
 import CanvasMinimap from "@/components/canvas/canvas-minimap";
 import CanvasNotebook from "@/components/canvas/canvas-notebook";
 import CanvasReleasePulse from "@/components/canvas/canvas-release-pulse";
+import CanvasServicePalette from "@/components/canvas/canvas-service-palette";
+import { AWS_SERVICE_REGISTRY } from "@/components/canvas/aws-icons";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
 
@@ -69,6 +71,7 @@ type DragState = {
   pointerStartScreen: { x: number; y: number };
   lastPosition: { x: number; y: number };
   initialPositions?: Map<string, { x: number; y: number }>;
+  lastPositions?: Map<string, { x: number; y: number }>;
 };
 
 type DraftEdgeState = {
@@ -130,6 +133,7 @@ export default function ProjectCanvasClient({
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [snapGrid, setSnapGrid] = useState(true);
   const [isMinimapOpen, setIsMinimapOpen] = useState(true);
+  const [isServicePaletteOpen, setIsServicePaletteOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
@@ -148,6 +152,12 @@ export default function ProjectCanvasClient({
 
   // Marquee Selection State
   const [selectionMarquee, setSelectionMarquee] = useState<{
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
+  const selectionMarqueeRef = useRef<{
     startX: number;
     startY: number;
     currentX: number;
@@ -256,57 +266,71 @@ export default function ProjectCanvasClient({
     }
   }, [notify, project.slug, secureFetch]);
 
-  // Add Milestone Box
+  // Add Milestone Box (Optimistic Instant Pop)
   const handleAddNode = useCallback(
-    async (customPos?: { x: number; y: number }) => {
+    (customPos?: { x: number; y: number }) => {
       if (isAIGenerating) return;
       const posX = customPos ? customPos.x : (400 - viewport.x) / viewport.zoom;
       const posY = customPos ? customPos.y : (250 - viewport.y) / viewport.zoom;
+      const finalX = snapGrid ? snapToGrid(posX) : posX;
+      const finalY = snapGrid ? snapToGrid(posY) : posY;
 
       const stepNum = nodes.length + 1;
       const defaultTitle = `Milestone Step ${stepNum}`;
+      const clientNodeId = crypto.randomUUID();
 
-      try {
-        const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "create_node",
-            title: defaultTitle,
-            position_x: snapGrid ? snapToGrid(posX) : posX,
-            position_y: snapGrid ? snapToGrid(posY) : posY,
-            checkpoints: [],
-          }),
-        });
+      const myHolder = {
+        id: currentUser.id,
+        fullName: currentUser.fullName,
+        email: currentUser.email,
+        avatarUrl: currentUser.avatarUrl,
+      };
 
-        const data = await res.json();
-        if (data.success && data.node) {
-          const myHolder = {
-            id: currentUser.id,
-            fullName: currentUser.fullName,
-            email: currentUser.email,
-            avatarUrl: currentUser.avatarUrl,
-          };
-          const nodeWithHolder: CanvasNode = {
-            ...data.node,
-            claim_holder:
-              data.node.claim_holder?.fullName && data.node.claim_holder.fullName !== "You"
-                ? data.node.claim_holder
-                : myHolder,
-          };
+      const optimisticNode: CanvasNode = {
+        id: clientNodeId,
+        project_id: project.id,
+        title: defaultTitle,
+        description: "",
+        status: "draft",
+        position_x: finalX,
+        position_y: finalY,
+        width: 280,
+        height: 170,
+        color: "default",
+        sort_order: nodes.length,
+        claimed_by: currentUser.id,
+        claim_holder: myHolder,
+        version: 1,
+        checkpoints: [],
+        node_type: "milestone",
+      };
 
-          const nextNodes = [...nodes, nodeWithHolder];
-          setNodes(nextNodes);
-          setSelectedNodeId(nodeWithHolder.id);
-          setSelectedNodeIds(new Set([nodeWithHolder.id]));
-          pushHistorySnapshot(nextNodes, edges);
-          canvasSounds.addNode();
-          broadcastEvent("node:created", { node: nodeWithHolder });
-          notify({ title: "Milestone Created", message: `Added "${nodeWithHolder.title}" to canvas` });
-        }
-      } catch {
+      // 0ms instant local insertion
+      setNodes((prev) => [...prev, optimisticNode]);
+      setSelectedNodeId(clientNodeId);
+      setSelectedNodeIds(new Set([clientNodeId]));
+      pushHistorySnapshot([...nodes, optimisticNode], edges);
+      canvasSounds.addNode();
+      broadcastEvent("node:created", { node: optimisticNode });
+      notify({ title: "Milestone Created", message: `Added "${defaultTitle}" to canvas` });
+
+      // Background persistence
+      secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create_node",
+          id: clientNodeId,
+          title: defaultTitle,
+          position_x: finalX,
+          position_y: finalY,
+          checkpoints: [],
+        }),
+      }).catch((e) => {
+        console.error("Failed to persist milestone node:", e);
+        setNodes((prev) => prev.filter((n) => n.id !== clientNodeId));
         notify({ tone: "error", title: "Error", message: "Failed to create milestone box" });
-      }
+      });
     },
     [
       broadcastEvent,
@@ -318,6 +342,210 @@ export default function ProjectCanvasClient({
       isAIGenerating,
       nodes,
       notify,
+      project.id,
+      project.slug,
+      pushHistorySnapshot,
+      secureFetch,
+      snapGrid,
+      viewport.x,
+      viewport.y,
+      viewport.zoom,
+    ]
+  );
+
+  // Add AWS Service Node (Optimistic Instant Pop)
+  const handleAddAWSService = useCallback(
+    (serviceId: string, customPos?: { x: number; y: number }) => {
+      if (isAIGenerating) return;
+      const posX = customPos ? customPos.x : (400 - viewport.x) / viewport.zoom;
+      const posY = customPos ? customPos.y : (250 - viewport.y) / viewport.zoom;
+      const finalX = snapGrid ? snapToGrid(posX) : posX;
+      const finalY = snapGrid ? snapToGrid(posY) : posY;
+
+      const serviceDef = AWS_SERVICE_REGISTRY[serviceId.toLowerCase()];
+      const serviceName = serviceDef ? serviceDef.name : serviceId.toUpperCase();
+      const category = serviceDef ? serviceDef.category : "compute";
+      const clientNodeId = crypto.randomUUID();
+
+      const myHolder = {
+        id: currentUser.id,
+        fullName: currentUser.fullName,
+        email: currentUser.email,
+        avatarUrl: currentUser.avatarUrl,
+      };
+
+      const optimisticNode: CanvasNode = {
+        id: clientNodeId,
+        project_id: project.id,
+        title: serviceName,
+        description: "",
+        status: "draft",
+        position_x: finalX,
+        position_y: finalY,
+        width: 200,
+        height: 140,
+        color: "default",
+        sort_order: nodes.length,
+        claimed_by: currentUser.id,
+        claim_holder: myHolder,
+        version: 1,
+        checkpoints: [],
+        node_type: "aws_service",
+        aws_metadata: {
+          serviceId,
+          category,
+          region: "us-east-1",
+          config: serviceDef?.defaultConfig || {},
+        },
+      };
+
+      // 0ms instant local insertion & close palette
+      setIsServicePaletteOpen(false);
+      setNodes((prev) => [...prev, optimisticNode]);
+      setSelectedNodeId(clientNodeId);
+      setSelectedNodeIds(new Set([clientNodeId]));
+      pushHistorySnapshot([...nodes, optimisticNode], edges);
+      canvasSounds.addNode();
+      broadcastEvent("node:created", { node: optimisticNode });
+      notify({ title: "AWS Service Added", message: `Added "${serviceName}" to canvas` });
+
+      // Background persistence
+      secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create_node",
+          id: clientNodeId,
+          title: serviceName,
+          node_type: "aws_service",
+          width: 200,
+          height: 140,
+          position_x: finalX,
+          position_y: finalY,
+          aws_metadata: {
+            serviceId,
+            category,
+            region: "us-east-1",
+            config: serviceDef?.defaultConfig || {},
+          },
+          checkpoints: [],
+        }),
+      }).catch((e) => {
+        console.error("Failed to persist AWS service node:", e);
+        setNodes((prev) => prev.filter((n) => n.id !== clientNodeId));
+        notify({ tone: "error", title: "Error", message: "Failed to add AWS service node" });
+      });
+    },
+    [
+      broadcastEvent,
+      currentUser.avatarUrl,
+      currentUser.email,
+      currentUser.fullName,
+      currentUser.id,
+      edges,
+      isAIGenerating,
+      nodes,
+      notify,
+      project.id,
+      project.slug,
+      pushHistorySnapshot,
+      secureFetch,
+      snapGrid,
+      viewport.x,
+      viewport.y,
+      viewport.zoom,
+    ]
+  );
+
+  // Add Group Container (Optimistic Instant Pop)
+  const handleAddGroup = useCallback(
+    (customPos?: { x: number; y: number }) => {
+      if (isAIGenerating) return;
+      const posX = customPos ? customPos.x : (350 - viewport.x) / viewport.zoom;
+      const posY = customPos ? customPos.y : (200 - viewport.y) / viewport.zoom;
+      const finalX = snapGrid ? snapToGrid(posX) : posX;
+      const finalY = snapGrid ? snapToGrid(posY) : posY;
+
+      const defaultTitle = "VPC Network";
+      const clientNodeId = crypto.randomUUID();
+
+      const myHolder = {
+        id: currentUser.id,
+        fullName: currentUser.fullName,
+        email: currentUser.email,
+        avatarUrl: currentUser.avatarUrl,
+      };
+
+      const optimisticNode: CanvasNode = {
+        id: clientNodeId,
+        project_id: project.id,
+        title: defaultTitle,
+        description: "",
+        status: "draft",
+        position_x: finalX,
+        position_y: finalY,
+        width: 440,
+        height: 320,
+        color: "default",
+        sort_order: nodes.length,
+        claimed_by: currentUser.id,
+        claim_holder: myHolder,
+        version: 1,
+        checkpoints: [],
+        node_type: "group",
+        group_metadata: {
+          label: defaultTitle,
+          style: "vpc",
+          childNodeIds: [],
+        },
+      };
+
+      // 0ms instant local insertion
+      setNodes((prev) => [...prev, optimisticNode]);
+      setSelectedNodeId(clientNodeId);
+      setSelectedNodeIds(new Set([clientNodeId]));
+      pushHistorySnapshot([...nodes, optimisticNode], edges);
+      canvasSounds.addNode();
+      broadcastEvent("node:created", { node: optimisticNode });
+      notify({ title: "Group Created", message: `Added "${defaultTitle}" to canvas` });
+
+      // Background persistence
+      secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create_node",
+          id: clientNodeId,
+          title: defaultTitle,
+          node_type: "group",
+          width: 440,
+          height: 320,
+          position_x: finalX,
+          position_y: finalY,
+          group_metadata: {
+            label: defaultTitle,
+            style: "vpc",
+            childNodeIds: [],
+          },
+          checkpoints: [],
+        }),
+      }).catch((e) => {
+        console.error("Failed to persist group container:", e);
+        setNodes((prev) => prev.filter((n) => n.id !== clientNodeId));
+        notify({ tone: "error", title: "Error", message: "Failed to create group container" });
+      });
+    },
+    [
+      broadcastEvent,
+      currentUser.avatarUrl,
+      currentUser.email,
+      currentUser.fullName,
+      currentUser.id,
+      edges,
+      isAIGenerating,
+      nodes,
+      notify,
+      project.id,
       project.slug,
       pushHistorySnapshot,
       secureFetch,
@@ -398,15 +626,69 @@ export default function ProjectCanvasClient({
     [broadcastEvent, currentUser.id, edges, isOwner, nodes, notify, project.slug, pushHistorySnapshot, secureFetch]
   );
 
-  // Delete All Selected Nodes (Batch Delete)
+  // Delete All Selected Nodes (Atomic Batch Delete)
   const handleDeleteSelectedNodes = useCallback(async () => {
-    if (selectedNodeIds.size === 0) return;
-    const targetIds = Array.from(selectedNodeIds);
+    const idsToDelete = new Set(selectedNodeIds);
+    if (selectedNodeId) idsToDelete.add(selectedNodeId);
+    if (idsToDelete.size === 0) return;
 
-    for (const id of targetIds) {
-      await handleDeleteNode(id);
+    // Filter nodes permitted to be deleted
+    const deletableNodeIds = new Set<string>();
+    for (const id of idsToDelete) {
+      const target = nodes.find((n) => n.id === id);
+      if (target && (target.claimed_by === currentUser.id || isOwner)) {
+        deletableNodeIds.add(id);
+      }
     }
-  }, [handleDeleteNode, selectedNodeIds]);
+
+    if (deletableNodeIds.size === 0) {
+      notify({
+        tone: "error",
+        title: "Action Denied",
+        message: "You must claim the selected nodes or be the project owner to delete them",
+      });
+      return;
+    }
+
+    // Atomic local state update
+    const nextNodes = nodes.filter((n) => !deletableNodeIds.has(n.id));
+    const nextEdges = edges.filter(
+      (e) => !deletableNodeIds.has(e.source_node_id) && !deletableNodeIds.has(e.target_node_id)
+    );
+
+    setNodes(nextNodes);
+    setEdges(nextEdges);
+    setSelectedNodeId(null);
+    setSelectedNodeIds(new Set());
+
+    pushHistorySnapshot(nextNodes, nextEdges);
+    canvasSounds.deleteNode();
+
+    // Broadcast deletions to collaborators
+    for (const nodeId of deletableNodeIds) {
+      broadcastEvent("node:deleted", { nodeId });
+    }
+
+    notify({
+      title: "Deleted",
+      message: `Deleted ${deletableNodeIds.size} ${deletableNodeIds.size === 1 ? "item" : "items"} from canvas`,
+    });
+
+    // Delete in database in parallel
+    try {
+      await Promise.all(
+        Array.from(deletableNodeIds).map((nodeId) =>
+          secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "delete_node", node_id: nodeId }),
+          })
+        )
+      );
+    } catch (e) {
+      console.error("Failed to delete batch nodes from database:", e);
+    }
+  }, [broadcastEvent, currentUser.id, edges, isOwner, nodes, notify, project.slug, pushHistorySnapshot, secureFetch, selectedNodeId, selectedNodeIds]);
 
   // Toggle Checkpoint Checkbox
   const handleToggleCheckpoint = useCallback(
@@ -787,7 +1069,7 @@ export default function ProjectCanvasClient({
 
   // Generate Visual Workflow Pipeline with AI
   const handleGenerateAIWorkflow = useCallback(
-    async (promptText: string) => {
+    async (promptText: string, mode?: string) => {
       const generatorName = currentUser.fullName || currentUser.email;
       setIsAIGenerating(true);
       setAiGeneratingUser(generatorName);
@@ -803,7 +1085,7 @@ export default function ProjectCanvasClient({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: promptText }),
+            body: JSON.stringify({ prompt: promptText, mode: mode || "workflow" }),
           }
         );
 
@@ -839,17 +1121,21 @@ export default function ProjectCanvasClient({
             let nextEdges: CanvasEdge[] = [];
 
             setNodes((prev) => {
-              const existingIds = new Set(prev.map((n) => n.id));
-              const newNodes = data.nodes.filter((n: CanvasNode) => !existingIds.has(n.id));
-              nextNodes = [...prev, ...newNodes];
+              const dataMap = new Map(data.nodes.map((n: CanvasNode) => [n.id, n]));
+              const updatedPrev = prev.map((n) => (dataMap.has(n.id) ? (dataMap.get(n.id) as CanvasNode) : n));
+              const prevIds = new Set(prev.map((n) => n.id));
+              const brandNew = data.nodes.filter((n: CanvasNode) => !prevIds.has(n.id));
+              nextNodes = [...updatedPrev, ...brandNew];
               return nextNodes;
             });
 
             if (data.edges) {
               setEdges((prev) => {
-                const existingIds = new Set(prev.map((e) => e.id));
-                const newEdges = data.edges.filter((e: CanvasEdge) => !existingIds.has(e.id));
-                nextEdges = [...prev, ...newEdges];
+                const dataMap = new Map(data.edges.map((e: CanvasEdge) => [e.id, e]));
+                const updatedPrev = prev.map((e) => (dataMap.has(e.id) ? (dataMap.get(e.id) as CanvasEdge) : e));
+                const prevIds = new Set(prev.map((e) => e.id));
+                const brandNew = data.edges.filter((e: CanvasEdge) => !prevIds.has(e.id));
+                nextEdges = [...updatedPrev, ...brandNew];
                 return nextEdges;
               });
             }
@@ -864,11 +1150,11 @@ export default function ProjectCanvasClient({
             });
 
             if (data.nodes.length > 0) {
-              const firstNode = data.nodes[data.nodes.length - 1] || data.nodes[0];
+              const firstNode = data.nodes[0];
               setViewport((prev) => ({
                 ...prev,
-                x: Math.round(-firstNode.position_x * prev.zoom + window.innerWidth / 2 - 140),
-                y: Math.round(-firstNode.position_y * prev.zoom + window.innerHeight / 2 - 100),
+                x: Math.round(-firstNode.position_x * prev.zoom + 200),
+                y: Math.round(-firstNode.position_y * prev.zoom + 150),
               }));
             }
 
@@ -1352,6 +1638,7 @@ export default function ProjectCanvasClient({
         const isBatch = initMap && initMap.size > 1;
 
         if (isBatch) {
+          const currentBatchPositions = new Map<string, { x: number; y: number }>();
           setNodes((prev) =>
             prev.map((n) => {
               const init = initMap.get(n.id);
@@ -1362,9 +1649,15 @@ export default function ProjectCanvasClient({
                 nextX = snapToGrid(nextX, 16);
                 nextY = snapToGrid(nextY, 16);
               }
+              currentBatchPositions.set(n.id, { x: nextX, y: nextY });
               return { ...n, position_x: nextX, position_y: nextY };
             })
           );
+          draggingNodeRef.current = {
+            ...activeDrag,
+            lastPosition: currentBatchPositions.get(activeDrag.nodeId) || activeDrag.lastPosition,
+            lastPositions: currentBatchPositions,
+          };
         } else {
           let nextX = activeDrag.startPos.x + dx;
           let nextY = activeDrag.startPos.y + dy;
@@ -1423,27 +1716,25 @@ export default function ProjectCanvasClient({
     setDraggingNode(null);
 
     const initMap = completedDrag.initialPositions;
-    if (initMap && initMap.size > 1) {
-      // Commit all batch nodes
-      for (const [nodeId] of initMap) {
-        const target = nodes.find((n) => n.id === nodeId);
-        if (target) {
-          try {
-            await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                action: "update_node",
-                node_id: target.id,
-                updates: {
-                  position_x: target.position_x,
-                  position_y: target.position_y,
-                },
-              }),
-            });
-          } catch {}
-        }
-      }
+    const finalBatchPositions = completedDrag.lastPositions;
+
+    if (initMap && initMap.size > 1 && finalBatchPositions) {
+      // Commit all batch nodes in parallel
+      const updatePromises = Array.from(finalBatchPositions.entries()).map(([nodeId, pos]) =>
+        secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update_node",
+            node_id: nodeId,
+            updates: {
+              position_x: pos.x,
+              position_y: pos.y,
+            },
+          }),
+        }).catch((err) => console.error("Batch drag node commit failed:", err))
+      );
+      await Promise.all(updatePromises);
     } else {
       try {
         await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
@@ -1462,60 +1753,73 @@ export default function ProjectCanvasClient({
         console.error("Failed to commit node drag:", e);
       }
     }
-  }, [nodes, project.slug, secureFetch]);
+  }, [project.slug, secureFetch]);
 
   // Marquee Selection Handlers
   const handleMarqueeStart = (worldPos: { x: number; y: number }) => {
-    setSelectionMarquee({
+    const initMarquee = {
       startX: worldPos.x,
       startY: worldPos.y,
       currentX: worldPos.x,
       currentY: worldPos.y,
-    });
+    };
+    selectionMarqueeRef.current = initMarquee;
+    setSelectionMarquee(initMarquee);
     setSelectedNodeId(null);
+    setSelectedNodeIds(new Set());
   };
 
   const handleMarqueeChange = (worldPos: { x: number; y: number }) => {
-    setSelectionMarquee((prev) =>
-      prev ? { ...prev, currentX: worldPos.x, currentY: worldPos.y } : null
-    );
+    const marquee = selectionMarqueeRef.current;
+    if (!marquee) return;
+    marquee.currentX = worldPos.x;
+    marquee.currentY = worldPos.y;
+    setSelectionMarquee({ ...marquee });
 
-    if (selectionMarquee) {
-      const minX = Math.min(selectionMarquee.startX, worldPos.x);
-      const maxX = Math.max(selectionMarquee.startX, worldPos.x);
-      const minY = Math.min(selectionMarquee.startY, worldPos.y);
-      const maxY = Math.max(selectionMarquee.startY, worldPos.y);
+    const minX = Math.min(marquee.startX, worldPos.x);
+    const maxX = Math.max(marquee.startX, worldPos.x);
+    const minY = Math.min(marquee.startY, worldPos.y);
+    const maxY = Math.max(marquee.startY, worldPos.y);
 
-      const insideIds = new Set<string>();
-      for (const node of nodes) {
-        const nw = node.width || 280;
-        const nh = node.height || 170;
-        const nodeRight = node.position_x + nw;
-        const nodeBottom = node.position_y + nh;
+    const insideIds = new Set<string>();
+    for (const node of nodes) {
+      const nw = node.width || (node.node_type === "aws_service" ? 200 : node.node_type === "group" ? 400 : 280);
+      const nh = node.height || (node.node_type === "aws_service" ? 140 : node.node_type === "group" ? 300 : 170);
+      const nodeRight = node.position_x + nw;
+      const nodeBottom = node.position_y + nh;
 
-        // Check bounding box intersection
-        const intersects =
-          node.position_x < maxX &&
-          nodeRight > minX &&
-          node.position_y < maxY &&
-          nodeBottom > minY;
+      // Check bounding box intersection
+      const intersects =
+        node.position_x < maxX &&
+        nodeRight > minX &&
+        node.position_y < maxY &&
+        nodeBottom > minY;
 
-        if (intersects) {
-          insideIds.add(node.id);
-        }
+      if (intersects) {
+        insideIds.add(node.id);
       }
-      setSelectedNodeIds(insideIds);
+    }
+    setSelectedNodeIds(insideIds);
+    if (insideIds.size === 1) {
+      setSelectedNodeId(Array.from(insideIds)[0]);
+    } else if (insideIds.size === 0) {
+      setSelectedNodeId(null);
     }
   };
 
   const handleMarqueeEnd = () => {
+    selectionMarqueeRef.current = null;
     setSelectionMarquee(null);
   };
 
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
+      ) {
         return;
       }
 
@@ -1546,10 +1850,9 @@ export default function ProjectCanvasClient({
       } else if (e.key === "n" || e.key === "N") {
         handleAddNode();
       } else if (e.key === "Delete" || e.key === "Backspace") {
-        if (selectedNodeIds.size > 1) {
+        if (selectedNodeIds.size > 0 || selectedNodeId) {
+          e.preventDefault();
           handleDeleteSelectedNodes();
-        } else if (selectedNodeId) {
-          handleDeleteNode(selectedNodeId);
         }
       }
     };
@@ -1879,8 +2182,18 @@ export default function ProjectCanvasClient({
           snappedHandle={snappedHandle}
         />
 
-        {/* Milestone Box Nodes Layer */}
-        {nodes.map((node, index) => (
+        {/* Canvas Nodes Layer: Groups in background, services and milestones on top */}
+        {[...nodes]
+          .sort((a, b) => {
+            const getLayer = (n: CanvasNode) => {
+              if (n.node_type === "group") {
+                return n.group_metadata?.style === "vpc" ? 0 : 1;
+              }
+              return 2;
+            };
+            return getLayer(a) - getLayer(b);
+          })
+          .map((node, index) => (
           <CanvasNodeComponent
             key={node.id}
             node={node}
@@ -1899,9 +2212,13 @@ export default function ProjectCanvasClient({
                   return copy;
                 });
               } else {
-                setIsNotebookOpen(false);
-                setSelectedNodeId(n.id);
-                setSelectedNodeIds(new Set([n.id]));
+                if (!selectedNodeIds.has(n.id)) {
+                  setIsNotebookOpen(false);
+                  setSelectedNodeId(n.id);
+                  setSelectedNodeIds(new Set([n.id]));
+                } else {
+                  setSelectedNodeId(n.id);
+                }
               }
             }}
             onDragStart={(n, e) => {
@@ -1927,6 +2244,7 @@ export default function ProjectCanvasClient({
                 pointerStartScreen: { x: e.clientX, y: e.clientY },
                 lastPosition: { x: n.position_x, y: n.position_y },
                 initialPositions: isBatch ? initPositions : undefined,
+                lastPositions: isBatch ? new Map(initPositions) : undefined,
               };
               draggingNodeRef.current = nextDrag;
               setDraggingNode(nextDrag);
@@ -1950,6 +2268,10 @@ export default function ProjectCanvasClient({
             }}
             onUpdateTitle={(nId, newTitle) => {
               handleUpdateNode(nId, { title: newTitle });
+            }}
+            zoom={viewport.zoom}
+            onResize={(nId, width, height) => {
+              handleUpdateNode(nId, { width, height });
             }}
           />
         ))}
@@ -2098,9 +2420,20 @@ export default function ProjectCanvasClient({
               setIsNotebookOpen(false);
               setIsReleasePulseOpen((open) => !open);
             }}
+            onToggleServicePalette={() => {
+              setIsServicePaletteOpen((open) => !open);
+            }}
+            onAddGroup={() => handleAddGroup()}
           />
         </div>
       </div>
+
+      {/* AWS Service Palette Flyout */}
+      <CanvasServicePalette
+        isOpen={isServicePaletteOpen}
+        onClose={() => setIsServicePaletteOpen(false)}
+        onAddService={(serviceId) => handleAddAWSService(serviceId)}
+      />
 
       {isReleasePulseOpen && (
         <CanvasReleasePulse

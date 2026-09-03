@@ -12,8 +12,10 @@ import {
   Sparkles,
   Volume2,
   X,
+  Waypoints,
 } from "lucide-react";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
+import { AIGenerationMode } from "@/lib/ai/types";
 
 interface CanvasAIAssistantProps {
   isOpen: boolean;
@@ -21,36 +23,93 @@ interface CanvasAIAssistantProps {
   onClose: () => void;
   portalContainer?: HTMLElement | null;
   requestsRemaining?: number;
-  onSubmitPrompt?: (prompt: string) => Promise<void> | void;
+  onSubmitPrompt?: (prompt: string, mode?: string) => Promise<void> | void;
 }
 
-// Progressive thinking stage descriptors representing the 4-phase AI engineering pipeline
-const THINKING_STAGES = [
-  {
-    buttonLabel: "Decomposing…",
-    title: "Phase 1: Architectural Decomposition",
-    detail: "Analyzing domain requirements, tech stack constraints, risk factors, and parallel tracks…",
-    pct: "25%",
-  },
-  {
-    buttonLabel: "Generating…",
-    title: "Phase 2: Deep Branching DAG Generation",
-    detail: "Synthesizing domain-specific engineering milestones, parallel branches, and actionable checklists…",
-    pct: "55%",
-  },
-  {
-    buttonLabel: "Validating…",
-    title: "Phase 3: DAG Validation & Cycle Detection",
-    detail: "Running cycle detection DFS, eliminating orphan nodes, verifying edge integrity, and padding tasks…",
-    pct: "80%",
-  },
-  {
-    buttonLabel: "Synchronizing…",
-    title: "Phase 4: Auto-Layout & Multiplayer Sync",
-    detail: "Calculating non-overlapping coordinates, persisting database changes, and broadcasting to peers…",
-    pct: "95%",
-  },
-];
+const getThinkingStages = (mode: AIGenerationMode) => {
+  if (mode === "aws_architecture") {
+    return [
+      {
+        buttonLabel: "Analyzing…",
+        title: "Phase 1: Analyzing AWS requirements...",
+        detail: "Evaluating AWS services, data flow, and networking constraints...",
+        pct: "25%",
+      },
+      {
+        buttonLabel: "Generating…",
+        title: "Phase 2: Generating service topology...",
+        detail: "Synthesizing AWS resources and IAM roles...",
+        pct: "55%",
+      },
+      {
+        buttonLabel: "Validating…",
+        title: "Phase 3: Validating architecture...",
+        detail: "Verifying resource availability and security groups...",
+        pct: "80%",
+      },
+      {
+        buttonLabel: "Laying out…",
+        title: "Phase 4: Laying out infrastructure...",
+        detail: "Auto-arranging AWS components and connecting edges...",
+        pct: "95%",
+      },
+    ];
+  }
+  if (mode === "full_stack") {
+    return [
+      {
+        buttonLabel: "Decomposing…",
+        title: "Phase 1: Decomposing project...",
+        detail: "Analyzing domain requirements, tech stack constraints, risk factors, and parallel tracks...",
+        pct: "25%",
+      },
+      {
+        buttonLabel: "Generating…",
+        title: "Phase 2: Generating workflow & architecture...",
+        detail: "Synthesizing domain-specific engineering milestones and parallel branches...",
+        pct: "55%",
+      },
+      {
+        buttonLabel: "Validating…",
+        title: "Phase 3: Validating DAG & topology...",
+        detail: "Running cycle detection DFS, eliminating orphan nodes, verifying edge integrity...",
+        pct: "80%",
+      },
+      {
+        buttonLabel: "Synchronizing…",
+        title: "Phase 4: Synchronizing canvas...",
+        detail: "Calculating non-overlapping coordinates, persisting database changes...",
+        pct: "95%",
+      },
+    ];
+  }
+  return [
+    {
+      buttonLabel: "Decomposing…",
+      title: "Phase 1: Architectural Decomposition",
+      detail: "Analyzing domain requirements, tech stack constraints, risk factors, and parallel tracks…",
+      pct: "25%",
+    },
+    {
+      buttonLabel: "Generating…",
+      title: "Phase 2: Deep Branching DAG Generation",
+      detail: "Synthesizing domain-specific engineering milestones, parallel branches, and actionable checklists…",
+      pct: "55%",
+    },
+    {
+      buttonLabel: "Validating…",
+      title: "Phase 3: DAG Validation & Cycle Detection",
+      detail: "Running cycle detection DFS, eliminating orphan nodes, verifying edge integrity, and padding tasks…",
+      pct: "80%",
+    },
+    {
+      buttonLabel: "Synchronizing…",
+      title: "Phase 4: Auto-Layout & Multiplayer Sync",
+      detail: "Calculating non-overlapping coordinates, persisting database changes, and broadcasting to peers…",
+      pct: "95%",
+    },
+  ];
+};
 
 // Extend window for Web Speech API types
 interface SpeechRecognitionInstance {
@@ -99,6 +158,7 @@ export default function CanvasAIAssistant({
   onSubmitPrompt,
 }: CanvasAIAssistantProps) {
   const [prompt, setPrompt] = useState("");
+  const [mode, setMode] = useState<AIGenerationMode>("workflow");
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -172,13 +232,14 @@ export default function CanvasAIAssistant({
     if (!isThinking) return;
 
     const interval = setInterval(() => {
-      setThinkingStep((prev) =>
-        prev < THINKING_STAGES.length - 1 ? prev + 1 : prev
-      );
+      setThinkingStep((prev) => {
+        const stagesLen = getThinkingStages(mode).length;
+        return prev < stagesLen - 1 ? prev + 1 : prev;
+      });
     }, 850);
 
     return () => clearInterval(interval);
-  }, [isThinking]);
+  }, [isThinking, mode]);
 
   // Speech Recognition Control
   const startListening = () => {
@@ -249,7 +310,7 @@ export default function CanvasAIAssistant({
 
     try {
       if (onSubmitPrompt) {
-        await onSubmitPrompt(trimmed);
+        await onSubmitPrompt(trimmed, mode);
       } else {
         // Visual placeholder delay for demo/thinking simulation
         await new Promise((resolve) => setTimeout(resolve, 2400));
@@ -264,7 +325,8 @@ export default function CanvasAIAssistant({
   };
 
   const isQuotaDepleted = requestsRemaining <= 0;
-  const currentStage = THINKING_STAGES[thinkingStep] || THINKING_STAGES[0];
+  const stages = getThinkingStages(mode);
+  const currentStage = stages[thinkingStep] || stages[0];
 
   return (
     <>
@@ -350,6 +412,43 @@ export default function CanvasAIAssistant({
 
           {/* Form & Input Area */}
           <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
+            {/* Mode Selector */}
+            <div className="flex p-1 bg-neutral-100 dark:bg-[#1e2634] rounded-lg border border-neutral-200/60 dark:border-[#283548] w-fit">
+              <button
+                type="button"
+                onClick={() => setMode('workflow')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                  mode === 'workflow' ? 'bg-white dark:bg-[#2a3649] text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
+                }`}
+              >
+                <Waypoints className="h-3.5 w-3.5" />
+                Workflow
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('aws_architecture')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                  mode === 'aws_architecture' ? 'bg-white dark:bg-[#2a3649] text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
+                }`}
+              >
+                <span className="font-bold text-[#FF9900]">AWS</span>
+                AWS Architecture
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('full_stack')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                  mode === 'full_stack' ? 'bg-white dark:bg-[#2a3649] text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
+                }`}
+              >
+                <div className="flex items-center gap-0.5">
+                  <Waypoints className="h-3.5 w-3.5" />
+                  <span className="font-bold text-[#FF9900] text-[10px]">AWS</span>
+                </div>
+                Full Stack
+              </button>
+            </div>
+
             <div className="rounded-xl border border-neutral-200 bg-white shadow-2xs transition-all focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/5 dark:border-[#283548] dark:bg-[#121721] dark:focus-within:border-emerald-500 dark:focus-within:ring-emerald-500/10">
               <textarea
                 ref={textareaRef}

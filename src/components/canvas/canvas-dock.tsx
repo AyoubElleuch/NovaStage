@@ -15,6 +15,7 @@ import {
   Undo2,
   Waypoints,
   X,
+  Square,
 } from "lucide-react";
 import { CanvasTool, CanvasViewport } from "@/lib/canvas/types";
 
@@ -28,6 +29,7 @@ interface CanvasDockProps {
   onResetZoom: () => void;
   onFitView: () => void;
   onAddNode: () => void;
+  onAddGroup?: () => void;
   onTidyLayout: () => void;
   snapGrid: boolean;
   onToggleSnapGrid: () => void;
@@ -39,6 +41,7 @@ interface CanvasDockProps {
   onToggleMinimap?: () => void;
   isReleasePulseOpen?: boolean;
   onToggleReleasePulse?: () => void;
+  onToggleServicePalette?: () => void;
 }
 
 export default function CanvasDock({
@@ -51,6 +54,7 @@ export default function CanvasDock({
   onResetZoom,
   onFitView,
   onAddNode,
+  onAddGroup,
   onTidyLayout,
   snapGrid,
   onToggleSnapGrid,
@@ -62,6 +66,7 @@ export default function CanvasDock({
   onToggleMinimap,
   isReleasePulseOpen,
   onToggleReleasePulse,
+  onToggleServicePalette,
 }: CanvasDockProps) {
   const [isQuickToolsOpen, setIsQuickToolsOpen] = useState(false);
   const zoomPct = Math.round(viewport.zoom * 100);
@@ -194,35 +199,35 @@ export default function CanvasDock({
         aria-label="Canvas control dock"
         className={
           className ||
-          "flex shrink-0 items-center gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all select-none dark:border-[#283548] dark:bg-[#161d27]/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+          "flex shrink-0 items-center gap-1 sm:gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1 sm:p-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all select-none max-w-[calc(100vw-16px)] overflow-x-auto no-scrollbar dark:border-[#283548] dark:bg-[#161d27]/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
         }
       >
         {/* Primary Interaction Tools (Pan & Select) */}
-        <div className="flex items-center gap-1 border-r border-neutral-200/80 dark:border-[#283548] pr-1.5">
+        <div className="flex items-center gap-0.5 sm:gap-1 border-r border-neutral-200/80 dark:border-[#283548] pr-1 sm:pr-1.5">
           <button
             type="button"
             onClick={() => onSelectTool("select")}
             title="Select & Marquee tool (V)"
-            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
+            className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
               activeTool === "select"
                 ? "bg-neutral-900 text-white shadow-xs dark:bg-emerald-600"
                 : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
             }`}
           >
-            <MousePointer className="h-4 w-4" />
+            <MousePointer className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </button>
 
           <button
             type="button"
             onClick={() => onSelectTool("hand")}
             title="Hand / Pan tool (H or Spacebar)"
-            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
+            className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
               activeTool === "hand"
                 ? "bg-neutral-900 text-white shadow-xs dark:bg-emerald-600"
                 : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
             }`}
           >
-            <Hand className="h-4 w-4" />
+            <Hand className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </button>
         </div>
 
@@ -231,18 +236,43 @@ export default function CanvasDock({
           type="button"
           onClick={onAddNode}
           title="Add Milestone Node (N)"
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 hover:scale-[1.02] cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
+          className="inline-flex h-8 sm:h-9 shrink-0 items-center gap-1 sm:gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-2 sm:px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 hover:scale-[1.02] cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
         >
           <Plus className="h-3.5 w-3.5 shrink-0" />
-          <span>Add Node</span>
+          <span className="hidden sm:inline">Add Node</span>
         </button>
+
+        {/* Add Group Action Button */}
+        {onAddGroup && (
+          <button
+            type="button"
+            onClick={onAddGroup}
+            title="Add Group"
+            className="inline-flex h-8 sm:h-9 shrink-0 items-center gap-1 sm:gap-1.5 whitespace-nowrap rounded-xl border border-neutral-200/80 bg-white/90 px-2 sm:px-3 text-xs font-semibold text-neutral-700 shadow-[0_2px_5px_rgba(0,0,0,0.04)] transition-all hover:bg-neutral-50 hover:scale-[1.02] cursor-pointer dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
+          >
+            <Square className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">Group</span>
+          </button>
+        )}
+
+        {/* AWS Services Button */}
+        {onToggleServicePalette && (
+          <button
+            type="button"
+            onClick={onToggleServicePalette}
+            title="AWS Services"
+            className="inline-flex h-8 sm:h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-[#FF9900]/30 bg-[#FF9900]/10 px-2 sm:px-2.5 text-xs font-bold text-[#FF9900] shadow-[0_2px_5px_rgba(255,153,0,0.08)] transition-all hover:bg-[#FF9900]/20 hover:scale-[1.02] cursor-pointer"
+          >
+            AWS
+          </button>
+        )}
 
         {/* Mobile Tools Trigger Button (Replaces 8 desktop buttons on mobile screens) */}
         <button
           type="button"
           onClick={() => setIsQuickToolsOpen((v) => !v)}
           title="Open Canvas Tools"
-          className={`sm:hidden flex h-9 items-center gap-1 rounded-xl px-2.5 text-xs font-semibold transition-colors cursor-pointer ${
+          className={`sm:hidden flex h-8 items-center gap-1 rounded-xl px-2 text-xs font-semibold transition-colors cursor-pointer ${
             isQuickToolsOpen
               ? "bg-neutral-900 text-white dark:bg-emerald-600"
               : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-[#1e2634]"

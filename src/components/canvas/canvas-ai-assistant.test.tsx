@@ -77,7 +77,7 @@ describe("CanvasAIAssistant Component", () => {
     fireEvent.click(generateBtn);
 
     await waitFor(() => {
-      expect(handleSubmit).toHaveBeenCalledWith("Create a modern event pipeline");
+      expect(handleSubmit).toHaveBeenCalledWith("Create a modern event pipeline", "workflow");
     });
   });
 
