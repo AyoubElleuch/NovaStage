@@ -142,7 +142,7 @@ export default function LoginForm({
         setIsSuccess(Boolean(result.success));
         if (result.success) {
           playSuccessChime();
-          router.push("/dashboard");
+          router.push(mode === "signup" ? "/onboarding" : redirectTo || "/dashboard");
         }
       } catch (err: unknown) {
         if (

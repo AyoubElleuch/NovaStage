@@ -96,7 +96,7 @@ export async function GET(request: Request) {
       const destination =
         next === "/reset-password"
           ? "/reset-password"
-          : !isProfileComplete
+          : isSignup || !isProfileComplete
             ? "/onboarding"
             : next !== "/dashboard"
               ? next

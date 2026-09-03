@@ -217,8 +217,6 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
   }
 
   const defaultName = email.split("@")[0] || "Developer";
-  const defaultUsername =
-    email.split("@")[0].toLowerCase().replace(/[^a-z0-9_-]/g, "_").slice(0, 24) || "user";
 
   const supabase = await createClient();
 
@@ -232,8 +230,6 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
       password,
       email_confirm: true,
       user_metadata: {
-        full_name: defaultName,
-        username: defaultUsername,
         welcome_sent: true,
       },
     });
@@ -250,14 +246,12 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
 
     userId = adminUser?.user?.id;
 
-    // Ensure profiles table has default full_name and username so profile is complete for dashboard
+    // Ensure profile is created with developer role, keeping username incomplete for onboarding
     if (userId) {
       await admin.from("profiles").upsert(
         {
           id: userId,
           email,
-          full_name: defaultName,
-          username: defaultUsername,
           role: "developer",
         },
         { onConflict: "id" }
@@ -271,8 +265,6 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
       password,
       options: {
         data: {
-          full_name: defaultName,
-          username: defaultUsername,
           welcome_sent: true,
         },
       },
@@ -304,8 +296,8 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
     redirect("/login");
   }
 
-  // Automatically go directly to the dashboard
-  redirect("/dashboard");
+  // Automatically go directly to onboarding for all new signups
+  redirect("/onboarding");
 }
 
 export async function signOut() {
