@@ -2,7 +2,52 @@ export type NodeStatus = "draft" | "in_progress" | "blocked" | "completed";
 
 export type HandlePosition = "top" | "right" | "bottom" | "left";
 
-export type CanvasTool = "select" | "hand" | "add_node" | "link";
+export type CanvasTool = "select" | "hand" | "add_node" | "link" | "add_service" | "add_group";
+
+/** Discriminated node types for the canvas */
+export type CanvasNodeType = "milestone" | "aws_service" | "group" | "annotation";
+
+/** Edge connection semantics */
+export type EdgeType = "dependency" | "data_flow" | "network" | "event";
+
+/** AWS service category for icon coloring and grouping */
+export type AWSServiceCategory =
+  | "compute"
+  | "storage"
+  | "database"
+  | "networking"
+  | "security"
+  | "integration"
+  | "management"
+  | "ai_ml"
+  | "ml"
+  | "analytics"
+  | "serverless"
+  | "containers"
+  | "front-end"
+  | "iot"
+  | "mobile";
+
+/** AWS-specific metadata stored as JSON on aws_service nodes */
+export interface AWSServiceMetadata {
+  serviceId: string;
+  category: AWSServiceCategory;
+  region?: string;
+  config?: Record<string, string>;
+}
+
+/** Group node metadata for VPC/Subnet/Region containers */
+export interface GroupMetadata {
+  label: string;
+  style: "vpc" | "subnet" | "region" | "availability_zone" | "custom";
+  childNodeIds: string[];
+}
+
+/** Annotation node metadata for sticky notes */
+export interface AnnotationMetadata {
+  content: string;
+  color?: "yellow" | "blue" | "green" | "pink" | "gray";
+}
 
 export interface CanvasCheckpoint {
   id: string;
@@ -49,6 +94,16 @@ export interface CanvasNode {
   } | null;
   version: number;
   checkpoints: CanvasCheckpoint[];
+  /** Discriminated node type — defaults to "milestone" for backward compatibility */
+  node_type?: CanvasNodeType;
+  /** AWS service metadata — only populated for aws_service nodes */
+  aws_metadata?: AWSServiceMetadata | null;
+  /** Group/container metadata — only populated for group nodes */
+  group_metadata?: GroupMetadata | null;
+  /** Annotation content — only populated for annotation nodes */
+  annotation_metadata?: AnnotationMetadata | null;
+  /** Parent group ID if this node is visually contained inside a group node */
+  parent_group_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -60,6 +115,10 @@ export interface CanvasEdge {
   target_node_id: string;
   source_handle: HandlePosition;
   target_handle: HandlePosition;
+  /** Connection type — defaults to "dependency" for backward compatibility */
+  edge_type?: EdgeType;
+  /** Optional label displayed on the edge (e.g. "port 443", "HTTPS") */
+  label?: string | null;
   created_at?: string;
 }
 

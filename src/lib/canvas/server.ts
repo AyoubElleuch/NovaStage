@@ -1,9 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeRedisSet, safeRedisDel } from "@/lib/redis/client";
-import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasClaimRequest, HandlePosition, NodeStatus } from "./types";
+import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasClaimRequest, CanvasNodeType, EdgeType, HandlePosition, NodeStatus, AWSServiceMetadata, GroupMetadata, AnnotationMetadata } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
 import { GeneratedWorkflow } from "@/lib/ai/gemini";
-export { applyAIWorkflowResult } from "./ai-reconcile";
+export { applyAIWorkflowResult, applyAWSServiceNodes } from "./ai-reconcile";
 
 export async function getProjectCanvasData(projectId: string): Promise<{
   nodes: CanvasNode[];
@@ -18,7 +18,8 @@ export async function getProjectCanvasData(projectId: string): Promise<{
     .select(`
       id, project_id, title, description, status,
       position_x, position_y, width, height, color, sort_order,
-      claimed_by, claimed_at, claim_expires_at, version, created_at, updated_at
+      claimed_by, claimed_at, claim_expires_at, version, created_at, updated_at,
+      node_type, aws_metadata, group_metadata, annotation_metadata, parent_group_id
     `)
     .eq("project_id", projectId)
     .order("sort_order", { ascending: true })
@@ -40,7 +41,7 @@ export async function getProjectCanvasData(projectId: string): Promise<{
   // Fetch edges
   const { data: rawEdges } = await adminClient
     .from("canvas_edges")
-    .select("id, project_id, source_node_id, target_node_id, source_handle, target_handle, created_at")
+    .select("id, project_id, source_node_id, target_node_id, source_handle, target_handle, edge_type, label, created_at")
     .eq("project_id", projectId);
 
   // Fetch active claim requests
@@ -117,6 +118,11 @@ export async function getProjectCanvasData(projectId: string): Promise<{
       claim_holder: claimHolder,
       version: n.version || 1,
       checkpoints: checkpointMap[n.id] || [],
+      node_type: (n.node_type || "milestone") as CanvasNodeType,
+      aws_metadata: n.aws_metadata || null,
+      group_metadata: n.group_metadata || null,
+      annotation_metadata: n.annotation_metadata || null,
+      parent_group_id: n.parent_group_id || null,
       created_at: n.created_at,
       updated_at: n.updated_at,
     };
@@ -129,6 +135,8 @@ export async function getProjectCanvasData(projectId: string): Promise<{
     target_node_id: e.target_node_id,
     source_handle: (e.source_handle || "right") as HandlePosition,
     target_handle: (e.target_handle || "left") as HandlePosition,
+    edge_type: (e.edge_type || "dependency") as EdgeType,
+    label: e.label || null,
     created_at: e.created_at,
   }));
 
@@ -149,6 +157,7 @@ export async function getProjectCanvasData(projectId: string): Promise<{
 export async function createCanvasNode(
   projectId: string,
   data: {
+    id?: string;
     title: string;
     description?: string;
     position_x: number;
@@ -156,21 +165,36 @@ export async function createCanvasNode(
     width?: number;
     height?: number;
     checkpoints?: string[];
+    node_type?: CanvasNodeType;
+    aws_metadata?: AWSServiceMetadata | null;
+    group_metadata?: GroupMetadata | null;
+    annotation_metadata?: AnnotationMetadata | null;
+    parent_group_id?: string | null;
   },
   userId: string
 ): Promise<CanvasNode | null> {
   const adminClient = createAdminClient();
 
+  const nodeType = data.node_type || "milestone";
+  const defaultWidth = nodeType === "aws_service" ? 200 : nodeType === "group" ? 400 : 280;
+  const defaultHeight = nodeType === "aws_service" ? 140 : nodeType === "group" ? 300 : 170;
+
   const { data: node, error } = await adminClient
     .from("canvas_nodes")
     .insert({
+      ...(data.id ? { id: data.id } : {}),
       project_id: projectId,
-      title: data.title || "New Milestone",
+      title: data.title || (nodeType === "group" ? "New Group" : "New Milestone"),
       description: data.description || "",
       position_x: data.position_x,
       position_y: data.position_y,
-      width: data.width || 280,
-      height: data.height || 170,
+      width: data.width || defaultWidth,
+      height: data.height || defaultHeight,
+      node_type: nodeType,
+      aws_metadata: data.aws_metadata || null,
+      group_metadata: data.group_metadata || null,
+      annotation_metadata: data.annotation_metadata || null,
+      parent_group_id: data.parent_group_id || null,
       claimed_by: userId,
       claimed_at: new Date().toISOString(),
       claim_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
@@ -227,6 +251,11 @@ export async function createCanvasNode(
 
   return {
     ...node,
+    node_type: (node.node_type || data.node_type || "milestone") as CanvasNodeType,
+    aws_metadata: node.aws_metadata || data.aws_metadata || null,
+    group_metadata: node.group_metadata || data.group_metadata || null,
+    annotation_metadata: node.annotation_metadata || data.annotation_metadata || null,
+    parent_group_id: node.parent_group_id || data.parent_group_id || null,
     checkpoints: createdCps,
     claim_holder: claimHolder,
   };
@@ -255,7 +284,10 @@ export async function updateCanvasNode(
     updates.title !== undefined ||
     updates.description !== undefined ||
     updates.status !== undefined ||
-    updates.color !== undefined;
+    updates.color !== undefined ||
+    updates.aws_metadata !== undefined ||
+    updates.group_metadata !== undefined ||
+    updates.annotation_metadata !== undefined;
 
   if (isContentUpdate) {
     const isClaimedByMe = node.claimed_by === userId && !isExpired;
@@ -264,19 +296,26 @@ export async function updateCanvasNode(
     }
   }
 
+  const updatePayload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (updates.title !== undefined) updatePayload.title = updates.title;
+  if (updates.description !== undefined) updatePayload.description = updates.description;
+  if (updates.status !== undefined) updatePayload.status = updates.status;
+  if (updates.position_x !== undefined) updatePayload.position_x = updates.position_x;
+  if (updates.position_y !== undefined) updatePayload.position_y = updates.position_y;
+  if (updates.width !== undefined) updatePayload.width = updates.width;
+  if (updates.height !== undefined) updatePayload.height = updates.height;
+  if (updates.color !== undefined) updatePayload.color = updates.color;
+  if (updates.node_type !== undefined) updatePayload.node_type = updates.node_type;
+  if (updates.aws_metadata !== undefined) updatePayload.aws_metadata = updates.aws_metadata;
+  if (updates.group_metadata !== undefined) updatePayload.group_metadata = updates.group_metadata;
+  if (updates.annotation_metadata !== undefined) updatePayload.annotation_metadata = updates.annotation_metadata;
+  if (updates.parent_group_id !== undefined) updatePayload.parent_group_id = updates.parent_group_id;
+
   const { error } = await adminClient
     .from("canvas_nodes")
-    .update({
-      title: updates.title,
-      description: updates.description,
-      status: updates.status,
-      position_x: updates.position_x,
-      position_y: updates.position_y,
-      width: updates.width,
-      height: updates.height,
-      color: updates.color,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("id", nodeId)
     .eq("project_id", projectId);
 
@@ -622,6 +661,7 @@ export async function createBatchCanvasWorkflow(
     claim_holder: null,
     version: n.version ?? 1,
     checkpoints: cpMap[n.id] || [],
+    node_type: (n.node_type || "milestone") as CanvasNodeType,
     created_at: n.created_at,
     updated_at: n.updated_at,
   }));

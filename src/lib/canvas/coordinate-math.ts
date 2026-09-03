@@ -69,7 +69,9 @@ export function getNodeHandlePosition(
   node: CanvasNode,
   handle: HandlePosition
 ): { x: number; y: number } {
-  const { position_x, position_y, width, height } = node;
+  const width = node.width || (node.node_type === "aws_service" ? 200 : node.node_type === "group" ? 440 : 280);
+  const height = node.height || (node.node_type === "aws_service" ? 140 : node.node_type === "group" ? 320 : 170);
+  const { position_x, position_y } = node;
 
   switch (handle) {
     case "top":
@@ -353,14 +355,24 @@ export function exportToMermaid(nodes: CanvasNode[], edges: CanvasEdge[]): strin
   // Nodes definition
   for (const node of nodes) {
     const safeTitle = sanitize(node.title || "Milestone");
-    const completion = calculateCompletionPercentage(node.checkpoints);
-    const label = `${safeTitle} (${completion}%)`;
-    lines.push(`  ${node.id}["${label}"]`);
+    if (node.node_type === "aws_service") {
+      lines.push(`  ${node.id}["AWS: ${safeTitle}"]`);
+    } else if (node.node_type === "group") {
+      lines.push(`  ${node.id}[["Group: ${safeTitle}"]]`);
+    } else {
+      const completion = calculateCompletionPercentage(node.checkpoints);
+      const label = `${safeTitle} (${completion}%)`;
+      lines.push(`  ${node.id}["${label}"]`);
+    }
   }
 
   // Edges definition
   for (const edge of edges) {
-    lines.push(`  ${edge.source_node_id} --> ${edge.target_node_id}`);
+    if (edge.label) {
+      lines.push(`  ${edge.source_node_id} -->|${sanitize(edge.label)}| ${edge.target_node_id}`);
+    } else {
+      lines.push(`  ${edge.source_node_id} --> ${edge.target_node_id}`);
+    }
   }
 
   return lines.join("\n");
