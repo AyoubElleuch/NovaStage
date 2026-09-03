@@ -47,35 +47,13 @@ describe("Onboarding & Profile Completion Verification", () => {
     });
   });
 
-  describe("Password requirements checks", () => {
-    const passwordRequirements = [
-      { label: "8+ characters", test: (password: string) => password.length >= 8 },
-      { label: "Capital letter", test: (password: string) => /[A-Z]/.test(password) },
-      { label: "Small letter", test: (password: string) => /[a-z]/.test(password) },
-      { label: "Number", test: (password: string) => /\d/.test(password) },
-      { label: "Special character", test: (password: string) => /[^A-Za-z0-9]/.test(password) },
-    ];
-
-    it("evaluates strong passwords satisfying all requirements", () => {
-      const password = "Password123!";
-      const passed = passwordRequirements.filter(({ test }) => test(password)).length;
-      expect(passed).toBe(5);
-    });
-
-    it("evaluates weak passwords failing multiple criteria", () => {
-      const password = "pass";
-      const passed = passwordRequirements.filter(({ test }) => test(password)).length;
-      expect(passed).toBe(1);
-    });
-  });
-
-  describe("OnboardingFlow 4-Step UI & Terms of Service Integration", () => {
-    it("renders Step 1 initially and advances through all 4 steps", () => {
+  describe("OnboardingFlow 3-Step UI & Terms of Service Integration", () => {
+    it("renders Step 1 initially and advances through all 3 steps", () => {
       render(<OnboardingFlow />);
 
       // Step 1: Full name
       expect(screen.getByText("Welcome to NovaStage")).toBeDefined();
-      expect(screen.getByText("Step 1 of 4")).toBeDefined();
+      expect(screen.getByText("Step 1 of 3")).toBeDefined();
       expect(screen.getByText("0%")).toBeDefined();
 
       const fullNameInput = screen.getByLabelText("Full name");
@@ -84,28 +62,17 @@ describe("Onboarding & Profile Completion Verification", () => {
 
       // Step 2: Username
       expect(screen.getByText("Choose your username")).toBeDefined();
-      expect(screen.getByText("Step 2 of 4")).toBeDefined();
-      expect(screen.getByText("25%")).toBeDefined();
+      expect(screen.getByText("Step 2 of 3")).toBeDefined();
+      expect(screen.getByText("35%")).toBeDefined();
 
       const usernameInput = screen.getByLabelText("Username");
       fireEvent.change(usernameInput, { target: { value: "alexmorgan" } });
       fireEvent.click(screen.getByRole("button", { name: /Next/i }));
 
-      // Step 3: Password
-      expect(screen.getByText("Update password")).toBeDefined();
-      expect(screen.getByText("Step 3 of 4")).toBeDefined();
-      expect(screen.getByText("50%")).toBeDefined();
-
-      const passwordInput = screen.getByLabelText("New password");
-      const confirmInput = screen.getByLabelText("Confirm password");
-      fireEvent.change(passwordInput, { target: { value: "NovaStage2026!" } });
-      fireEvent.change(confirmInput, { target: { value: "NovaStage2026!" } });
-      fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-
-      // Step 4: Terms of Service
+      // Step 3: Terms of Service
       expect(screen.getByRole("heading", { name: "Terms of Service" })).toBeDefined();
-      expect(screen.getByText("Step 4 of 4")).toBeDefined();
-      expect(screen.getByText("75%")).toBeDefined();
+      expect(screen.getByText("Step 3 of 3")).toBeDefined();
+      expect(screen.getByText("70%")).toBeDefined();
 
       // Checkbox is an HTML input element with type="checkbox"
       const checkbox = screen.getByRole("checkbox", {
@@ -138,7 +105,7 @@ describe("Onboarding & Profile Completion Verification", () => {
       expect(finishButton.disabled).toBe(false);
     });
 
-    it("allows navigating Back from Step 4 to Step 3, Step 2, and Step 1", () => {
+    it("allows navigating Back from Step 3 to Step 2, and Step 2 to Step 1", () => {
       render(
         <OnboardingFlow
           initialFullName="Alex Morgan"
@@ -149,22 +116,11 @@ describe("Onboarding & Profile Completion Verification", () => {
       // Advance Step 1 -> Step 2
       fireEvent.click(screen.getByRole("button", { name: /Next/i }));
 
-      // Advance Step 2 -> Step 3
+      // Advance Step 2 -> Step 3 (Terms of Service)
       fireEvent.click(screen.getByRole("button", { name: /Next/i }));
 
-      // Enter matching passwords to advance to Step 4
-      const passwordInput = screen.getByLabelText("New password");
-      const confirmInput = screen.getByLabelText("Confirm password");
-      fireEvent.change(passwordInput, { target: { value: "NovaStage2026!" } });
-      fireEvent.change(confirmInput, { target: { value: "NovaStage2026!" } });
-      fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-
-      // Verify at Step 4
+      // Verify at Step 3
       expect(screen.getByRole("heading", { name: "Terms of Service" })).toBeDefined();
-
-      // Click Back -> Step 3
-      fireEvent.click(screen.getByRole("button", { name: "Back" }));
-      expect(screen.getByText("Update password")).toBeDefined();
 
       // Click Back -> Step 2
       fireEvent.click(screen.getByRole("button", { name: "Back" }));

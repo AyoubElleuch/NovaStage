@@ -12,9 +12,7 @@ export interface OnboardingActionResult {
 
 export async function completeOnboarding(
   fullNameInput: string,
-  usernameInput: string,
-  passwordInput: string,
-  confirmationInput: string
+  usernameInput: string
 ): Promise<OnboardingActionResult> {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -23,8 +21,6 @@ export async function completeOnboarding(
 
   const fullName = (fullNameInput || "").trim();
   const username = (usernameInput || "").trim();
-  const password = String(passwordInput || "");
-  const confirmation = String(confirmationInput || "");
 
   if (!fullName) {
     return { error: "Please enter your full name." };
@@ -32,30 +28,21 @@ export async function completeOnboarding(
   if (!username) {
     return { error: "Please enter your username." };
   }
-  if (!password) {
-    return { error: "Please enter a password." };
-  }
-  if (password.length < 8) {
-    return { error: "Your password must be at least 8 characters." };
-  }
-  if (password !== confirmation) {
-    return { error: "Passwords do not match." };
-  }
 
   const supabase = await createClient();
 
-  // 1. Update Auth user password and metadata in Supabase Auth
+  // 1. Update Auth user metadata in Supabase Auth
   const { error: authError } = await supabase.auth.updateUser({
-    password,
     data: {
       full_name: fullName,
       username: username,
+      onboarding_completed: true,
     },
   });
 
   if (authError) {
     return {
-      error: authError.message || "We could not update your password. Please try again.",
+      error: authError.message || "We could not update your profile. Please try again.",
     };
   }
 
@@ -79,6 +66,7 @@ export async function completeOnboarding(
 
   revalidatePath("/", "layout");
   revalidatePath("/dashboard", "layout");
+  revalidatePath("/admin", "layout");
   revalidatePath("/onboarding");
 
   return { success: true };

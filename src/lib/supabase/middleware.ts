@@ -43,7 +43,61 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refresh auth token
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+
+  // Protect pages (exclude API endpoints and public assets)
+  const isProtectedPage =
+    (pathname.startsWith("/dashboard") || pathname.startsWith("/admin")) &&
+    !pathname.startsWith("/api/");
+  const isOnboardingPage = pathname === "/onboarding";
+
+  if (!user && (isProtectedPage || isOnboardingPage)) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirectTo", pathname);
+    const redirectResponse = NextResponse.redirect(loginUrl);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie);
+    });
+    return redirectResponse;
+  }
+
+  if (user && (isProtectedPage || isOnboardingPage)) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, username, role")
+      .eq("id", user.id)
+      .single();
+
+    const fullName = typeof profile?.full_name === "string" ? profile.full_name.trim() : "";
+    const username = typeof profile?.username === "string" ? profile.username.trim() : "";
+    const isComplete = Boolean(fullName && username);
+
+    // Incomplete profile: redirect to /onboarding, block changing URL to /dashboard or /admin
+    if (!isComplete && isProtectedPage) {
+      const redirectResponse = NextResponse.redirect(new URL("/onboarding", request.url));
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
+      });
+      return redirectResponse;
+    }
+
+    // Completed profile: redirect away from /onboarding
+    if (isComplete && isOnboardingPage) {
+      const destination =
+        profile?.role === "admin" || profile?.role === "super_admin"
+          ? "/admin"
+          : "/dashboard";
+      const redirectResponse = NextResponse.redirect(new URL(destination, request.url));
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
+      });
+      return redirectResponse;
+    }
+  }
 
   return supabaseResponse;
 }
