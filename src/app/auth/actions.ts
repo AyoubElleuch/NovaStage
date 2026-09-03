@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimitAsync, resetRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { sendWaitlistJoinedEmail, sendPasswordResetEmail } from "@/lib/email/resend";
+import { sendWaitlistJoinedEmail, sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email/resend";
 
 export interface AuthActionResult {
   success?: boolean;
@@ -186,19 +186,22 @@ function getRequestOrigin(headerList: Headers): string {
 export async function signUp(formData: FormData): Promise<AuthActionResult> {
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
-  const fullName = (formData.get("fullName") as string)?.trim();
+  const fullName =
+    (formData.get("fullName") as string)?.trim() ||
+    email?.split("@")[0] ||
+    "Builder";
   const headerList = await headers();
   const origin = getRequestOrigin(headerList);
 
-  if (!email || !password || !fullName) {
-    return { error: "All fields are required." };
+  if (!email || !password) {
+    return { error: "Email and password are required." };
   }
 
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters long." };
   }
 
-  // Check rate limit for sign up (3 signups per 10 minutes per IP)
+  // Check rate limit for sign up (4 signups per 60s per IP)
   const clientIp = await getClientIp();
   const rateLimitKey = `signup:${clientIp}`;
   const rateCheck = await checkRateLimitAsync(rateLimitKey, {
@@ -222,24 +225,35 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
     options: {
       data: {
         full_name: fullName,
+        welcome_sent: true,
       },
-      emailRedirectTo: `${origin}/auth/callback`,
+      emailRedirectTo: `${origin}/auth/callback?mode=signup`,
     },
   });
 
   if (error) {
-    return { error: "We could not create your account. Please try again." };
+    return { error: error.message || "We could not create your account. Please try again." };
+  }
+
+  // Send welcoming email upon signup
+  try {
+    await sendWelcomeEmail({
+      email,
+      name: fullName,
+    });
+  } catch (emailErr) {
+    console.error("[SignUp] Failed to dispatch welcome email:", emailErr);
   }
 
   // If email confirmation is required by Supabase project settings
   if (data?.user && !data.session) {
     return {
       success: true,
-      message: "Verification email sent! Please check your inbox to confirm your account.",
+      message: "Welcome to NovaStage Beta! Verification email sent. Please check your inbox to confirm your account.",
     };
   }
 
-  redirect("/dashboard");
+  redirect("/onboarding");
 }
 
 export async function signOut() {
@@ -250,7 +264,7 @@ export async function signOut() {
 
 export async function signInWithOAuth(
   provider: "github" | "google",
-  mode: "waitlist" | "login" = "waitlist",
+  mode: "signup" | "login" | "waitlist" = "login",
   redirectTo = "/dashboard"
 ) {
   const clientIp = await getClientIp();
@@ -273,10 +287,12 @@ export async function signInWithOAuth(
 
   const supabase = await createClient();
 
+  const normalizedMode = mode === "waitlist" ? "signup" : mode;
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: `${origin}/auth/callback?mode=${mode}&next=${encodeURIComponent(redirectTo)}`,
+      redirectTo: `${origin}/auth/callback?mode=${normalizedMode}&next=${encodeURIComponent(redirectTo)}`,
     },
   });
 

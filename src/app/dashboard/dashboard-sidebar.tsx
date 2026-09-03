@@ -187,34 +187,41 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
           collapsed && !isMobile ? "justify-center px-0" : "justify-between px-5"
         }`}
       >
-        <Link
-          href="/dashboard"
-          aria-label="NovaStage dashboard"
-          onClick={() => navigate("/dashboard")}
-          className="block cursor-pointer"
-        >
-          {collapsed && !isMobile ? (
-            <span className="flex h-8 w-8 overflow-hidden rounded-lg bg-white dark:bg-[#151c27]">
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard"
+            aria-label="NovaStage dashboard"
+            onClick={() => navigate("/dashboard")}
+            className="block cursor-pointer"
+          >
+            {collapsed && !isMobile ? (
+              <span className="flex h-8 w-8 overflow-hidden rounded-lg bg-white dark:bg-[#151c27]">
+                <Image
+                  src="/images/logo.svg"
+                  alt="NovaStage"
+                  width={171}
+                  height={70}
+                  priority
+                  className="h-8 w-auto max-w-none shrink-0 dark:brightness-0 dark:invert"
+                />
+              </span>
+            ) : (
               <Image
                 src="/images/logo.svg"
                 alt="NovaStage"
-                width={171}
-                height={70}
+                width={104}
+                height={42}
                 priority
-                className="h-8 w-auto max-w-none shrink-0 dark:brightness-0 dark:invert"
+                className="h-auto w-[104px] dark:brightness-0 dark:invert"
               />
+            )}
+          </Link>
+          {(!collapsed || isMobile) && (
+            <span className="rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:border-[#283548] dark:bg-[#1e2736] dark:text-neutral-300">
+              Beta v1.0.0
             </span>
-          ) : (
-            <Image
-              src="/images/logo.svg"
-              alt="NovaStage"
-              width={104}
-              height={42}
-              priority
-              className="h-auto w-[104px] dark:brightness-0 dark:invert"
-            />
           )}
-        </Link>
+        </div>
 
         {isMobile && (
           <button

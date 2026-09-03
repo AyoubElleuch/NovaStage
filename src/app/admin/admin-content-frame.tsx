@@ -36,16 +36,21 @@ export default function AdminContentFrame({
           >
             <Menu className="h-4 w-4" />
           </button>
-          <Link href="/admin" className="block">
-            <Image
-              src="/images/logo.svg"
-              alt="NovaStage"
-              width={92}
-              height={37}
-              priority
-              className="h-6 w-auto dark:brightness-0 dark:invert"
-            />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/admin" className="block">
+              <Image
+                src="/images/logo.svg"
+                alt="NovaStage"
+                width={92}
+                height={37}
+                priority
+                className="h-6 w-auto dark:brightness-0 dark:invert"
+              />
+            </Link>
+            <span className="rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300">
+              Beta v1.0.0
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-1.5 rounded-full bg-neutral-900 px-2.5 py-0.5 text-[11px] font-medium text-white dark:bg-[#1e2634] dark:text-neutral-200">
           <ShieldCheck className="h-3 w-3 text-amber-400" />

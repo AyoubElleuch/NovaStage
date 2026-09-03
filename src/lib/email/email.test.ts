@@ -2,10 +2,12 @@ import { describe, it, expect } from "vitest";
 import { renderWaitlistJoinedEmail } from "./templates/waitlist-joined";
 import { renderWaitlistApprovedEmail } from "./templates/waitlist-approved";
 import { renderPasswordResetEmail } from "./templates/password-reset";
+import { renderWelcomeEmail } from "./templates/welcome";
 import {
   sendWaitlistJoinedEmail,
   sendWaitlistApprovedEmail,
   sendPasswordResetEmail,
+  sendWelcomeEmail,
 } from "./resend";
 
 describe("Email Templates & Resend Service", () => {
@@ -77,6 +79,37 @@ describe("Email Templates & Resend Service", () => {
     });
   });
 
+  describe("Welcome Email Template", () => {
+    it("renders welcoming email with user greeting and launch link", () => {
+      const { subject, html, text } = renderWelcomeEmail({
+        email: "elena@example.com",
+        name: "Elena",
+        appUrl: "https://novastage.dev",
+      });
+
+      expect(subject).toBe("Welcome to NovaStage — Official Beta Launch");
+      expect(html).toContain("elena@example.com");
+      expect(html).toContain("Hi Elena,");
+      expect(html).toContain("https://novastage.dev/dashboard");
+      expect(html).toContain("Official Beta Access");
+      expect(html).toContain("Beta v1.0.0");
+      expect(text).toContain("elena@example.com");
+      expect(text).toContain("Hi Elena,");
+      expect(text).toContain("https://novastage.dev/dashboard");
+    });
+
+    it("falls back gracefully when name is not provided", () => {
+      const { html, text } = renderWelcomeEmail({
+        email: "guest@example.com",
+      });
+
+      expect(html).toContain("Hello,");
+      expect(text).toContain("Hello,");
+      expect(html).toContain("guest@example.com");
+      expect(html).toContain("Beta v1.0.0");
+    });
+  });
+
   describe("Resend Safe Fallback Mode", () => {
     it("safely handles sending without throwing when RESEND_API_KEY is not configured", async () => {
       const resultJoined = await sendWaitlistJoinedEmail({
@@ -98,6 +131,14 @@ describe("Email Templates & Resend Service", () => {
       });
       expect(resultReset.success).toBe(true);
       expect(resultReset.id).toBeDefined();
+
+      const resultWelcome = await sendWelcomeEmail({
+        email: "dev@example.com",
+        name: "Dev User",
+      });
+      expect(resultWelcome.success).toBe(true);
+      expect(resultWelcome.id).toBeDefined();
     });
   });
 });
+

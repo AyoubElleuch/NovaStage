@@ -1,15 +1,23 @@
+import { redirect } from "next/navigation";
 import { getWaitlistEntries } from "../actions";
 import WaitlistTable from "./waitlist-table";
 import { AlertCircle } from "lucide-react";
 
+/**
+ * Waitlist page has been deactivated in Beta v1.0.0 per task specification:
+ * "Keep the files, just deactivate them. We don't want the waitlist page anymore or the waitlist form."
+ */
 export default async function AdminWaitlistPage() {
+  redirect("/admin");
+
+  // Deactivated code preserved below:
   const { data: waitlist = [], error } = await getWaitlistEntries();
 
   return (
     <div className="space-y-8">
       <header className="dash-enter">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">
-          Administration
+          Administration (Deactivated)
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">Waitlist</h1>
         <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
@@ -31,3 +39,4 @@ export default async function AdminWaitlistPage() {
     </div>
   );
 }
+

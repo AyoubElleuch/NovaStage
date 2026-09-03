@@ -1,7 +1,6 @@
 import { getWaitlistEntries } from "./actions";
 import Link from "next/link";
 import {
-  ArrowUpRight,
   CheckCircle2,
   Clock3,
   Sparkles,
@@ -66,13 +65,6 @@ export default async function AdminOverviewPage() {
             <Sparkles className="h-4 w-4 text-amber-500" aria-hidden="true" />
             <span>AI Limits</span>
           </Link>
-          <Link
-            href="/admin/waitlist"
-            className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-medium text-white shadow-sm transition-all duration-150 hover:bg-neutral-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 active:scale-[0.98]"
-          >
-            <span>Review waitlist</span>
-            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
         </div>
       </header>
 
@@ -108,13 +100,6 @@ export default async function AdminOverviewPage() {
             </p>
             <h2 className="mt-0.5 text-sm font-semibold text-neutral-900 dark:text-white">Recent registrations</h2>
           </div>
-          <Link
-            href="/admin/waitlist"
-            className="group inline-flex items-center gap-1 text-xs font-medium text-neutral-600 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-          >
-            <span>View all</span>
-            <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </Link>
         </div>
 
         <div>

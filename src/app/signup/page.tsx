@@ -2,14 +2,14 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, isAdminRole, isProfileComplete } from "@/lib/auth/session";
-import LoginForm from "./login-form";
+import LoginForm from "@/app/login/login-form";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
 import { TermsOfServiceTrigger } from "@/components/terms/terms-of-service-modal";
 import { ThemeToggle } from "@/lib/theme-context";
 
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage() {
+export default async function SignUpPage() {
   const session = await getAuthenticatedProfile();
   if (session?.user) {
     if (!isProfileComplete(session.profile)) {
@@ -54,7 +54,7 @@ export default async function LoginPage() {
 
         <div className="flex flex-1 items-center justify-center py-12">
           <Suspense fallback={<div className="text-sm text-neutral-400 dark:text-neutral-500">Loading...</div>}>
-            <LoginForm initialMode="login" />
+            <LoginForm initialMode="signup" />
           </Suspense>
         </div>
 

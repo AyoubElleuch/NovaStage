@@ -45,16 +45,21 @@ export default function DashboardContentFrame({
           >
             <Menu className="h-4 w-4" />
           </button>
-          <Link href="/dashboard" className="block">
-            <Image
-              src="/images/logo.svg"
-              alt="NovaStage"
-              width={92}
-              height={37}
-              priority
-              className="h-6 w-auto dark:brightness-0 dark:invert"
-            />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard" className="block">
+              <Image
+                src="/images/logo.svg"
+                alt="NovaStage"
+                width={92}
+                height={37}
+                priority
+                className="h-6 w-auto dark:brightness-0 dark:invert"
+              />
+            </Link>
+            <span className="rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:border-[#283548] dark:bg-[#1e2736] dark:text-neutral-300">
+              Beta v1.0.0
+            </span>
+          </div>
         </div>
         <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider dark:text-neutral-400">
           {pageTitle}

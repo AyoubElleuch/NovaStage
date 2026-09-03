@@ -2,7 +2,18 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
-    version: "v1.5.0",
+    version: "Beta v1.0.0",
+    date: "September 3, 2026",
+    title: "Official Beta Launch",
+    summary:
+      "NovaStage officially enters Public Beta! We have retired the waitlist, opened instantaneous sign-up with GitHub and email/password, and enhanced workspace stability across all platforms.",
+    changes: [
+      "Official Public Beta Launch: Deactivated the waitlist and invitation gates to provide instant registration and immediate workspace access for all users.",
+      "Direct Authentication: Full support for immediate sign-up and sign-in via GitHub OAuth or email and password without waiting for admin approval.",
+    ],
+  },
+  {
+    version: "Alpha v1.6.0",
     date: "September 3, 2026",
     title: "AWS Architecture & Advanced Canvas Power Tools",
     summary:
@@ -17,7 +28,19 @@ const releases = [
     ],
   },
   {
-    version: "v1.4.1",
+    version: "Alpha v1.5.0",
+    date: "September 3, 2026",
+    title: "Realtime Synchronization & Canvas Engine Overhaul",
+    summary:
+      "Sub-millisecond presence broadcasting, distributed lock management, and responsive canvas rendering optimizations.",
+    changes: [
+      "Optimistic State Propagation: Streamlined canvas state changes with instant client feedback and rollback resiliency.",
+      "Distributed Rate Limiting: Hardened token-bucket rate limits across project canvas updates and collaborative cursors.",
+      "Workspace Telemetry: Integrated detailed health checks and live heartbeat indicators for collaborative sessions.",
+    ],
+  },
+  {
+    version: "Alpha v1.4.1",
     date: "September 3, 2026",
     title: "Eye-Friendly Dark Mode",
     summary: "Complete workspace-wide dark mode with a balanced slate palette, instant switching, and light mode by default.",
@@ -26,7 +49,7 @@ const releases = [
     ],
   },
   {
-    version: "v1.4.0",
+    version: "Alpha v1.4.0",
     date: "September 2, 2026",
     title: "Mobile-Native Workspace & Canvas",
     summary: "Complete mobile responsiveness overhaul with fluid touch gestures, multi-touch pinch-to-zoom, and responsive controls.",
@@ -38,7 +61,7 @@ const releases = [
     ],
   },
   {
-    version: "v1.3.0",
+    version: "Alpha v1.3.0",
     date: "September 1, 2026",
     title: "Release Pulse",
     summary: "Turn the live roadmap into a clear signal for what is ready, blocked, and critical.",
@@ -51,7 +74,7 @@ const releases = [
     ],
   },
   {
-    version: "v1.2.2",
+    version: "Alpha v1.2.2",
     date: "August 31, 2026",
     title: "Canvas notebook",
     summary: "Keep planning context close to the roadmap without adding more nodes.",
@@ -63,7 +86,7 @@ const releases = [
     ],
   },
   {
-    version: "v1.2.1",
+    version: "Alpha v1.2.1",
     date: "August 20, 2026",
     title: "A faster collaborative canvas",
     summary: "Made large roadmaps easier to navigate and edit together.",
@@ -74,7 +97,7 @@ const releases = [
     ],
   },
   {
-    version: "v1.2.0",
+    version: "Alpha v1.2.0",
     date: "August 19, 2026",
     title: "AI workflow generation",
     summary: "Turn a prompt into a structured roadmap, then refine it in place.",
@@ -85,7 +108,7 @@ const releases = [
     ],
   },
   {
-    version: "v1.1.0",
+    version: "Alpha v1.1.0",
     date: "August 19, 2026",
     title: "Project collaboration",
     summary: "Added the controls teams need to share a live project safely.",
@@ -96,7 +119,7 @@ const releases = [
     ],
   },
   {
-    version: "v1.0.0",
+    version: "Alpha v1.0.0",
     date: "August 18, 2026",
     title: "NovaStage workspace launch",
     summary: "The first complete workspace for planning and shipping project roadmaps.",

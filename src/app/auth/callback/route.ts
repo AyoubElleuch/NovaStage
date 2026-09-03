@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
-import { sendWaitlistJoinedEmail } from "@/lib/email/resend";
+import { sendWelcomeEmail } from "@/lib/email/resend";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const { searchParams } = requestUrl;
   const code = searchParams.get("code");
-  const mode = searchParams.get("mode") === "login" ? "login" : "waitlist";
+  const rawMode = searchParams.get("mode");
+  const isSignup = rawMode === "signup" || rawMode === "waitlist";
   const requestedNext = searchParams.get("next");
   const next =
     requestedNext && requestedNext.startsWith("/") && !requestedNext.startsWith("//")
@@ -38,39 +39,6 @@ export async function GET(request: Request) {
       const normalizedEmail = user.email.toLowerCase();
       const adminClient = createAdminClient();
 
-      if (mode === "waitlist") {
-        // 1. Save email to waitlist table only
-        await adminClient.from("waitlist").upsert(
-          {
-            email: normalizedEmail,
-            provider: "github",
-            status: "pending",
-          },
-          { onConflict: "email", ignoreDuplicates: true }
-        );
-
-        // 2. Send waitlist confirmation email
-        await sendWaitlistJoinedEmail({
-          email: normalizedEmail,
-          name: user.user_metadata?.full_name || user.user_metadata?.name,
-        });
-
-        // 3. Immediately purge the auto-created auth.users record so they are not an active user
-        await adminClient.auth.admin.deleteUser(user.id);
-        await supabase.auth.signOut();
-
-        const response = NextResponse.redirect(`${origin}/login`);
-        response.cookies.set("waitlist_success", "1", {
-          httpOnly: true,
-          maxAge: 60,
-          path: "/",
-          sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
-        });
-        return response;
-      }
-
-      // Mode === "login": Check if user is approved or an admin before granting access
       const { data: profile } = await adminClient
         .from("profiles")
         .select("role, full_name, username")
@@ -87,19 +55,38 @@ export async function GET(request: Request) {
         profile?.role === "super_admin" ||
         userRoles?.some((r) => r.role_id === "admin" || r.role_id === "super_admin");
 
-      const { data: waitlistEntry } = await adminClient
-        .from("waitlist")
-        .select("status")
-        .eq("email", normalizedEmail)
-        .single();
+      // Check if user is newly registered and hasn't received welcome email yet
+      const welcomeAlreadySent = Boolean(user.user_metadata?.welcome_sent);
 
-      const isApproved = isAdmin || waitlistEntry?.status === "approved";
+      const isNewUser =
+        !welcomeAlreadySent &&
+        (isSignup ||
+          !profile ||
+          !profile.username ||
+          (user.created_at &&
+            Math.abs(Date.now() - new Date(user.created_at).getTime()) < 120000));
 
-      if (!isApproved) {
-        // Prevent bypassing waitlist via direct OAuth login: delete user and sign out
-        await adminClient.auth.admin.deleteUser(user.id);
-        await supabase.auth.signOut();
-        return NextResponse.redirect(`${origin}/login?error=not_approved`);
+      if (isNewUser) {
+        // Send welcoming email for new registration
+        try {
+          await sendWelcomeEmail({
+            email: normalizedEmail,
+            name:
+              profile?.full_name ||
+              user.user_metadata?.full_name ||
+              user.user_metadata?.name ||
+              user.user_metadata?.user_name,
+          });
+
+          await adminClient.auth.admin.updateUserById(user.id, {
+            user_metadata: {
+              ...user.user_metadata,
+              welcome_sent: true,
+            },
+          });
+        } catch (emailErr) {
+          console.error("[Auth Callback] Failed to dispatch welcome email:", emailErr);
+        }
       }
 
       const fullName = typeof profile?.full_name === "string" ? profile.full_name.trim() : "";

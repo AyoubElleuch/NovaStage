@@ -15,7 +15,6 @@ import {
   PanelLeftOpen,
   Sparkles,
   Sun,
-  UsersRound,
   X,
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
@@ -31,7 +30,6 @@ interface AdminSidebarProps {
 
 const navigation = [
   { href: "/admin", label: "Overview", icon: LayoutGrid },
-  { href: "/admin/waitlist", label: "Waitlist", icon: UsersRound },
   { href: "/admin/ai-limits", label: "AI Limits", icon: Sparkles },
 ];
 
@@ -161,34 +159,41 @@ export default function AdminSidebar({ userEmail, userRole }: AdminSidebarProps)
           collapsed && !isMobile ? "justify-center px-0" : "justify-between px-5"
         }`}
       >
-        <Link
-          href="/admin"
-          aria-label="NovaStage admin overview"
-          onClick={() => navigate("/admin")}
-          className="block cursor-pointer"
-        >
-          {collapsed && !isMobile ? (
-            <span className="flex h-8 w-8 overflow-hidden rounded-lg bg-white dark:bg-transparent">
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin"
+            aria-label="NovaStage admin overview"
+            onClick={() => navigate("/admin")}
+            className="block cursor-pointer"
+          >
+            {collapsed && !isMobile ? (
+              <span className="flex h-8 w-8 overflow-hidden rounded-lg bg-white dark:bg-transparent">
+                <Image
+                  src="/images/logo.svg"
+                  alt="NovaStage"
+                  width={171}
+                  height={70}
+                  priority
+                  className="h-8 w-auto max-w-none shrink-0 dark:brightness-0 dark:invert"
+                />
+              </span>
+            ) : (
               <Image
                 src="/images/logo.svg"
                 alt="NovaStage"
-                width={171}
-                height={70}
+                width={104}
+                height={42}
                 priority
-                className="h-8 w-auto max-w-none shrink-0 dark:brightness-0 dark:invert"
+                className="h-auto w-[104px] dark:brightness-0 dark:invert"
               />
+            )}
+          </Link>
+          {(!collapsed || isMobile) && (
+            <span className="rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300">
+              Beta v1.0.0
             </span>
-          ) : (
-            <Image
-              src="/images/logo.svg"
-              alt="NovaStage"
-              width={104}
-              height={42}
-              priority
-              className="h-auto w-[104px] dark:brightness-0 dark:invert"
-            />
           )}
-        </Link>
+        </div>
 
         {isMobile && (
           <button

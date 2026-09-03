@@ -3,22 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
-  let supabaseResponse: NextResponse;
-
-  const waitlistSuccess = request.cookies.get("waitlist_success")?.value === "1";
-  if (waitlistSuccess && request.nextUrl.pathname === "/login") {
-    requestHeaders.set("x-waitlist-success", "1");
-  }
-
-  supabaseResponse = NextResponse.next({
+  let supabaseResponse: NextResponse = NextResponse.next({
     request: {
       headers: requestHeaders,
     },
   });
-
-  if (waitlistSuccess && request.nextUrl.pathname === "/login") {
-    supabaseResponse.cookies.delete("waitlist_success");
-  }
 
   const isPlaceholder =
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -55,10 +44,6 @@ export async function updateSession(request: NextRequest) {
 
   // Refresh auth token
   await supabase.auth.getUser();
-
-  if (waitlistSuccess && request.nextUrl.pathname === "/login") {
-    supabaseResponse.cookies.delete("waitlist_success");
-  }
 
   return supabaseResponse;
 }
