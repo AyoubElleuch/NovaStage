@@ -369,17 +369,22 @@ export async function createCanvasEdge(
   if (!isOwner && userId) {
     const { data: nodes } = await adminClient
       .from("canvas_nodes")
-      .select("id, claimed_by, claim_expires_at")
+      .select("id, claimed_by, claim_expires_at, node_type")
       .in("id", [sourceNodeId, targetNodeId])
       .eq("project_id", projectId);
 
     const now = new Date();
-    const ownsAny = nodes?.some((n) => {
-      const isExpired = Boolean(n.claim_expires_at && new Date(n.claim_expires_at) < now);
-      return n.claimed_by === userId && !isExpired;
-    });
-    if (!ownsAny) {
-      return null;
+    // Only enforce milestone claim checks if BOTH nodes are milestones
+    const allMilestones = nodes?.every((n) => !n.node_type || n.node_type === "milestone");
+    if (allMilestones && nodes && nodes.length > 0) {
+      const anyUnclaimed = nodes.some((n) => !n.claimed_by);
+      const ownsAny = nodes.some((n) => {
+        const isExpired = Boolean(n.claim_expires_at && new Date(n.claim_expires_at) < now);
+        return n.claimed_by === userId && !isExpired;
+      });
+      if (!anyUnclaimed && !ownsAny) {
+        return null;
+      }
     }
   }
 

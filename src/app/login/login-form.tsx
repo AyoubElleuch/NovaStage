@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { signUp, signIn, signInWithOAuth, requestPasswordReset } from "@/app/auth/actions";
 import { GitHubIcon } from "@/components/icons";
 import { AlertCircle, ArrowLeft, Check, Eye, EyeOff, Loader2 } from "lucide-react";
+import PasswordStrength from "@/components/ui/password-strength";
 
 const MINIMUM_SUBMIT_TIME = 700;
 
@@ -30,12 +31,14 @@ export default function LoginForm({
   );
   const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
   const [isForgotSuccess, setIsForgotSuccess] = useState(false);
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [message, setMessage] = useState(initialErrorMessage);
   const [isSuccess, setIsSuccess] = useState(false);
   const [lockoutSeconds, setLockoutSeconds] = useState<number | null>(null);
@@ -97,12 +100,22 @@ export default function LoginForm({
         ? "Password must be at least 8 characters long."
         : "";
 
+    const nextConfirmPasswordError =
+      mode === "signup"
+        ? !confirmPassword
+          ? "Confirm your password."
+          : confirmPassword !== password
+            ? "Passwords do not match."
+            : ""
+        : "";
+
     setEmailError(nextEmailError);
     setPasswordError(nextPasswordError);
+    setConfirmPasswordError(nextConfirmPasswordError);
     setMessage("");
     setIsSuccess(false);
 
-    if (nextEmailError || nextPasswordError) return;
+    if (nextEmailError || nextPasswordError || nextConfirmPasswordError) return;
 
     startTransition(async () => {
       try {
@@ -112,9 +125,7 @@ export default function LoginForm({
         formData.append("password", password);
 
         if (mode === "signup") {
-          if (fullName.trim()) {
-            formData.append("fullName", fullName.trim());
-          }
+          formData.append("confirmPassword", confirmPassword);
         } else {
           formData.append("redirectTo", redirectTo);
         }
@@ -128,7 +139,10 @@ export default function LoginForm({
         if (result.retryAfterSeconds) setLockoutSeconds(result.retryAfterSeconds);
         setMessage(result.message || result.error || "");
         setIsSuccess(Boolean(result.success));
-        if (result.success) playSuccessChime();
+        if (result.success) {
+          playSuccessChime();
+          window.location.href = "/dashboard";
+        }
       } catch (err: unknown) {
         if (
           err instanceof Error &&
@@ -211,6 +225,7 @@ export default function LoginForm({
     setMode(nextMode);
     setEmailError("");
     setPasswordError("");
+    setConfirmPasswordError("");
     setMessage("");
     if (lockoutSeconds !== null) setLockoutSeconds(null);
     setIsSuccess(false);
@@ -344,36 +359,18 @@ export default function LoginForm({
               <Check className="h-8 w-8" strokeWidth={2.5} />
             </div>
             <h1 className="mt-7 text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-              Check your email
+              Account created!
             </h1>
             <p className="mt-3 max-w-xs text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-              Welcome to NovaStage Beta! We&apos;ve sent an email to{" "}
-              <strong className="font-semibold text-neutral-900 dark:text-white">{email}</strong>.
+              Welcome to NovaStage Beta! Directing you to your dashboard...
             </p>
-            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-              Check your inbox for your welcome confirmation and login link.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setMode("login");
-                setIsSuccess(false);
-                setMessage("");
-              }}
-              className="mt-6 inline-flex h-10 cursor-pointer items-center justify-center rounded-lg border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 shadow-xs transition-colors hover:bg-neutral-50 dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100"
-            >
-              Back to log in
-            </button>
+            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-600 dark:text-emerald-400" />
+              <span>Entering workspace...</span>
+            </div>
           </section>
         ) : (
           <>
-            <div className="mb-2.5 flex items-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-600/20 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Beta v1.0.0
-              </span>
-            </div>
-
             <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">
               {mode === "login" ? "Log in" : "Create an account"}
             </h1>
@@ -404,27 +401,6 @@ export default function LoginForm({
             </div>
 
             <form onSubmit={handleSubmit} noValidate className="space-y-4">
-              {mode === "signup" && (
-                <div>
-                  <label
-                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
-                    htmlFor="fullName"
-                  >
-                    Full name
-                  </label>
-                  <input
-                    id="fullName"
-                    type="text"
-                    autoComplete="name"
-                    disabled={isPending}
-                    value={fullName}
-                    onChange={(event) => setFullName(event.target.value)}
-                    placeholder="Ada Lovelace"
-                    className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 hover:border-neutral-300 focus:border-neutral-400 focus:outline-none focus:ring-4 focus:ring-neutral-100 disabled:opacity-50 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:placeholder-neutral-500 dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/15"
-                  />
-                </div>
-              )}
-
               <div>
                 <label
                   className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
@@ -471,7 +447,7 @@ export default function LoginForm({
                     className="cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
                     htmlFor="password"
                   >
-                    {mode === "signup" ? "Password (8+ characters)" : "Password"}
+                    Password
                   </label>
                   {mode === "login" && (
                     <button
@@ -481,6 +457,7 @@ export default function LoginForm({
                         setIsForgotSuccess(false);
                         setEmailError("");
                         setPasswordError("");
+                        setConfirmPasswordError("");
                         setMessage("");
                       }}
                       className="cursor-pointer text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 rounded"
@@ -532,7 +509,61 @@ export default function LoginForm({
                     <span>{passwordError}</span>
                   </p>
                 )}
+                {mode === "signup" && <PasswordStrength password={password} />}
               </div>
+
+              {mode === "signup" && (
+                <div>
+                  <label
+                    className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                    htmlFor="confirmPassword"
+                  >
+                    Confirm password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      disabled={isPending}
+                      value={confirmPassword}
+                      onChange={(event) => {
+                        setConfirmPassword(event.target.value);
+                        if (confirmPasswordError) setConfirmPasswordError("");
+                        if (message) setMessage("");
+                      }}
+                      placeholder="••••••••"
+                      aria-invalid={Boolean(confirmPasswordError)}
+                      aria-describedby={confirmPasswordError ? "confirm-password-error" : undefined}
+                      className={`h-11 w-full rounded-lg border px-3.5 pr-11 text-sm text-neutral-900 placeholder-neutral-400 shadow-xs transition-colors duration-150 focus:outline-none focus:ring-4 disabled:opacity-50 dark:text-white dark:placeholder-neutral-500 ${
+                        confirmPasswordError
+                          ? "border-red-300 bg-red-50/15 focus:border-red-400 focus:ring-red-500/10 dark:border-red-800 dark:bg-red-950/20"
+                          : "border-neutral-200 bg-white hover:border-neutral-300 focus:border-neutral-400 focus:ring-neutral-100 dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/15"
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className={`absolute right-1.5 top-1/2 grid h-10 w-10 -translate-y-1/2 cursor-pointer place-items-center rounded-md transition-colors hover:bg-neutral-50 hover:text-neutral-700 dark:hover:bg-[#1e2634] dark:hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 ${
+                        confirmPasswordError ? "text-red-500 dark:text-red-400" : "text-neutral-400 dark:text-neutral-500"
+                      }`}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {confirmPasswordError && (
+                    <p
+                      id="confirm-password-error"
+                      className="login-error-transition mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400"
+                    >
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span>{confirmPasswordError}</span>
+                    </p>
+                  )}
+                </div>
+              )}
 
               {message && (
                 <div

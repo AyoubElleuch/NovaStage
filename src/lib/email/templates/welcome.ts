@@ -80,7 +80,7 @@ Collaborative System Architecture & Stack Designer
                   </td>
                   <td style="padding:14px 18px;">
                     <p style="margin:0 0 3px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#7a736c;">Release Channel</p>
-                    <p style="margin:0;font-size:13px;font-weight:bold;color:#386233;">Beta v1.0.0</p>
+                    <p style="margin:0;font-size:13px;font-weight:bold;color:#386233;">Beta v1.0.1</p>
                   </td>
                 </tr>
               </table>

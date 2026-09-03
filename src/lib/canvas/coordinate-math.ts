@@ -188,13 +188,18 @@ export function getBezierPoint(
 }
 
 export function canConnectMilestones(
-  nodeA: { claimed_by: string | null; claim_expires_at?: string | null },
-  nodeB: { claimed_by: string | null; claim_expires_at?: string | null },
+  nodeA: { claimed_by: string | null; claim_expires_at?: string | null; node_type?: string },
+  nodeB: { claimed_by: string | null; claim_expires_at?: string | null; node_type?: string },
   userId?: string,
   isOwner?: boolean
 ): boolean {
   if (isOwner) return true;
   if (!userId) return false;
+
+  // AWS service nodes (e.g. Amazon CloudWatch observer), groups, and annotations do not enforce milestone claim locks
+  if (nodeA.node_type && nodeA.node_type !== "milestone") return true;
+  if (nodeB.node_type && nodeB.node_type !== "milestone") return true;
+
   const now = new Date();
   const isClaimActive = (node: { claimed_by: string | null; claim_expires_at?: string | null }) => {
     if (node.claimed_by !== userId) return false;
@@ -202,6 +207,32 @@ export function canConnectMilestones(
     return true;
   };
   return isClaimActive(nodeA) || isClaimActive(nodeB);
+}
+
+/**
+ * Finds which handle of a node is closest to a given world coordinate.
+ * Allows clicking anywhere on a target node to connect automatically to the optimal port.
+ */
+export function getClosestHandleToPoint(
+  node: CanvasNode,
+  point: { x: number; y: number }
+): HandlePosition {
+  const handles: HandlePosition[] = ["top", "right", "bottom", "left"];
+  let bestHandle: HandlePosition = "left";
+  let minDistanceSq = Infinity;
+
+  for (const handle of handles) {
+    const handlePos = getNodeHandlePosition(node, handle);
+    const dx = handlePos.x - point.x;
+    const dy = handlePos.y - point.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq < minDistanceSq) {
+      minDistanceSq = distSq;
+      bestHandle = handle;
+    }
+  }
+
+  return bestHandle;
 }
 
 /**

@@ -110,6 +110,13 @@ function CanvasMilestoneNode({
       return;
     }
     e.stopPropagation();
+
+    // If linking wire is active, clicking anywhere on this milestone completes connection!
+    if (isLinking) {
+      onStartLink(node, "left", e);
+      return;
+    }
+
     e.currentTarget.setPointerCapture(e.pointerId);
     onSelect(node, e.shiftKey);
     onDragStart(node, e);
@@ -158,8 +165,10 @@ function CanvasMilestoneNode({
         transform: `translate3d(${node.position_x}px, ${node.position_y}px, 0)`,
         width: `${node.width}px`,
       }}
-      className={`group absolute top-0 left-0 cursor-move rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur-md transition-shadow duration-150 select-none dark:bg-[#161d27]/95 ${
-        isSelected || isMultiSelected
+      className={`group absolute top-0 left-0 cursor-move rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur-md transition-all duration-150 select-none dark:bg-[#161d27]/95 ${
+        isLinking
+          ? "cursor-pointer ring-2 ring-emerald-500/30 hover:ring-emerald-500 hover:border-emerald-500 hover:shadow-lg"
+          : isSelected || isMultiSelected
           ? "border-neutral-900 ring-2 ring-neutral-900/20 shadow-md dark:border-emerald-500 dark:ring-emerald-500/30"
           : isComplete
           ? "border-emerald-300/80 hover:border-emerald-400 hover:shadow-md dark:border-emerald-700/60 dark:hover:border-emerald-500"
@@ -179,11 +188,11 @@ function CanvasMilestoneNode({
               e.stopPropagation();
               onStartLink(node, handle, e);
             }}
-            className={`absolute z-20 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs transition-all duration-150 before:absolute before:-inset-2 before:content-[''] dark:border-[#283548] dark:bg-[#1e2634] ${getHandlePositionStyles(
+            className={`absolute z-20 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs transition-all duration-150 before:absolute before:-inset-3 before:content-[''] dark:border-[#283548] dark:bg-[#1e2634] ${getHandlePositionStyles(
               handle
             )} ${
               isPortVisible
-                ? "opacity-100 scale-100 cursor-crosshair hover:bg-neutral-900 hover:text-white hover:scale-115 hover:border-neutral-900 dark:hover:bg-emerald-600 dark:hover:border-emerald-600"
+                ? "opacity-100 scale-100 cursor-pointer hover:bg-neutral-900 hover:text-white hover:scale-125 hover:border-neutral-900 dark:hover:bg-emerald-600 dark:hover:border-emerald-600"
                 : "opacity-0 scale-75 pointer-events-none"
             }`}
             title={isLinking ? `Connect to ${handle} port` : `Link from ${handle} port`}

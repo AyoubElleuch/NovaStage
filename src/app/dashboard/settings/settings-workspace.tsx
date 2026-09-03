@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import type { DashboardSettingsData } from "@/lib/dashboard-data";
+import UserAvatar from "@/components/ui/user-avatar";
 import { AppearanceForm, DeleteAccountForm, ProfileForm, PasswordForm } from "./settings-forms";
 import SettingsLoading from "./loading";
 
@@ -41,9 +42,13 @@ export default function SettingsWorkspace() {
         className="dash-enter flex flex-wrap items-center gap-4 rounded-xl border border-neutral-200 bg-white p-5 sm:gap-5 sm:p-6 dark:border-[#283548] dark:bg-[#161d27]"
         style={{ "--dash-delay": "70ms" } as React.CSSProperties}
       >
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-neutral-900 dark:bg-emerald-600 text-base font-semibold text-white">
-          {(profile.full_name?.[0] || email[0] || "N").toUpperCase()}
-        </span>
+        <UserAvatar
+          src={profile.avatar_url}
+          name={displayName}
+          email={email}
+          size="lg"
+          className="shadow-sm"
+        />
         <div className="min-w-0">
           <h2 className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{displayName}</h2>
           <p className="truncate text-[13px] text-neutral-500 dark:text-neutral-400">{email}</p>

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { CollaboratorPresence, CanvasNetworkStatus } from "@/lib/canvas/types";
 import { useTheme } from "@/lib/theme-context";
+import UserAvatar from "@/components/ui/user-avatar";
 
 interface CanvasHudProps {
   projectName: string;
@@ -264,14 +265,19 @@ export default function CanvasHud({
                       ? `Following ${c.fullName || c.email}. Click to stop.`
                       : `Click to follow ${c.fullName || c.email}`
                   }
-                  className={`relative grid h-7 w-7 place-items-center rounded-full text-[10px] font-bold text-white ring-2 shadow-2xs transition-transform cursor-pointer ${
+                  className={`relative flex items-center justify-center rounded-full ring-2 shadow-2xs transition-transform cursor-pointer overflow-visible ${
                     isFollowingThis
                       ? "ring-blue-500 scale-115 z-10"
                       : "ring-white hover:scale-110 dark:ring-[#161d27]"
                   }`}
-                  style={{ backgroundColor: c.color }}
                 >
-                  {(c.fullName?.[0] || c.email?.[0] || "U").toUpperCase()}
+                  <UserAvatar
+                    src={c.avatarUrl}
+                    name={c.fullName}
+                    email={c.email}
+                    size="sm"
+                    className="border-none"
+                  />
                   <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-1 ring-white dark:ring-[#161d27]" />
                 </button>
               );

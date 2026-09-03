@@ -186,12 +186,7 @@ function getRequestOrigin(headerList: Headers): string {
 export async function signUp(formData: FormData): Promise<AuthActionResult> {
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
-  const fullName =
-    (formData.get("fullName") as string)?.trim() ||
-    email?.split("@")[0] ||
-    "Builder";
-  const headerList = await headers();
-  const origin = getRequestOrigin(headerList);
+  const confirmPassword = formData.get("confirmPassword") as string | null;
 
   if (!email || !password) {
     return { error: "Email and password are required." };
@@ -199,6 +194,10 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
 
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters long." };
+  }
+
+  if (confirmPassword !== null && password !== confirmPassword) {
+    return { error: "Passwords do not match." };
   }
 
   // Check rate limit for sign up (4 signups per 60s per IP)
@@ -217,43 +216,96 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
     };
   }
 
+  const defaultName = email.split("@")[0] || "Developer";
+  const defaultUsername =
+    email.split("@")[0].toLowerCase().replace(/[^a-z0-9_-]/g, "_").slice(0, 24) || "user";
+
   const supabase = await createClient();
 
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        full_name: fullName,
+  // Create confirmed user via Admin API so Supabase does NOT send confirmation email
+  let userId: string | undefined;
+
+  try {
+    const admin = createAdminClient();
+    const { data: adminUser, error: adminErr } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: defaultName,
+        username: defaultUsername,
         welcome_sent: true,
       },
-      emailRedirectTo: `${origin}/auth/callback?mode=signup`,
-    },
-  });
+    });
 
-  if (error) {
-    return { error: error.message || "We could not create your account. Please try again." };
+    if (adminErr) {
+      if (
+        adminErr.message.toLowerCase().includes("already") ||
+        adminErr.message.toLowerCase().includes("exists")
+      ) {
+        return { error: "An account with this email already exists." };
+      }
+      throw adminErr;
+    }
+
+    userId = adminUser?.user?.id;
+
+    // Ensure profiles table has default full_name and username so profile is complete for dashboard
+    if (userId) {
+      await admin.from("profiles").upsert(
+        {
+          id: userId,
+          email,
+          full_name: defaultName,
+          username: defaultUsername,
+          role: "developer",
+        },
+        { onConflict: "id" }
+      );
+    }
+  } catch (adminFallbackErr) {
+    console.warn("[SignUp] Admin createUser fallback:", adminFallbackErr);
+    // Fallback in case admin client is unavailable or in mock test environment
+    const { data: fallbackData, error: fallbackErr } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: defaultName,
+          username: defaultUsername,
+          welcome_sent: true,
+        },
+      },
+    });
+
+    if (fallbackErr) {
+      return { error: fallbackErr.message || "We could not create your account. Please try again." };
+    }
+    userId = fallbackData?.user?.id;
   }
+
+  // Instantly sign in with password to set session cookies
+  const { error: signInErr } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   // Send welcoming email upon signup
   try {
     await sendWelcomeEmail({
       email,
-      name: fullName,
+      name: defaultName,
     });
   } catch (emailErr) {
     console.error("[SignUp] Failed to dispatch welcome email:", emailErr);
   }
 
-  // If email confirmation is required by Supabase project settings
-  if (data?.user && !data.session) {
-    return {
-      success: true,
-      message: "Welcome to NovaStage Beta! Verification email sent. Please check your inbox to confirm your account.",
-    };
+  if (signInErr) {
+    redirect("/login");
   }
 
-  redirect("/onboarding");
+  // Automatically go directly to the dashboard
+  redirect("/dashboard");
 }
 
 export async function signOut() {

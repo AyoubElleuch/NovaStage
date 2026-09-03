@@ -86,6 +86,13 @@ export default function CanvasGroupNode({
       return;
     }
     e.stopPropagation();
+
+    // If linking wire is active, clicking anywhere on this group completes connection!
+    if (isLinking) {
+      onStartLink(node, "left", e);
+      return;
+    }
+
     e.currentTarget.setPointerCapture(e.pointerId);
     onSelect(node, e.shiftKey);
     onDragStart(node, e);
@@ -185,10 +192,12 @@ export default function CanvasGroupNode({
         width: `${effectiveWidth}px`,
         height: `${effectiveHeight}px`,
       }}
-      className={`absolute top-0 left-0 cursor-move rounded-xl border-2 border-dashed transition-shadow duration-150 select-none ${
+      className={`absolute top-0 left-0 cursor-move rounded-xl border-2 border-dashed transition-all duration-150 select-none ${
         colors.border
       } ${colors.bg} ${
-        isSelected || isMultiSelected
+        isLinking
+          ? "cursor-pointer ring-2 ring-emerald-500/40 hover:ring-emerald-500 hover:shadow-lg"
+          : isSelected || isMultiSelected
           ? "ring-2 ring-neutral-900/20 shadow-md dark:ring-emerald-500/30"
           : "hover:shadow-md"
       }`}
@@ -203,11 +212,11 @@ export default function CanvasGroupNode({
               e.stopPropagation();
               onStartLink(node, handle, e);
             }}
-            className={`absolute z-20 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs transition-all duration-150 before:absolute before:-inset-2 before:content-[''] dark:border-[#283548] dark:bg-[#1e2634] ${getHandlePositionStyles(
+            className={`absolute z-20 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs transition-all duration-150 before:absolute before:-inset-3 before:content-[''] dark:border-[#283548] dark:bg-[#1e2634] ${getHandlePositionStyles(
               handle
             )} ${
               isPortVisible
-                ? "opacity-100 scale-100 cursor-crosshair hover:bg-neutral-900 hover:text-white hover:scale-115 hover:border-neutral-900 dark:hover:bg-emerald-600 dark:hover:border-emerald-600"
+                ? "opacity-100 scale-100 cursor-pointer hover:bg-neutral-900 hover:text-white hover:scale-125 hover:border-neutral-900 dark:hover:bg-emerald-600 dark:hover:border-emerald-600"
                 : "opacity-0 scale-75 pointer-events-none"
             }`}
             title={isLinking ? `Connect to ${handle} port` : `Link from ${handle} port`}

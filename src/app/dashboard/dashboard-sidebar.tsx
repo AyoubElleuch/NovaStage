@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
 import { fetcher } from "@/lib/fetcher";
-import type { DashboardProjectsData } from "@/lib/dashboard-data";
+import type { DashboardProjectsData, DashboardSettingsData } from "@/lib/dashboard-data";
+import UserAvatar from "@/components/ui/user-avatar";
 import useSWR from "swr";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
 import { TermsOfServiceTrigger } from "@/components/terms/terms-of-service-modal";
@@ -99,6 +100,10 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
   const { data } = useSWR<DashboardProjectsData>(
     "/api/dashboard/projects",
     fetcher<DashboardProjectsData>
+  );
+  const { data: settingsData } = useSWR<DashboardSettingsData>(
+    "/api/dashboard/settings",
+    fetcher<DashboardSettingsData>
   );
   const projects = data?.projects || [];
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -218,7 +223,7 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
           </Link>
           {(!collapsed || isMobile) && (
             <span className="rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:border-[#283548] dark:bg-[#1e2736] dark:text-neutral-300">
-              Beta v1.0.0
+              Beta v1.0.1
             </span>
           )}
         </div>
@@ -376,9 +381,12 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
             collapsed ? "justify-center px-0" : ""
           }`}
         >
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-900 dark:bg-emerald-600 text-xs font-semibold text-white">
-            {(userEmail?.[0] || "N").toUpperCase()}
-          </span>
+          <UserAvatar
+            src={settingsData?.profile?.avatar_url}
+            name={settingsData?.profile?.full_name}
+            email={userEmail}
+            size="md"
+          />
           {!collapsed && (
             <div className="min-w-0">
               <p className="truncate text-[13px] font-medium text-neutral-900 dark:text-white">{userEmail}</p>

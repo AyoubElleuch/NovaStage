@@ -12,6 +12,7 @@ import {
   canConnectMilestones,
   detectCycle,
   findNearestHandle,
+  getClosestHandleToPoint,
   getCanvasBoundingBox,
   exportToMermaid,
 } from "./coordinate-math";
@@ -240,6 +241,55 @@ describe("Canvas Coordinate Math & Utilities", () => {
       const nodeA = { claimed_by: "user-2", claim_expires_at: futureDate };
       const nodeB = { claimed_by: null, claim_expires_at: null };
       expect(canConnectMilestones(nodeA, nodeB, "user-1", true)).toBe(true);
+    });
+
+    it("allows connecting AWS service nodes without milestone claim locks", () => {
+      const nodeA = { claimed_by: null, claim_expires_at: null, node_type: "aws_service" as const };
+      const nodeB = { claimed_by: null, claim_expires_at: null, node_type: "aws_service" as const };
+      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(true);
+    });
+
+    it("allows connecting milestone to AWS service node without milestone claim locks", () => {
+      const nodeA = { claimed_by: null, claim_expires_at: null, node_type: "milestone" as const };
+      const nodeB = { claimed_by: null, claim_expires_at: null, node_type: "aws_service" as const };
+      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(true);
+    });
+  });
+
+  describe("getClosestHandleToPoint", () => {
+    const testNode: CanvasNode = {
+      id: "node-1",
+      project_id: "p1",
+      title: "Test",
+      description: "",
+      status: "draft",
+      position_x: 100,
+      position_y: 100,
+      width: 200,
+      height: 100,
+      color: "default",
+      sort_order: 0,
+      claimed_by: null,
+      claim_holder: null,
+      version: 1,
+      checkpoints: [],
+      node_type: "milestone",
+    };
+
+    it("picks left handle when point is to the left", () => {
+      expect(getClosestHandleToPoint(testNode, { x: 50, y: 150 })).toBe("left");
+    });
+
+    it("picks right handle when point is to the right", () => {
+      expect(getClosestHandleToPoint(testNode, { x: 350, y: 150 })).toBe("right");
+    });
+
+    it("picks top handle when point is above", () => {
+      expect(getClosestHandleToPoint(testNode, { x: 200, y: 50 })).toBe("top");
+    });
+
+    it("picks bottom handle when point is below", () => {
+      expect(getClosestHandleToPoint(testNode, { x: 200, y: 250 })).toBe("bottom");
     });
   });
 

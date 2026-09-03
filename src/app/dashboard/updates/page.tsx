@@ -2,6 +2,18 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
+    version: "Beta v1.0.1",
+    date: "September 3, 2026",
+    title: "Avatar Fix, Faster Connections & Sign-up Polish",
+    summary:
+      "Fixed avatar updates with live previews, made canvas connections instant with browser caching and rollback, and streamlined sign-up with instant dashboard login.",
+    changes: [
+      "Avatar Fix & Preview: Resolved profile avatar rendering and added live preview in account settings.",
+      "Faster Canvas Connections: Connect nodes instantly by clicking anywhere, with expanded snapping and browser caching.",
+      "Streamlined Sign-up: Added password confirmation and strength meter, with instant login straight to the dashboard.",
+    ],
+  },
+  {
     version: "Beta v1.0.0",
     date: "September 3, 2026",
     title: "Official Beta Launch",

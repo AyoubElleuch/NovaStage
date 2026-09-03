@@ -21,6 +21,7 @@ import {
   canConnectMilestones,
   detectCycle,
   findNearestHandle,
+  getClosestHandleToPoint,
   exportToMermaid,
 } from "@/lib/canvas/coordinate-math";
 import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
@@ -149,6 +150,14 @@ export default function ProjectCanvasClient({
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
+
+  // Sync edges into browser cache
+  useEffect(() => {
+    try {
+      const cacheKey = `novastage:canvas:${project.id}:edges`;
+      window.localStorage.setItem(cacheKey, JSON.stringify(edges));
+    } catch {}
+  }, [edges, project.id]);
 
   // Marquee Selection State
   const [selectionMarquee, setSelectionMarquee] = useState<{
@@ -1689,7 +1698,8 @@ export default function ProjectCanvasClient({
 
       // Draft Edge linking + Magnetic snapping
       if (draftEdgeRef.current) {
-        const nearest = findNearestHandle(worldPos, nodes, draftEdgeRef.current.sourceNode.id, 28);
+        // Check expanded 50px handle radius
+        const nearest = findNearestHandle(worldPos, nodes, draftEdgeRef.current.sourceNode.id, 50);
         if (nearest) {
           setSnappedHandle({ node: nearest.node, handle: nearest.handle });
           const cycle = detectCycle(edges, {
@@ -1699,9 +1709,31 @@ export default function ProjectCanvasClient({
           setIsCycleDetected(cycle);
           setDraftEdge((prev) => (prev ? { ...prev, currentPos: nearest.position } : null));
         } else {
-          setSnappedHandle(null);
-          setIsCycleDetected(false);
-          setDraftEdge((prev) => (prev ? { ...prev, currentPos: worldPos } : null));
+          // Check if hovering anywhere over another node body to snap magnetically to its closest port
+          const hoveredCandidate = nodes.find(
+            (n) =>
+              n.id !== draftEdgeRef.current!.sourceNode.id &&
+              worldPos.x >= n.position_x &&
+              worldPos.x <= n.position_x + (n.width || 200) &&
+              worldPos.y >= n.position_y &&
+              worldPos.y <= n.position_y + (n.height || 100)
+          );
+
+          if (hoveredCandidate) {
+            const bestHandle = getClosestHandleToPoint(hoveredCandidate, worldPos);
+            const bestPos = getNodeHandlePosition(hoveredCandidate, bestHandle);
+            setSnappedHandle({ node: hoveredCandidate, handle: bestHandle });
+            const cycle = detectCycle(edges, {
+              sourceNodeId: draftEdgeRef.current.sourceNode.id,
+              targetNodeId: hoveredCandidate.id,
+            });
+            setIsCycleDetected(cycle);
+            setDraftEdge((prev) => (prev ? { ...prev, currentPos: bestPos } : null));
+          } else {
+            setSnappedHandle(null);
+            setIsCycleDetected(false);
+            setDraftEdge((prev) => (prev ? { ...prev, currentPos: worldPos } : null));
+          }
         }
       }
     },
@@ -1935,33 +1967,90 @@ export default function ProjectCanvasClient({
       return;
     }
 
-    try {
-      const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create_edge",
-          source_node_id: sourceNodeId,
-          target_node_id: targetNodeId,
-          source_handle: sourceHandle,
-          target_handle: handle,
-        }),
-      });
+    const targetHandle: HandlePosition =
+      snappedHandle?.node.id === node.id
+        ? snappedHandle.handle
+        : handle !== "left"
+        ? handle
+        : getClosestHandleToPoint(node, activeDraft.currentPos);
 
-      const data = await res.json();
-      if (data.success && data.edge) {
-        const nextEdges = [...edges, data.edge];
-        setEdges(nextEdges);
-        pushHistorySnapshot(nodes, nextEdges);
-        canvasSounds.link();
-        broadcastEvent("edge:created", { edge: data.edge });
-        notify({ title: "Connected!", message: "Dependency wire created" });
-      } else if (data.error) {
-        notify({ tone: "error", title: "Connection Failed", message: data.error });
-      }
-    } catch (e) {
-      console.error("Failed to link nodes:", e);
+    // 0ms instant local insertion
+    const clientEdgeId = `edge_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const optimisticEdge: CanvasEdge = {
+      id: clientEdgeId,
+      project_id: project.id,
+      source_node_id: sourceNodeId,
+      target_node_id: targetNodeId,
+      source_handle: sourceHandle,
+      target_handle: targetHandle,
+      edge_type: "dependency",
+    };
+
+    const nextEdges = [...edges, optimisticEdge];
+    setEdges(nextEdges);
+    pushHistorySnapshot(nodes, nextEdges);
+    canvasSounds.link();
+    broadcastEvent("edge:created", { edge: optimisticEdge });
+    notify({ title: "Connected!", message: "Dependency wire created" });
+
+    // Cache immediately in browser localStorage
+    const cacheKey = `novastage:canvas:${project.id}:edges`;
+    try {
+      window.localStorage.setItem(cacheKey, JSON.stringify(nextEdges));
+    } catch (err) {
+      console.warn("Failed to cache edges in localStorage:", err);
     }
+
+    // Background persistence with success reconciliation & automatic rollback on error
+    secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "create_edge",
+        source_node_id: sourceNodeId,
+        target_node_id: targetNodeId,
+        source_handle: sourceHandle,
+        target_handle: targetHandle,
+      }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (data.success && data.edge) {
+          // Edge confirmed and persisted on server
+          setEdges((prev) =>
+            prev.map((e) => (e.id === clientEdgeId ? data.edge : e))
+          );
+          try {
+            const currentCached = JSON.parse(
+              window.localStorage.getItem(cacheKey) || "[]"
+            ) as CanvasEdge[];
+            const updatedCached = currentCached.map((e) =>
+              e.id === clientEdgeId ? data.edge : e
+            );
+            window.localStorage.setItem(cacheKey, JSON.stringify(updatedCached));
+          } catch {}
+        } else {
+          throw new Error(data.error || "Failed to persist dependency wire");
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to link nodes on server, rolling back:", err);
+        // Instant rollback on error
+        setEdges((prev) => prev.filter((e) => e.id !== clientEdgeId));
+        try {
+          const currentCached = JSON.parse(
+            window.localStorage.getItem(cacheKey) || "[]"
+          ) as CanvasEdge[];
+          const rolledBack = currentCached.filter((e) => e.id !== clientEdgeId);
+          window.localStorage.setItem(cacheKey, JSON.stringify(rolledBack));
+        } catch {}
+        broadcastEvent("edge:deleted", { edgeId: clientEdgeId });
+        notify({
+          tone: "error",
+          title: "Connection Failed",
+          message: err instanceof Error ? err.message : "Failed to connect milestones",
+        });
+      });
   };
 
   const handleStartLink = (
@@ -1990,6 +2079,12 @@ export default function ProjectCanvasClient({
     pushHistorySnapshot(nodes, nextEdges);
     canvasSounds.deleteNode();
     broadcastEvent("edge:deleted", { edgeId });
+
+    // Cache updated edges in browser
+    const cacheKey = `novastage:canvas:${project.id}:edges`;
+    try {
+      window.localStorage.setItem(cacheKey, JSON.stringify(nextEdges));
+    } catch {}
 
     try {
       await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {

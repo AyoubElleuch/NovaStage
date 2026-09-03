@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useSWRConfig } from "swr";
 import { deleteAccount, updatePassword, updateProfile, type SettingsActionResult } from "./actions";
 import { useTheme } from "@/lib/theme-context";
+import UserAvatar from "@/components/ui/user-avatar";
 
 const initialState: SettingsActionResult = {};
 
@@ -246,7 +247,12 @@ export function ProfileForm({
   email: string;
 }) {
   const [state, formAction, isPending] = useActionState(updateProfile, initialState);
+  const [avatarUrlInput, setAvatarUrlInput] = useState(profile.avatar_url || "");
   const { mutate } = useSWRConfig();
+
+  useEffect(() => {
+    setAvatarUrlInput(profile.avatar_url || "");
+  }, [profile.avatar_url]);
 
   useEffect(() => {
     if (state.success) {
@@ -315,15 +321,30 @@ export function ProfileForm({
           <label htmlFor="avatarUrl" className={labelClass}>
             Avatar URL <span className="ml-1 text-xs font-normal text-neutral-400">Optional</span>
           </label>
-          <input
-            id="avatarUrl"
-            name="avatarUrl"
-            type="url"
-            defaultValue={profile.avatar_url || ""}
-            placeholder="https://…"
-            disabled={isPending}
-            className={fieldClass}
-          />
+          <div className="flex items-center gap-3.5">
+            <UserAvatar
+              src={avatarUrlInput}
+              name={profile.full_name}
+              email={email}
+              size="lg"
+              className="ring-2 ring-neutral-200 dark:ring-[#283548] shadow-xs"
+            />
+            <div className="flex-1 min-w-0">
+              <input
+                id="avatarUrl"
+                name="avatarUrl"
+                type="url"
+                value={avatarUrlInput}
+                onChange={(e) => setAvatarUrlInput(e.target.value)}
+                placeholder="https://..."
+                disabled={isPending}
+                className={fieldClass}
+              />
+              <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
+                Direct image link (JPEG, PNG, WebP, SVG). Preview updates instantly as you type.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

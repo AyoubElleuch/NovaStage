@@ -36,6 +36,7 @@ import type {
   ProjectJoinRequestInfo,
   ProjectBannedMemberInfo,
 } from "@/lib/dashboard-data";
+import UserAvatar from "@/components/ui/user-avatar";
 
 import DashboardLoading from "./(projects)/loading";
 
@@ -1393,9 +1394,12 @@ export default function ProjectsWorkspace() {
                                 className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 dark:hover:bg-[#1e2634]/60 rounded-lg"
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase dark:bg-emerald-600">
-                                    {displayName[0]}
-                                  </span>
+                                  <UserAvatar
+                                    src={member.avatarUrl}
+                                    name={displayName}
+                                    email={member.email}
+                                    size="md"
+                                  />
                                   <div className="min-w-0">
                                     <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
                                       {displayName}
@@ -1491,9 +1495,12 @@ export default function ProjectsWorkspace() {
                               className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 dark:hover:bg-[#1e2634]/60 rounded-lg"
                             >
                               <div className="flex items-center gap-3 min-w-0">
-                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase dark:bg-emerald-600">
-                                  {displayName[0]}
-                                </span>
+                                <UserAvatar
+                                  src={req.avatarUrl}
+                                  name={displayName}
+                                  email={req.email}
+                                  size="md"
+                                />
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
                                     {displayName}
@@ -1579,9 +1586,12 @@ export default function ProjectsWorkspace() {
                               className="flex items-center justify-between py-2.5 px-1.5 transition-colors hover:bg-neutral-50/80 dark:hover:bg-[#1e2634]/60 rounded-lg"
                             >
                               <div className="flex items-center gap-3 min-w-0">
-                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white uppercase dark:bg-emerald-600">
-                                  {displayName[0]}
-                                </span>
+                                <UserAvatar
+                                  src={banned.avatarUrl}
+                                  name={displayName}
+                                  email={banned.email}
+                                  size="md"
+                                />
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
                                     {displayName}

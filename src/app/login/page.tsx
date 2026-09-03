@@ -45,9 +45,6 @@ export default async function LoginPage() {
               priority
               className="h-auto w-27.5 dark:brightness-0 dark:invert"
             />
-            <span className="rounded-md border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300">
-              Beta v1.0.0
-            </span>
           </div>
           <ThemeToggle />
         </div>
@@ -58,9 +55,11 @@ export default async function LoginPage() {
           </Suspense>
         </div>
 
-        <div className="flex items-center justify-center gap-3 text-xs text-neutral-400 dark:text-neutral-500 pt-4">
+        <div className="flex items-center justify-center gap-3 text-xs pt-4">
+          <span className="font-semibold text-neutral-900 dark:text-white">Beta v1.0.1</span>
+          <span className="text-neutral-300 dark:text-neutral-600">&bull;</span>
           <TermsOfServiceTrigger />
-          <span>&bull;</span>
+          <span className="text-neutral-300 dark:text-neutral-600">&bull;</span>
           <PrivacyPolicyTrigger />
         </div>
       </div>
