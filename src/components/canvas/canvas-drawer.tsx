@@ -175,7 +175,11 @@ function MilestoneDrawerContent({
                 </p>
               ) : (
                 <p className="font-medium text-neutral-500 dark:text-neutral-400 truncate">
-                  Unclaimed milestone
+                  {node.node_type === "aws_service"
+                    ? "Unclaimed AWS resource"
+                    : node.node_type === "group"
+                    ? "Unclaimed group container"
+                    : "Unclaimed milestone"}
                 </p>
               )}
             </div>
@@ -229,7 +233,11 @@ function MilestoneDrawerContent({
         {/* Title Input */}
         <div>
           <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
-            Step Title
+            {node.node_type === "aws_service"
+              ? "Service Name / Resource Label"
+              : node.node_type === "group"
+              ? "Container Label"
+              : "Step Title"}
           </label>
           <input
             type="text"
@@ -279,6 +287,50 @@ function MilestoneDrawerContent({
                   Category: {node.aws_metadata?.category?.replace("_", " ") || "Compute"}
                 </div>
               </div>
+            </div>
+
+            {/* Deployment Lifecycle Status */}
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
+                Deployment Lifecycle
+              </label>
+              <div className="flex items-center gap-2 rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-1.5 dark:border-[#283548] dark:bg-[#121721]">
+                <button
+                  type="button"
+                  disabled={!isClaimedByMe && !isProjectOwner}
+                  onClick={() => {
+                    onUpdateNode(node.id, { status: "draft" });
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
+                    node.status !== "completed"
+                      ? "bg-white shadow-xs text-neutral-900 border border-neutral-200/90 dark:bg-[#1e2634] dark:text-white dark:border-[#283548]"
+                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+                  }`}
+                >
+                  <span className="h-2 w-2 rounded-full bg-neutral-400 dark:bg-neutral-500" />
+                  Planned
+                </button>
+                <button
+                  type="button"
+                  disabled={!isClaimedByMe && !isProjectOwner}
+                  onClick={() => {
+                    onUpdateNode(node.id, { status: "completed" });
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
+                    node.status === "completed"
+                      ? "bg-emerald-600 text-white shadow-xs shadow-emerald-600/30 dark:bg-emerald-600"
+                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+                  }`}
+                >
+                  <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+                  Active / Live
+                </button>
+              </div>
+              <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1 pl-1">
+                {node.status === "completed"
+                  ? "Resource is Active / Live. Connected downstream data wires glow active."
+                  : "Resource is in planning. Wires show planned architecture flow."}
+              </p>
             </div>
 
             {/* Region Configuration */}
@@ -505,73 +557,168 @@ function MilestoneDrawerContent({
           />
         </div>
 
-        {/* Dependency Chain Section */}
-        <div className="border-t border-neutral-100 dark:border-[#283548] pt-5">
-          <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-3">
-            Dependency Flow
-          </label>
+        {/* Architecture Connections (AWS / Group) OR Dependency Flow (Milestones) */}
+        {node.node_type === "aws_service" || node.node_type === "group" ? (
+          <div className="border-t border-neutral-100 dark:border-[#283548] pt-5">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-3">
+              Architecture Connections
+            </label>
 
-          {/* Prerequisites */}
-          <div className="mb-3">
-            <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
-              <ArrowLeft className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
-              Prerequisites ({prerequisiteNodes.length})
-            </p>
-            {prerequisiteNodes.length === 0 ? (
-              <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No prerequisites (Root step)</p>
-            ) : (
-              <div className="space-y-1.5 pl-2">
-                {prerequisiteNodes.map((pn) => {
-                  const prereqComplete = isNodeFullyComplete(pn);
-                  return (
+            {/* Inbound Sources */}
+            <div className="mb-4">
+              <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
+                <ArrowLeft className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
+                Inbound Sources ({prerequisiteNodes.length})
+              </p>
+              {prerequisiteNodes.length === 0 ? (
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No inbound traffic or connections</p>
+              ) : (
+                <div className="space-y-1.5 pl-2">
+                  {prerequisiteNodes.map((pn) => {
+                    const isSourceActive = pn.status === "completed";
+                    const isAws = pn.node_type === "aws_service";
+                    return (
+                      <div
+                        key={pn.id}
+                        onClick={() => onJumpToNode(pn.id)}
+                        className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{pn.title}</span>
+                          {pn.aws_metadata?.serviceId && (
+                            <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase font-mono">
+                              ({pn.aws_metadata.serviceId})
+                            </span>
+                          )}
+                        </div>
+                        <span
+                          className={`text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
+                            isSourceActive
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                              : "bg-neutral-200 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-400"
+                          }`}
+                        >
+                          {isAws ? (isSourceActive ? "Live" : "Planned") : isSourceActive ? "Done" : "In Progress"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Outbound Destinations */}
+            <div>
+              <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
+                <ArrowRight className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
+                Outbound Destinations ({unlockedNodes.length})
+              </p>
+              {unlockedNodes.length === 0 ? (
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No outbound services connected</p>
+              ) : (
+                <div className="space-y-1.5 pl-2">
+                  {unlockedNodes.map((un) => {
+                    const isTargetActive = un.status === "completed";
+                    const isAws = un.node_type === "aws_service";
+                    return (
+                      <div
+                        key={un.id}
+                        onClick={() => onJumpToNode(un.id)}
+                        className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{un.title}</span>
+                          {un.aws_metadata?.serviceId && (
+                            <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase font-mono">
+                              ({un.aws_metadata.serviceId})
+                            </span>
+                          )}
+                        </div>
+                        <span
+                          className={`text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
+                            isTargetActive
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                              : "bg-neutral-200 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-400"
+                          }`}
+                        >
+                          {isAws ? (isTargetActive ? "Live" : "Planned") : isTargetActive ? "Done" : "In Progress"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Dependency Chain Section for Milestones */
+          <div className="border-t border-neutral-100 dark:border-[#283548] pt-5">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-3">
+              Dependency Flow
+            </label>
+
+            {/* Prerequisites */}
+            <div className="mb-3">
+              <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
+                <ArrowLeft className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
+                Prerequisites ({prerequisiteNodes.length})
+              </p>
+              {prerequisiteNodes.length === 0 ? (
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No prerequisites (Root step)</p>
+              ) : (
+                <div className="space-y-1.5 pl-2">
+                  {prerequisiteNodes.map((pn) => {
+                    const prereqComplete = isNodeFullyComplete(pn);
+                    return (
+                      <div
+                        key={pn.id}
+                        onClick={() => onJumpToNode(pn.id)}
+                        className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
+                      >
+                        <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{pn.title}</span>
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                            prereqComplete
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                              : "bg-neutral-200 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-400"
+                          }`}
+                        >
+                          {prereqComplete ? "Done" : "Pending"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Unlocked Downstream Steps */}
+            <div>
+              <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
+                <ArrowRight className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
+                Unlocks Downstream ({unlockedNodes.length})
+              </p>
+              {unlockedNodes.length === 0 ? (
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No downstream steps</p>
+              ) : (
+                <div className="space-y-1.5 pl-2">
+                  {unlockedNodes.map((un) => (
                     <div
-                      key={pn.id}
-                      onClick={() => onJumpToNode(pn.id)}
+                      key={un.id}
+                      onClick={() => onJumpToNode(un.id)}
                       className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
                     >
-                      <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{pn.title}</span>
-                      <span
-                        className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                          prereqComplete
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                            : "bg-neutral-200 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-400"
-                        }`}
-                      >
-                        {prereqComplete ? "Done" : "Pending"}
+                      <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{un.title}</span>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                        {isComplete ? "Wire Glowing" : "Waiting"}
                       </span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-
-          {/* Unlocked Downstream Steps */}
-          <div>
-            <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
-              <ArrowRight className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
-              Unlocks Downstream ({unlockedNodes.length})
-            </p>
-            {unlockedNodes.length === 0 ? (
-              <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No downstream steps</p>
-            ) : (
-              <div className="space-y-1.5 pl-2">
-                {unlockedNodes.map((un) => (
-                  <div
-                    key={un.id}
-                    onClick={() => onJumpToNode(un.id)}
-                    className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
-                  >
-                    <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{un.title}</span>
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                      {isComplete ? "Wire Glowing" : "Waiting"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Drawer Footer Actions - Only available if claimed or owner */}
@@ -583,7 +730,13 @@ function MilestoneDrawerContent({
             className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white py-2 text-xs font-semibold text-red-600 shadow-2xs hover:bg-red-50 transition-colors cursor-pointer dark:border-red-900/50 dark:bg-[#161d27] dark:text-red-400 dark:hover:bg-red-950/30"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            <span>Delete Milestone Box</span>
+            <span>
+              {node.node_type === "aws_service"
+                ? "Delete AWS Service"
+                : node.node_type === "group"
+                ? "Delete Group Container"
+                : "Delete Milestone Box"}
+            </span>
           </button>
         </div>
       )}

@@ -35,10 +35,12 @@ export function analyzeReleasePulse(
   nodes: CanvasNode[],
   edges: CanvasEdge[]
 ): ReleasePulseAnalysis {
-  const nodeById = new Map(nodes.map((node) => [node.id, node]));
-  const completionById = new Map(nodes.map((node) => [node.id, getCompletion(node)]));
-  const incoming = new Map(nodes.map((node) => [node.id, [] as string[]]));
-  const outgoing = new Map(nodes.map((node) => [node.id, [] as string[]]));
+  // Only evaluate milestone nodes for roadmap progress, readiness, and blockers
+  const milestoneNodes = nodes.filter((node) => !node.node_type || node.node_type === "milestone");
+  const nodeById = new Map(milestoneNodes.map((node) => [node.id, node]));
+  const completionById = new Map(milestoneNodes.map((node) => [node.id, getCompletion(node)]));
+  const incoming = new Map(milestoneNodes.map((node) => [node.id, [] as string[]]));
+  const outgoing = new Map(milestoneNodes.map((node) => [node.id, [] as string[]]));
 
   for (const edge of edges) {
     if (!nodeById.has(edge.source_node_id) || !nodeById.has(edge.target_node_id)) continue;
@@ -46,8 +48,8 @@ export function analyzeReleasePulse(
     outgoing.get(edge.source_node_id)?.push(edge.target_node_id);
   }
 
-  const indegree = new Map(nodes.map((node) => [node.id, incoming.get(node.id)?.length ?? 0]));
-  const queue = nodes.filter((node) => indegree.get(node.id) === 0).map((node) => node.id);
+  const indegree = new Map(milestoneNodes.map((node) => [node.id, incoming.get(node.id)?.length ?? 0]));
+  const queue = milestoneNodes.filter((node) => indegree.get(node.id) === 0).map((node) => node.id);
   const topologicalOrder: string[] = [];
 
   while (queue.length > 0) {
@@ -61,8 +63,8 @@ export function analyzeReleasePulse(
     }
   }
 
-  const hasCycle = topologicalOrder.length !== nodes.length;
-  const analysisOrder = hasCycle ? nodes.map((node) => node.id) : topologicalOrder;
+  const hasCycle = topologicalOrder.length !== milestoneNodes.length;
+  const analysisOrder = hasCycle ? milestoneNodes.map((node) => node.id) : topologicalOrder;
   const pathWeight = new Map<string, number>();
   const pathIds = new Map<string, string[]>();
 
@@ -96,7 +98,7 @@ export function analyzeReleasePulse(
     completion: completionById.get(nodeId) ?? 0,
   });
 
-  const incompleteNodes = nodes.filter((node) => (completionById.get(node.id) ?? 0) < 100);
+  const incompleteNodes = milestoneNodes.filter((node) => (completionById.get(node.id) ?? 0) < 100);
   const readyNow = incompleteNodes
     .filter(
       (node) =>
@@ -138,11 +140,11 @@ export function analyzeReleasePulse(
         left.completion - right.completion
     );
 
-  const totalWorkUnits = nodes.reduce(
+  const totalWorkUnits = milestoneNodes.reduce(
     (total, node) => total + Math.max(node.checkpoints.length, 1),
     0
   );
-  const completedWorkUnits = nodes.reduce(
+  const completedWorkUnits = milestoneNodes.reduce(
     (total, node) =>
       total +
       (node.checkpoints.length > 0
@@ -155,8 +157,8 @@ export function analyzeReleasePulse(
 
   return {
     readiness: totalWorkUnits === 0 ? 0 : Math.round((completedWorkUnits / totalWorkUnits) * 100),
-    completedNodes: nodes.length - incompleteNodes.length,
-    totalNodes: nodes.length,
+    completedNodes: milestoneNodes.length - incompleteNodes.length,
+    totalNodes: milestoneNodes.length,
     readyNow,
     blockedNodes,
     blockers,

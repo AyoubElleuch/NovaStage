@@ -13,6 +13,7 @@ import {
   CollaboratorPresence,
   HandlePosition,
   CanvasNetworkStatus,
+  EdgeType,
 } from "@/lib/canvas/types";
 import {
   snapToGrid,
@@ -1974,6 +1975,12 @@ export default function ProjectCanvasClient({
         ? handle
         : getClosestHandleToPoint(node, activeDraft.currentPos);
 
+    const sourceNode = nodes.find((n) => n.id === sourceNodeId);
+    const isAwsConnection =
+      (sourceNode?.node_type === "aws_service" || sourceNode?.node_type === "group") &&
+      (node.node_type === "aws_service" || node.node_type === "group");
+    const edgeType: EdgeType = isAwsConnection ? "data_flow" : "dependency";
+
     // 0ms instant local insertion
     const clientEdgeId = `edge_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const optimisticEdge: CanvasEdge = {
@@ -1983,7 +1990,7 @@ export default function ProjectCanvasClient({
       target_node_id: targetNodeId,
       source_handle: sourceHandle,
       target_handle: targetHandle,
-      edge_type: "dependency",
+      edge_type: edgeType,
     };
 
     const nextEdges = [...edges, optimisticEdge];
@@ -1991,7 +1998,10 @@ export default function ProjectCanvasClient({
     pushHistorySnapshot(nodes, nextEdges);
     canvasSounds.link();
     broadcastEvent("edge:created", { edge: optimisticEdge });
-    notify({ title: "Connected!", message: "Dependency wire created" });
+    notify({
+      title: "Connected!",
+      message: isAwsConnection ? "Architecture data flow wire created" : "Dependency wire created",
+    });
 
     // Cache immediately in browser localStorage
     const cacheKey = `novastage:canvas:${project.id}:edges`;
@@ -2011,6 +2021,7 @@ export default function ProjectCanvasClient({
         target_node_id: targetNodeId,
         source_handle: sourceHandle,
         target_handle: targetHandle,
+        edge_type: edgeType,
       }),
     })
       .then(async (res) => {
@@ -2187,7 +2198,8 @@ export default function ProjectCanvasClient({
     notify({ title: "Roadmap Exported", message: `Downloaded ${project.slug}-roadmap.json` });
   };
 
-  const completedCount = nodes.filter((n) =>
+  const milestoneNodes = nodes.filter((n) => !n.node_type || n.node_type === "milestone");
+  const completedCount = milestoneNodes.filter((n) =>
     n.checkpoints.length > 0
       ? n.checkpoints.every((c) => c.is_completed)
       : n.status === "completed"
@@ -2216,7 +2228,7 @@ export default function ProjectCanvasClient({
         projectName={project.name}
         inviteCode={project.invite_code}
         isOwner={isOwner}
-        totalNodes={nodes.length}
+        totalNodes={milestoneNodes.length}
         completedNodes={completedCount}
         collaborators={collaborators}
         currentUserId={currentUser.id}

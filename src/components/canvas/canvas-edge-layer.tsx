@@ -176,10 +176,16 @@ export default function CanvasEdgeLayer({
           strokeColor = isDark ? "#60a5fa" : "#3B48CC"; // bright electric blue in dark mode
           strokeDasharray = "8 6";
           markerId = "url(#arrow-data-flow)";
+          if (isNeonActive || sourceNode.status === "completed") {
+            animationClass = "animate-[dash-flow_1.2s_linear_infinite]";
+          }
         } else if (edgeType === "network") {
           strokeColor = isDark ? "#34d399" : "#3F8624"; // bright emerald green in dark mode
-          strokeDasharray = "2 4";
+          strokeDasharray = "4 4";
           markerId = "url(#arrow-network)";
+          if (isNeonActive || sourceNode.status === "completed") {
+            animationClass = "animate-[dash-flow_1s_linear_infinite]";
+          }
         } else if (edgeType === "event") {
           strokeColor = isDark ? "#fbbf24" : "#FF9900"; // luminous amber/yellow in dark mode
           strokeDasharray = "8 4 2 4";

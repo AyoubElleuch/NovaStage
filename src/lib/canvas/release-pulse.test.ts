@@ -88,4 +88,52 @@ describe("analyzeReleasePulse", () => {
       hasCycle: false,
     });
   });
+
+  it("ignores AWS service nodes and group containers when calculating milestone pulse", () => {
+    const awsNode: CanvasNode = {
+      id: "alb-1",
+      project_id: "project-1",
+      title: "Application Load Balancer",
+      description: "",
+      status: "draft",
+      position_x: 0,
+      position_y: 0,
+      width: 200,
+      height: 140,
+      color: "default",
+      sort_order: 0,
+      claimed_by: null,
+      version: 1,
+      checkpoints: [],
+      node_type: "aws_service",
+      aws_metadata: { serviceId: "alb", category: "networking" },
+    };
+
+    const groupNode: CanvasNode = {
+      id: "vpc-1",
+      project_id: "project-1",
+      title: "VPC",
+      description: "",
+      status: "draft",
+      position_x: 0,
+      position_y: 0,
+      width: 400,
+      height: 300,
+      color: "default",
+      sort_order: 0,
+      claimed_by: null,
+      version: 1,
+      checkpoints: [],
+      node_type: "group",
+    };
+
+    const result = analyzeReleasePulse(
+      [node("brief", 2, 2), node("build", 1, 2), awsNode, groupNode],
+      [edge("brief", "build"), edge("build", "alb-1")]
+    );
+
+    expect(result.totalNodes).toBe(2);
+    expect(result.completedNodes).toBe(1);
+    expect(result.readiness).toBe(75);
+  });
 });

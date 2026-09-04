@@ -361,7 +361,8 @@ export async function createCanvasEdge(
   sourceHandle: HandlePosition = "right",
   targetHandle: HandlePosition = "left",
   userId?: string,
-  isOwner?: boolean
+  isOwner?: boolean,
+  edgeType?: EdgeType
 ): Promise<CanvasEdge | null> {
   if (sourceNodeId === targetNodeId) return null;
   const adminClient = createAdminClient();
@@ -397,6 +398,7 @@ export async function createCanvasEdge(
         target_node_id: targetNodeId,
         source_handle: sourceHandle,
         target_handle: targetHandle,
+        ...(edgeType ? { edge_type: edgeType } : {}),
       },
       { onConflict: "source_node_id,target_node_id,source_handle,target_handle" }
     )

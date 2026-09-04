@@ -168,10 +168,28 @@ export default function CanvasServiceNode({
         );
       })}
 
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 flex justify-center py-2">
-          <AwsIcon serviceId={node.aws_metadata?.serviceId || ""} size={40} className="w-10 h-10" />
+      <div className="flex items-start justify-between gap-1.5">
+        <div
+          data-no-drag="true"
+          className={`shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold tracking-wider uppercase transition-all ${
+            node.status === "completed"
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/80 shadow-[0_0_8px_rgba(16,185,129,0.2)]"
+              : "bg-neutral-100 text-neutral-500 border border-neutral-200 dark:bg-[#121721] dark:text-neutral-400 dark:border-[#283548]"
+          }`}
+          title={node.status === "completed" ? "Resource is Active / Live" : "Resource is Planned"}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              node.status === "completed" ? "bg-emerald-500 animate-pulse" : "bg-neutral-400 dark:bg-neutral-500"
+            }`}
+          />
+          <span>{node.status === "completed" ? "Live" : "Plan"}</span>
         </div>
+
+        <div className="flex-1 flex justify-center py-1">
+          <AwsIcon serviceId={node.aws_metadata?.serviceId || ""} size={36} className="w-9 h-9" />
+        </div>
+
         <div
           data-no-drag="true"
           onClick={(e) => {

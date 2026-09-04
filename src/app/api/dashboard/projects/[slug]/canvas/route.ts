@@ -115,7 +115,8 @@ export async function POST(
         body.source_handle || "right",
         body.target_handle || "left",
         session.user.id,
-        isOwner
+        isOwner,
+        body.edge_type
       );
       return NextResponse.json({ success: Boolean(newEdge), edge: newEdge });
     }

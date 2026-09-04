@@ -2,6 +2,18 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
+    version: "Beta v1.0.2",
+    date: "September 4, 2026",
+    title: "AWS Architecture Decoupling & Deployment Lifecycle",
+    summary:
+      "Decoupled AWS cloud architecture nodes from roadmap milestone tracking, introduced a 1-click Active/Live vs Planned deployment lifecycle for cloud resources, and streamlined architecture network flow.",
+    changes: [
+      "Milestone & Architecture Decoupling: Cloud infrastructure nodes (ALB, ECS, RDS, VPCs) are now strictly excluded from milestone calculations and Release Pulse, keeping roadmap progress accurate.",
+      "AWS Deployment Lifecycle: Added a 1-click 'Planned' vs 'Active / Live' status toggle in the inspector drawer and live glowing badges on canvas cards.",
+      "Architecture Flow Inspector: Replaced task-based prerequisite blocker warnings with dedicated Inbound and Outbound service connections with animated data flow wires.",
+    ],
+  },
+  {
     version: "Beta v1.0.1",
     date: "September 3, 2026",
     title: "Avatar Fix, Faster Connections & Sign-up Polish",
