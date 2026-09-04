@@ -21,6 +21,8 @@ export default function AdminContentFrame({
       ? "Waitlist"
       : pathname === "/admin/ai-limits"
       ? "AI Limits"
+      : pathname === "/admin/broadcast"
+      ? "Announcement"
       : "Admin Console";
 
   return (

@@ -6,6 +6,13 @@ import { hasPermission, Permission } from "@/lib/auth/permissions";
 import { revalidatePath } from "next/cache";
 import { sendWaitlistApprovedEmail } from "@/lib/email/resend";
 import { generateSecurePassword } from "@/lib/security/password";
+import { broadcastPlatformAnnouncementChange } from "@/lib/announcements/server";
+import {
+  AnnouncementSeverity,
+  isAnnouncementSeverity,
+  parsePlatformAnnouncement,
+  PlatformAnnouncement,
+} from "@/lib/announcements/types";
 
 export interface WaitlistRecord {
   email: string;
@@ -44,6 +51,101 @@ async function assertPermission(requiredPermission: Permission) {
   }
 
   return session;
+}
+
+async function assertSuperAdmin() {
+  const session = await getAuthenticatedProfile();
+  if (!session || !session.user) {
+    throw new Error("Unauthorized. User must be authenticated.");
+  }
+
+  const isSuperAdmin =
+    session.roles.includes("super_admin") || session.profile?.role === "super_admin";
+  if (!isSuperAdmin) {
+    throw new Error("Forbidden. Super admin access is required.");
+  }
+
+  return session;
+}
+
+export async function getPlatformAnnouncement(): Promise<{
+  data?: PlatformAnnouncement | null;
+  error?: string;
+}> {
+  try {
+    await assertSuperAdmin();
+    const adminClient = createAdminClient();
+    const { data, error } = await adminClient
+      .from("platform_announcements")
+      .select("id, message, severity, is_active, updated_at, updated_by")
+      .eq("id", "platform")
+      .maybeSingle();
+
+    if (error) return { error: error.message };
+    return { data: parsePlatformAnnouncement(data) };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Failed to load the platform announcement." };
+  }
+}
+
+export async function savePlatformAnnouncement(
+  message: string,
+  severity: AnnouncementSeverity,
+  isActive: boolean
+): Promise<AdminActionResult> {
+  try {
+    const session = await assertSuperAdmin();
+    const normalizedMessage = message.trim();
+
+    if (normalizedMessage.length > 280) {
+      return { error: "Announcement messages must be 280 characters or fewer." };
+    }
+    if (isActive && !normalizedMessage) {
+      return { error: "Enter a message before activating the announcement." };
+    }
+    if (typeof isActive !== "boolean") {
+      return { error: "Choose whether the announcement should be active." };
+    }
+    if (!isAnnouncementSeverity(severity)) {
+      return { error: "Choose a valid announcement severity." };
+    }
+
+    const adminClient = createAdminClient();
+    const { data, error } = await adminClient
+      .from("platform_announcements")
+      .upsert(
+        {
+          id: "platform",
+          message: normalizedMessage,
+          severity,
+          is_active: isActive,
+          updated_by: session.user.id,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      )
+      .select("id, message, severity, is_active, updated_at, updated_by")
+      .single();
+
+    if (error || !data) {
+      return { error: error?.message || "Could not save the platform announcement." };
+    }
+
+    try {
+      await broadcastPlatformAnnouncementChange();
+    } catch {
+      // The database change is durable; the next client refresh will still converge.
+    }
+
+    revalidatePath("/admin/broadcast");
+    revalidatePath("/", "layout");
+    return {
+      success: true,
+      message: isActive ? "Announcement activated for all users." : "Announcement disabled.",
+    };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Failed to save the platform announcement." };
+  }
 }
 
 /**

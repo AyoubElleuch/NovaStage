@@ -5,12 +5,22 @@
 
 begin;
 
+do $$
+begin
+	if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+		alter publication supabase_realtime drop table if exists public.platform_announcements;
+	end if;
+exception
+	when undefined_object then null;
+end $$;
+
 -- Remove policies before dropping the functions they call.
 drop policy if exists "Users can view their own profile or permitted profiles." on public.profiles;
 drop policy if exists "Users can insert their own profile." on public.profiles;
 drop policy if exists "Users can update their own profile." on public.profiles;
 
 drop policy if exists "Anyone can join the waitlist." on public.waitlist;
+drop policy if exists "Anyone can view the active platform announcement." on public.platform_announcements;
 drop policy if exists "Users with waitlist:read can view waitlist." on public.waitlist;
 drop policy if exists "Users with waitlist:approve or waitlist:disapprove can update waitlist." on public.waitlist;
 drop policy if exists "Users with waitlist:approve or waitlist:disapprove can delete waitlist." on public.waitlist;
@@ -64,6 +74,7 @@ drop table if exists public.user_roles;
 drop table if exists public.role_permissions;
 drop table if exists public.profiles;
 drop table if exists public.waitlist;
+drop table if exists public.platform_announcements;
 drop table if exists public.roles;
 drop table if exists public.permissions;
 

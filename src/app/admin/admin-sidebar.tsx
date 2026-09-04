@@ -16,6 +16,7 @@ import {
   Sparkles,
   Sun,
   X,
+  Megaphone,
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
@@ -31,6 +32,7 @@ interface AdminSidebarProps {
 const navigation = [
   { href: "/admin", label: "Overview", icon: LayoutGrid },
   { href: "/admin/ai-limits", label: "AI Limits", icon: Sparkles },
+  { href: "/admin/broadcast", label: "Announcement", icon: Megaphone, superAdminOnly: true },
 ];
 
 function ThemeToggleButton({ collapsed }: { collapsed: boolean }) {
@@ -96,6 +98,7 @@ export default function AdminSidebar({ userEmail, userRole }: AdminSidebarProps)
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   const collapsed = isMobile ? false : isCollapsed;
+  const isSuperAdmin = userRole === "super_admin";
   const activePendingHref = pendingHref !== pathname ? pendingHref : null;
 
   const [prevPathname, setPrevPathname] = useState(pathname);
@@ -215,27 +218,29 @@ export default function AdminSidebar({ userEmail, userRole }: AdminSidebarProps)
             </p>
           )}
 
-          {navigation.map(({ href, label, icon: Icon }) => {
-            const isActive = href === "/admin" ? pathname === href : pathname.startsWith(href);
-            const isPending = activePendingHref === href;
+          {navigation
+            .filter((item) => !item.superAdminOnly || isSuperAdmin)
+            .map(({ href, label, icon: Icon }) => {
+              const isActive = href === "/admin" ? pathname === href : pathname.startsWith(href);
+              const isPending = activePendingHref === href;
 
-            return (
-              <Link
-                key={href}
-                href={href}
-                title={collapsed ? label : undefined}
-                onClick={() => navigate(href)}
-                className={`${linkBase} ${linkTone(isActive)} ${collapsed ? "justify-center px-0" : ""}`}
-              >
-                {isPending ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
-                ) : (
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                )}
-                {!collapsed && <span className="truncate">{label}</span>}
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  title={collapsed ? label : undefined}
+                  onClick={() => navigate(href)}
+                  className={`${linkBase} ${linkTone(isActive)} ${collapsed ? "justify-center px-0" : ""}`}
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  )}
+                  {!collapsed && <span className="truncate">{label}</span>}
+                </Link>
+              );
+            })}
 
           {!collapsed && (
             <p className="px-2.5 pt-5 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400 dark:text-neutral-500">

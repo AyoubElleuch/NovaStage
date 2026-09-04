@@ -10,7 +10,9 @@ export default async function AdminLayout({
 }) {
   const session = await requireAdmin("/login");
   const userEmail = session.user.email;
-  const userRole = session.profile?.role || "admin";
+  const userRole = session.roles.includes("super_admin")
+    ? "super_admin"
+    : session.profile?.role || session.roles[0] || "admin";
 
   return (
     <MobileNavProvider>
