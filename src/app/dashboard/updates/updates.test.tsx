@@ -7,7 +7,7 @@ describe("Updates Page — Beta v1.0.3 & Product Release Archive", () => {
     render(<UpdatesPage />);
     expect(screen.getByText("Beta v1.0.3")).toBeDefined();
     expect(
-      screen.getByText("Fast-Path Telemetry & Production Latency Optimization")
+      screen.getByText("Much Faster Canvas Speed & Slashed Ping Times")
     ).toBeDefined();
     expect(screen.getByText("Latest")).toBeDefined();
 
@@ -15,9 +15,9 @@ describe("Updates Page — Beta v1.0.3 & Product Release Archive", () => {
     expect(latestArticle).not.toBeNull();
     const listItems = latestArticle!.querySelectorAll("li");
     expect(listItems).toHaveLength(3);
-    expect(latestArticle?.textContent).toContain("Fast-Path Latency Probing");
-    expect(latestArticle?.textContent).toContain("Middleware Pipeline Streamlining");
-    expect(latestArticle?.textContent).toContain("Real-time Connection Quality");
+    expect(latestArticle?.textContent).toContain("Cut Connection Ping in Half");
+    expect(latestArticle?.textContent).toContain("Instant, Smoother Canvas Experience");
+    expect(latestArticle?.textContent).toContain("Faster Release Pipeline");
   });
 
   it("renders Beta v1.0.2, Beta v1.0.1, Beta v1.0.0 and Alpha releases down to Alpha v1.0.0", () => {

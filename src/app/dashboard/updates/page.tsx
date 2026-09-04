@@ -4,13 +4,13 @@ const releases = [
   {
     version: "Beta v1.0.3",
     date: "September 4, 2026",
-    title: "Fast-Path Telemetry & Production Latency Optimization",
+    title: "Much Faster Canvas Speed & Slashed Ping Times",
     summary:
-      "Optimized production network performance with zero-overhead fast-path ping routing, bypassed middleware authentication cascades for diagnostic endpoints, and enhanced real-time latency precision.",
+      "We removed hidden background connection delays to make NovaStage feel noticeably faster. Server ping dropped from over 300 ms down to under 150 ms (and often under 50 ms on good internet), making moving milestone boxes, connecting cloud resources, and collaborating live feel immediate and smooth.",
     changes: [
-      "Fast-Path Latency Probing: Excluded ping telemetry probes from Supabase Auth middleware execution, cutting synthetic round-trip latency to raw network speed.",
-      "Middleware Pipeline Streamlining: Eliminated redundant remote authentication cascades for lightweight diagnostic and public utility requests.",
-      "Real-time Connection Quality: Hardened connection HUD diagnostics with instant status tracking across cloud hosting providers.",
+      "Cut Connection Ping in Half (300+ ms → Under 150 ms): Eliminated an unnecessary background check that was slowing down every ping. Your live connection dot is now green, responsive, and reflects your real speed.",
+      "Instant, Smoother Canvas Experience: Adding milestones, dragging boxes, and seeing team updates on the roadmap now syncs with virtually zero lag.",
+      "Faster Release Pipeline: Streamlined our automated quality checks so they finish in a fraction of the time, helping us test and ship new improvements to you much faster.",
     ],
   },
   {

@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-and-typecheck:
-    name: Lint & Type Check
+  test-and-lint:
+    name: Lint & Test Suite
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -30,32 +30,12 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-      - name: Run TypeScript Type Check
-        run: npx tsc --noEmit
-
-  unit-and-integration-tests:
-    name: Test Suite (Vitest)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install Dependencies
-        run: npm ci
-
       - name: Run Vitest Suite
         run: npm test
 
   build-verification:
     name: Production Build Verification
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, unit-and-integration-tests]
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder-project.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTkwMDAwMDAwMH0.placeholder

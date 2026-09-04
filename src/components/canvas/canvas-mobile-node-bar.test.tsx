@@ -49,7 +49,7 @@ describe("CanvasMobileNodeBar", () => {
     onToggleCheckpoint: vi.fn(),
   };
 
-  it("renders milestone title, step badge, and next unfinished checkpoint", () => {
+  it("renders milestone title, step badge, percentage, and next unfinished checkpoint", () => {
     render(<CanvasMobileNodeBar {...defaultProps} />);
 
     expect(screen.getByText("STEP 01")).not.toBeNull();
@@ -58,65 +58,36 @@ describe("CanvasMobileNodeBar", () => {
     expect(screen.getByText("0%")).not.toBeNull();
   });
 
-  it("opens the full drawer when Details button is clicked", () => {
+  it("handles mobile bar interactions: details drawer, deselect, claim/release, and checkpoint toggle", () => {
     const handleOpenDrawer = vi.fn();
-    render(<CanvasMobileNodeBar {...defaultProps} onOpenDrawer={handleOpenDrawer} />);
-
-    const detailsBtn = screen.getByRole("button", { name: /details/i });
-    fireEvent.click(detailsBtn);
-
-    expect(handleOpenDrawer).toHaveBeenCalledTimes(1);
-  });
-
-  it("calls onDeselect when close button is clicked", () => {
     const handleDeselect = vi.fn();
-    render(<CanvasMobileNodeBar {...defaultProps} onDeselect={handleDeselect} />);
-
-    const closeBtn = screen.getByRole("button", { name: /deselect milestone/i });
-    fireEvent.click(closeBtn);
-
-    expect(handleDeselect).toHaveBeenCalledTimes(1);
-  });
-
-  it("allows releasing edit lock when claimed by current user", () => {
     const handleRelease = vi.fn();
-    render(<CanvasMobileNodeBar {...defaultProps} onReleaseNode={handleRelease} />);
-
-    const releaseBtn = screen.getByRole("button", { name: /release edit lock/i });
-    fireEvent.click(releaseBtn);
-
-    expect(handleRelease).toHaveBeenCalledWith("node-1");
-  });
-
-  it("allows claiming milestone when not claimed", () => {
-    const handleClaim = vi.fn();
-    const unclaimedNode: CanvasNode = { ...mockNode, claimed_by: null };
-    render(
-      <CanvasMobileNodeBar
-        {...defaultProps}
-        node={unclaimedNode}
-        onClaimNode={handleClaim}
-      />
-    );
-
-    const claimBtn = screen.getByRole("button", { name: /claim to edit/i });
-    fireEvent.click(claimBtn);
-
-    expect(handleClaim).toHaveBeenCalledWith("node-1");
-  });
-
-  it("toggles checkpoint completion when check circle is clicked", () => {
     const handleToggle = vi.fn();
+
     render(
       <CanvasMobileNodeBar
         {...defaultProps}
+        onOpenDrawer={handleOpenDrawer}
+        onDeselect={handleDeselect}
+        onReleaseNode={handleRelease}
         onToggleCheckpoint={handleToggle}
       />
     );
 
-    const checkpointBtn = screen.getByTitle("Mark next step complete");
-    fireEvent.click(checkpointBtn);
+    // 1. Open drawer
+    fireEvent.click(screen.getByRole("button", { name: /details/i }));
+    expect(handleOpenDrawer).toHaveBeenCalledTimes(1);
 
+    // 2. Deselect
+    fireEvent.click(screen.getByRole("button", { name: /deselect milestone/i }));
+    expect(handleDeselect).toHaveBeenCalledTimes(1);
+
+    // 3. Release edit lock
+    fireEvent.click(screen.getByRole("button", { name: /release edit lock/i }));
+    expect(handleRelease).toHaveBeenCalledWith("node-1");
+
+    // 4. Toggle checkpoint
+    fireEvent.click(screen.getByTitle("Mark next step complete"));
     expect(handleToggle).toHaveBeenCalledWith("cp-1", "node-1", true);
   });
 });

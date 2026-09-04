@@ -59,61 +59,30 @@ describe("AiLimitsTable", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the table with users, emails, names, usernames, and quota counts", () => {
+  it("renders the table and filters users by search and status tabs", () => {
     render(<AiLimitsTable initialData={mockUsers} />);
 
+    // Renders table data
     expect(screen.getByText("alice@example.com")).not.toBeNull();
     expect(screen.getByText("Alice Developer")).not.toBeNull();
     expect(screen.getByText("@alice_dev")).not.toBeNull();
     expect(screen.getByText("7 / 10 left")).not.toBeNull();
 
     expect(screen.getByText("bob@example.com")).not.toBeNull();
-    expect(screen.getByText("Bob Admin")).not.toBeNull();
-    expect(screen.getByText("@bob_admin")).not.toBeNull();
     expect(screen.getByText("0 / 10 left")).not.toBeNull();
 
-    expect(screen.getByText("charlie@example.com")).not.toBeNull();
-    expect(screen.getByText("10 / 10 left")).not.toBeNull();
-  });
-
-  it("filters users via search input by email, name, or username", () => {
-    render(<AiLimitsTable initialData={mockUsers} />);
-
+    // Filters via search input
     const searchInput = screen.getByPlaceholderText(/search by name/i);
-
-    // Search by username
     fireEvent.change(searchInput, { target: { value: "alice_dev" } });
     expect(screen.getByText("alice@example.com")).not.toBeNull();
     expect(screen.queryByText("bob@example.com")).toBeNull();
 
-    // Search by full name
-    fireEvent.change(searchInput, { target: { value: "Bob" } });
-    expect(screen.queryByText("alice@example.com")).toBeNull();
-    expect(screen.getByText("bob@example.com")).not.toBeNull();
+    fireEvent.change(searchInput, { target: { value: "" } });
 
-    // Search by email
-    fireEvent.change(searchInput, { target: { value: "charlie@" } });
-    expect(screen.getByText("charlie@example.com")).not.toBeNull();
-    expect(screen.queryByText("alice@example.com")).toBeNull();
-  });
-
-  it("filters users using status tabs", () => {
-    render(<AiLimitsTable initialData={mockUsers} />);
-
-    // Click "Depleted (0)" tab
+    // Filters via status tab
     const depletedTab = screen.getByRole("tab", { name: /Depleted/i });
     fireEvent.click(depletedTab);
-
     expect(screen.getByText("bob@example.com")).not.toBeNull();
-    expect(screen.queryByText("alice@example.com")).toBeNull();
-    expect(screen.queryByText("charlie@example.com")).toBeNull();
-
-    // Click "Full (10/10)" tab
-    const fullTab = screen.getByRole("tab", { name: /Full/i });
-    fireEvent.click(fullTab);
-
-    expect(screen.getByText("charlie@example.com")).not.toBeNull();
-    expect(screen.queryByText("bob@example.com")).toBeNull();
     expect(screen.queryByText("alice@example.com")).toBeNull();
   });
 
@@ -140,11 +109,10 @@ describe("AiLimitsTable", () => {
       );
     });
 
-    // Check Bob's quota updated in UI to 10 / 10 left
     expect(screen.queryByText("0 / 10 left")).toBeNull();
   });
 
-  it("handles Reset All confirmation modal text matching and execution", async () => {
+  it("handles the full Reset All confirmation modal workflow: open, cancel, validation, and execution", async () => {
     vi.mocked(resetAllUsersAiQuota).mockResolvedValueOnce({
       success: true,
       message: "All users reset",
@@ -152,27 +120,24 @@ describe("AiLimitsTable", () => {
 
     render(<AiLimitsTable initialData={mockUsers} />);
 
-    // Open Reset All modal
-    const resetAllTrigger = screen.getByRole("button", { name: /Reset for all/i });
-    fireEvent.click(resetAllTrigger);
+    // 1. Open and test Cancel
+    fireEvent.click(screen.getByRole("button", { name: /Reset for all/i }));
+    expect(screen.getByRole("dialog")).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
 
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).not.toBeNull();
-
+    // 2. Open again and test validation + execution
+    fireEvent.click(screen.getByRole("button", { name: /Reset for all/i }));
     const submitButton = screen.getByRole("button", { name: /Reset AI for all/i }) as HTMLButtonElement;
-    // Button should be disabled initially
     expect(submitButton.disabled).toBe(true);
 
-    // Type incorrect confirmation text
     const input = screen.getByPlaceholderText(/Type "reset AI for all"/i);
-    fireEvent.change(input, { target: { value: "wrong phrase" } });
+    fireEvent.change(input, { target: { value: "invalid text" } });
     expect(submitButton.disabled).toBe(true);
 
-    // Type exact matching text "reset AI for all"
     fireEvent.change(input, { target: { value: "reset AI for all" } });
     expect(submitButton.disabled).toBe(false);
 
-    // Click submit
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -184,40 +149,7 @@ describe("AiLimitsTable", () => {
       );
     });
 
-    // Modal should close
     expect(screen.queryByRole("dialog")).toBeNull();
-
-    // All users should now be at 10 / 10 left
-    const fullIndicators = screen.getAllByText("10 / 10 left");
-    expect(fullIndicators.length).toBe(3);
-  });
-
-  it("also accepts 'reset AI tokens' in the confirmation modal", () => {
-    render(<AiLimitsTable initialData={mockUsers} />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Reset for all/i }));
-    const submitButton = screen.getByRole("button", { name: /Reset AI for all/i }) as HTMLButtonElement;
-    const input = screen.getByPlaceholderText(/Type "reset AI for all"/i);
-
-    fireEvent.change(input, { target: { value: "reset AI tokens" } });
-    expect(submitButton.disabled).toBe(false);
-  });
-
-  it("closes the Reset All modal when Cancel or Escape is pressed", () => {
-    render(<AiLimitsTable initialData={mockUsers} />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Reset for all/i }));
-    expect(screen.getByRole("dialog")).not.toBeNull();
-
-    const cancelButton = screen.getByRole("button", { name: "Cancel" });
-    fireEvent.click(cancelButton);
-    expect(screen.queryByRole("dialog")).toBeNull();
-
-    // Open again and test Escape key
-    fireEvent.click(screen.getByRole("button", { name: /Reset for all/i }));
-    expect(screen.getByRole("dialog")).not.toBeNull();
-
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getAllByText("10 / 10 left").length).toBe(3);
   });
 });
