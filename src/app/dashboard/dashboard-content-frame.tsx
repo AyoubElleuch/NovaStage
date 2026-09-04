@@ -17,7 +17,7 @@ export default function DashboardContentFrame({
 
   if (isProjectCanvas) {
     return (
-      <main className="relative min-w-0 flex-1 h-dvh overflow-hidden bg-[#f7f6f2] dark:bg-[#10151f]">
+      <main className="relative min-h-0 min-w-0 flex-1 h-full overflow-hidden bg-[#f7f6f2] dark:bg-[#10151f]">
         {children}
       </main>
     );
@@ -33,7 +33,7 @@ export default function DashboardContentFrame({
       : "Workspace";
 
   return (
-    <main className="min-w-0 flex-1 overflow-y-auto flex flex-col">
+    <main className="min-h-0 min-w-0 flex-1 overflow-y-auto flex flex-col">
       {/* Mobile Top App Bar */}
       <header className="sticky top-0 z-20 flex min-h-16 w-full items-center justify-between border-b border-neutral-200/80 bg-white/95 px-4.5 py-3.5 backdrop-blur-md md:hidden dark:border-[#263143] dark:bg-[#151c27]/95">
         <div className="flex items-center gap-3">

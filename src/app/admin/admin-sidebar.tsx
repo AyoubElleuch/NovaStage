@@ -143,13 +143,13 @@ export default function AdminSidebar({ userEmail, userRole }: AdminSidebarProps)
     <>
     {isMobile && isMobileOpen && (
       <div
-        className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs md:hidden dark:bg-black/60"
+        className="fixed inset-x-0 bottom-0 top-(--announcement-height) z-40 bg-neutral-950/40 backdrop-blur-xs md:hidden dark:bg-black/60"
         onClick={() => setIsMobileOpen(false)}
         aria-hidden="true"
       />
     )}
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex h-dvh shrink-0 flex-col border-r border-neutral-200 bg-white shadow-[8px_0_30px_rgba(0,0,0,0.06)] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:relative md:z-30 md:shadow-none dark:border-[#283548] dark:bg-[#161d27] dark:shadow-[8px_0_30px_rgba(0,0,0,0.3)] ${
+      className={`fixed bottom-0 left-0 top-(--announcement-height) z-50 flex min-h-0 h-[calc(100dvh-var(--announcement-height))] shrink-0 flex-col border-r border-neutral-200 bg-white shadow-[8px_0_30px_rgba(0,0,0,0.06)] transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:relative md:top-0 md:z-30 md:h-full md:shadow-none dark:border-[#283548] dark:bg-[#161d27] dark:shadow-[8px_0_30px_rgba(0,0,0,0.3)] ${
         isMobile
           ? `w-72 max-w-[85vw] ${isMobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"}`
           : collapsed

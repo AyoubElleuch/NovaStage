@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Info, OctagonAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -37,6 +37,28 @@ export default function PlatformAnnouncementBanner({
   initialAnnouncement,
 }: PlatformAnnouncementBannerProps) {
   const [announcement, setAnnouncement] = useState(initialAnnouncement);
+  const bannerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updateAnnouncementHeight = () => {
+      const height = bannerRef.current?.getBoundingClientRect().height || 0;
+      document.documentElement.style.setProperty("--announcement-height", `${height}px`);
+    };
+
+    updateAnnouncementHeight();
+    if (!bannerRef.current) {
+      return () => document.documentElement.style.setProperty("--announcement-height", "0px");
+    }
+
+    if (typeof ResizeObserver !== "undefined") {
+      const resizeObserver = new ResizeObserver(updateAnnouncementHeight);
+      resizeObserver.observe(bannerRef.current);
+      return () => resizeObserver.disconnect();
+    }
+
+    window.addEventListener("resize", updateAnnouncementHeight);
+    return () => window.removeEventListener("resize", updateAnnouncementHeight);
+  }, [announcement]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -86,6 +108,7 @@ export default function PlatformAnnouncementBanner({
 
   return (
     <div
+      ref={bannerRef}
       className={`w-full border-b px-4 py-2.5 ${style.container}`}
       role="status"
       aria-live="polite"

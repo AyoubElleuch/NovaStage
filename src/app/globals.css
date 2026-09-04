@@ -134,6 +134,7 @@
 :root {
   --sidebar-width: 240px;
   --canvas-dot: rgba(160, 150, 140, 0.18);
+  --announcement-height: 0px;
 }
 
 .dark {
