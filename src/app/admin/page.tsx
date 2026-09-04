@@ -1,45 +1,65 @@
-import { getWaitlistEntries } from "./actions";
+import { getAdminOverviewUsers } from "./actions";
+import OverviewUsersTable from "./overview-users-table";
 import Link from "next/link";
 import {
-  CheckCircle2,
+  AlertCircle,
   Clock3,
+  Flame,
   Sparkles,
+  UserPlus,
   UsersRound,
-  XCircle,
 } from "lucide-react";
 
 export default async function AdminOverviewPage() {
-  const { data: waitlist = [] } = await getWaitlistEntries();
+  const { data: users = [], error } = await getAdminOverviewUsers();
 
-  const total = waitlist.length;
-  const pending = waitlist.filter((w) => w.status === "pending").length;
-  const approved = waitlist.filter((w) => w.status === "approved").length;
-  const disapproved = waitlist.filter((w) => w.status === "disapproved").length;
+  const now = Date.now();
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+  const totalUsers = users.length;
+  const activeRecently = users.filter((u) => {
+    if (!u.last_sign_in_at) return false;
+    const diff = now - new Date(u.last_sign_in_at).getTime();
+    return diff >= 0 && diff <= sevenDaysMs;
+  }).length;
+
+  const newThisMonth = users.filter((u) => {
+    if (!u.created_at) return false;
+    const diff = now - new Date(u.created_at).getTime();
+    return diff >= 0 && diff <= thirtyDaysMs;
+  }).length;
+
+  const neverSignedIn = users.filter((u) => !u.last_sign_in_at).length;
 
   const statCards = [
     {
-      label: "Total registrations",
-      value: total,
+      label: "Total users",
+      value: totalUsers,
+      subtext: "Signed up accounts",
       icon: UsersRound,
       iconBg: "bg-neutral-100 text-neutral-700 dark:bg-[#1e2634] dark:text-neutral-300",
     },
     {
-      label: "Needs review",
-      value: pending,
-      icon: Clock3,
-      iconBg: "bg-amber-50 text-amber-600 border border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60",
-    },
-    {
-      label: "Approved",
-      value: approved,
-      icon: CheckCircle2,
+      label: "Active recently",
+      value: activeRecently,
+      subtext: "Signed in past 7 days",
+      icon: Flame,
       iconBg: "bg-emerald-50 text-emerald-600 border border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60",
     },
     {
-      label: "Disapproved",
-      value: disapproved,
-      icon: XCircle,
-      iconBg: "bg-neutral-100 text-neutral-500 border border-neutral-200/60 dark:bg-[#1e2634] dark:text-neutral-400 dark:border-[#283548]",
+      label: "New signups",
+      value: newThisMonth,
+      subtext: "Joined past 30 days",
+      icon: UserPlus,
+      iconBg: "bg-sky-50 text-sky-600 border border-sky-200/60 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-800/60",
+    },
+    {
+      label: "Never signed in",
+      value: neverSignedIn,
+      subtext: "Awaiting first session",
+      icon: Clock3,
+      iconBg: "bg-amber-50 text-amber-600 border border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60",
     },
   ];
 
@@ -54,7 +74,7 @@ export default async function AdminOverviewPage() {
             Good morning, admin.
           </h1>
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-            A clear view of access requests across NovaStage.
+            Real-time overview of registered users, platform activity, and access.
           </p>
         </div>
         <div className="flex flex-wrap gap-2.5">
@@ -68,104 +88,41 @@ export default async function AdminOverviewPage() {
         </div>
       </header>
 
-      <section
-        aria-label="Waitlist summary"
-        className="dash-enter grid gap-4 grid-cols-2 lg:grid-cols-4"
-        style={{ "--dash-delay": "90ms" } as React.CSSProperties}
-      >
-        {statCards.map(({ label, value, icon: Icon, iconBg }) => (
-          <div
-            key={label}
-            className="rounded-xl border border-neutral-200 bg-white p-5 transition-all duration-150 hover:border-neutral-300 hover:shadow-xs dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{label}</span>
-              <span className={`grid h-8 w-8 place-items-center rounded-lg ${iconBg}`}>
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </span>
-            </div>
-            <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">{value}</p>
-          </div>
-        ))}
-      </section>
-
-      <section
-        className="dash-enter rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-xs dark:border-[#283548] dark:bg-[#161d27]"
-        style={{ "--dash-delay": "160ms" } as React.CSSProperties}
-      >
-        <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#283548] px-6 py-4">
+      {error ? (
+        <div className="dash-enter flex items-start gap-3 rounded-xl border border-red-200 bg-red-50/50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">
-              Latest activity
-            </p>
-            <h2 className="mt-0.5 text-sm font-semibold text-neutral-900 dark:text-white">Recent registrations</h2>
+            <p className="font-semibold text-red-900 dark:text-red-200">Failed to load platform users</p>
+            <p className="mt-0.5 text-xs text-red-700 dark:text-red-400">{error}</p>
           </div>
         </div>
-
-        <div>
-          {waitlist.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-neutral-100 text-neutral-400 dark:bg-[#1e2634] dark:text-neutral-500">
-                <UsersRound className="h-5 w-5" />
-              </span>
-              <p className="mt-3 text-sm font-semibold text-neutral-900 dark:text-white">No registrations recorded yet</p>
-              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Waitlist applications will appear here as users sign up.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-neutral-100 dark:divide-[#283548]">
-              {waitlist.slice(0, 5).map((entry) => (
-                <div
-                  key={entry.email}
-                  className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-neutral-50/60 dark:hover:bg-[#121721]/60"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-semibold text-white dark:bg-emerald-600">
-                      {(entry.email?.[0] || "U").toUpperCase()}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-neutral-900 dark:text-white">{entry.email}</p>
-                      <p className="text-xs text-neutral-400 dark:text-neutral-500 capitalize">Via {entry.provider}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        entry.status === "approved"
-                          ? "border border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-400"
-                          : entry.status === "pending"
-                          ? "border border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-400"
-                          : "border border-neutral-200 bg-neutral-100 text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-400"
-                      }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          entry.status === "approved"
-                            ? "bg-emerald-500"
-                            : entry.status === "pending"
-                            ? "bg-amber-500"
-                            : "bg-neutral-400"
-                        }`}
-                      />
-                      <span className="capitalize">{entry.status}</span>
-                    </span>
-
-                    <time className="text-xs text-neutral-400 dark:text-neutral-500 min-w-[70px] text-right">
-                      {entry.created_at
-                        ? new Date(entry.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })
-                        : "—"}
-                    </time>
-                  </div>
+      ) : (
+        <>
+          <section
+            aria-label="Platform users summary"
+            className="dash-enter grid gap-4 grid-cols-2 lg:grid-cols-4"
+            style={{ "--dash-delay": "90ms" } as React.CSSProperties}
+          >
+            {statCards.map(({ label, value, subtext, icon: Icon, iconBg }) => (
+              <div
+                key={label}
+                className="rounded-xl border border-neutral-200 bg-white p-5 transition-all duration-150 hover:border-neutral-300 hover:shadow-xs dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{label}</span>
+                  <span className={`grid h-8 w-8 place-items-center rounded-lg ${iconBg}`}>
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+                <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">{value}</p>
+                <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">{subtext}</p>
+              </div>
+            ))}
+          </section>
+
+          <OverviewUsersTable initialData={users} />
+        </>
+      )}
     </div>
   );
 }

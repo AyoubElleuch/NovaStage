@@ -199,6 +199,96 @@ export async function disapproveWaitlistEntry(email: string): Promise<AdminActio
   }
 }
 
+export interface AdminOverviewUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  role: string;
+  provider: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+}
+
+/**
+ * Fetches all registered users for the admin overview dashboard,
+ * combining profile details with authentication records and last sign-in timestamps.
+ */
+export async function getAdminOverviewUsers(): Promise<{ data?: AdminOverviewUser[]; error?: string }> {
+  try {
+    await assertPermission("users:read");
+    const adminClient = createAdminClient();
+
+    // 1. Fetch auth users from Supabase Auth admin API (contains last_sign_in_at)
+    const { data: authUsersData, error: authError } = await adminClient.auth.admin.listUsers({
+      perPage: 1000,
+    });
+
+    if (authError) {
+      return { error: authError.message };
+    }
+
+    // 2. Fetch profiles to get usernames, roles, and avatar URLs
+    const { data: profiles, error: profileError } = await adminClient
+      .from("profiles")
+      .select("id, email, full_name, username, avatar_url, role, created_at");
+
+    if (profileError) {
+      return { error: profileError.message };
+    }
+
+    const profileMap = new Map<
+      string,
+      {
+        id: string;
+        email: string;
+        full_name: string | null;
+        username: string | null;
+        avatar_url: string | null;
+        role: string;
+        created_at: string;
+      }
+    >();
+
+    for (const p of profiles || []) {
+      profileMap.set(p.id, p);
+      if (p.email) {
+        profileMap.set(p.email.toLowerCase(), p);
+      }
+    }
+
+    // 3. Map auth users to AdminOverviewUser
+    const users: AdminOverviewUser[] = (authUsersData.users || []).map((u) => {
+      const profile = profileMap.get(u.id) || (u.email ? profileMap.get(u.email.toLowerCase()) : undefined);
+      const email = u.email || profile?.email || "Unknown";
+      const provider =
+        (u.app_metadata?.provider as string) ||
+        (Array.isArray(u.app_metadata?.providers) && u.app_metadata.providers[0]) ||
+        "email";
+
+      return {
+        id: u.id,
+        email,
+        full_name: profile?.full_name || (u.user_metadata?.full_name as string) || null,
+        username: profile?.username || null,
+        avatar_url: profile?.avatar_url || (u.user_metadata?.avatar_url as string) || null,
+        role: profile?.role || (u.user_metadata?.role as string) || "developer",
+        provider,
+        created_at: u.created_at || profile?.created_at || new Date().toISOString(),
+        last_sign_in_at: u.last_sign_in_at || null,
+      };
+    });
+
+    // Sort by created_at descending (newest signups first)
+    users.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    return { data: users };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Failed to load registered users." };
+  }
+}
+
 export interface UserAiLimitRecord {
   id: string;
   email: string;
