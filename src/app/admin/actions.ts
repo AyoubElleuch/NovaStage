@@ -211,11 +211,22 @@ export interface AdminOverviewUser {
   last_sign_in_at: string | null;
 }
 
+export interface AdminOverviewStats {
+  totalUsers: number;
+  activeRecently: number;
+  newThisMonth: number;
+  neverSignedIn: number;
+}
+
 /**
  * Fetches all registered users for the admin overview dashboard,
  * combining profile details with authentication records and last sign-in timestamps.
  */
-export async function getAdminOverviewUsers(): Promise<{ data?: AdminOverviewUser[]; error?: string }> {
+export async function getAdminOverviewUsers(): Promise<{
+  data?: AdminOverviewUser[];
+  stats?: AdminOverviewStats;
+  error?: string;
+}> {
   try {
     await assertPermission("users:read");
     const adminClient = createAdminClient();
@@ -283,7 +294,34 @@ export async function getAdminOverviewUsers(): Promise<{ data?: AdminOverviewUse
     // Sort by created_at descending (newest signups first)
     users.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    return { data: users };
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+    const totalUsers = users.length;
+    const activeRecently = users.filter((u) => {
+      if (!u.last_sign_in_at) return false;
+      const diff = now - new Date(u.last_sign_in_at).getTime();
+      return diff >= 0 && diff <= sevenDaysMs;
+    }).length;
+
+    const newThisMonth = users.filter((u) => {
+      if (!u.created_at) return false;
+      const diff = now - new Date(u.created_at).getTime();
+      return diff >= 0 && diff <= thirtyDaysMs;
+    }).length;
+
+    const neverSignedIn = users.filter((u) => !u.last_sign_in_at).length;
+
+    return {
+      data: users,
+      stats: {
+        totalUsers,
+        activeRecently,
+        newThisMonth,
+        neverSignedIn,
+      },
+    };
   } catch (err: unknown) {
     return { error: err instanceof Error ? err.message : "Failed to load registered users." };
   }

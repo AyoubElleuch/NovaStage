@@ -56,7 +56,7 @@ export default async function LoginPage() {
         </div>
 
         <div className="flex items-center justify-center gap-3 text-xs pt-4">
-          <span className="font-semibold text-neutral-900 dark:text-white">Beta v1.0.1</span>
+          <span className="font-semibold text-neutral-900 dark:text-white">Beta v1.0.3</span>
           <span className="text-neutral-300 dark:text-neutral-600">&bull;</span>
           <TermsOfServiceTrigger />
           <span className="text-neutral-300 dark:text-neutral-600">&bull;</span>

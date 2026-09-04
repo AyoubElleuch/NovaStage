@@ -2,6 +2,18 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
+    version: "Beta v1.0.3",
+    date: "September 4, 2026",
+    title: "Fast-Path Telemetry & Production Latency Optimization",
+    summary:
+      "Optimized production network performance with zero-overhead fast-path ping routing, bypassed middleware authentication cascades for diagnostic endpoints, and enhanced real-time latency precision.",
+    changes: [
+      "Fast-Path Latency Probing: Excluded ping telemetry probes from Supabase Auth middleware execution, cutting synthetic round-trip latency to raw network speed.",
+      "Middleware Pipeline Streamlining: Eliminated redundant remote authentication cascades for lightweight diagnostic and public utility requests.",
+      "Real-time Connection Quality: Hardened connection HUD diagnostics with instant status tracking across cloud hosting providers.",
+    ],
+  },
+  {
     version: "Beta v1.0.2",
     date: "September 4, 2026",
     title: "AWS Architecture Decoupling & Deployment Lifecycle",

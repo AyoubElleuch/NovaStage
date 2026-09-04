@@ -13,7 +13,7 @@ export async function updateSession(request: NextRequest) {
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder-project");
 
-  if (isPlaceholder) {
+  if (isPlaceholder || request.nextUrl.pathname === "/api/ping") {
     return supabaseResponse;
   }
 

@@ -11,26 +11,12 @@ import {
 } from "lucide-react";
 
 export default async function AdminOverviewPage() {
-  const { data: users = [], error } = await getAdminOverviewUsers();
+  const { data: users = [], stats, error } = await getAdminOverviewUsers();
 
-  const now = Date.now();
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-
-  const totalUsers = users.length;
-  const activeRecently = users.filter((u) => {
-    if (!u.last_sign_in_at) return false;
-    const diff = now - new Date(u.last_sign_in_at).getTime();
-    return diff >= 0 && diff <= sevenDaysMs;
-  }).length;
-
-  const newThisMonth = users.filter((u) => {
-    if (!u.created_at) return false;
-    const diff = now - new Date(u.created_at).getTime();
-    return diff >= 0 && diff <= thirtyDaysMs;
-  }).length;
-
-  const neverSignedIn = users.filter((u) => !u.last_sign_in_at).length;
+  const totalUsers = stats?.totalUsers ?? users.length;
+  const activeRecently = stats?.activeRecently ?? 0;
+  const newThisMonth = stats?.newThisMonth ?? 0;
+  const neverSignedIn = stats?.neverSignedIn ?? 0;
 
   const statCards = [
     {
