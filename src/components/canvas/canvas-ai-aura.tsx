@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 
 interface CanvasAIAuraProps {
   generatingUserName?: string | null;
+  isAssistantOpen?: boolean;
   isExiting?: boolean;
   onExitComplete?: () => void;
 }
@@ -60,6 +61,7 @@ const AURA_BLOBS = [
 
 export default function CanvasAIAura({
   generatingUserName,
+  isAssistantOpen = false,
   isExiting = false,
   onExitComplete,
 }: CanvasAIAuraProps) {
@@ -184,9 +186,12 @@ export default function CanvasAIAura({
         ))}
 
         {/* Premium center status pill */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div
+          className={`${isAssistantOpen ? "fixed left-1/2 z-20 -translate-x-1/2" : "absolute inset-0 flex items-center justify-center"} pointer-events-none`}
+          style={isAssistantOpen ? { bottom: "var(--canvas-ai-notification-offset, 50%)" } : undefined}
+        >
           <div
-            className={`flex items-center gap-2.5 rounded-2xl border border-white/30 bg-white/80 px-5 py-2.5 shadow-2xl backdrop-blur-xl transition-all duration-500 ease-out ${
+            className={`flex items-center gap-2.5 rounded-2xl border border-white/40 bg-white/90 px-5 py-2.5 shadow-2xl backdrop-blur-xl transition-all duration-500 ease-out dark:border-[#384961] dark:bg-[#161d27]/95 ${
               phase === "entering"
                 ? "opacity-0 scale-90 translate-y-2"
                 : phase === "exiting"
@@ -209,13 +214,13 @@ export default function CanvasAIAura({
             </span>
             <div className="flex flex-col">
               <span
-                className="text-xs font-semibold text-neutral-900 tracking-tight"
+                className="text-xs font-semibold tracking-tight text-neutral-900 dark:text-white"
                 style={{ animation: "auraPulseLabel 2s ease-in-out infinite" }}
               >
                 AI is generating the workflow…
               </span>
               {generatingUserName && (
-                <span className="text-[10px] text-neutral-500 font-medium">
+                <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
                   Initiated by {generatingUserName}
                 </span>
               )}

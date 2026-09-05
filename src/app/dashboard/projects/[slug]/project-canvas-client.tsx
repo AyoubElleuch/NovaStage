@@ -2427,6 +2427,7 @@ export default function ProjectCanvasClient({
       {isAIGenerating && (
         <CanvasAIAura
           generatingUserName={aiGeneratingUser}
+          isAssistantOpen={isAIAssistantOpen}
           isExiting={isAuraExiting}
           onExitComplete={() => {
             setIsAIGenerating(false);
