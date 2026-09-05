@@ -56,7 +56,7 @@ export default async function SignUpPage() {
         </div>
 
         <div className="flex items-center justify-center gap-3 text-xs pt-4">
-          <span className="font-semibold text-neutral-900 dark:text-white">Beta v1.0.4</span>
+          <span className="font-semibold text-neutral-900 dark:text-white">Beta v1.0.5</span>
           <span className="text-neutral-300 dark:text-neutral-600">&bull;</span>
           <TermsOfServiceTrigger />
           <span className="text-neutral-300 dark:text-neutral-600">&bull;</span>

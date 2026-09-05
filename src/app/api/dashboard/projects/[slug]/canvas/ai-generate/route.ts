@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getProjectBySlug, isProjectMember } from "@/lib/projects";
 import { getAuthenticatedProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { executeAIPipeline } from "@/lib/ai/pipeline";
 import { CanvasAIContext } from "@/lib/ai/types";
 import { getProjectCanvasData, applyAIWorkflowResult, applyAWSServiceNodes } from "@/lib/canvas/server";
@@ -77,17 +78,101 @@ export async function POST(
     // Set lock tracking for cleanup in finally block
     projectToUnlock = project.id;
 
-    // 2. Atomically consume user AI quota (hard 10 requests limit enforced at DB level)
-    const { data: quotaResult, error: quotaErr } = await supabase.rpc(
+    // 2. Resolve user's subscription tier and dynamic quota limit
+    const userPlan =
+      (session.profile?.plan as string) ||
+      (session.user.user_metadata?.plan as string) ||
+      "free";
+
+    const maxAiRequests =
+      userPlan === "enterprise"
+        ? 999999
+        : userPlan === "pro"
+        ? 50
+        : userPlan === "plus"
+        ? 30
+        : 10;
+
+    let quotaResult: {
+      success: boolean;
+      error?: string;
+      requests_used?: number;
+      requests_remaining?: number;
+    } | null = null;
+
+    const { data: rpcData, error: quotaErr } = await supabase.rpc(
       "consume_user_ai_quota"
     );
 
-    if (quotaErr) {
-      console.error("Quota RPC error:", quotaErr);
+    if (!quotaErr && rpcData?.success) {
+      quotaResult = rpcData;
+    } else if (!quotaErr && rpcData && !rpcData.success && (rpcData.requests_used ?? 10) >= maxAiRequests) {
       return NextResponse.json(
-        { error: "Failed to verify AI request quota" },
-        { status: 500 }
+        {
+          error: "QUOTA_EXCEEDED",
+          message:
+            rpcData.error ||
+            `You have reached your limit of ${maxAiRequests} AI workflow requests.`,
+          requests_used: rpcData.requests_used ?? maxAiRequests,
+          requests_remaining: 0,
+          max_requests: maxAiRequests,
+        },
+        { status: 403 }
       );
+    } else {
+      // Robust tier-aware quota check: check profiles count directly
+      try {
+        const adminClient = createAdminClient();
+        const { data: currentProfile } = await adminClient
+          .from("profiles")
+          .select("ai_requests_count")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        const currentUsed = currentProfile?.ai_requests_count ?? 0;
+        if (currentUsed >= maxAiRequests) {
+          return NextResponse.json(
+            {
+              error: "QUOTA_EXCEEDED",
+              message: `You have reached your limit of ${maxAiRequests} AI workflow requests.`,
+              requests_used: currentUsed,
+              requests_remaining: 0,
+              max_requests: maxAiRequests,
+            },
+            { status: 403 }
+          );
+        }
+
+        await adminClient
+          .from("profiles")
+          .update({
+            ai_requests_count: currentUsed + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", session.user.id);
+
+        quotaResult = {
+          success: true,
+          requests_used: currentUsed + 1,
+          requests_remaining: Math.max(0, maxAiRequests - (currentUsed + 1)),
+        };
+      } catch (adminErr) {
+        if (!quotaErr && rpcData && !rpcData.success) {
+          return NextResponse.json(
+            {
+              error: "QUOTA_EXCEEDED",
+              message:
+                rpcData.error ||
+                `You have reached your limit of ${maxAiRequests} AI workflow requests.`,
+              requests_used: rpcData.requests_used ?? maxAiRequests,
+              requests_remaining: 0,
+              max_requests: maxAiRequests,
+            },
+            { status: 403 }
+          );
+        }
+        throw adminErr;
+      }
     }
 
     if (quotaResult && !quotaResult.success) {
@@ -96,9 +181,10 @@ export async function POST(
           error: "QUOTA_EXCEEDED",
           message:
             quotaResult.error ||
-            "You have reached your limit of 10 AI workflow requests.",
-          requests_used: quotaResult.requests_used ?? 10,
+            `You have reached your limit of ${maxAiRequests} AI workflow requests.`,
+          requests_used: quotaResult.requests_used ?? maxAiRequests,
           requests_remaining: quotaResult.requests_remaining ?? 0,
+          max_requests: maxAiRequests,
         },
         { status: 403 }
       );
@@ -133,7 +219,7 @@ export async function POST(
     // 4. Call Multi-Phase AI Pipeline to generate or update structured DAG workflow
     let workflowResult;
     try {
-      workflowResult = await executeAIPipeline(prompt, mode, aiContext);
+      workflowResult = await executeAIPipeline(prompt, mode, aiContext, { plan: userPlan });
     } catch (aiErr: unknown) {
       console.error("Gemini AI Processing failed:", aiErr);
 
@@ -193,8 +279,8 @@ export async function POST(
       summary: workflowResult.summary,
       nodes: finalNodes,
       edges: finalEdges,
-      requests_used: quotaResult.requests_used,
-      requests_remaining: quotaResult.requests_remaining,
+      requests_used: quotaResult?.requests_used ?? 1,
+      requests_remaining: quotaResult?.requests_remaining ?? 0,
     });
   } catch (err: unknown) {
     const errorMsg =

@@ -23,6 +23,8 @@ interface CanvasAIAssistantProps {
   onClose: () => void;
   portalContainer?: HTMLElement | null;
   requestsRemaining?: number;
+  maxRequests?: number;
+  userPlan?: string;
   onSubmitPrompt?: (prompt: string, mode?: string) => Promise<void> | void;
 }
 
@@ -155,6 +157,8 @@ export default function CanvasAIAssistant({
   onClose,
   portalContainer,
   requestsRemaining = 10,
+  maxRequests = 10,
+  userPlan = "free",
   onSubmitPrompt,
 }: CanvasAIAssistantProps) {
   const [prompt, setPrompt] = useState("");
@@ -417,13 +421,22 @@ export default function CanvasAIAssistant({
                   Generate or Update Workflow with AI
                 </h3>
                 <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
                     isQuotaDepleted
                       ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/50"
                       : "bg-neutral-100 text-neutral-600 border-neutral-200/80 dark:bg-[#1e2634] dark:text-neutral-300 dark:border-[#283548]"
                   }`}
                 >
-                  {isQuotaDepleted ? "0 / 10 remaining" : `${requestsRemaining} of 10 requests left`}
+                  <span>
+                    {maxRequests >= 999
+                      ? "Unlimited AI requests"
+                      : isQuotaDepleted
+                      ? `0 / ${maxRequests} remaining`
+                      : `${requestsRemaining} of ${maxRequests} requests left`}
+                  </span>
+                  <span className="text-[9px] font-medium opacity-75 border-l border-neutral-300 dark:border-neutral-600 pl-1.5">
+                    {userPlan === "pro" ? "Gemini Ultra" : userPlan === "plus" ? "Gemini Pro" : "Gemini Flash"}
+                  </span>
                 </span>
               </div>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
@@ -487,7 +500,7 @@ export default function CanvasAIAssistant({
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={
                   isQuotaDepleted
-                    ? "You have reached your 10 AI workflow limit."
+                    ? `You have reached your ${maxRequests} AI workflow limit.`
                     : "Describe your project or ask to modify the pipeline (e.g., 'Add a QA testing step between step 2 and step 3', 'Add Redis cache checkpoints to step 2')..."
                 }
                 disabled={isThinking || isQuotaDepleted}

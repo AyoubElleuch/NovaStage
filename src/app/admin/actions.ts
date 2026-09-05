@@ -538,4 +538,173 @@ export async function resetAllUsersAiQuota(): Promise<AdminActionResult> {
   }
 }
 
+export type SubscriptionPlan = "free" | "plus" | "pro" | "enterprise";
+
+export interface AdminSubscriptionUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  role: string;
+  plan: SubscriptionPlan;
+  ai_requests_count: number;
+  created_at: string;
+}
+
+/**
+ * Fetches all registered users with their active subscription plan and AI usage.
+ */
+export async function getAdminSubscriptionUsers(): Promise<{
+  data?: AdminSubscriptionUser[];
+  error?: string;
+}> {
+  try {
+    await assertPermission("users:read");
+    const adminClient = createAdminClient();
+
+    // 1. Fetch auth users (to get user_metadata.plan if set)
+    const { data: authUsersData, error: authError } = await adminClient.auth.admin.listUsers({
+      perPage: 1000,
+    });
+    if (authError) {
+      return { error: authError.message };
+    }
+
+    type RawProfile = {
+      id: string;
+      email: string;
+      full_name: string | null;
+      username: string | null;
+      avatar_url: string | null;
+      role: string;
+      plan?: string | null;
+      ai_requests_count?: number;
+      created_at: string;
+    };
+
+    let profileList: RawProfile[] = [];
+    const { data: profiles, error: profileError } = await adminClient
+      .from("profiles")
+      .select("id, email, full_name, username, avatar_url, role, plan, ai_requests_count, created_at");
+
+    if (profileError) {
+      const fallback = await adminClient
+        .from("profiles")
+        .select("id, email, full_name, username, avatar_url, role, ai_requests_count, created_at");
+      if (fallback.error) {
+        return { error: fallback.error.message };
+      }
+      profileList = (fallback.data as unknown as RawProfile[]) || [];
+    } else {
+      profileList = (profiles as unknown as RawProfile[]) || [];
+    }
+
+    const profileMap = new Map<string, RawProfile>();
+
+    for (const p of profileList) {
+      profileMap.set(p.id, p);
+      if (p.email) {
+        profileMap.set(p.email.toLowerCase(), p);
+      }
+    }
+
+    const validPlans: SubscriptionPlan[] = ["free", "plus", "pro", "enterprise"];
+
+    const users: AdminSubscriptionUser[] = (authUsersData.users || []).map((u) => {
+      const profile = profileMap.get(u.id) || (u.email ? profileMap.get(u.email.toLowerCase()) : undefined);
+      const email = u.email || profile?.email || "Unknown";
+      const metadataPlan = u.user_metadata?.plan as SubscriptionPlan | undefined;
+      const profilePlan = profile?.plan as SubscriptionPlan | undefined;
+
+      const resolvedPlan =
+        (profilePlan && validPlans.includes(profilePlan))
+          ? profilePlan
+          : (metadataPlan && validPlans.includes(metadataPlan))
+          ? metadataPlan
+          : "free";
+
+      return {
+        id: u.id,
+        email,
+        full_name: profile?.full_name || (u.user_metadata?.full_name as string) || null,
+        username: profile?.username || null,
+        avatar_url: profile?.avatar_url || (u.user_metadata?.avatar_url as string) || null,
+        role: profile?.role || (u.user_metadata?.role as string) || "developer",
+        plan: resolvedPlan,
+        ai_requests_count: profile?.ai_requests_count ?? 0,
+        created_at: u.created_at || profile?.created_at || new Date().toISOString(),
+      };
+    });
+
+    users.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return { data: users };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Failed to load subscription users." };
+  }
+}
+
+/**
+ * Updates a user's subscription plan (Super Admin only).
+ * Synchronizes across both auth.users metadata and the profiles table.
+ */
+export async function updateUserSubscriptionPlan(
+  userId: string,
+  plan: SubscriptionPlan
+): Promise<AdminActionResult> {
+  try {
+    await assertSuperAdmin();
+    const validPlans: SubscriptionPlan[] = ["free", "plus", "pro", "enterprise"];
+    if (!validPlans.includes(plan)) {
+      return { error: `Invalid subscription plan: ${plan}` };
+    }
+
+    const adminClient = createAdminClient();
+
+    // 1. Update user metadata in auth.users
+    const { data: userData, error: getUserError } = await adminClient.auth.admin.getUserById(userId);
+    if (getUserError || !userData?.user) {
+      return { error: getUserError?.message || "User not found." };
+    }
+
+    const existingMetadata = userData.user.user_metadata || {};
+    const { error: updateAuthError } = await adminClient.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        ...existingMetadata,
+        plan,
+      },
+    });
+
+    if (updateAuthError) {
+      return { error: updateAuthError.message };
+    }
+
+    // 2. Update profiles table if available
+    try {
+      await adminClient
+        .from("profiles")
+        .update({
+          plan,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
+    } catch {
+      // Column may be pending migration; metadata holds the source of truth
+    }
+
+    revalidatePath("/admin/subscriptions");
+    revalidatePath("/admin");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/subscription");
+
+    return {
+      success: true,
+      message: `Updated plan for ${userData.user.email || "user"} to ${plan.toUpperCase()}.`,
+    };
+  } catch (err: unknown) {
+    return { error: err instanceof Error ? err.message : "Failed to update subscription plan." };
+  }
+}
+
 

@@ -42,11 +42,26 @@ export default async function ProjectPage({
 
   const { data: profile } = await adminClient
     .from("profiles")
-    .select("ai_requests_count, full_name, avatar_url")
+    .select("ai_requests_count, full_name, avatar_url, plan")
     .eq("id", user.id)
     .maybeSingle();
 
-  const aiRequestsRemaining = Math.max(0, 10 - (profile?.ai_requests_count ?? 0));
+  const userPlan =
+    profile?.plan ||
+    (session?.profile?.plan as string) ||
+    (user.user_metadata?.plan as string) ||
+    "free";
+
+  const maxAiRequests =
+    userPlan === "enterprise"
+      ? 999999
+      : userPlan === "pro"
+      ? 50
+      : userPlan === "plus"
+      ? 30
+      : 10;
+
+  const aiRequestsRemaining = Math.max(0, maxAiRequests - (profile?.ai_requests_count ?? 0));
 
   const currentUser = {
     id: user.id,
@@ -64,6 +79,8 @@ export default async function ProjectPage({
       currentUser={currentUser}
       isOwner={isOwner}
       initialAiRequestsRemaining={aiRequestsRemaining}
+      maxAiRequests={maxAiRequests}
+      userPlan={userPlan}
     />
   );
 }

@@ -19,6 +19,10 @@ export async function GET() {
           username: session.profile.username,
           avatar_url: session.profile.avatar_url,
           role: session.profile.role,
+          plan:
+            (session.profile.plan as "free" | "plus" | "pro" | "enterprise") ||
+            (session.user.user_metadata?.plan as "free" | "plus" | "pro" | "enterprise") ||
+            "free",
           created_at: session.profile.created_at,
         }
       : null,

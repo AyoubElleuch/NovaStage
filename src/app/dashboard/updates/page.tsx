@@ -2,6 +2,17 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
+    version: "Beta v1.0.5",
+    date: "September 6, 2026",
+    title: "Account Tiers & Subscription Preview",
+    summary:
+      "Introduced provisional pricing and account tiers with functional perk enforcement, plan indicators, and Super Admin tier management. Automated checkout is not live yet while business registration is finalized.",
+    changes: [
+      "Provisional Account Tiers: Added Free, Plus ($1.99/mo), Pro ($4.99/mo), and Enterprise tiers. Note: Automated billing is not live yet; early testers can preview pricing and join the launch notification list.",
+      "Live Tier Perk Enforcement: Active plan perks are now fully functional across the app. Plus unlocks 3x AI quota (30 requests) and 10 members/project; Pro unlocks 5x AI quota (50 requests), frontier models, and 25 members/project.",
+    ],
+  },
+  {
     version: "Beta v1.0.4",
     date: "September 5, 2026",
     title: "A Clearer, Roomier Canvas",

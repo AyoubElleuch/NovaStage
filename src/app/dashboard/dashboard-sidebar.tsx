@@ -18,6 +18,7 @@ import {
   Sun,
   Moon,
   X,
+  CreditCard,
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
 import { fetcher } from "@/lib/fetcher";
@@ -37,6 +38,7 @@ interface DashboardSidebarProps {
 const navigation = [
   { href: "/dashboard", label: "Projects", icon: FolderGit2 },
   { href: "/dashboard/updates", label: "Updates", icon: Megaphone },
+  { href: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
@@ -223,7 +225,7 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
           </Link>
           {(!collapsed || isMobile) && (
             <span className="rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:border-[#283548] dark:bg-[#1e2736] dark:text-neutral-300">
-              Beta v1.0.4
+              Beta v1.0.5
             </span>
           )}
         </div>
@@ -381,18 +383,49 @@ export default function DashboardSidebar({ userEmail, userRole }: DashboardSideb
             collapsed ? "justify-center px-0" : ""
           }`}
         >
-          <UserAvatar
-            src={settingsData?.profile?.avatar_url}
-            name={settingsData?.profile?.full_name}
-            email={userEmail}
-            size="md"
-          />
+          <div className="relative shrink-0">
+            <UserAvatar
+              src={settingsData?.profile?.avatar_url}
+              name={settingsData?.profile?.full_name}
+              email={userEmail}
+              size="md"
+            />
+            {collapsed && settingsData?.profile?.plan && settingsData.profile.plan !== "free" && (
+              <span
+                title={`Plan: ${settingsData.profile.plan.toUpperCase()}`}
+                className={`absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full border-2 border-white dark:border-[#151c27] ${
+                  settingsData.profile.plan === "pro"
+                    ? "bg-purple-500"
+                    : settingsData.profile.plan === "enterprise"
+                    ? "bg-emerald-500"
+                    : "bg-blue-500"
+                }`}
+              >
+                <span className="sr-only">{settingsData.profile.plan}</span>
+              </span>
+            )}
+          </div>
           {!collapsed && (
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-neutral-900 dark:text-white">{userEmail}</p>
-              <p className="text-[11px] capitalize text-neutral-400 dark:text-neutral-500">
-                {userRole.replace("_", " ")}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[11px] capitalize text-neutral-400 dark:text-neutral-500">
+                  {userRole.replace("_", " ")}
+                </p>
+                {settingsData?.profile?.plan && settingsData.profile.plan !== "free" && (
+                  <span
+                    className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                      settingsData.profile.plan === "pro"
+                        ? "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/60 dark:text-purple-300"
+                        : settingsData.profile.plan === "enterprise"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                        : "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                    }`}
+                  >
+                    {settingsData.profile.plan}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>

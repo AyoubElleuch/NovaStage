@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
+  CreditCard,
   FolderGit2,
   LayoutGrid,
   Loader2,
@@ -31,6 +32,7 @@ interface AdminSidebarProps {
 
 const navigation = [
   { href: "/admin", label: "Overview", icon: LayoutGrid },
+  { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard, superAdminOnly: true },
   { href: "/admin/ai-limits", label: "AI Limits", icon: Sparkles },
   { href: "/admin/broadcast", label: "Announcement", icon: Megaphone, superAdminOnly: true },
 ];
@@ -193,7 +195,7 @@ export default function AdminSidebar({ userEmail, userRole }: AdminSidebarProps)
           </Link>
           {(!collapsed || isMobile) && (
             <span className="rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300">
-              Beta v1.0.4
+              Beta v1.0.5
             </span>
           )}
         </div>

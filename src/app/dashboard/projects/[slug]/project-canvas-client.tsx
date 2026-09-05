@@ -66,6 +66,8 @@ interface ProjectCanvasClientProps {
   };
   isOwner: boolean;
   initialAiRequestsRemaining?: number;
+  maxAiRequests?: number;
+  userPlan?: string;
 }
 
 type DragState = {
@@ -97,6 +99,8 @@ export default function ProjectCanvasClient({
   currentUser,
   isOwner,
   initialAiRequestsRemaining = 10,
+  maxAiRequests = 10,
+  userPlan = "free",
 }: ProjectCanvasClientProps) {
   const { notify } = useNotifications();
   const supabase = useMemo(() => createClient(), []);
@@ -2498,6 +2502,8 @@ export default function ProjectCanvasClient({
               }}
               onClose={() => setIsAIAssistantOpen(false)}
               requestsRemaining={aiRequestsRemaining}
+              maxRequests={maxAiRequests}
+              userPlan={userPlan}
               onSubmitPrompt={handleGenerateAIWorkflow}
             />
 

@@ -10,6 +10,7 @@ export interface UserProfile {
   username: string | null;
   avatar_url: string | null;
   role: string;
+  plan?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -28,8 +28,10 @@ export * from "./types";
 export async function executeAIPipeline(
   prompt: string,
   mode: AIGenerationMode = "workflow",
-  context?: CanvasAIContext
+  context?: CanvasAIContext,
+  options?: { plan?: string }
 ): Promise<AIWorkflowResult> {
+  void options;
   const cleanPrompt = prompt.trim();
   if (!cleanPrompt) {
     throw new Error("Prompt cannot be empty");

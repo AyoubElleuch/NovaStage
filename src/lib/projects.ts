@@ -14,6 +14,52 @@ import type {
 export const MAX_PROJECT_MEMBERS = 5;
 
 /**
+ * Resolves maximum project member limit based on user subscription plan.
+ * - Free: 5 members
+ * - Plus: 10 members (2x)
+ * - Pro: 25 members (5x)
+ * - Enterprise: 999999 (Unlimited)
+ */
+export function getMaxMembersForPlan(plan?: string | null): number {
+  if (plan === "enterprise") return 999999;
+  if (plan === "pro") return 25;
+  if (plan === "plus") return 10;
+  return MAX_PROJECT_MEMBERS;
+}
+
+/**
+ * Retrieves the maximum member capacity for a given project based on the project owner's plan.
+ */
+export async function getProjectMemberCapacity(projectId: string): Promise<number> {
+  try {
+    const adminClient = createAdminClient();
+    const { data: project } = await adminClient
+      .from("projects")
+      .select("created_by")
+      .eq("id", projectId)
+      .maybeSingle();
+
+    if (!project?.created_by) return MAX_PROJECT_MEMBERS;
+
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("plan")
+      .eq("id", project.created_by)
+      .maybeSingle();
+
+    if (profile?.plan) {
+      return getMaxMembersForPlan(profile.plan);
+    }
+
+    const { data: userData } = await adminClient.auth.admin.getUserById(project.created_by);
+    return getMaxMembersForPlan(userData?.user?.user_metadata?.plan as string);
+  } catch (err) {
+    console.error("Failed to determine project member capacity:", err);
+    return MAX_PROJECT_MEMBERS;
+  }
+}
+
+/**
  * Generates a short, shareable, crypto-random invite code:
  * "NS-" + 5 uppercase hexadecimal characters (e.g. "NS-8A3F1").
  * 5 hex characters provide 1,048,576 possible combinations.
@@ -178,10 +224,24 @@ export async function getUserProjects(userId: string): Promise<DashboardProject[
       }
     }
 
+    // 5. Fetch project creators' plans to determine capacity limits
+    const creatorIds = Array.from(new Set(projectRows.map((p) => p.created_by).filter(Boolean)));
+    const creatorPlanMap = new Map<string, string>();
+    if (creatorIds.length > 0) {
+      const { data: creatorProfiles } = await adminClient
+        .from("profiles")
+        .select("id, plan")
+        .in("id", creatorIds);
+      for (const cp of creatorProfiles || []) {
+        if (cp.plan) creatorPlanMap.set(cp.id, cp.plan);
+      }
+    }
+
     return projectRows.map((p) => {
       const memberList = membersByProject.get(p.id) || [];
       const fallbackRole = p.created_by === userId ? "owner" : "collaborator";
       const myRole = (userRoleMap.get(p.id) || fallbackRole) as "owner" | "collaborator";
+      const plan = creatorPlanMap.get(p.created_by);
 
       return {
         id: p.id,
@@ -191,6 +251,7 @@ export async function getUserProjects(userId: string): Promise<DashboardProject[
         inviteCode: p.invite_code,
         role: myRole,
         members: Math.max(memberList.length, 1),
+        maxMembers: getMaxMembersForPlan(plan),
         memberList: memberList.length > 0 ? memberList : [{ userId, role: myRole }],
         pendingRequestsCount: pendingRequestsCountMap.get(p.id) || 0,
         updatedAt: formatRelativeTime(p.updated_at),
@@ -383,16 +444,17 @@ export async function joinProjectByInviteCode(params: {
     };
   }
 
-  // 3. Check if project has already reached full capacity (1 owner + 4 collaborators = 5 total)
+  // 3. Check if project has already reached full capacity based on owner's plan
   const { count: memberCount } = await adminClient
     .from("project_members")
     .select("user_id", { count: "exact", head: true })
     .eq("project_id", project.id);
 
-  if ((memberCount || 0) >= MAX_PROJECT_MEMBERS) {
+  const capacity = await getProjectMemberCapacity(project.id);
+  if ((memberCount || 0) >= capacity) {
     return {
       success: false,
-      error: `This project is at full capacity (${MAX_PROJECT_MEMBERS}/${MAX_PROJECT_MEMBERS} members: 1 owner + 4 collaborators).`,
+      error: `This project is at full capacity (${capacity}/${capacity} members).`,
     };
   }
 
@@ -762,16 +824,17 @@ export async function resolveProjectJoinRequest(params: {
   const now = new Date().toISOString();
 
   if (action === "approve") {
-    // Enforce project capacity limit (max 5 members: 1 owner + 4 collaborators)
+    // Enforce project capacity limit based on owner's plan
     const { count: currentMemberCount } = await adminClient
       .from("project_members")
       .select("user_id", { count: "exact", head: true })
       .eq("project_id", projectId);
 
-    if ((currentMemberCount || 0) >= MAX_PROJECT_MEMBERS) {
+    const capacity = await getProjectMemberCapacity(projectId);
+    if ((currentMemberCount || 0) >= capacity) {
       return {
         success: false,
-        error: `Project has reached maximum capacity (${MAX_PROJECT_MEMBERS}/${MAX_PROJECT_MEMBERS} members: 1 owner + 4 collaborators). You must remove a member before accepting new requests.`,
+        error: `Project has reached maximum capacity (${capacity}/${capacity} members). You must remove a member before accepting new requests.`,
       };
     }
 

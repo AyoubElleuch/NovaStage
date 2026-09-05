@@ -18,7 +18,7 @@ export function renderWelcomeEmail({
   const text = `
 ${greeting}
 
-Welcome to NovaStage Beta (v1.0.4)!
+Welcome to NovaStage Beta (v1.0.5)!
 
 Thank you for joining NovaStage (${email}). Your account is active and your workspace is ready. You can now model cloud architectures, collaborate in real time, and map delivery milestones seamlessly.
 
@@ -65,7 +65,7 @@ Collaborative System Architecture & Stack Designer
               <h1 style="margin:0 0 12px;font-size:26px;line-height:1.2;font-weight:bold;color:#24221f;letter-spacing:-0.01em;">Welcome to NovaStage.</h1>
               <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#24221f;">${greeting}</p>
               <p style="margin:0;font-size:14px;line-height:1.6;color:#57534b;">
-                Thank you for creating your NovaStage account. Your workspace is active and you are officially part of our Beta release (v1.0.4). Start designing your cloud topologies and planning collaborative roadmaps today.
+                Thank you for creating your NovaStage account. Your workspace is active and you are officially part of our Beta release (v1.0.5). Start designing your cloud topologies and planning collaborative roadmaps today.
               </p>
             </td>
           </tr>
@@ -80,7 +80,7 @@ Collaborative System Architecture & Stack Designer
                   </td>
                   <td style="padding:14px 18px;">
                     <p style="margin:0 0 3px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#7a736c;">Release Channel</p>
-                    <p style="margin:0;font-size:13px;font-weight:bold;color:#386233;">Beta v1.0.4</p>
+                    <p style="margin:0;font-size:13px;font-weight:bold;color:#386233;">Beta v1.0.5</p>
                   </td>
                 </tr>
               </table>

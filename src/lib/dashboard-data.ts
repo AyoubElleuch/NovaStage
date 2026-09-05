@@ -42,6 +42,7 @@ export interface DashboardProject {
   updatedAt: string;
   createdAt?: string;
   members: number;
+  maxMembers?: number;
   memberList?: ProjectMemberInfo[];
   pendingRequestsCount?: number;
 }
@@ -56,6 +57,7 @@ export interface DashboardProfile {
   username?: string | null;
   avatar_url?: string | null;
   role?: string | null;
+  plan?: "free" | "plus" | "pro" | "enterprise" | null;
   created_at?: string | null;
 }
 

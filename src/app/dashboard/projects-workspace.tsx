@@ -1362,7 +1362,7 @@ export default function ProjectsWorkspace() {
                     {/* Members List */}
                     <div>
                       <div className="mb-2.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                        <span>Members ({projectMembers.length}/5)</span>
+                        <span>Members ({projectMembers.length}/{selectedProject.maxMembers || 5})</span>
                         <span>Role</span>
                       </div>
 
@@ -1457,11 +1457,14 @@ export default function ProjectsWorkspace() {
                     </div>
 
                     {/* Capacity limit warning banner if project full */}
-                    {projectMembers.length >= 5 && (
+                    {projectMembers.length >= (selectedProject.maxMembers || 5) && (
                       <div className="flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 text-xs text-neutral-600 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-300">
                         <ShieldAlert className="h-4 w-4 shrink-0 text-neutral-700 dark:text-neutral-400" aria-hidden="true" />
                         <p>
-                          <span className="font-semibold text-neutral-900 dark:text-white">Project capacity reached (5/5 members).</span> Remove an existing member before accepting new requests.
+                          <span className="font-semibold text-neutral-900 dark:text-white">
+                            Project capacity reached ({selectedProject.maxMembers || 5}/{selectedProject.maxMembers || 5} members).
+                          </span>{" "}
+                          Remove an existing member before accepting new requests.
                         </p>
                       </div>
                     )}
