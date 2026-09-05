@@ -38,6 +38,7 @@ export interface GeminiCallOptions {
   systemInstruction?: string;
   temperature?: number;
   modelOverride?: string;
+  signal?: AbortSignal;
 }
 
 /**
@@ -65,6 +66,7 @@ async function callOpenAI<T>(
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
+      signal: options?.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
@@ -101,6 +103,10 @@ export async function callGemini<T>(
   schema: object,
   options?: GeminiCallOptions
 ): Promise<T | null> {
+  const signal = options?.signal
+    ? AbortSignal.any([options.signal, AbortSignal.timeout(20_000)])
+    : AbortSignal.timeout(20_000);
+  options = { ...options, signal };
   // Check if OpenAI is explicitly chosen or Gemini is unconfigured
   const preferOpenAI =
     process.env.AI_PROVIDER === "openai" ||
@@ -114,19 +120,16 @@ export async function callGemini<T>(
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     // If Gemini key is missing, attempt OpenAI as alternate
-    if (process.env.OPENAI_API_KEY) {
+    if (process.env.OPENAI_API_KEY && !preferOpenAI && !signal.aborted) {
       return callOpenAI<T>(prompt, schema, options);
     }
     return null;
   }
 
-  const primaryModel = options?.modelOverride || process.env.GEMINI_MODEL?.trim() || "gemini-3.7-flash";
+  const primaryModel = options?.modelOverride || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
   const candidateModels = [
     primaryModel,
-    "gemini-3.6-flash",
     "gemini-flash-latest",
-    "gemini-2.5-pro",
-    "gemini-pro-latest",
   ].filter((v, i, a) => a.indexOf(v) === i);
 
   const fullPrompt = options?.systemInstruction
@@ -150,11 +153,13 @@ export async function callGemini<T>(
   let lastErrorMsg = "";
 
   for (const model of candidateModels) {
+    if (signal.aborted) return null;
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
       const response = await fetch(endpoint, {
         method: "POST",
+        signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -177,6 +182,7 @@ export async function callGemini<T>(
         const errBody = await response.text().catch(() => "");
         lastErrorMsg = `Model ${model} (${response.status}): ${errBody || response.statusText}`;
         console.warn(`[Gemini AI] ${model} unavailable (${response.status}). Trying next model...`);
+        if (response.status === 401 || response.status === 403 || response.status === 429) break;
       }
     } catch (fetchErr: unknown) {
       const msg = fetchErr instanceof Error ? fetchErr.message : "Network error";

@@ -131,6 +131,7 @@ export default function CanvasServiceNode({
       style={{
         transform: `translate3d(${node.position_x}px, ${node.position_y}px, 0)`,
         width: `${node.width || 200}px`,
+        minHeight: `${node.height || 220}px`,
       }}
       className={`group absolute top-0 left-0 cursor-move rounded-xl border bg-white/95 p-3 shadow-sm backdrop-blur-md transition-all duration-150 select-none dark:bg-[#161d27]/95 flex flex-col border-l-4 ${
         categoryStyles.border
@@ -263,7 +264,8 @@ export default function CanvasServiceNode({
                 setIsEditingTitle(true);
               }
             }}
-            className="text-[13px] font-bold text-neutral-900 line-clamp-1 leading-snug cursor-text dark:text-white"
+            className="text-[15px] font-bold text-neutral-900 line-clamp-2 break-words leading-snug cursor-text dark:text-white"
+            title={node.title}
           >
             {node.title}
           </h3>

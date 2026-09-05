@@ -282,7 +282,7 @@ describe("AI Workflow Generation & Multi-Phase Pipeline", () => {
     const layouted = autoLayoutNodes(mockNodes, mockEdges, { startX: 100, startY: 100 });
 
     expect(layouted[0].position_x).toBe(100);
-    expect(layouted[1].position_x).toBe(480); // startX + 380px HORIZONTAL_SPACING
+    expect(layouted[1].position_x).toBeGreaterThanOrEqual(layouted[0].position_x + layouted[0].width + 140);
   });
 
   it("executeAIPipeline in full_stack mode generates interlocked milestones and AWS cloud architecture", async () => {

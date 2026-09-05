@@ -164,6 +164,7 @@ function CanvasMilestoneNode({
       style={{
         transform: `translate3d(${node.position_x}px, ${node.position_y}px, 0)`,
         width: `${node.width}px`,
+        minHeight: `${node.height}px`,
       }}
       className={`group absolute top-0 left-0 cursor-move rounded-xl border bg-white/95 p-4 shadow-sm backdrop-blur-md transition-all duration-150 select-none dark:bg-[#161d27]/95 ${
         isLinking
@@ -302,7 +303,7 @@ function CanvasMilestoneNode({
               setIsEditingTitle(true);
             }
           }}
-          className="mt-2.5 text-[13px] font-semibold text-neutral-900 line-clamp-1 leading-snug cursor-text dark:text-white"
+          className="mt-2.5 text-[15px] font-semibold text-neutral-900 line-clamp-2 break-words leading-snug cursor-text dark:text-white"
           title={`${node.title} (Double-click to rename)`}
         >
           {node.title}

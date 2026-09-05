@@ -227,11 +227,11 @@ export default function CanvasGroupNode({
       })}
 
       {/* Group Title Badge */}
-      <div className={`absolute top-0 left-0 -translate-y-1/2 ml-4 flex items-center gap-2 px-2 py-0.5 rounded-md border border-inherit ${colors.labelBg}`}>
-        <span className={`text-[10px] font-bold uppercase tracking-wider ${colors.text}`}>
+      <div className={`absolute top-0 left-0 -translate-y-1/2 ml-4 max-w-[calc(100%-32px)] flex items-center gap-2 px-2 py-0.5 rounded-md border border-inherit ${colors.labelBg}`}>
+        <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider ${colors.text}`}>
           {styleType.replace("_", " ")}
         </span>
-        <span className={`text-xs font-semibold ${colors.text}`}>
+        <span title={node.group_metadata?.label || node.title} className={`min-w-0 truncate text-sm font-semibold ${colors.text}`}>
           {node.group_metadata?.label || node.title}
         </span>
       </div>

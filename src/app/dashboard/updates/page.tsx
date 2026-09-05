@@ -2,6 +2,18 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
+    version: "Beta v1.0.4",
+    date: "September 5, 2026",
+    title: "A Clearer, Roomier Canvas",
+    summary:
+      "Improved the AI assistant response experience and made architecture canvases easier to read, navigate, and arrange across desktop and mobile devices.",
+    changes: [
+      "More Reliable AI Assistance: Added bounded provider requests and clearer handling for delayed or invalid responses, so the assistant fails fast with a useful message instead of hanging or showing raw HTML.",
+      "Roomier Architecture Layouts: Updated automatic placement for AWS and standard schemas with dimension-aware spacing, better group padding, and improved nested resource containment.",
+      "Smoother Canvas Controls: Improved pan and pinch gestures, enabled canvas-only Ctrl + mouse-wheel zoom, and made the hand tool pan from any point, including inside groups.",
+    ],
+  },
+  {
     version: "Beta v1.0.3",
     date: "September 4, 2026",
     title: "Much Faster Canvas Speed & Slashed Ping Times",

@@ -5,6 +5,8 @@ import { CanvasViewport, CanvasTool } from "@/lib/canvas/types";
 import { screenToWorld } from "@/lib/canvas/coordinate-math";
 import { useTheme } from "@/lib/theme-context";
 
+const CTRL_WHEEL_ZOOM_SENSITIVITY = 0.0025;
+
 interface CanvasViewportProps {
   viewport: CanvasViewport;
   onViewportChange: (newViewport: CanvasViewport) => void;
@@ -33,6 +35,12 @@ export default function CanvasViewportContainer({
   onMarqueeEnd,
 }: CanvasViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef(viewport);
+  useEffect(() => { viewportRef.current = viewport; }, [viewport]);
+  const updateViewport = useCallback((next: CanvasViewport) => {
+    viewportRef.current = next;
+    onViewportChange(next);
+  }, [onViewportChange]);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [isSpacePressed, setIsSpacePressed] = useState(false);
@@ -56,7 +64,7 @@ export default function CanvasViewportContainer({
       if (
         e.code === "Space" &&
         !isSpacePressed &&
-        !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)
+        !(e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable='true']"))
       ) {
         e.preventDefault();
         setIsSpacePressed(true);
@@ -68,20 +76,32 @@ export default function CanvasViewportContainer({
         setIsSpacePressed(false);
       }
     };
+    const handleBlur = () => {
+      setIsSpacePressed(false);
+      setIsPanning(false);
+      activePointersRef.current.clear();
+      pinchStateRef.current = null;
+    };
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
     };
   }, [isSpacePressed]);
 
   // Mouse Wheel Zoom centered around pointer
   const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+    (e: WheelEvent) => {
       if (!containerRef.current) return;
       e.preventDefault();
+      const viewport = viewportRef.current;
+      const deltaScale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? containerRef.current.clientHeight : 1;
+      const deltaX = e.deltaX * deltaScale;
+      const deltaY = e.deltaY * deltaScale;
 
       const rect = containerRef.current.getBoundingClientRect();
       const mouseScreenX = e.clientX - rect.left;
@@ -89,26 +109,34 @@ export default function CanvasViewportContainer({
 
       if (e.ctrlKey || e.metaKey) {
         // Pinch / Ctrl + Wheel Zoom
-        const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+        const zoomFactor = Math.exp(
+          -Math.max(-100, Math.min(100, deltaY)) * CTRL_WHEEL_ZOOM_SENSITIVITY
+        );
         const newZoom = Math.min(Math.max(viewport.zoom * zoomFactor, 0.15), 2.5);
 
         const newX = mouseScreenX - (mouseScreenX - viewport.x) * (newZoom / viewport.zoom);
         const newY = mouseScreenY - (mouseScreenY - viewport.y) * (newZoom / viewport.zoom);
 
-        onViewportChange({ x: newX, y: newY, zoom: newZoom });
+        updateViewport({ x: newX, y: newY, zoom: newZoom });
       } else {
         // Standard Trackpad 2-finger pan or Shift+Wheel
-        const dx = e.shiftKey ? e.deltaY : e.deltaX;
-        const dy = e.shiftKey ? 0 : e.deltaY;
-        onViewportChange({
+        const dx = e.shiftKey && deltaX === 0 ? deltaY : deltaX;
+        const dy = e.shiftKey ? 0 : deltaY;
+        updateViewport({
           ...viewport,
           x: viewport.x - dx,
           y: viewport.y - dy,
         });
       }
     },
-    [viewport, onViewportChange]
+    [updateViewport]
   );
+
+  useEffect(() => {
+    const container = containerRef.current;
+    container?.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container?.removeEventListener("wheel", handleWheel);
+  }, [handleWheel]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     // Only pan or marquee if clicking on the background canvas (not a node/button)
@@ -116,12 +144,21 @@ export default function CanvasViewportContainer({
       e.target === containerRef.current ||
       (e.target as HTMLElement).getAttribute("data-canvas-bg") === "true";
 
-    if (!isBackground) return;
+    const isTouch = e.pointerType === "touch";
+    const shouldPan = activeTool === "hand" || isSpacePressed || e.button === 1 ||
+      (e.button === 0 && e.altKey) || isTouch;
+    if (!isBackground && !shouldPan) return;
+    if (!isTouch && e.button !== 0 && e.button !== 1) return;
+    if (shouldPan) {
+      e.stopPropagation();
+      if (!isTouch) e.preventDefault();
+    }
 
     activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     // Multi-touch pinch-to-zoom start
     if (activePointersRef.current.size === 2) {
+      dragDistanceRef.current = 10;
       setIsPanning(false);
       setIsMarqueeDragging(false);
       const [p1, p2] = Array.from(activePointersRef.current.values());
@@ -142,14 +179,6 @@ export default function CanvasViewportContainer({
     if (activePointersRef.current.size > 2) return;
 
     dragDistanceRef.current = 0;
-    const isTouch = e.pointerType === "touch";
-    const shouldPan =
-      activeTool === "hand" ||
-      isSpacePressed ||
-      e.button === 1 ||
-      (e.button === 0 && e.altKey) ||
-      isTouch;
-
     if (shouldPan) {
       setIsPanning(true);
       setPanStart({ x: e.clientX - viewport.x, y: e.clientY - viewport.y });
@@ -208,7 +237,7 @@ export default function CanvasViewportContainer({
       const newX = currentMidScreen.x - worldMidX * newZoom;
       const newY = currentMidScreen.y - worldMidY * newZoom;
 
-      onViewportChange({ x: newX, y: newY, zoom: newZoom });
+      updateViewport({ x: newX, y: newY, zoom: newZoom });
       return;
     }
 
@@ -221,8 +250,11 @@ export default function CanvasViewportContainer({
     onPointerMove?.(worldPos, { x: e.clientX, y: e.clientY });
 
     if (isPanning) {
-      dragDistanceRef.current += 1;
-      onViewportChange({
+      dragDistanceRef.current = Math.max(dragDistanceRef.current, Math.hypot(
+        e.clientX - panStart.x - viewport.x,
+        e.clientY - panStart.y - viewport.y
+      ));
+      updateViewport({
         ...viewport,
         x: e.clientX - panStart.x,
         y: e.clientY - panStart.y,
@@ -234,7 +266,19 @@ export default function CanvasViewportContainer({
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    if (!activePointersRef.current.has(e.pointerId)) return;
     activePointersRef.current.delete(e.pointerId);
+    try {
+      containerRef.current?.releasePointerCapture(e.pointerId);
+    } catch {}
+
+    if (activePointersRef.current.size === 1 && pinchStateRef.current) {
+      pinchStateRef.current = null;
+      const remaining = Array.from(activePointersRef.current.values())[0];
+      setPanStart({ x: remaining.x - viewportRef.current.x, y: remaining.y - viewportRef.current.y });
+      setIsPanning(true);
+      return;
+    }
 
     if (activePointersRef.current.size < 2) {
       pinchStateRef.current = null;
@@ -263,6 +307,11 @@ export default function CanvasViewportContainer({
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    if (activeTool === "hand" || isSpacePressed || e.altKey || dragDistanceRef.current > 4) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const isBackground =
       e.target === containerRef.current ||
       (e.target as HTMLElement).getAttribute("data-canvas-bg") === "true";
@@ -321,11 +370,12 @@ export default function CanvasViewportContainer({
     <div
       ref={containerRef}
       data-canvas-bg="true"
-      onWheel={handleWheel}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onClick={handleClick}
+      onPointerDownCapture={handlePointerDown}
+      onPointerMoveCapture={handlePointerMove}
+      onPointerUpCapture={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onLostPointerCapture={handlePointerUp}
+      onClickCapture={handleClick}
       className={`relative h-full w-full select-none overflow-hidden bg-[#faf8f5] dark:bg-[#10151f] touch-none ${cursorClass}`}
       style={{
         backgroundImage: `

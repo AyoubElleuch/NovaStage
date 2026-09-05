@@ -26,6 +26,7 @@ import {
   exportToMermaid,
 } from "@/lib/canvas/coordinate-math";
 import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
+import { readAIGenerationResponse } from "@/lib/ai/response";
 import CanvasViewportContainer from "@/components/canvas/canvas-viewport";
 import CanvasNodeComponent from "@/components/canvas/canvas-node";
 import CanvasEdgeLayer from "@/components/canvas/canvas-edge-layer";
@@ -1096,14 +1097,11 @@ export default function ProjectCanvasClient({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ prompt: promptText, mode: mode || "workflow" }),
+            signal: AbortSignal.timeout(125_000),
           }
         );
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.message || data.error || "Failed to generate workflow with AI");
-        }
+        const data = await readAIGenerationResponse(res);
 
         if (data.success && data.nodes) {
           const isUpdateIntent = data.intent === "update_pipeline";
@@ -1140,11 +1138,12 @@ export default function ProjectCanvasClient({
             });
 
             if (data.edges) {
+              const generatedEdges = data.edges;
               setEdges((prev) => {
-                const dataMap = new Map(data.edges.map((e: CanvasEdge) => [e.id, e]));
+                const dataMap = new Map(generatedEdges.map((e: CanvasEdge) => [e.id, e]));
                 const updatedPrev = prev.map((e) => (dataMap.has(e.id) ? (dataMap.get(e.id) as CanvasEdge) : e));
                 const prevIds = new Set(prev.map((e) => e.id));
-                const brandNew = data.edges.filter((e: CanvasEdge) => !prevIds.has(e.id));
+                const brandNew = generatedEdges.filter((e: CanvasEdge) => !prevIds.has(e.id));
                 nextEdges = [...updatedPrev, ...brandNew];
                 return nextEdges;
               });
@@ -1180,6 +1179,11 @@ export default function ProjectCanvasClient({
 
           setIsAIAssistantOpen(false);
         }
+      } catch (error) {
+        if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+          throw new Error("AI generation timed out. Refresh the canvas before retrying to check whether it completed.");
+        }
+        throw error;
       } finally {
         broadcastEvent("ai:generating_end", { userId: currentUser.id });
         setIsAuraExiting(true);
@@ -2108,18 +2112,38 @@ export default function ProjectCanvasClient({
     }
   };
 
-  const handleTidyLayout = () => {
+  const handleTidyLayout = async () => {
+    if (!nodes.length || isAIGenerating) return;
     const tidyNodes = autoLayoutNodes(nodes, edges);
+    const changedNodes = tidyNodes.filter((node, index) => {
+      const previous = nodes[index];
+      return node.position_x !== previous.position_x || node.position_y !== previous.position_y ||
+        node.width !== previous.width || node.height !== previous.height;
+    });
+    if (!changedNodes.length) return;
     setNodes(tidyNodes);
     pushHistorySnapshot(tidyNodes, edges);
 
-    tidyNodes.forEach((n) => {
-      handleUpdateNode(n.id, {
-        position_x: n.position_x,
-        position_y: n.position_y,
+    const saves = await Promise.allSettled(changedNodes.map(async (node) => {
+      const updates = {
+        position_x: node.position_x, position_y: node.position_y,
+        width: node.width, height: node.height,
+      };
+      broadcastEvent("node:updated", { nodeId: node.id, updates });
+      const response = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update_node", node_id: node.id, updates }),
       });
-    });
-    notify({ title: "Auto-Layout Complete", message: "Arranged milestones in roadmap order" });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error("Layout save failed");
+    }));
+    if (saves.some((result) => result.status === "rejected")) {
+      await resyncCanvasState();
+      notify({ tone: "error", title: "Layout Not Fully Saved", message: "Some changes could not be saved. The canvas has been refreshed." });
+    } else {
+      notify({ title: "Auto-Layout Complete", message: "Arranged nodes with space for connections and nested groups" });
+    }
   };
 
   const handleFitView = () => {

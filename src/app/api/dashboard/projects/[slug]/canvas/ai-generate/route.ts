@@ -6,6 +6,8 @@ import { executeAIPipeline } from "@/lib/ai/pipeline";
 import { CanvasAIContext } from "@/lib/ai/types";
 import { getProjectCanvasData, applyAIWorkflowResult, applyAWSServiceNodes } from "@/lib/canvas/server";
 
+export const maxDuration = 120;
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ slug: string }> }

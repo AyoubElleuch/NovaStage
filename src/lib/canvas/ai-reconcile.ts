@@ -8,6 +8,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasNodeType, HandlePosition } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
+import { layoutAWSArchitecture } from "./aws-layout";
 import { AIWorkflowResult } from "@/lib/ai/types";
 import { getProjectCanvasData } from "./server";
 
@@ -193,6 +194,8 @@ export async function applyAIWorkflowResult(
         .update({
           position_x: node.position_x,
           position_y: node.position_y,
+          width: node.width,
+          height: node.height,
           sort_order: node.sort_order,
           updated_at: new Date().toISOString(),
         })
@@ -405,6 +408,8 @@ export async function applyAIWorkflowResult(
       .update({
         position_x: node.position_x,
         position_y: node.position_y,
+        width: node.width,
+        height: node.height,
         sort_order: node.sort_order,
         updated_at: new Date().toISOString(),
       })
@@ -442,181 +447,14 @@ export async function applyAWSServiceNodes(
   const adminClient = createAdminClient();
   const tempIdToUuid: Record<string, string> = { ...(initialTempIdToUuid || {}) };
 
-  const isFullStack =
-    result.mode === "full_stack" ||
-    (result.milestones && result.milestones.length > 0);
-  const startX = 100;
-  const milestoneStartY = 100;
-  const infraStartY = isFullStack ? 420 : 100;
-
-  // 1. Separate services into edge, subnet-contained, management, and other
   const groups = result.groups || [];
   const serviceNodes = result.serviceNodes || [];
-
-  const vpcGroup = groups.find((g) => g.style === "vpc");
-  const subnetGroups = groups.filter(
-    (g) =>
-      g.style === "subnet" ||
-      (g.style !== "vpc" && g.parentGroupTempId === vpcGroup?.tempId)
-  );
-
-  // Sort subnets: Public first, Private second, Database third, other last
-  const getSubnetPriority = (g: typeof subnetGroups[0]) => {
-    const l = (g.label || "").toLowerCase();
-    if (l.includes("public") || l.includes("ingress")) return 1;
-    if (l.includes("private") || l.includes("app") || l.includes("compute")) return 2;
-    if (l.includes("db") || l.includes("data") || l.includes("isolated")) return 3;
-    return 4;
-  };
-  subnetGroups.sort((a, b) => getSubnetPriority(a) - getSubnetPriority(b));
-
-  const edgeServices = serviceNodes.filter((s) => {
-    if (s.parentGroupTempId) return false;
-    const sid = s.serviceId.toLowerCase();
-    return (
-      sid === "cloudfront" ||
-      sid === "route53" ||
-      sid === "waf" ||
-      sid === "api_gateway"
-    );
-  });
-
-  const mgmtServices = serviceNodes.filter((s) => {
-    if (s.parentGroupTempId) return false;
-    if (edgeServices.includes(s)) return false;
-    const cat = getServiceCategory(s.serviceId);
-    const sid = s.serviceId.toLowerCase();
-    return (
-      cat === "management" ||
-      cat === "security" ||
-      sid === "cloudwatch" ||
-      sid === "kms" ||
-      sid === "iam"
-    );
-  });
-
-  const remainingUngrouped = serviceNodes.filter(
-    (s) =>
-      !s.parentGroupTempId &&
-      !edgeServices.includes(s) &&
-      !mgmtServices.includes(s)
-  );
-
-  // Position mapping before inserting
-  interface NodePlacement {
-    tempId: string;
-    x: number;
-    y: number;
-    width?: number;
-    height?: number;
-  }
-  const placements: Record<string, NodePlacement> = {};
-
-  let currentX = startX;
-
-  // Place Edge Services
-  if (edgeServices.length > 0) {
-    edgeServices.forEach((s, idx) => {
-      placements[s.tempId] = {
-        tempId: s.tempId,
-        x: currentX,
-        y: infraStartY + 40 + idx * 160,
-        width: 200,
-        height: 140,
-      };
-    });
-    currentX += 280; // Gap between Edge and VPC
-  }
-
-  // Place VPC and Subnets
-  if (vpcGroup || subnetGroups.length > 0) {
-    const vpcX = currentX;
-    let subnetCurrentX = vpcX + 40;
-    const subnetY = infraStartY + 50;
-
-    for (const sub of subnetGroups) {
-      const childServices = serviceNodes.filter(
-        (s) =>
-          s.parentGroupTempId === sub.tempId ||
-          sub.childTempIds?.includes(s.tempId)
-      );
-      const childCount = Math.max(1, childServices.length);
-      const subWidth = Math.max(280, childCount * 240 + 40);
-      const subHeight = 250;
-
-      placements[sub.tempId] = {
-        tempId: sub.tempId,
-        x: subnetCurrentX,
-        y: subnetY,
-        width: subWidth,
-        height: subHeight,
-      };
-
-      // Place child services inside subnet with generous padding
-      childServices.forEach((s, cIdx) => {
-        placements[s.tempId] = {
-          tempId: s.tempId,
-          x: subnetCurrentX + 25 + cIdx * 240,
-          y: subnetY + 45,
-          width: 200,
-          height: 140,
-        };
-      });
-
-      subnetCurrentX += subWidth + 30;
-    }
-
-    if (vpcGroup) {
-      const totalVpcWidth = Math.max(520, subnetCurrentX - vpcX + 10);
-      placements[vpcGroup.tempId] = {
-        tempId: vpcGroup.tempId,
-        x: vpcX,
-        y: infraStartY,
-        width: totalVpcWidth,
-        height: 340,
-      };
-      currentX = vpcX + totalVpcWidth + 60;
-    } else {
-      currentX = subnetCurrentX + 30;
-    }
-  }
-
-  // Place Management Services (CloudWatch, KMS)
-  if (mgmtServices.length > 0) {
-    mgmtServices.forEach((s, idx) => {
-      placements[s.tempId] = {
-        tempId: s.tempId,
-        x: currentX + idx * 230,
-        y: infraStartY + 40,
-        width: 200,
-        height: 140,
-      };
-    });
-    currentX += mgmtServices.length * 230 + 40;
-  }
-
-  // Place remaining ungrouped
-  if (remainingUngrouped.length > 0) {
-    remainingUngrouped.forEach((s, idx) => {
-      placements[s.tempId] = {
-        tempId: s.tempId,
-        x: currentX + idx * 230,
-        y: infraStartY + 40,
-        width: 200,
-        height: 140,
-      };
-    });
-    currentX += remainingUngrouped.length * 230 + 40;
-  }
+  const layout = layoutAWSArchitecture(result, existingData.nodes);
+  const placements = new Map(layout.map((node) => [node.id, node]));
 
   // 2. Insert Groups
   for (const group of groups) {
-    const pos = placements[group.tempId] || {
-      x: currentX,
-      y: infraStartY,
-      width: 400,
-      height: 280,
-    };
+    const pos = placements.get(group.tempId)!;
     const { data: createdGroup, error: groupErr } = await adminClient
       .from("canvas_nodes")
       .insert({
@@ -624,8 +462,8 @@ export async function applyAWSServiceNodes(
         title: group.label,
         description: "",
         node_type: "group",
-        position_x: pos.x,
-        position_y: pos.y,
+        position_x: pos.position_x,
+        position_y: pos.position_y,
         width: pos.width || 400,
         height: pos.height || 280,
         color: "default",
@@ -648,14 +486,9 @@ export async function applyAWSServiceNodes(
   // 3. Insert AWS Service Nodes
   for (let sIdx = 0; sIdx < serviceNodes.length; sIdx++) {
     const svc = serviceNodes[sIdx];
-    const pos = placements[svc.tempId] || {
-      x: startX + sIdx * 240,
-      y: infraStartY + 40,
-      width: 200,
-      height: 140,
-    };
-    const parentGroupUuid = svc.parentGroupTempId
-      ? tempIdToUuid[svc.parentGroupTempId]
+    const pos = placements.get(svc.tempId)!;
+    const parentGroupUuid = pos.parent_group_id
+      ? tempIdToUuid[pos.parent_group_id]
       : null;
 
     const { data: createdNode, error: nodeErr } = await adminClient
@@ -665,8 +498,8 @@ export async function applyAWSServiceNodes(
         title: svc.name || svc.serviceId.toUpperCase(),
         description: svc.description || "",
         node_type: "aws_service",
-        position_x: pos.x,
-        position_y: pos.y,
+        position_x: pos.position_x,
+        position_y: pos.position_y,
         width: pos.width || 200,
         height: pos.height || 140,
         color: "default",
@@ -692,13 +525,15 @@ export async function applyAWSServiceNodes(
   for (const group of groups) {
     const groupUuid = tempIdToUuid[group.tempId];
     if (!groupUuid) continue;
-    const resolvedChildIds = (group.childTempIds || [])
-      .map((tid) => tempIdToUuid[tid])
+    const resolvedChildIds = layout.filter((node) => node.parent_group_id === group.tempId)
+      .map((node) => tempIdToUuid[node.id])
       .filter(Boolean);
-    if (resolvedChildIds.length > 0) {
+    const parentId = placements.get(group.tempId)?.parent_group_id;
+    {
       await adminClient
         .from("canvas_nodes")
         .update({
+          parent_group_id: parentId ? tempIdToUuid[parentId] || null : null,
           group_metadata: {
             label: group.label,
             style: group.style,
@@ -707,33 +542,6 @@ export async function applyAWSServiceNodes(
           updated_at: new Date().toISOString(),
         })
         .eq("id", groupUuid);
-    }
-  }
-
-  // 4. In Full Stack Mode: Align Milestones along the Top Track!
-  if (isFullStack && result.milestones && result.milestones.length > 0) {
-    const totalInfraWidth = Math.max(
-      currentX - startX,
-      result.milestones.length * 360
-    );
-    const mSpacing = Math.max(340, totalInfraWidth / result.milestones.length);
-
-    for (let mIdx = 0; mIdx < result.milestones.length; mIdx++) {
-      const m = result.milestones[mIdx];
-      const mUuid = tempIdToUuid[m.tempId || m.id || ""];
-      if (mUuid) {
-        const mX = startX + mIdx * mSpacing;
-        const mY = milestoneStartY;
-        await adminClient
-          .from("canvas_nodes")
-          .update({
-            position_x: mX,
-            position_y: mY,
-            sort_order: mIdx,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", mUuid);
-      }
     }
   }
 
