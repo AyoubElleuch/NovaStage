@@ -167,6 +167,7 @@ export default function CanvasAIAssistant({
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const speechSupported = useSyncExternalStore(
@@ -226,6 +227,35 @@ export default function CanvasAIAssistant({
   useEffect(() => {
     adjustHeight();
   }, [prompt, adjustHeight]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const updateNotificationOffset = () => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const desiredOffset = window.innerHeight - dialog.getBoundingClientRect().top + 16;
+      const visibleOffset = Math.min(desiredOffset, window.innerHeight - 120);
+      document.documentElement.style.setProperty(
+        "--canvas-ai-notification-offset",
+        `${Math.max(24, visibleOffset)}px`
+      );
+    };
+
+    updateNotificationOffset();
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(updateNotificationOffset);
+    if (dialogRef.current) resizeObserver?.observe(dialogRef.current);
+    window.addEventListener("resize", updateNotificationOffset);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateNotificationOffset);
+      document.documentElement.style.removeProperty("--canvas-ai-notification-offset");
+    };
+  }, [isOpen]);
 
   // Progressive Thinking Stage Interval
   useEffect(() => {
@@ -370,6 +400,7 @@ export default function CanvasAIAssistant({
             aria-hidden="true"
           />
           <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="ai-assistant-title"

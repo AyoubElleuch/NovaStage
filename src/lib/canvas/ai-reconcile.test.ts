@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { applyAIWorkflowResult, applyAWSServiceNodes } from "./ai-reconcile";
-import { CanvasNode, CanvasEdge } from "./types";
+import { CanvasNode, CanvasEdge, EdgeType } from "./types";
 import { AIWorkflowResult } from "@/lib/ai/types";
 
 // Mock Supabase admin client
@@ -70,6 +70,10 @@ describe("AI Canvas Graph Reconciliation Engine", () => {
 
     expect(result.intent).toBe("create_pipeline");
     expect(result.nodes.length).toBe(2);
+    expect(result.tempIdToUuid).toEqual({
+      m1: "uuid-node-1",
+      m2: "uuid-node-2",
+    });
     expect(mockAdminClient.from).toHaveBeenCalledWith("canvas_nodes");
   });
 
@@ -351,10 +355,12 @@ describe("AI Canvas Graph Reconciliation Engine", () => {
         { tempId: "subnet_public", parentGroupTempId: "vpc_1", label: "Public Ingress Subnet", style: "subnet", childTempIds: ["alb_1"] }
       ],
       serviceNodes: [
-        { tempId: "alb_1", parentGroupTempId: "subnet_public", serviceId: "alb", name: "Application Load Balancer" }
+        { tempId: "alb_1", parentGroupTempId: "subnet_public", serviceId: "alb", name: "Application Load Balancer" },
+        { tempId: "cloudfront_1", serviceId: "cloudfront", name: "CloudFront CDN" }
       ],
       dataFlowEdges: [
-        { fromId: "m_alb", toId: "alb_1", edgeType: "dependency", label: "Binds Listeners", protocol: "iac" }
+        { fromId: "m_alb", toId: "alb_1", edgeType: "dependency", label: "Binds Listeners", protocol: "iac" },
+        { fromId: "cloudfront_1", toId: "alb_1", edgeType: "https" as unknown as EdgeType, label: "HTTPS/443", protocol: "https" }
       ]
     };
 
@@ -371,7 +377,7 @@ describe("AI Canvas Graph Reconciliation Engine", () => {
 
     expect(result.nodes.length).toBe(3);
     expect(insertedGroups.length).toBe(2);
-    expect(insertedServices.length).toBe(1);
+    expect(insertedServices.length).toBe(2);
 
     // Verify VPC container starts at X and subnet sits inside it
     const vpc = insertedGroups.find((g) => ((g.group_metadata as { style: string })?.style === "vpc"));
@@ -382,11 +388,13 @@ describe("AI Canvas Graph Reconciliation Engine", () => {
     expect((subnet?.position_y as number)).toBeGreaterThan((vpc?.position_y as number));
 
     // Verify interlocking bridge edge: source_handle: "bottom", target_handle: "top"
-    expect(insertedEdges.length).toBe(1);
+    expect(insertedEdges.length).toBe(2);
     expect(insertedEdges[0].source_node_id).toBe("m_alb_uuid");
     expect(insertedEdges[0].source_handle).toBe("bottom");
     expect(insertedEdges[0].target_handle).toBe("top");
     expect(insertedEdges[0].label).toBe("Binds Listeners");
+    expect(insertedEdges[1].edge_type).toBe("data_flow");
+    expect(insertedEdges[1].label).toBe("HTTPS/443");
   });
 });
 

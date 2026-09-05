@@ -142,7 +142,7 @@
 }
 
 .site-notifications {
-  bottom: 24px;
+  bottom: var(--canvas-ai-notification-offset, 24px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -151,7 +151,7 @@
   position: fixed;
   right: 24px;
   width: 100%;
-  z-index: 120;
+  z-index: 1000;
 }
 
 .site-notifications--left {
@@ -187,14 +187,14 @@
 
 @media (max-width: 768px) {
   .site-notifications {
-    bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    bottom: max(var(--canvas-ai-notification-offset, 16px), env(safe-area-inset-bottom, 16px));
     left: 16px;
     right: 16px;
     max-width: calc(100vw - 32px);
     margin: 0 auto;
   }
   .site-notifications--left {
-    bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    bottom: max(var(--canvas-ai-notification-offset, 16px), env(safe-area-inset-bottom, 16px));
     left: 16px;
     right: 16px;
     margin: 0 auto;

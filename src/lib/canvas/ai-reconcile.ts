@@ -6,7 +6,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasNodeType, HandlePosition } from "./types";
+import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasNodeType, EdgeType, HandlePosition } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
 import { layoutAWSArchitecture } from "./aws-layout";
 import { AIWorkflowResult } from "@/lib/ai/types";
@@ -210,6 +210,7 @@ export async function applyAIWorkflowResult(
       edges: allEdges,
       summary: result.summary,
       intent: result.intent,
+      tempIdToUuid,
     };
   }
 
@@ -575,14 +576,18 @@ export async function applyAWSServiceNodes(
           target_node_id: targetUuid,
           source_handle: sourceHandle,
           target_handle: targetHandle,
-          edge_type: edge.edgeType || "data_flow",
+          edge_type: normalizeEdgeType(edge.edgeType, edge.protocol),
           label: edge.label || edge.protocol || null,
         });
       }
     }
 
     if (edgeInserts.length > 0) {
-      await adminClient.from("canvas_edges").insert(edgeInserts);
+      const { error: edgeErr } = await adminClient.from("canvas_edges").insert(edgeInserts);
+      if (edgeErr) {
+        console.error("Error creating AWS architecture edges:", edgeErr);
+        throw new Error("Failed to connect AWS architecture nodes");
+      }
     }
   }
 
@@ -592,6 +597,26 @@ export async function applyAWSServiceNodes(
     nodes: finalCanvas.nodes,
     edges: finalCanvas.edges,
   };
+}
+
+function normalizeEdgeType(edgeType?: string, protocol?: string): EdgeType {
+  if (edgeType === "dependency" || edgeType === "data_flow" || edgeType === "network" || edgeType === "event") {
+    return edgeType;
+  }
+
+  const normalizedType = edgeType?.toLowerCase().replace(/[\s-]+/g, "_");
+  if (normalizedType === "dataflow" || normalizedType === "flow") return "data_flow";
+  if (normalizedType === "networking" || normalizedType === "connection") return "network";
+  if (normalizedType === "events" || normalizedType === "async") return "event";
+
+  const normalizedProtocol = protocol?.toLowerCase() || normalizedType || "";
+  if (["tcp", "udp", "tls", "ssh"].some((value) => normalizedProtocol.startsWith(value))) {
+    return "network";
+  }
+  if (["sns", "sqs", "eventbridge", "kafka", "amqp"].some((value) => normalizedProtocol.includes(value))) {
+    return "event";
+  }
+  return "data_flow";
 }
 
 /**
