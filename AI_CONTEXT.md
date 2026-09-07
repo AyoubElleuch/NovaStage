@@ -5,13 +5,13 @@ Read this file before changing the project. Keep it current when architecture, d
 ## Project
 
 - Next.js 16.3.1 App Router with React 19, TypeScript, Tailwind CSS 4, and Supabase.
-- `/` redirects to `/login`.
+- `/` renders the public NovaStage homepage for guests; authenticated users still route to onboarding, `/dashboard`, or `/admin` according to profile completeness and role.
 - `/login` is the public waitlist page: email signup and GitHub signup use the existing visual design. The page also has an inline animated `Log in` mode for approved users, with email/password and GitHub login.
 - Auth code lives in `src/app/auth/`; Supabase clients live in `src/lib/supabase/`.
 - `middleware.ts` refreshes Supabase sessions. Do not expose the service-role key to client code.
 - Database migrations live in `supabase/migrations/`. Current public tables are `profiles`, `waitlist`, `permissions`, `roles`, `role_permissions`, `user_roles`, `projects`, `project_members`, `canvas_nodes`, `canvas_checkpoints`, `canvas_edges`, and `canvas_claim_requests`; `auth.users` is managed by Supabase and must never be deleted by development cleanup.
 - Granular permissions and roles live in `src/lib/auth/permissions.ts` and `src/lib/auth/session.ts`.
-- `public/images/` and `public/videos/login_page.mp4` are intentional login-page assets.
+- `public/images/`, `public/videos/login_page.mp4`, and `public/videos/hero.mp4` are intentional page assets.
 
 ## User Hierarchy & Permissions (RBAC / PBAC)
 
@@ -37,6 +37,10 @@ Read this file before changing the project. Keep it current when architecture, d
   - Release Pulse derives a live, task-weighted readiness score, longest unfinished dependency path, highest-impact blockers, and currently actionable milestones entirely from the in-memory canvas graph.
   - The canvas project notebook provides separate Notes and Questions tabs. Entries are private to the current browser and stored in `localStorage` by project ID.
   - `/dashboard/updates` is the authenticated product release timeline and is linked from the dashboard sidebar.
+  - **Public Homepage**: `src/components/home/` owns the hero, autonomous 2.5-second reversible curtain choreography, production canvas sandbox, lower capability demos, and footer. The sandbox reuses `CanvasViewportContainer`, `CanvasNodeComponent`, `CanvasEdgeLayer`, `CanvasDock`, `CanvasMinimap`, `CanvasServicePalette`, `CanvasDrawer`, `CanvasReleasePulse`, `CanvasCursors`, and `AWS_SERVICE_REGISTRY` with browser-only state and no database writes.
+  - Homepage canvas parity includes shift/marquee multi-selection, batch delete, undo/redo, milestone and AWS service creation, group creation, right-side inspection/editing, local claim locks, AWS registry defaults, and an explicitly non-functional AI Assistant demo trigger.
+  - Homepage scroll input is captured during forward/reverse choreography; the document and interactive surface unlock only at the terminal frame. The canvas frame scales uniformly into its final layout, and reverse playback begins from the top edge of the canvas environment.
+  - Homepage feature dropdowns use custom unfocused listbox controls. Do not reintroduce native `<select>` controls in homepage surfaces or invent provider pricing/latency data that is not present in the service registry or product source.
 
 ## Commands
 

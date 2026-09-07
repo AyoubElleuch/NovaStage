@@ -1,0 +1,43 @@
+.home-scroll-stage { position: relative; height: 100svh; z-index: 4; }
+.home-curtain { position: absolute; inset: 0; transform: translate3d(0, var(--curtain), 0); will-change: transform; }
+.home-canvas-frame { width: 100%; height: 100%; overflow: hidden; transform: translate3d(0, var(--frame-offset), 0) scale(var(--frame-scale)); transform-origin: center; will-change: transform; border: 1px solid var(--home-border); border-radius: calc((1 - var(--frame-scale)) * 100px); background: var(--home-surface); box-shadow: 0 32px 80px -30px rgb(0 0 0 / 30%); transition: transform 220ms cubic-bezier(.22, 1, .36, 1), border-radius 220ms cubic-bezier(.22, 1, .36, 1), box-shadow 220ms ease; }
+.home-canvas-frame:has(.home-sandbox[data-expanded="true"]) { transform: translate3d(0, 0, 0) scale(1); border-radius: 0; box-shadow: none; }
+.novastage-home[data-phase="hero"] .home-environment { background: transparent; }
+.novastage-home[data-phase="hero"] .home-doodle { visibility: hidden; }
+.novastage-home[data-phase="forward"] .home-environment { position: fixed; inset: 0; z-index: 4; margin-top: 0; background: transparent; }
+.novastage-home[data-revealed="true"] .home-environment { background: var(--home-bg); }
+.novastage-home[data-phase="hero"] .home-scroll-stage { pointer-events: none; }
+.home-sandbox { position: relative; height: 100%; display: flex; flex-direction: column; background: var(--home-bg); }
+.home-canvas-bar { height: 42px; padding: 0 12px; display: flex; justify-content: flex-end; align-items: center; border-bottom: 1px solid var(--home-border); background: var(--home-surface); flex-shrink: 0; }
+.home-canvas-bar-actions { display: flex; align-items: center; gap: 4px; }
+.home-canvas-viewport { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.home-dock-position { position: absolute; z-index: 35; left: 50%; bottom: 20px; transform: translate3d(-50%, 0, 0); max-width: calc(100% - 20px); }
+.home-production-dock { display: flex; align-items: center; gap: 5px; max-width: 100%; padding: 6px; border: 1px solid var(--home-border); border-radius: 8px; background: var(--home-surface); box-shadow: 0 4px 16px rgb(0 0 0 / 8%); }
+.home-production-dock button { border-radius: 5px; }
+.home-selection-actions { position: absolute; z-index: 37; left: 18px; bottom: 20px; display: flex; align-items: center; gap: 10px; color: var(--home-muted); font-size: 11px; }
+.home-selection-actions button { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 6px; color: #dc2626; background: var(--home-surface); border: 1px solid rgb(220 38 38 / 25%); }
+.home-selection-actions button:hover { background: rgb(220 38 38 / 8%); }
+.home-sandbox [aria-label="Milestone inspector drawer"], .home-sandbox [aria-label="Release pulse"] { position: absolute !important; top: 0 !important; right: 0 !important; bottom: 0 !important; left: auto !important; width: min(420px, 100%) !important; max-width: min(420px, 100%) !important; height: 100% !important; max-height: 100% !important; }
+.home-sandbox > [aria-hidden="true"].fixed.inset-0 { position: absolute !important; inset: 0 !important; }
+.home-sandbox [class*="backdrop-blur"] { backdrop-filter: none !important; }
+.home-assembled-node { position: absolute; top: 0; left: 0; opacity: clamp(0, calc(var(--assembly) * 2 - var(--node-order) * .15), 1); transform: translate3d(0, calc((1 - var(--assembly)) * 70px), 0); }
+.home-assembled-node > .group { background: var(--home-surface) !important; border: 1px solid var(--home-border) !important; border-radius: 8px; transition-property: box-shadow, border-color !important; }
+.home-assembled-node [data-no-drag="true"]:not(input), .home-assembled-node span.inline-block { border: none !important; background: transparent !important; box-shadow: none !important; }
+.home-assembled-node span.inline-block { max-width: none; }
+.home-assembled-node > .group > div:first-child { padding-bottom: 8px; }
+.home-assembled-edges { opacity: var(--assembly); }
+.home-assembled-edges foreignObject span { border: none !important; background: var(--home-bg) !important; box-shadow: none !important; border-radius: 0 !important; }
+.novastage-home:not([data-phase="canvas"]) .home-assembled-edges path[marker-end] { stroke-dasharray: 1000; stroke-dashoffset: calc((1 - var(--assembly)) * 1000); }
+.home-packet-layer { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+.home-assembly-cursor { opacity: clamp(0, calc((var(--assembly) - .65) * 3), 1); }
+.home-checkpoint { position: absolute; font-size: 12px; line-height: 1.6; color: var(--home-muted); width: 260px; }
+.home-checkpoint > span { color: var(--home-accent); font-weight: 600; }
+.home-checkpoint p { margin-top: 3px; }
+@media (max-width: 700px) {
+  .home-canvas-bar { height: 38px; padding: 0 8px; }
+  .home-production-dock { gap: 3px; }
+  .home-selection-actions { left: 10px; bottom: 62px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-canvas-frame { transition: none; }
+}

@@ -2,6 +2,15 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
+    version: "Beta v1.0.6",
+    date: "September 7, 2026",
+    title: "Early Landing Page",
+    summary: "Introduced an early version of the NovaStage landing page.",
+    changes: [
+      "Early Landing Page: Launched the first version of the NovaStage landing page with an interactive architecture canvas preview.",
+    ],
+  },
+  {
     version: "Beta v1.0.5",
     date: "September 6, 2026",
     title: "Account Tiers & Subscription Preview",

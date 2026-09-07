@@ -1,0 +1,44 @@
+.home-pricing { max-width: 1280px; margin: 0 auto; padding: 100px 48px 110px; border-top: 1px solid var(--home-border); scroll-margin-top: 105px; }
+.home-pricing-heading { display: flex; align-items: end; justify-content: space-between; gap: 48px; margin-bottom: 48px; }
+.home-pricing-heading h2 { max-width: 800px; margin: 0 0 20px; font-size: 52px; line-height: 1.08; }
+.home-pricing-heading h2 span { color: var(--home-muted); }
+.home-billing-control { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; flex-shrink: 0; }
+.home-billing-control > span { color: var(--home-accent); font-size: 12px; font-weight: 600; }
+.home-billing-toggle { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--home-border); border-radius: 6px; background: var(--home-surface); }
+.home-billing-toggle button { min-width: 84px; height: 38px; padding: 0 12px; border-radius: 4px; color: var(--home-muted); font-size: 13px; font-weight: 600; }
+.home-billing-toggle button[aria-pressed="true"] { background: #f8fafc; color: #090d16; }
+.home-pricing-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.home-price-card { --plan-accent: #64748b; position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 650px; padding: 28px 22px 22px; border: 1px solid var(--home-border); border-radius: 8px; background: var(--home-surface); }
+.home-price-card[data-plan="plus"] { --plan-accent: #3b82f6; }
+.home-price-card[data-plan="pro"] { --plan-accent: var(--home-secondary); }
+.home-price-card[data-plan="enterprise"] { --plan-accent: #fbbf24; }
+.home-price-card[data-featured="true"] { border: 2px solid #3b82f6; background: var(--home-surface); box-shadow: 0 18px 42px rgb(59 130 246 / 14%); }
+.home-plan-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); padding: 5px 10px; border-radius: 6px; background: #2563eb; color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+.home-plan-title { display: flex; align-items: center; }
+.home-plan-title h3 { color: var(--home-text); font-size: 23px; line-height: 1.2; }
+.home-plan-description { min-height: 72px; margin-top: 15px; color: #c5cedb; font-size: 14px; line-height: 1.55; }
+.home-plan-price-wrap { display: flex; flex-direction: column; justify-content: flex-end; min-height: 74px; margin-top: 17px; }
+.home-plan-price-wrap del { margin-bottom: 8px; color: #a8b3c3; font-size: 14px; font-weight: 600; text-decoration-color: #f87171; text-decoration-thickness: 2px; }
+.home-plan-price { display: flex; align-items: baseline; gap: 6px; }
+.home-plan-price strong { font-family: var(--home-display); font-size: 32px; line-height: 1; }
+.home-plan-price span { color: #c5cedb; font-size: 13px; }
+.home-plan-billing { min-height: 21px; margin-top: 9px; color: #c5cedb; font-size: 14px; font-weight: 500; }
+.home-price-card ul { display: grid; align-content: start; gap: 12px; margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--home-border); }
+.home-price-card li { display: flex; align-items: flex-start; gap: 8px; color: #e0e6ee; font-size: 14px; line-height: 1.5; }
+.home-price-card li svg { flex-shrink: 0; color: var(--plan-accent); margin-top: 1px; }
+.home-plan-action { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 46px; margin-top: auto; padding: 0 13px; border: 1px solid var(--home-border); border-radius: 5px; color: var(--home-text); font-size: 14px; font-weight: 600; transition: border-color 180ms ease, background 180ms ease, color 180ms ease; }
+.home-plan-action:hover { border-color: #a7f3d0; background: #a7f3d0; color: #052e24; }
+.home-pricing-note { display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 28px; color: #b8c2d1; font-size: 12px; text-align: center; }
+@media (max-width: 1100px) {
+  .home-pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-price-card { min-height: 610px; }
+}
+@media (max-width: 760px) {
+  .home-pricing { padding: 72px 24px 78px; }
+  .home-pricing-heading { align-items: flex-start; flex-direction: column; gap: 28px; }
+  .home-pricing-heading h2 { font-size: 40px; }
+  .home-billing-control { align-items: flex-start; }
+  .home-pricing-grid { display: flex; gap: 14px; margin-right: -24px; padding: 8px 24px 18px 0; overflow-x: auto; overscroll-behavior-x: contain; scroll-padding-left: 0; scroll-snap-type: x mandatory; scrollbar-width: none; touch-action: pan-x; -webkit-overflow-scrolling: touch; }
+  .home-pricing-grid::-webkit-scrollbar { display: none; }
+  .home-price-card { width: min(82vw, 340px); flex: 0 0 min(82vw, 340px); min-height: 610px; scroll-snap-align: start; }
+}

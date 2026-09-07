@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    --font-display: "Archivo Black", "Geist", sans-serif;
     --background: 42 20% 97%;
     --foreground: 30 12% 12%;
     --card: 40 33% 99%;
@@ -36,6 +37,10 @@
     font-family: "Trebuchet MS", "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  h1 {
+    font-family: var(--font-display);
   }
 
   .dark body,

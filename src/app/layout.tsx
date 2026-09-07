@@ -6,6 +6,8 @@ import PlatformAnnouncementBanner from "@/components/announcements/platform-anno
 import { getActivePlatformAnnouncement } from "@/lib/announcements/server";
 
 import { ThemeProvider } from "@/lib/theme-context";
+import AuthTransitionProvider from "@/components/home/navigation/auth-transition-provider";
+import "@fontsource/archivo-black/400.css";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -58,7 +60,7 @@ export default async function RootLayout({
       <body className="min-h-screen bg-[#fafafa] text-neutral-900 dark:bg-[#0f141c] dark:text-[#f1f5f9] antialiased transition-colors duration-200">
         <ThemeProvider>
           <PlatformAnnouncementBanner initialAnnouncement={activeAnnouncement} />
-          <NotificationProvider>{children}</NotificationProvider>
+          <NotificationProvider><AuthTransitionProvider>{children}</AuthTransitionProvider></NotificationProvider>
           <LoadingScreen />
         </ThemeProvider>
       </body>

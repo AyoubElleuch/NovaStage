@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const INTRO_DURATION = 1000;
 const EXIT_DURATION = 480;
@@ -25,11 +25,13 @@ function waitForVideo(video: HTMLVideoElement) {
   });
 }
 
-export default function LoadingScreen() {
+export default function LoadingScreen({ ready = true, onComplete }: { ready?: boolean; onComplete?: () => void } = {}) {
   const [isVisible, setIsVisible] = useState(true);
   const [isExiting, setIsExiting] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const completeRef = useRef(onComplete);
+  useEffect(() => { completeRef.current = onComplete; }, [onComplete]);
 
   useEffect(() => {
     let hasFinished = false;
@@ -39,13 +41,13 @@ export default function LoadingScreen() {
     let exitTimer: number | undefined;
 
     const removeScreen = () => {
-      if (hasFinished) return;
+      if (hasFinished || !ready) return;
       hasFinished = true;
       if (progressTimer) window.clearInterval(progressTimer);
       if (readyTimer) window.clearTimeout(readyTimer);
       setProgress(100);
       setIsExiting(true);
-      exitTimer = window.setTimeout(() => setIsVisible(false), EXIT_DURATION);
+      exitTimer = window.setTimeout(() => { setIsVisible(false); completeRef.current?.(); }, EXIT_DURATION);
     };
 
     const beginWaiting = () => {
@@ -101,7 +103,7 @@ export default function LoadingScreen() {
       if (progressTimer) window.clearInterval(progressTimer);
       if (exitTimer) window.clearTimeout(exitTimer);
     };
-  }, []);
+  }, [ready]);
 
   useEffect(() => {
     if (!isVisible) return;

@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  Check,
+  ChevronDown,
   Circle,
   Lock,
   Plus,
@@ -38,6 +40,44 @@ interface CanvasDrawerProps {
   onRequestClaim: (node: CanvasNode) => void;
   onForceUnlock?: (nodeId: string) => void;
   onJumpToNode: (nodeId: string) => void;
+}
+
+const GROUP_STYLE_OPTIONS = [
+  ["vpc", "Virtual Private Cloud (VPC)"],
+  ["subnet", "Subnet (Public / Private)"],
+  ["region", "AWS Region Boundary"],
+  ["availability_zone", "Availability Zone (AZ)"],
+  ["custom", "Custom Group"],
+] as const;
+
+function DrawerDropdown({ value, disabled, onChange }: { value: string; disabled: boolean; onChange: (value: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = GROUP_STYLE_OPTIONS.find(([key]) => key === value) || GROUP_STYLE_OPTIONS[0];
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const close = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") setIsOpen(false); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
+  }, [isOpen]);
+
+  return <div ref={rootRef} className="relative">
+    <button type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={isOpen} onMouseDown={(event) => event.preventDefault()} onClick={() => setIsOpen((open) => !open)}
+      className="flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-xs font-semibold text-neutral-900 shadow-2xs outline-none transition-colors hover:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:hover:border-[#384961] dark:disabled:bg-[#161d27] dark:disabled:text-neutral-500">
+      <span>{selected[1]}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 text-neutral-400" aria-hidden="true" />
+    </button>
+    {isOpen && <div role="listbox" className="absolute inset-x-0 top-[calc(100%+6px)] z-20 rounded-lg border border-neutral-200 bg-white p-1 shadow-xl dark:border-[#283548] dark:bg-[#161d27]">
+      {GROUP_STYLE_OPTIONS.map(([key, label]) => <button key={key} type="button" role="option" aria-selected={key === value} onMouseDown={(event) => event.preventDefault()} onClick={() => { onChange(key); setIsOpen(false); }}
+        className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-[#1e2634]">
+        <span>{label}</span>{key === value && <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
+      </button>)}
+    </div>}
+  </div>;
 }
 
 function MilestoneDrawerContent({
@@ -390,28 +430,17 @@ function MilestoneDrawerContent({
               <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
                 Container Style & Boundary
               </label>
-              <select
-                disabled={!isClaimedByMe}
-                value={node.group_metadata?.style || "vpc"}
-                onChange={(e) => {
-                  if (isClaimedByMe) {
-                    onUpdateNode(node.id, {
-                      group_metadata: {
-                        label: node.group_metadata?.label || node.title,
-                        style: e.target.value as "vpc" | "subnet" | "region" | "availability_zone" | "custom",
-                        childNodeIds: node.group_metadata?.childNodeIds || [],
-                      },
-                    });
-                  }
-                }}
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 dark:border-[#283548] dark:bg-[#121721] dark:text-white cursor-pointer"
-              >
-                <option value="vpc">Virtual Private Cloud (VPC)</option>
-                <option value="subnet">Subnet (Public / Private)</option>
-                <option value="region">AWS Region Boundary</option>
-                <option value="availability_zone">Availability Zone (AZ)</option>
-                <option value="custom">Custom Group</option>
-              </select>
+              <DrawerDropdown value={node.group_metadata?.style || "vpc"} disabled={!isClaimedByMe} onChange={(value) => {
+                if (isClaimedByMe) {
+                  onUpdateNode(node.id, {
+                    group_metadata: {
+                      label: node.group_metadata?.label || node.title,
+                      style: value as "vpc" | "subnet" | "region" | "availability_zone" | "custom",
+                      childNodeIds: node.group_metadata?.childNodeIds || [],
+                    },
+                  });
+                }
+              }} />
             </div>
             <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-3 dark:border-[#283548] dark:bg-[#121721]">
               <span className="text-xs text-neutral-600 dark:text-neutral-400">

@@ -9,6 +9,7 @@ import type { CanvasEdge, CanvasNode } from "@/lib/canvas/types";
 interface CanvasReleasePulseProps {
   nodes: CanvasNode[];
   edges: CanvasEdge[];
+  portalContainer?: HTMLElement | null;
   onClose: () => void;
   onJumpToNode: (nodeId: string) => void;
 }
@@ -23,6 +24,7 @@ function readinessLabel(readiness: number) {
 export default function CanvasReleasePulse({
   nodes,
   edges,
+  portalContainer,
   onClose,
   onJumpToNode,
 }: CanvasReleasePulseProps) {
@@ -190,6 +192,6 @@ export default function CanvasReleasePulse({
       </div>
     </aside>
     </>,
-    document.body
+    portalContainer || document.body
   );
 }

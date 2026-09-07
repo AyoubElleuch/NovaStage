@@ -6,7 +6,7 @@ import { X, Check, Mail, ShieldCheck } from "lucide-react";
 interface BillingComingSoonModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedPlan: "plus" | "pro" | "enterprise" | null;
+  selectedPlan: "free" | "plus" | "pro" | "enterprise" | null;
   hasPlusCredit?: boolean;
   proPrice?: string;
 }
@@ -46,7 +46,9 @@ export default function BillingComingSoonModal({
   if (!isOpen) return null;
 
   const planTitle =
-    selectedPlan === "plus"
+    selectedPlan === "free"
+      ? "Free Plan ($0/mo)"
+      : selectedPlan === "plus"
       ? "Plus Plan ($1.99/mo)"
       : selectedPlan === "pro"
       ? hasPlusCredit
