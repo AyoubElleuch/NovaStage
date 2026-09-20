@@ -57,6 +57,13 @@ export default function CanvasViewportContainer({
   const dragDistanceRef = useRef(0);
   const marqueeDistanceRef = useRef(0);
   const justFinishedMarqueeRef = useRef(false);
+  const getScreenPoint = useCallback((clientX: number, clientY: number) => {
+    const container = containerRef.current;
+    const rect = container?.getBoundingClientRect();
+    if (!container || !rect) return { x: clientX, y: clientY };
+    const scale = rect.width / Math.max(container.clientWidth, 1);
+    return { x: (clientX - rect.left) / (scale || 1), y: (clientY - rect.top) / (scale || 1) };
+  }, []);
 
   // Keyboard Spacebar for Pan
   useEffect(() => {
@@ -103,9 +110,9 @@ export default function CanvasViewportContainer({
       const deltaX = e.deltaX * deltaScale;
       const deltaY = e.deltaY * deltaScale;
 
-      const rect = containerRef.current.getBoundingClientRect();
-      const mouseScreenX = e.clientX - rect.left;
-      const mouseScreenY = e.clientY - rect.top;
+      const mouseScreen = getScreenPoint(e.clientX, e.clientY);
+      const mouseScreenX = mouseScreen.x;
+      const mouseScreenY = mouseScreen.y;
 
       if (e.ctrlKey || e.metaKey) {
         // Pinch / Ctrl + Wheel Zoom
@@ -129,7 +136,7 @@ export default function CanvasViewportContainer({
         });
       }
     },
-    [updateViewport]
+    [getScreenPoint, updateViewport]
   );
 
   useEffect(() => {
@@ -154,7 +161,8 @@ export default function CanvasViewportContainer({
       if (!isTouch) e.preventDefault();
     }
 
-    activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const screenPoint = getScreenPoint(e.clientX, e.clientY);
+    activePointersRef.current.set(e.pointerId, screenPoint);
 
     // Multi-touch pinch-to-zoom start
     if (activePointersRef.current.size === 2) {
@@ -181,16 +189,15 @@ export default function CanvasViewportContainer({
     dragDistanceRef.current = 0;
     if (shouldPan) {
       setIsPanning(true);
-      setPanStart({ x: e.clientX - viewport.x, y: e.clientY - viewport.y });
+      setPanStart({ x: screenPoint.x - viewport.x, y: screenPoint.y - viewport.y });
       try {
         containerRef.current?.setPointerCapture(e.pointerId);
       } catch {}
     } else if (e.button === 0 && (activeTool === "select" || e.shiftKey)) {
       // Marquee selection start
       if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const screenX = e.clientX - rect.left;
-      const screenY = e.clientY - rect.top;
+      const screenX = screenPoint.x;
+      const screenY = screenPoint.y;
       const worldPos = screenToWorld(screenX, screenY, viewport);
 
       setIsMarqueeDragging(true);
@@ -205,7 +212,7 @@ export default function CanvasViewportContainer({
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (activePointersRef.current.has(e.pointerId)) {
-      activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      activePointersRef.current.set(e.pointerId, getScreenPoint(e.clientX, e.clientY));
     }
 
     // 2-Finger Pinch Zoom & Pan
@@ -214,14 +221,13 @@ export default function CanvasViewportContainer({
       const currentDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
       const currentMidpoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
 
-      const rect = containerRef.current.getBoundingClientRect();
       const initialMidScreen = {
-        x: pinchStateRef.current.initialMidpoint.x - rect.left,
-        y: pinchStateRef.current.initialMidpoint.y - rect.top,
+        x: pinchStateRef.current.initialMidpoint.x,
+        y: pinchStateRef.current.initialMidpoint.y,
       };
       const currentMidScreen = {
-        x: currentMidpoint.x - rect.left,
-        y: currentMidpoint.y - rect.top,
+        x: currentMidpoint.x,
+        y: currentMidpoint.y,
       };
 
       const scale = currentDistance / (pinchStateRef.current.initialDistance || 1);
@@ -242,22 +248,22 @@ export default function CanvasViewportContainer({
     }
 
     if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const screenX = e.clientX - rect.left;
-    const screenY = e.clientY - rect.top;
+    const screen = getScreenPoint(e.clientX, e.clientY);
+    const screenX = screen.x;
+    const screenY = screen.y;
     const worldPos = screenToWorld(screenX, screenY, viewport);
 
     onPointerMove?.(worldPos, { x: e.clientX, y: e.clientY });
 
     if (isPanning) {
       dragDistanceRef.current = Math.max(dragDistanceRef.current, Math.hypot(
-        e.clientX - panStart.x - viewport.x,
-        e.clientY - panStart.y - viewport.y
+        screenX - panStart.x - viewport.x,
+        screenY - panStart.y - viewport.y
       ));
       updateViewport({
         ...viewport,
-        x: e.clientX - panStart.x,
-        y: e.clientY - panStart.y,
+        x: screenX - panStart.x,
+        y: screenY - panStart.y,
       });
     } else if (isMarqueeDragging) {
       marqueeDistanceRef.current += Math.hypot(e.movementX, e.movementY);
@@ -321,9 +327,9 @@ export default function CanvasViewportContainer({
     }
 
     if (isBackground && !isPanning && !isMarqueeDragging && containerRef.current && dragDistanceRef.current < 8) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const screenX = e.clientX - rect.left;
-      const screenY = e.clientY - rect.top;
+      const screen = getScreenPoint(e.clientX, e.clientY);
+      const screenX = screen.x;
+      const screenY = screen.y;
       const worldPos = screenToWorld(screenX, screenY, viewport);
       onCanvasClick?.(worldPos);
     }

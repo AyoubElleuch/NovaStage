@@ -5,6 +5,7 @@
  */
 
 import { AIWorkflowResult, AIProcessedMilestone, AIProcessedEdge, MilestonePhase } from "../types";
+import { normalizeAWSServiceId } from "@/lib/canvas/aws-catalog-lookup";
 
 export interface ValidationReport {
   isValid: boolean;
@@ -13,6 +14,8 @@ export interface ValidationReport {
   brokenEdgesRemoved: number;
   checkpointsPadded: number;
   duplicateTitlesFixed: number;
+  architectureReferencesRepaired: number;
+  architectureEdgesRemoved: number;
 }
 
 /**
@@ -113,7 +116,96 @@ export function validateAndRepairWorkflow(
     brokenEdgesRemoved: 0,
     checkpointsPadded: 0,
     duplicateTitlesFixed: 0,
+    architectureReferencesRepaired: 0,
+    architectureEdgesRemoved: 0,
   };
+
+  const seenArchitectureIds = new Set<string>();
+  const normalizeArchitectureId = (id: string, prefix: string, index: number) => {
+    const trimmed = id?.trim() || `${prefix}_${index + 1}`;
+    if (!seenArchitectureIds.has(trimmed)) {
+      seenArchitectureIds.add(trimmed);
+      return trimmed;
+    }
+    report.architectureReferencesRepaired++;
+    let suffix = 2;
+    while (seenArchitectureIds.has(`${trimmed}_${suffix}`)) suffix++;
+    const unique = `${trimmed}_${suffix}`;
+    seenArchitectureIds.add(unique);
+    return unique;
+  };
+
+  const groups = (workflow.groups || []).map((group, index) => ({
+    ...group,
+    tempId: normalizeArchitectureId(group.tempId || group.id || "", "group", index),
+    label: group.label?.trim() || `Architecture group ${index + 1}`,
+    childTempIds: [...new Set((group.childTempIds || []).filter(Boolean))],
+  }));
+  const groupIds = new Set(groups.map((group) => group.tempId));
+  const services = (workflow.serviceNodes || []).map((service, index) => ({
+    ...service,
+    tempId: normalizeArchitectureId(service.tempId || service.id || "", "service", index),
+    serviceId: normalizeAWSServiceId(service.serviceId || "ec2"),
+    name: service.name?.trim() || service.serviceId?.trim() || `AWS service ${index + 1}`,
+  }));
+
+  const normalizeParent = (parentId?: string) => {
+    if (!parentId) return undefined;
+    if (groupIds.has(parentId)) return parentId;
+    report.architectureReferencesRepaired++;
+    return undefined;
+  };
+  groups.forEach((group) => {
+    group.parentGroupTempId = normalizeParent(
+      group.parentGroupTempId || groups.find((candidate) => candidate.childTempIds.includes(group.tempId))?.tempId
+    );
+  });
+  const groupById = new Map(groups.map((group) => [group.tempId, group]));
+  groups.forEach((group) => {
+    const visited = new Set([group.tempId]);
+    let parentId = group.parentGroupTempId;
+    while (parentId) {
+      if (visited.has(parentId)) {
+        group.parentGroupTempId = undefined;
+        report.architectureReferencesRepaired++;
+        break;
+      }
+      visited.add(parentId);
+      parentId = groupById.get(parentId)?.parentGroupTempId;
+    }
+  });
+  services.forEach((service) => {
+    service.parentGroupTempId = normalizeParent(
+      service.parentGroupTempId || groups.find((group) => group.childTempIds.includes(service.tempId))?.tempId
+    );
+  });
+  for (const group of groups) {
+    const directChildren = [
+      ...groups.filter((candidate) => candidate.parentGroupTempId === group.tempId).map((candidate) => candidate.tempId),
+      ...services.filter((candidate) => candidate.parentGroupTempId === group.tempId).map((candidate) => candidate.tempId),
+    ];
+    group.childTempIds = [...new Set(directChildren)];
+  }
+
+  const architectureNodeIds = new Set([
+    ...groups.map((group) => group.tempId),
+    ...services.map((service) => service.tempId),
+    ...(workflow.milestones || []).flatMap((milestone) => [milestone.id, milestone.tempId].filter(Boolean) as string[]),
+  ]);
+  const architectureEdgeKeys = new Set<string>();
+  const dataFlowEdges = (workflow.dataFlowEdges || []).filter((edge) => {
+    const key = `${edge.fromId}->${edge.toId}:${edge.edgeType || "data_flow"}`;
+    const valid = Boolean(
+      edge.fromId && edge.toId && edge.fromId !== edge.toId &&
+      architectureNodeIds.has(edge.fromId) && architectureNodeIds.has(edge.toId) &&
+      !architectureEdgeKeys.has(key)
+    );
+    if (!valid) report.architectureEdgesRemoved++;
+    if (valid) architectureEdgeKeys.add(key);
+    return valid;
+  });
+
+  workflow = { ...workflow, groups, serviceNodes: services, dataFlowEdges };
 
   if (!workflow.milestones || workflow.milestones.length === 0) {
     return { workflow, report };

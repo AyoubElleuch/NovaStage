@@ -10,7 +10,7 @@
  * 3. Phase 3: Local Deterministic Graph Validation & Auto-Repair (Algorithmic)
  */
 
-import { CanvasAIContext, AIWorkflowResult, AIGenerationMode } from "./types";
+import { CanvasAIContext, AIWorkflowResult, AIGenerationMode, AIGenerationOperation } from "./types";
 import { decomposePrompt } from "./phases/decompose";
 import { generateDeepWorkflow } from "./phases/generate";
 import { generateAWSArchitecture } from "./phases/generate-aws";
@@ -29,13 +29,16 @@ export async function executeAIPipeline(
   prompt: string,
   mode: AIGenerationMode = "workflow",
   context?: CanvasAIContext,
-  options?: { plan?: string }
+  options?: { plan?: string; operation?: AIGenerationOperation }
 ): Promise<AIWorkflowResult> {
-  void options;
   const cleanPrompt = prompt.trim();
   if (!cleanPrompt) {
     throw new Error("Prompt cannot be empty");
   }
+
+  const pipelineContext = context
+    ? { ...context, operation: options?.operation || context.operation }
+    : context;
 
   // Phase 1: Decompose prompt into structured architectural specification
   let decomposition;
@@ -49,14 +52,14 @@ export async function executeAIPipeline(
   let rawWorkflow: AIWorkflowResult;
   switch (mode) {
     case "aws_architecture":
-      rawWorkflow = await generateAWSArchitecture(cleanPrompt, decomposition, context);
+      rawWorkflow = await generateAWSArchitecture(cleanPrompt, decomposition, pipelineContext);
       break;
     case "full_stack":
-      rawWorkflow = await generateFullStack(cleanPrompt, decomposition, context);
+      rawWorkflow = await generateFullStack(cleanPrompt, decomposition, pipelineContext);
       break;
     case "workflow":
     default:
-      rawWorkflow = await generateDeepWorkflow(cleanPrompt, decomposition, context);
+      rawWorkflow = await generateDeepWorkflow(cleanPrompt, decomposition, pipelineContext);
       break;
   }
 
@@ -74,4 +77,3 @@ export async function executeAIPipeline(
 
   return validatedWorkflow;
 }
-

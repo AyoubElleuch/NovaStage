@@ -35,23 +35,30 @@ export function createGroup(id: string, position_x: number, position_y: number):
 }
 
 export function createInitialGraph(compact = false): CanvasGraphData {
-  const nodes = [
-    createService("edge", "Next.js Edge", "cloudfront", 50, 230),
-    createService("api", "API Gateway", "apigateway", 360, 230),
-    createService("postgres", "Supabase Postgres", "rds", 710, 80),
-    createService("redis", "Redis Cluster", "elasticache", 710, 380),
-    createService("queue", "Worker Queue", "sqs", 1060, 230),
+  const nodes: CanvasNode[] = [
+    { ...createGroup("edge-group", 20, 90), title: "Global edge", width: 580, height: 280, group_metadata: { label: "Global edge", style: "custom", childNodeIds: ["edge", "web"] } },
+    { ...createGroup("vpc-group", 670, 60), title: "Production VPC", width: 850, height: 540, group_metadata: { label: "Production VPC", style: "vpc", childNodeIds: ["api", "queue", "worker", "postgres", "redis"] } },
+    createService("edge", "Amazon CloudFront", "cloudfront", 70, 160),
+    createService("web", "Next.js application", "lambda", 300, 160),
+    createService("api", "API Gateway", "apigateway", 730, 150),
+    createService("worker", "Lambda workers", "lambda", 1260, 150),
+    createService("postgres", "Amazon RDS", "rds", 1000, 390),
+    createService("redis", "ElastiCache", "elasticache", 1260, 390),
+    createService("queue", "Amazon SQS", "sqs", 1000, 150),
   ];
   if (compact) {
-    const positions = [[0, 0], [270, 0], [0, 270], [270, 270], [135, 540]];
+    const positions = [[0, 0], [0, 500], [40, 80], [40, 280], [40, 580], [40, 980], [260, 580], [260, 780], [40, 780]];
     nodes.forEach((node, index) => { [node.position_x, node.position_y] = positions[index]; });
+    nodes[0] = { ...nodes[0], width: 500, height: 420 };
+    nodes[1] = { ...nodes[1], width: 500, height: 800 };
   }
   const connections = [
-    ["edge", "api", "HTTPS", "network"],
+    ["edge", "web", "HTTPS", "network"],
+    ["web", "api", "HTTPS", "network"],
+    ["api", "queue", "Jobs", "event"],
+    ["queue", "worker", "Events", "event"],
     ["api", "postgres", "PostgreSQL / TLS", "data_flow"],
-    ["api", "redis", "RESP / TLS", "data_flow"],
-    ["postgres", "queue", "Events", "event"],
-    ["redis", "queue", "HTTPS", "network"],
+    ["worker", "redis", "Cache", "data_flow"],
   ] as const;
   return { nodes, edges: connections.map(([source, target, label, edge_type]) => ({
     id: `${source}-${target}`, project_id: PROJECT_ID, source_node_id: source,

@@ -10,9 +10,9 @@ import {
 } from "../types";
 import { buildAWSGenerationSystemInstruction } from "../prompts/system-generate-aws";
 import { callGemini } from "../gemini";
-import { AWS_WEB_APP_FEW_SHOT_EXAMPLE } from "../prompts/aws-few-shot-examples";
+import { evaluateArchitectureQuality, hasUsableArchitecture, normalizeArchitectureResult } from "../architecture-quality";
 
-const WORKFLOW_SCHEMA = {
+export const AWS_WORKFLOW_SCHEMA = {
   type: "OBJECT",
   properties: {
     intent: {
@@ -25,14 +25,22 @@ const WORKFLOW_SCHEMA = {
       items: {
         type: "OBJECT",
         properties: {
+          id: { type: "STRING" },
           tempId: { type: "STRING" },
           serviceId: { type: "STRING" },
           name: { type: "STRING" },
           description: { type: "STRING" },
           region: { type: "STRING" },
-          config: {
-            type: "OBJECT",
-            additionalProperties: { type: "STRING" }
+          configEntries: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                key: { type: "STRING" },
+                value: { type: "STRING" }
+              },
+              required: ["key", "value"]
+            }
           },
           parentGroupTempId: { type: "STRING" }
         },
@@ -44,6 +52,7 @@ const WORKFLOW_SCHEMA = {
       items: {
         type: "OBJECT",
         properties: {
+          id: { type: "STRING" },
           tempId: { type: "STRING" },
           label: { type: "STRING" },
           style: { 
@@ -72,7 +81,9 @@ const WORKFLOW_SCHEMA = {
         },
         required: ["fromId", "toId", "edgeType"]
       }
-    }
+    },
+    deletedServiceNodeIds: { type: "ARRAY", items: { type: "STRING" } },
+    deletedGroupIds: { type: "ARRAY", items: { type: "STRING" } }
   },
   required: ["intent", "summary", "serviceNodes", "groups", "dataFlowEdges"],
 };
@@ -87,10 +98,15 @@ export async function generateAWSArchitecture(
 ): Promise<AIWorkflowResult> {
   const systemInstruction = buildAWSGenerationSystemInstruction(prompt, decomposition);
 
-  // Format existing canvas context into clear text
+  // Format the complete existing topology; update requests must never be blind.
   let contextDescription = "The canvas is currently empty. Generate a brand-new comprehensive AWS architecture.";
-  if (context?.existingMilestones && context.existingMilestones.length > 0) {
-    const simplifiedMilestones = context.existingMilestones.map((m, idx) => ({
+  const hasCanvasContext = Boolean(
+    context?.existingMilestones?.length ||
+    context?.existingServiceNodes?.length ||
+    context?.existingGroups?.length
+  );
+  if (hasCanvasContext) {
+    const simplifiedMilestones = (context?.existingMilestones || []).map((m, idx) => ({
       id: m.id,
       stepNumber: idx + 1,
       order: m.order,
@@ -105,15 +121,19 @@ export async function generateAWSArchitecture(
       })),
     }));
 
-    const simplifiedEdges = (context.existingEdges || []).map((e) => ({
+    const simplifiedEdges = (context?.existingEdges || []).map((e) => ({
       fromId: e.sourceId,
       toId: e.targetId,
     }));
 
-    contextDescription = `Current Canvas Graph State:\n${JSON.stringify(
+    contextDescription = `ORCHESTRATION OPERATION: ${context?.operation || "update"}\n` +
+      `Current Canvas Graph State (UUIDs are authoritative):\n${JSON.stringify(
       {
         existingMilestones: simplifiedMilestones,
         existingEdges: simplifiedEdges,
+        existingServiceNodes: context?.existingServiceNodes || [],
+        existingGroups: context?.existingGroups || [],
+        existingDataFlowEdges: context?.existingDataFlowEdges || [],
       },
       null,
       2
@@ -143,21 +163,34 @@ export async function generateAWSArchitecture(
     )}`;
   }
 
-  const userPromptText = `${contextDescription}${decompositionContext}\n\nUser Request: "${prompt}"`;
+  const userPromptText = `${contextDescription}${decompositionContext}\n\nUser Request: "${prompt}"\n\n` +
+    (context?.operation === "update"
+      ? "Return the complete desired AWS topology after the update. Preserve each retained resource's exact UUID in both id and tempId. Use new_* tempIds only for additions, and list explicit removals in deletedServiceNodeIds/deletedGroupIds."
+      : "Create a distinct new architecture. Do not reuse IDs from existing canvas resources.");
 
-  const result = await callGemini<AIWorkflowResult>(userPromptText, WORKFLOW_SCHEMA, {
+  let result = await callGemini<AIWorkflowResult>(userPromptText, AWS_WORKFLOW_SCHEMA, {
     systemInstruction,
     temperature: 0.2,
   });
+  result = normalizeArchitectureResult(result);
+  let quality = evaluateArchitectureQuality(result, prompt, decomposition);
+  if (!quality.ok) {
+    result = await callGemini<AIWorkflowResult>(
+      `${userPromptText}\n\nThe previous draft was rejected for these reasons:\n- ${quality.issues.join("\n- ")}\nRegenerate the complete topology and correct every issue.`,
+      AWS_WORKFLOW_SCHEMA,
+      { systemInstruction, temperature: 0.15 }
+    );
+    result = normalizeArchitectureResult(result);
+    quality = evaluateArchitectureQuality(result, prompt, decomposition);
+  }
 
-  if (
-    result &&
-    Array.isArray(result.serviceNodes) &&
-    result.serviceNodes.length > 0 &&
-    Array.isArray(result.dataFlowEdges)
-  ) {
+  if (hasUsableArchitecture(result)) {
+    if (!quality.ok) {
+      console.warn("[AI Pipeline] Accepting a usable AWS topology after quality retry:", quality.issues);
+    }
     return {
       ...result,
+      intent: context?.operation === "update" ? "update_pipeline" : "create_pipeline",
       mode: "aws_architecture" as const,
       milestones: [],
       edges: [],
@@ -165,16 +198,7 @@ export async function generateAWSArchitecture(
     };
   }
 
-  // Safe fallback if Gemini is offline or fails
-  return {
-    intent: "create_pipeline",
-    summary: "Generated fallback basic web app architecture.",
-    mode: "aws_architecture" as const,
-    milestones: [],
-    edges: [],
-    serviceNodes: AWS_WEB_APP_FEW_SHOT_EXAMPLE.serviceNodes || [],
-    groups: AWS_WEB_APP_FEW_SHOT_EXAMPLE.groups || [],
-    dataFlowEdges: AWS_WEB_APP_FEW_SHOT_EXAMPLE.dataFlowEdges || [],
-    decomposition,
-  };
+  throw new Error(
+    "The AI provider did not return a valid AWS topology. No canvas changes were applied; please retry."
+  );
 }

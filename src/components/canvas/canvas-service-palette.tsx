@@ -45,7 +45,7 @@ export default function CanvasServicePalette({
 
   const filteredServices = useMemo(() => {
     if (!searchQuery.trim()) return null;
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
     return Object.values(AWS_SERVICE_REGISTRY).filter(
       (svc) =>
         svc.name.toLowerCase().includes(q) ||
@@ -79,10 +79,11 @@ export default function CanvasServicePalette({
         <div className="flex items-center gap-2">
           <AWSLogoIcon size={20} />
           <span className="text-[13px] font-bold text-neutral-900 dark:text-white">
-            AWS Services
+            AWS Services · {Object.keys(AWS_SERVICE_REGISTRY).length}
           </span>
         </div>
         <button
+          aria-label="Close service palette"
           onClick={handleClose}
           className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-[#1e2634] dark:hover:text-neutral-200"
         >
@@ -97,7 +98,8 @@ export default function CanvasServicePalette({
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search services..."
+            aria-label="Search AWS services"
+            placeholder="Search 303 services and architecture icons..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-lg border border-neutral-200 bg-neutral-50 py-1.5 pl-8 pr-3 text-[12px] text-neutral-900 placeholder-neutral-400 outline-none focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400/30 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:placeholder-neutral-500 dark:focus:border-[#384961]"
@@ -138,6 +140,7 @@ export default function CanvasServicePalette({
             {categories.map(([catKey, catMeta]) => {
               const services = getServicesByCategory(catKey);
               const isExpanded = expandedCategories.has(catKey);
+              if (!services.length) return null;
 
               return (
                 <div key={catKey}>

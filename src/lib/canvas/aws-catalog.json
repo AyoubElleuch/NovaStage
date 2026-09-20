@@ -1,0 +1,2939 @@
+{
+  "release": "2026-07-31",
+  "source": "https://aws.amazon.com/architecture/icons/",
+  "categories": {
+    "end-user-computing": {
+      "label": "End User Computing",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "compute": {
+      "label": "Compute",
+      "color": "#FF9900",
+      "bgColor": "bg-[#FF9900]"
+    },
+    "customer-enablement": {
+      "label": "Customer Enablement",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "cloud-financial-management": {
+      "label": "Cloud Financial Management",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "database": {
+      "label": "Database",
+      "color": "#3B48CC",
+      "bgColor": "bg-[#3B48CC]"
+    },
+    "business-applications": {
+      "label": "Business Applications",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "blockchain": {
+      "label": "Blockchain",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "quantum-technologies": {
+      "label": "Quantum Technologies",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "management": {
+      "label": "Management & Governance",
+      "color": "#E7157B",
+      "bgColor": "bg-[#E7157B]"
+    },
+    "iot": {
+      "label": "Internet of Things",
+      "color": "#3F8624",
+      "bgColor": "bg-[#3F8624]"
+    },
+    "developer-tools": {
+      "label": "Developer Tools",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "migration-modernization": {
+      "label": "Migration Modernization",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "general-icons": {
+      "label": "General Icons",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "containers": {
+      "label": "Containers",
+      "color": "#FF9900",
+      "bgColor": "bg-[#FF9900]"
+    },
+    "games": {
+      "label": "Games",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "media-services": {
+      "label": "Media Services",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "ml": {
+      "label": "Machine Learning",
+      "color": "#01A88D",
+      "bgColor": "bg-[#01A88D]"
+    },
+    "satellite": {
+      "label": "Satellite",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "storage": {
+      "label": "Storage",
+      "color": "#3F8624",
+      "bgColor": "bg-[#3F8624]"
+    },
+    "front-end": {
+      "label": "Front-end Web & Mobile",
+      "color": "#DD344C",
+      "bgColor": "bg-[#DD344C]"
+    },
+    "integration": {
+      "label": "Application Integration",
+      "color": "#E7157B",
+      "bgColor": "bg-[#E7157B]"
+    },
+    "analytics": {
+      "label": "Analytics",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "networking": {
+      "label": "Networking & Content Delivery",
+      "color": "#8C4FFF",
+      "bgColor": "bg-[#8C4FFF]"
+    },
+    "security": {
+      "label": "Security, Identity, & Compliance",
+      "color": "#DD344C",
+      "bgColor": "bg-[#DD344C]"
+    },
+    "ai_ml": {
+      "label": "Machine Learning & AI",
+      "color": "#01A88D",
+      "bgColor": "bg-[#01A88D]"
+    },
+    "serverless": {
+      "label": "Serverless",
+      "color": "#FF9900",
+      "bgColor": "bg-[#FF9900]"
+    },
+    "mobile": {
+      "label": "Mobile",
+      "color": "#DD344C",
+      "bgColor": "bg-[#DD344C]"
+    }
+  },
+  "services": [
+    {
+      "id": "apigateway",
+      "name": "Amazon API Gateway",
+      "shortName": "API Gateway",
+      "category": "networking",
+      "description": "Build, deploy, and manage APIs",
+      "defaultConfig": {
+        "endpointType": "REGIONAL"
+      },
+      "iconPath": "/aws-icons/Amazon-API-Gateway.svg"
+    },
+    {
+      "id": "appflow",
+      "name": "Amazon AppFlow",
+      "shortName": "AppFlow",
+      "description": "Application Integration",
+      "defaultConfig": {},
+      "category": "integration",
+      "iconPath": "/aws-icons/Amazon-AppFlow.svg"
+    },
+    {
+      "id": "applicationrecoverycontroller",
+      "name": "Amazon Application Recovery Controller",
+      "shortName": "Application Recovery Controller",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/Amazon-Application-Recovery-Controller.svg"
+    },
+    {
+      "id": "athena",
+      "name": "Amazon Athena",
+      "shortName": "Athena",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-Athena.svg"
+    },
+    {
+      "id": "augmentedaia2i",
+      "name": "Amazon Augmented AI A2I",
+      "shortName": "Augmented AI A2I",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Augmented-AI-A2I.svg"
+    },
+    {
+      "id": "aurora",
+      "name": "Amazon Aurora",
+      "shortName": "Aurora",
+      "category": "database",
+      "description": "High performance managed relational database",
+      "defaultConfig": {
+        "engine": "aurora-postgresql"
+      },
+      "iconPath": "/aws-icons/Amazon-Aurora.svg"
+    },
+    {
+      "id": "bedrock",
+      "name": "Amazon Bedrock",
+      "shortName": "Bedrock",
+      "category": "ml",
+      "description": "Build and scale generative AI applications",
+      "defaultConfig": {},
+      "iconPath": "/aws-icons/Amazon-Bedrock.svg"
+    },
+    {
+      "id": "bedrockagentcore",
+      "name": "Amazon Bedrock AgentCore",
+      "shortName": "Bedrock AgentCore",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Bedrock-AgentCore.svg"
+    },
+    {
+      "id": "braket",
+      "name": "Amazon Braket",
+      "shortName": "Braket",
+      "description": "Quantum Technologies",
+      "defaultConfig": {},
+      "category": "quantum-technologies",
+      "iconPath": "/aws-icons/Amazon-Braket.svg"
+    },
+    {
+      "id": "chime",
+      "name": "Amazon Chime",
+      "shortName": "Chime",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/Amazon-Chime.svg"
+    },
+    {
+      "id": "chimesdk",
+      "name": "Amazon Chime SDK",
+      "shortName": "Chime SDK",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/Amazon-Chime-SDK.svg"
+    },
+    {
+      "id": "clouddirectory",
+      "name": "Amazon Cloud Directory",
+      "shortName": "Cloud Directory",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/Amazon-Cloud-Directory.svg"
+    },
+    {
+      "id": "cloudfront",
+      "name": "Amazon CloudFront",
+      "shortName": "CloudFront",
+      "category": "networking",
+      "description": "Global content delivery network",
+      "defaultConfig": {
+        "priceClass": "PriceClass_100"
+      },
+      "iconPath": "/aws-icons/Amazon-CloudFront.svg"
+    },
+    {
+      "id": "cloudsearch",
+      "name": "Amazon CloudSearch",
+      "shortName": "CloudSearch",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-CloudSearch.svg"
+    },
+    {
+      "id": "cloudwatch",
+      "name": "Amazon CloudWatch",
+      "shortName": "CloudWatch",
+      "category": "management",
+      "description": "Monitor resources and applications",
+      "defaultConfig": {},
+      "iconPath": "/aws-icons/Amazon-CloudWatch.svg"
+    },
+    {
+      "id": "codecatalyst",
+      "name": "Amazon CodeCatalyst",
+      "shortName": "CodeCatalyst",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/Amazon-CodeCatalyst.svg"
+    },
+    {
+      "id": "codeguru",
+      "name": "Amazon CodeGuru",
+      "shortName": "CodeGuru",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-CodeGuru.svg"
+    },
+    {
+      "id": "codewhisperer",
+      "name": "Amazon CodeWhisperer",
+      "shortName": "CodeWhisperer",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-CodeWhisperer.svg"
+    },
+    {
+      "id": "cognito",
+      "name": "Amazon Cognito",
+      "shortName": "Cognito",
+      "category": "security",
+      "description": "Identity management for your apps",
+      "defaultConfig": {
+        "type": "UserPool"
+      },
+      "iconPath": "/aws-icons/Amazon-Cognito.svg"
+    },
+    {
+      "id": "comprehend",
+      "name": "Amazon Comprehend",
+      "shortName": "Comprehend",
+      "category": "ml",
+      "description": "Discover insights and relationships in text",
+      "defaultConfig": {},
+      "iconPath": "/aws-icons/Amazon-Comprehend.svg"
+    },
+    {
+      "id": "comprehendmedical",
+      "name": "Amazon Comprehend Medical",
+      "shortName": "Comprehend Medical",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Comprehend-Medical.svg"
+    },
+    {
+      "id": "connect",
+      "name": "Amazon Connect",
+      "shortName": "Connect",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/Amazon-Connect.svg"
+    },
+    {
+      "id": "corretto",
+      "name": "Amazon Corretto",
+      "shortName": "Corretto",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/Amazon-Corretto.svg"
+    },
+    {
+      "id": "datafirehose",
+      "name": "Amazon Data Firehose",
+      "shortName": "Data Firehose",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-Data-Firehose.svg"
+    },
+    {
+      "id": "datazone",
+      "name": "Amazon DataZone",
+      "shortName": "DataZone",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-DataZone.svg"
+    },
+    {
+      "id": "dcv",
+      "name": "Amazon DCV",
+      "shortName": "DCV",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/Amazon-DCV.svg"
+    },
+    {
+      "id": "detective",
+      "name": "Amazon Detective",
+      "shortName": "Detective",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/Amazon-Detective.svg"
+    },
+    {
+      "id": "devopsguru",
+      "name": "Amazon DevOps Guru",
+      "shortName": "DevOps Guru",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-DevOps-Guru.svg"
+    },
+    {
+      "id": "documentdb",
+      "name": "Amazon DocumentDB",
+      "shortName": "DocumentDB",
+      "category": "database",
+      "description": "Fully managed document database",
+      "defaultConfig": {
+        "instanceClass": "db.r5.large"
+      },
+      "iconPath": "/aws-icons/Amazon-DocumentDB.svg"
+    },
+    {
+      "id": "dynamodb",
+      "name": "Amazon DynamoDB",
+      "shortName": "DynamoDB",
+      "category": "database",
+      "description": "Fast and flexible NoSQL database service",
+      "defaultConfig": {
+        "billingMode": "PAY_PER_REQUEST"
+      },
+      "iconPath": "/aws-icons/Amazon-DynamoDB.svg"
+    },
+    {
+      "id": "ec2autoscaling",
+      "name": "Amazon EC2 Auto Scaling",
+      "shortName": "EC2 Auto Scaling",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/Amazon-EC2-Auto-Scaling.svg"
+    },
+    {
+      "id": "ec2imagebuilder",
+      "name": "Amazon EC2 Image Builder",
+      "shortName": "EC2 Image Builder",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/Amazon-EC2-Image-Builder.svg"
+    },
+    {
+      "id": "ecsanywhere",
+      "name": "Amazon ECS Anywhere",
+      "shortName": "ECS Anywhere",
+      "description": "Containers",
+      "defaultConfig": {},
+      "category": "containers",
+      "iconPath": "/aws-icons/Amazon-ECS-Anywhere.svg"
+    },
+    {
+      "id": "eksanywhere",
+      "name": "Amazon EKS Anywhere",
+      "shortName": "EKS Anywhere",
+      "description": "Containers",
+      "defaultConfig": {},
+      "category": "containers",
+      "iconPath": "/aws-icons/Amazon-EKS-Anywhere.svg"
+    },
+    {
+      "id": "eksdistro",
+      "name": "Amazon EKS Distro",
+      "shortName": "EKS Distro",
+      "description": "Containers",
+      "defaultConfig": {},
+      "category": "containers",
+      "iconPath": "/aws-icons/Amazon-EKS-Distro.svg"
+    },
+    {
+      "id": "ebs",
+      "name": "Amazon Elastic Block Store",
+      "shortName": "EBS",
+      "category": "storage",
+      "description": "EC2 block storage volumes",
+      "defaultConfig": {
+        "volumeType": "gp3",
+        "size": "20"
+      },
+      "iconPath": "/aws-icons/Amazon-Elastic-Block-Store.svg"
+    },
+    {
+      "id": "ec2",
+      "name": "Amazon Elastic Compute Cloud",
+      "shortName": "EC2",
+      "category": "compute",
+      "description": "Virtual servers in the cloud",
+      "defaultConfig": {
+        "instanceType": "t3.micro"
+      },
+      "iconPath": "/aws-icons/Amazon-EC2.svg"
+    },
+    {
+      "id": "elasticcontainerregistry",
+      "name": "Amazon Elastic Container Registry",
+      "shortName": "Elastic Container Registry",
+      "description": "Containers",
+      "defaultConfig": {},
+      "category": "containers",
+      "iconPath": "/aws-icons/Amazon-Elastic-Container-Registry.svg"
+    },
+    {
+      "id": "ecs",
+      "name": "Amazon Elastic Container Service",
+      "shortName": "ECS",
+      "category": "containers",
+      "description": "Highly secure, reliable, and scalable way to run containers",
+      "defaultConfig": {
+        "launchType": "FARGATE"
+      },
+      "iconPath": "/aws-icons/Amazon-Elastic-Container-Service.svg"
+    },
+    {
+      "id": "efs",
+      "name": "Amazon Elastic File System",
+      "shortName": "EFS",
+      "category": "storage",
+      "description": "Managed file storage for EC2",
+      "defaultConfig": {
+        "performanceMode": "generalPurpose"
+      },
+      "iconPath": "/aws-icons/Amazon-EFS.svg"
+    },
+    {
+      "id": "elasticinference",
+      "name": "Amazon Elastic Inference",
+      "shortName": "Elastic Inference",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Elastic-Inference.svg"
+    },
+    {
+      "id": "eks",
+      "name": "Amazon Elastic Kubernetes Service",
+      "shortName": "EKS",
+      "category": "containers",
+      "description": "Managed Kubernetes service",
+      "defaultConfig": {
+        "version": "1.29"
+      },
+      "iconPath": "/aws-icons/Amazon-Elastic-Kubernetes-Service.svg"
+    },
+    {
+      "id": "elasticvmwareservice",
+      "name": "Amazon Elastic VMware Service",
+      "shortName": "Elastic VMware Service",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/Amazon-Elastic-VMware-Service.svg"
+    },
+    {
+      "id": "elasticache",
+      "name": "Amazon ElastiCache",
+      "shortName": "ElastiCache",
+      "category": "database",
+      "description": "In-memory caching service",
+      "defaultConfig": {
+        "engine": "redis"
+      },
+      "iconPath": "/aws-icons/Amazon-ElastiCache.svg"
+    },
+    {
+      "id": "emr",
+      "name": "Amazon EMR",
+      "shortName": "EMR",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-EMR.svg"
+    },
+    {
+      "id": "eventbridge",
+      "name": "Amazon EventBridge",
+      "shortName": "EventBridge",
+      "category": "integration",
+      "description": "Serverless event bus",
+      "defaultConfig": {},
+      "iconPath": "/aws-icons/Amazon-EventBridge.svg"
+    },
+    {
+      "id": "filecache",
+      "name": "Amazon File Cache",
+      "shortName": "File Cache",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/Amazon-File-Cache.svg"
+    },
+    {
+      "id": "finspace",
+      "name": "Amazon FinSpace",
+      "shortName": "FinSpace",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-FinSpace.svg"
+    },
+    {
+      "id": "forecast",
+      "name": "Amazon Forecast",
+      "shortName": "Forecast",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Forecast.svg"
+    },
+    {
+      "id": "frauddetector",
+      "name": "Amazon Fraud Detector",
+      "shortName": "Fraud Detector",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Fraud-Detector.svg"
+    },
+    {
+      "id": "fsx",
+      "name": "Amazon FSx",
+      "shortName": "FSx",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/Amazon-FSx.svg"
+    },
+    {
+      "id": "fsxforlustre",
+      "name": "Amazon FSx for Lustre",
+      "shortName": "FSx for Lustre",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/Amazon-FSx-for-Lustre.svg"
+    },
+    {
+      "id": "fsxfornetappontap",
+      "name": "Amazon FSx for NetApp ONTAP",
+      "shortName": "FSx for NetApp ONTAP",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/Amazon-FSx-for-NetApp-ONTAP.svg"
+    },
+    {
+      "id": "fsxforopenzfs",
+      "name": "Amazon FSx for OpenZFS",
+      "shortName": "FSx for OpenZFS",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/Amazon-FSx-for-OpenZFS.svg"
+    },
+    {
+      "id": "fsxforwfs",
+      "name": "Amazon FSx for WFS",
+      "shortName": "FSx for WFS",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/Amazon-FSx-for-WFS.svg"
+    },
+    {
+      "id": "gameliftservers",
+      "name": "Amazon GameLift Servers",
+      "shortName": "GameLift Servers",
+      "description": "Games",
+      "defaultConfig": {},
+      "category": "games",
+      "iconPath": "/aws-icons/Amazon-GameLift-Servers.svg"
+    },
+    {
+      "id": "gameliftstreams",
+      "name": "Amazon GameLift Streams",
+      "shortName": "GameLift Streams",
+      "description": "Games",
+      "defaultConfig": {},
+      "category": "games",
+      "iconPath": "/aws-icons/Amazon-GameLift-Streams.svg"
+    },
+    {
+      "id": "guardduty",
+      "name": "Amazon GuardDuty",
+      "shortName": "GuardDuty",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/Amazon-GuardDuty.svg"
+    },
+    {
+      "id": "inspector",
+      "name": "Amazon Inspector",
+      "shortName": "Inspector",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/Amazon-Inspector.svg"
+    },
+    {
+      "id": "interactivevideoservice",
+      "name": "Amazon Interactive Video Service",
+      "shortName": "Interactive Video Service",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/Amazon-Interactive-Video-Service.svg"
+    },
+    {
+      "id": "kendra",
+      "name": "Amazon Kendra",
+      "shortName": "Kendra",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Kendra.svg"
+    },
+    {
+      "id": "keyspaces",
+      "name": "Amazon Keyspaces",
+      "shortName": "Keyspaces",
+      "description": "Databases",
+      "defaultConfig": {},
+      "category": "database",
+      "iconPath": "/aws-icons/Amazon-Keyspaces.svg"
+    },
+    {
+      "id": "kinesis",
+      "name": "Amazon Kinesis",
+      "shortName": "Kinesis",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-Kinesis.svg"
+    },
+    {
+      "id": "kinesisdatastreams",
+      "name": "Amazon Kinesis Data Streams",
+      "shortName": "Kinesis Data Streams",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-Kinesis-Data-Streams.svg"
+    },
+    {
+      "id": "kinesisvideostreams",
+      "name": "Amazon Kinesis Video Streams",
+      "shortName": "Kinesis Video Streams",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-Kinesis-Video-Streams.svg"
+    },
+    {
+      "id": "lex",
+      "name": "Amazon Lex",
+      "shortName": "Lex",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Lex.svg"
+    },
+    {
+      "id": "lightsail",
+      "name": "Amazon Lightsail",
+      "shortName": "Lightsail",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/Amazon-Lightsail.svg"
+    },
+    {
+      "id": "lightsailforresearch",
+      "name": "Amazon Lightsail for Research",
+      "shortName": "Lightsail for Research",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/Amazon-Lightsail-for-Research.svg"
+    },
+    {
+      "id": "locationservice",
+      "name": "Amazon Location Service",
+      "shortName": "Location Service",
+      "description": "Front End Web Mobile",
+      "defaultConfig": {},
+      "category": "front-end",
+      "iconPath": "/aws-icons/Amazon-Location-Service.svg"
+    },
+    {
+      "id": "lookoutforequipment",
+      "name": "Amazon Lookout for Equipment",
+      "shortName": "Lookout for Equipment",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Lookout-for-Equipment.svg"
+    },
+    {
+      "id": "lookoutforvision",
+      "name": "Amazon Lookout for Vision",
+      "shortName": "Lookout for Vision",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Lookout-for-Vision.svg"
+    },
+    {
+      "id": "macie",
+      "name": "Amazon Macie",
+      "shortName": "Macie",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/Amazon-Macie.svg"
+    },
+    {
+      "id": "managedblockchain",
+      "name": "Amazon Managed Blockchain",
+      "shortName": "Managed Blockchain",
+      "description": "Blockchain",
+      "defaultConfig": {},
+      "category": "blockchain",
+      "iconPath": "/aws-icons/Amazon-Managed-Blockchain.svg"
+    },
+    {
+      "id": "managedgrafana",
+      "name": "Amazon Managed Grafana",
+      "shortName": "Managed Grafana",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/Amazon-Managed-Grafana.svg"
+    },
+    {
+      "id": "managedserviceforapacheflink",
+      "name": "Amazon Managed Service for Apache Flink",
+      "shortName": "Managed Service for Apache Flink",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-Managed-Service-for-Apache-Flink.svg"
+    },
+    {
+      "id": "managedserviceforprometheus",
+      "name": "Amazon Managed Service for Prometheus",
+      "shortName": "Managed Service for Prometheus",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/Amazon-Managed-Service-for-Prometheus.svg"
+    },
+    {
+      "id": "managedstreamingforapachekafka",
+      "name": "Amazon Managed Streaming for Apache Kafka",
+      "shortName": "Managed Streaming for Apache Kafka",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-Managed-Streaming-for-Apache-Kafka.svg"
+    },
+    {
+      "id": "managedworkflowsforapacheairflow",
+      "name": "Amazon Managed Workflows for Apache Airflow",
+      "shortName": "Managed Workflows for Apache Airflow",
+      "description": "Application Integration",
+      "defaultConfig": {},
+      "category": "integration",
+      "iconPath": "/aws-icons/Amazon-Managed-Workflows-for-Apache-Airflow.svg"
+    },
+    {
+      "id": "memorydb",
+      "name": "Amazon MemoryDB",
+      "shortName": "MemoryDB",
+      "description": "Databases",
+      "defaultConfig": {},
+      "category": "database",
+      "iconPath": "/aws-icons/Amazon-MemoryDB.svg"
+    },
+    {
+      "id": "monitron",
+      "name": "Amazon Monitron",
+      "shortName": "Monitron",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Monitron.svg"
+    },
+    {
+      "id": "mq",
+      "name": "Amazon MQ",
+      "shortName": "MQ",
+      "category": "integration",
+      "description": "Managed message broker for ActiveMQ and RabbitMQ",
+      "defaultConfig": {
+        "engine": "RabbitMQ"
+      },
+      "iconPath": "/aws-icons/Amazon-MQ.svg"
+    },
+    {
+      "id": "neptune",
+      "name": "Amazon Neptune",
+      "shortName": "Neptune",
+      "description": "Databases",
+      "defaultConfig": {},
+      "category": "database",
+      "iconPath": "/aws-icons/Amazon-Neptune.svg"
+    },
+    {
+      "id": "nova",
+      "name": "Amazon Nova",
+      "shortName": "Nova",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Nova.svg"
+    },
+    {
+      "id": "opensearchservice",
+      "name": "Amazon OpenSearch Service",
+      "shortName": "OpenSearch Service",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/Amazon-OpenSearch-Service.svg"
+    },
+    {
+      "id": "personalize",
+      "name": "Amazon Personalize",
+      "shortName": "Personalize",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Personalize.svg"
+    },
+    {
+      "id": "pinpoint",
+      "name": "Amazon Pinpoint",
+      "shortName": "Pinpoint",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/Amazon-Pinpoint.svg"
+    },
+    {
+      "id": "pinpointapis",
+      "name": "Amazon Pinpoint APIs",
+      "shortName": "Pinpoint APIs",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/Amazon-Pinpoint-APIs.svg"
+    },
+    {
+      "id": "polly",
+      "name": "Amazon Polly",
+      "shortName": "Polly",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Polly.svg"
+    },
+    {
+      "id": "q",
+      "name": "Amazon Q",
+      "shortName": "Q",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Q.svg"
+    },
+    {
+      "id": "quick",
+      "name": "Amazon Quick",
+      "shortName": "Quick",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/Amazon-Quick.svg"
+    },
+    {
+      "id": "redshift",
+      "name": "Amazon Redshift",
+      "shortName": "Redshift",
+      "category": "analytics",
+      "description": "Fast, simple, cost-effective data warehousing",
+      "defaultConfig": {
+        "nodeType": "dc2.large"
+      },
+      "iconPath": "/aws-icons/Amazon-Redshift.svg"
+    },
+    {
+      "id": "rekognition",
+      "name": "Amazon Rekognition",
+      "shortName": "Rekognition",
+      "category": "ml",
+      "description": "Analyze image and video",
+      "defaultConfig": {},
+      "iconPath": "/aws-icons/Amazon-Rekognition.svg"
+    },
+    {
+      "id": "rds",
+      "name": "Amazon Relational Database Service",
+      "shortName": "RDS",
+      "category": "database",
+      "description": "Managed relational database service",
+      "defaultConfig": {
+        "engine": "postgres",
+        "instanceClass": "db.t3.micro"
+      },
+      "iconPath": "/aws-icons/Amazon-RDS.svg"
+    },
+    {
+      "id": "route53",
+      "name": "Amazon Route 53",
+      "shortName": "Route 53",
+      "category": "networking",
+      "description": "Scalable DNS and domain name registration",
+      "defaultConfig": {
+        "type": "A"
+      },
+      "iconPath": "/aws-icons/Amazon-Route-53.svg"
+    },
+    {
+      "id": "glacier",
+      "name": "Amazon S3 Glacier",
+      "shortName": "Glacier",
+      "category": "storage",
+      "description": "Low-cost archive storage in the cloud",
+      "defaultConfig": {
+        "retrievalTier": "Standard"
+      },
+      "iconPath": "/aws-icons/Amazon-Simple-Storage-Service-Glacier.svg"
+    },
+    {
+      "id": "s3onoutposts",
+      "name": "Amazon S3 on Outposts",
+      "shortName": "S3 on Outposts",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/Amazon-S3-on-Outposts.svg"
+    },
+    {
+      "id": "sagemaker",
+      "name": "Amazon SageMaker",
+      "shortName": "SageMaker",
+      "category": "analytics",
+      "description": "Build, train, and deploy machine learning models",
+      "defaultConfig": {},
+      "iconPath": "/aws-icons/Amazon-SageMaker.svg"
+    },
+    {
+      "id": "sagemakerai",
+      "name": "Amazon SageMaker AI",
+      "shortName": "SageMaker AI",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-SageMaker-AI.svg"
+    },
+    {
+      "id": "sagemakergroundtruth",
+      "name": "Amazon SageMaker Ground Truth",
+      "shortName": "SageMaker Ground Truth",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-SageMaker-Ground-Truth.svg"
+    },
+    {
+      "id": "sagemakerstudiolab",
+      "name": "Amazon SageMaker Studio Lab",
+      "shortName": "SageMaker Studio Lab",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-SageMaker-Studio-Lab.svg"
+    },
+    {
+      "id": "securitylake",
+      "name": "Amazon Security Lake",
+      "shortName": "Security Lake",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/Amazon-Security-Lake.svg"
+    },
+    {
+      "id": "simpleemailservice",
+      "name": "Amazon Simple Email Service",
+      "shortName": "Simple Email Service",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/Amazon-Simple-Email-Service.svg"
+    },
+    {
+      "id": "sns",
+      "name": "Amazon Simple Notification Service",
+      "shortName": "SNS",
+      "category": "integration",
+      "description": "Pub/sub, SMS, email, and mobile push notifications",
+      "defaultConfig": {
+        "type": "standard"
+      },
+      "iconPath": "/aws-icons/Amazon-Simple-Notification-Service.svg"
+    },
+    {
+      "id": "sqs",
+      "name": "Amazon Simple Queue Service",
+      "shortName": "SQS",
+      "category": "integration",
+      "description": "Managed message queues",
+      "defaultConfig": {
+        "type": "standard"
+      },
+      "iconPath": "/aws-icons/Amazon-Simple-Queue-Service.svg"
+    },
+    {
+      "id": "s3",
+      "name": "Amazon Simple Storage Service",
+      "shortName": "S3",
+      "category": "storage",
+      "description": "Scalable storage in the cloud",
+      "defaultConfig": {
+        "versioning": "enabled",
+        "encryption": "AES256"
+      },
+      "iconPath": "/aws-icons/Amazon-Simple-Storage-Service.svg"
+    },
+    {
+      "id": "textract",
+      "name": "Amazon Textract",
+      "shortName": "Textract",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Textract.svg"
+    },
+    {
+      "id": "timestream",
+      "name": "Amazon Timestream",
+      "shortName": "Timestream",
+      "description": "Databases",
+      "defaultConfig": {},
+      "category": "database",
+      "iconPath": "/aws-icons/Amazon-Timestream.svg"
+    },
+    {
+      "id": "transcribe",
+      "name": "Amazon Transcribe",
+      "shortName": "Transcribe",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Transcribe.svg"
+    },
+    {
+      "id": "translate",
+      "name": "Amazon Translate",
+      "shortName": "Translate",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Amazon-Translate.svg"
+    },
+    {
+      "id": "verifiedpermissions",
+      "name": "Amazon Verified Permissions",
+      "shortName": "Verified Permissions",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/Amazon-Verified-Permissions.svg"
+    },
+    {
+      "id": "vpc",
+      "name": "Amazon Virtual Private Cloud",
+      "shortName": "VPC",
+      "category": "networking",
+      "description": "Isolated cloud resources",
+      "defaultConfig": {
+        "cidrBlock": "10.0.0.0/16"
+      },
+      "iconPath": "/aws-icons/Amazon-Virtual-Private-Cloud.svg"
+    },
+    {
+      "id": "vpclattice",
+      "name": "Amazon VPC Lattice",
+      "shortName": "VPC Lattice",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/Amazon-VPC-Lattice.svg"
+    },
+    {
+      "id": "workdocs",
+      "name": "Amazon WorkDocs",
+      "shortName": "WorkDocs",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/Amazon-WorkDocs.svg"
+    },
+    {
+      "id": "workdocssdk",
+      "name": "Amazon WorkDocs SDK",
+      "shortName": "WorkDocs SDK",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/Amazon-WorkDocs-SDK.svg"
+    },
+    {
+      "id": "workmail",
+      "name": "Amazon WorkMail",
+      "shortName": "WorkMail",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/Amazon-WorkMail.svg"
+    },
+    {
+      "id": "workspaces",
+      "name": "Amazon WorkSpaces",
+      "shortName": "WorkSpaces",
+      "description": "End User Computing",
+      "defaultConfig": {},
+      "category": "end-user-computing",
+      "iconPath": "/aws-icons/Amazon-WorkSpaces.svg"
+    },
+    {
+      "id": "apachemxnetonaws",
+      "name": "Apache MXNet on AWS",
+      "shortName": "Apache MXNet on AWS",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/Apache-MXNet-on-AWS.svg"
+    },
+    {
+      "id": "activate",
+      "name": "AWS Activate",
+      "shortName": "Activate",
+      "description": "Customer Enablement",
+      "defaultConfig": {},
+      "category": "customer-enablement",
+      "iconPath": "/aws-icons/AWS-Activate.svg"
+    },
+    {
+      "id": "amplify",
+      "name": "AWS Amplify",
+      "shortName": "Amplify",
+      "description": "Front End Web Mobile",
+      "defaultConfig": {},
+      "category": "front-end",
+      "iconPath": "/aws-icons/AWS-Amplify.svg"
+    },
+    {
+      "id": "appmesh",
+      "name": "AWS App Mesh",
+      "shortName": "App Mesh",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-App-Mesh.svg"
+    },
+    {
+      "id": "apprunner",
+      "name": "AWS App Runner",
+      "shortName": "App Runner",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-App-Runner.svg"
+    },
+    {
+      "id": "appstudio",
+      "name": "AWS App Studio",
+      "shortName": "App Studio",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-App-Studio.svg"
+    },
+    {
+      "id": "appconfig",
+      "name": "AWS AppConfig",
+      "shortName": "AppConfig",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-AppConfig.svg"
+    },
+    {
+      "id": "appfabric",
+      "name": "AWS AppFabric",
+      "shortName": "AppFabric",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/AWS-AppFabric.svg"
+    },
+    {
+      "id": "applicationautoscaling",
+      "name": "AWS Application Auto Scaling",
+      "shortName": "Application Auto Scaling",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Application-Auto-Scaling.svg"
+    },
+    {
+      "id": "applicationdiscoveryservice",
+      "name": "AWS Application Discovery Service",
+      "shortName": "Application Discovery Service",
+      "description": "Migration Modernization",
+      "defaultConfig": {},
+      "category": "migration-modernization",
+      "iconPath": "/aws-icons/AWS-Application-Discovery-Service.svg"
+    },
+    {
+      "id": "applicationmigrationservice",
+      "name": "AWS Application Migration Service",
+      "shortName": "Application Migration Service",
+      "description": "Migration Modernization",
+      "defaultConfig": {},
+      "category": "migration-modernization",
+      "iconPath": "/aws-icons/AWS-Application-Migration-Service.svg"
+    },
+    {
+      "id": "appsync",
+      "name": "AWS AppSync",
+      "shortName": "AppSync",
+      "description": "Application Integration",
+      "defaultConfig": {},
+      "category": "integration",
+      "iconPath": "/aws-icons/AWS-AppSync.svg"
+    },
+    {
+      "id": "artifact",
+      "name": "AWS Artifact",
+      "shortName": "Artifact",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Artifact.svg"
+    },
+    {
+      "id": "auditmanager",
+      "name": "AWS Audit Manager",
+      "shortName": "Audit Manager",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Audit-Manager.svg"
+    },
+    {
+      "id": "autoscaling",
+      "name": "AWS Auto Scaling",
+      "shortName": "Auto Scaling",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Auto-Scaling.svg"
+    },
+    {
+      "id": "b2bdatainterchange",
+      "name": "AWS B2B Data Interchange",
+      "shortName": "B2B Data Interchange",
+      "description": "Application Integration",
+      "defaultConfig": {},
+      "category": "integration",
+      "iconPath": "/aws-icons/AWS-B2B-Data-Interchange.svg"
+    },
+    {
+      "id": "backintagent",
+      "name": "AWS Backint Agent",
+      "shortName": "Backint Agent",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Backint-Agent.svg"
+    },
+    {
+      "id": "backup",
+      "name": "AWS Backup",
+      "shortName": "Backup",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/AWS-Backup.svg"
+    },
+    {
+      "id": "batch",
+      "name": "AWS Batch",
+      "shortName": "Batch",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-Batch.svg"
+    },
+    {
+      "id": "billingconductor",
+      "name": "AWS Billing Conductor",
+      "shortName": "Billing Conductor",
+      "description": "Cloud Financial Management",
+      "defaultConfig": {},
+      "category": "cloud-financial-management",
+      "iconPath": "/aws-icons/AWS-Billing-Conductor.svg"
+    },
+    {
+      "id": "budgets",
+      "name": "AWS Budgets",
+      "shortName": "Budgets",
+      "description": "Cloud Financial Management",
+      "defaultConfig": {},
+      "category": "cloud-financial-management",
+      "iconPath": "/aws-icons/AWS-Budgets.svg"
+    },
+    {
+      "id": "certificatemanager",
+      "name": "AWS Certificate Manager",
+      "shortName": "ACM",
+      "category": "security",
+      "description": "Provision, manage, and deploy SSL/TLS certificates",
+      "defaultConfig": {
+        "validationMethod": "DNS"
+      },
+      "iconPath": "/aws-icons/AWS-Certificate-Manager.svg"
+    },
+    {
+      "id": "chatbot",
+      "name": "AWS Chatbot",
+      "shortName": "Chatbot",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Chatbot.svg"
+    },
+    {
+      "id": "cleanrooms",
+      "name": "AWS Clean Rooms",
+      "shortName": "Clean Rooms",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/AWS-Clean-Rooms.svg"
+    },
+    {
+      "id": "clientvpn",
+      "name": "AWS Client VPN",
+      "shortName": "Client VPN",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-Client-VPN.svg"
+    },
+    {
+      "id": "cloudcontrolapi",
+      "name": "AWS Cloud Control API",
+      "shortName": "Cloud Control API",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-Cloud-Control-API.svg"
+    },
+    {
+      "id": "clouddevelopmentkit",
+      "name": "AWS Cloud Development Kit",
+      "shortName": "Cloud Development Kit",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-Cloud-Development-Kit.svg"
+    },
+    {
+      "id": "cloudmap",
+      "name": "AWS Cloud Map",
+      "shortName": "Cloud Map",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-Cloud-Map.svg"
+    },
+    {
+      "id": "cloudwan",
+      "name": "AWS Cloud WAN",
+      "shortName": "Cloud WAN",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-Cloud-WAN.svg"
+    },
+    {
+      "id": "cloud9",
+      "name": "AWS Cloud9",
+      "shortName": "Cloud9",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-Cloud9.svg"
+    },
+    {
+      "id": "cloudformation",
+      "name": "AWS CloudFormation",
+      "shortName": "CloudFormation",
+      "category": "management",
+      "description": "Create and manage resources with templates",
+      "defaultConfig": {},
+      "iconPath": "/aws-icons/AWS-CloudFormation.svg"
+    },
+    {
+      "id": "cloudhsm",
+      "name": "AWS CloudHSM",
+      "shortName": "CloudHSM",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-CloudHSM.svg"
+    },
+    {
+      "id": "cloudshell",
+      "name": "AWS CloudShell",
+      "shortName": "CloudShell",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-CloudShell.svg"
+    },
+    {
+      "id": "cloudtrail",
+      "name": "AWS CloudTrail",
+      "shortName": "CloudTrail",
+      "category": "management",
+      "description": "Track user activity and API usage",
+      "defaultConfig": {
+        "multiRegion": "true"
+      },
+      "iconPath": "/aws-icons/AWS-CloudTrail.svg"
+    },
+    {
+      "id": "codeartifact",
+      "name": "AWS CodeArtifact",
+      "shortName": "CodeArtifact",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-CodeArtifact.svg"
+    },
+    {
+      "id": "codebuild",
+      "name": "AWS CodeBuild",
+      "shortName": "CodeBuild",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-CodeBuild.svg"
+    },
+    {
+      "id": "codecommit",
+      "name": "AWS CodeCommit",
+      "shortName": "CodeCommit",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-CodeCommit.svg"
+    },
+    {
+      "id": "codedeploy",
+      "name": "AWS CodeDeploy",
+      "shortName": "CodeDeploy",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-CodeDeploy.svg"
+    },
+    {
+      "id": "codepipeline",
+      "name": "AWS CodePipeline",
+      "shortName": "CodePipeline",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-CodePipeline.svg"
+    },
+    {
+      "id": "commandlineinterface",
+      "name": "AWS Command Line Interface",
+      "shortName": "Command Line Interface",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-Command-Line-Interface.svg"
+    },
+    {
+      "id": "computeoptimizer",
+      "name": "AWS Compute Optimizer",
+      "shortName": "Compute Optimizer",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Compute-Optimizer.svg"
+    },
+    {
+      "id": "config",
+      "name": "AWS Config",
+      "shortName": "Config",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Config.svg"
+    },
+    {
+      "id": "consolemobileapplication",
+      "name": "AWS Console Mobile Application",
+      "shortName": "Console Mobile Application",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Console-Mobile-Application.svg"
+    },
+    {
+      "id": "controltower",
+      "name": "AWS Control Tower",
+      "shortName": "Control Tower",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Control-Tower.svg"
+    },
+    {
+      "id": "costandusagereport",
+      "name": "AWS Cost and Usage Report",
+      "shortName": "Cost and Usage Report",
+      "description": "Cloud Financial Management",
+      "defaultConfig": {},
+      "category": "cloud-financial-management",
+      "iconPath": "/aws-icons/AWS-Cost-and-Usage-Report.svg"
+    },
+    {
+      "id": "costexplorer",
+      "name": "AWS Cost Explorer",
+      "shortName": "Cost Explorer",
+      "description": "Cloud Financial Management",
+      "defaultConfig": {},
+      "category": "cloud-financial-management",
+      "iconPath": "/aws-icons/AWS-Cost-Explorer.svg"
+    },
+    {
+      "id": "dataexchange",
+      "name": "AWS Data Exchange",
+      "shortName": "Data Exchange",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/AWS-Data-Exchange.svg"
+    },
+    {
+      "id": "datatransferterminal",
+      "name": "AWS Data Transfer Terminal",
+      "shortName": "Data Transfer Terminal",
+      "description": "Migration Modernization",
+      "defaultConfig": {},
+      "category": "migration-modernization",
+      "iconPath": "/aws-icons/AWS-Data-Transfer-Terminal.svg"
+    },
+    {
+      "id": "databasemigrationservice",
+      "name": "AWS Database Migration Service",
+      "shortName": "Database Migration Service",
+      "description": "Databases",
+      "defaultConfig": {},
+      "category": "database",
+      "iconPath": "/aws-icons/AWS-Database-Migration-Service.svg"
+    },
+    {
+      "id": "datasync",
+      "name": "AWS DataSync",
+      "shortName": "DataSync",
+      "description": "Migration Modernization",
+      "defaultConfig": {},
+      "category": "migration-modernization",
+      "iconPath": "/aws-icons/AWS-DataSync.svg"
+    },
+    {
+      "id": "deadlinecloud",
+      "name": "AWS Deadline Cloud",
+      "shortName": "Deadline Cloud",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Deadline-Cloud.svg"
+    },
+    {
+      "id": "deeplearningamis",
+      "name": "AWS Deep Learning AMIs",
+      "shortName": "Deep Learning AMIs",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-Deep-Learning-AMIs.svg"
+    },
+    {
+      "id": "deeplearningcontainers",
+      "name": "AWS Deep Learning Containers",
+      "shortName": "Deep Learning Containers",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-Deep-Learning-Containers.svg"
+    },
+    {
+      "id": "deepracer",
+      "name": "AWS DeepRacer",
+      "shortName": "DeepRacer",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-DeepRacer.svg"
+    },
+    {
+      "id": "devicefarm",
+      "name": "AWS Device Farm",
+      "shortName": "Device Farm",
+      "description": "Front End Web Mobile",
+      "defaultConfig": {},
+      "category": "front-end",
+      "iconPath": "/aws-icons/AWS-Device-Farm.svg"
+    },
+    {
+      "id": "devopsagent",
+      "name": "AWS DevOps Agent",
+      "shortName": "DevOps Agent",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-DevOps-Agent.svg"
+    },
+    {
+      "id": "directconnect",
+      "name": "AWS Direct Connect",
+      "shortName": "Direct Connect",
+      "category": "networking",
+      "description": "Dedicated network connection to AWS",
+      "defaultConfig": {
+        "bandwidth": "1Gbps"
+      },
+      "iconPath": "/aws-icons/AWS-Direct-Connect.svg"
+    },
+    {
+      "id": "directoryservice",
+      "name": "AWS Directory Service",
+      "shortName": "Directory Service",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Directory-Service.svg"
+    },
+    {
+      "id": "distroforopentelemetry",
+      "name": "AWS Distro for OpenTelemetry",
+      "shortName": "Distro for OpenTelemetry",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Distro-for-OpenTelemetry.svg"
+    },
+    {
+      "id": "elasticbeanstalk",
+      "name": "AWS Elastic Beanstalk",
+      "shortName": "Elastic Beanstalk",
+      "category": "compute",
+      "description": "Run and manage web apps",
+      "defaultConfig": {
+        "platform": "Node.js"
+      },
+      "iconPath": "/aws-icons/AWS-Elastic-Beanstalk.svg"
+    },
+    {
+      "id": "elasticdisasterrecovery",
+      "name": "AWS Elastic Disaster Recovery",
+      "shortName": "Elastic Disaster Recovery",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/AWS-Elastic-Disaster-Recovery.svg"
+    },
+    {
+      "id": "elementalappliancessoftware",
+      "name": "AWS Elemental Appliances & Software",
+      "shortName": "Elemental Appliances & Software",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-Appliances-&-Software.svg"
+    },
+    {
+      "id": "elementalconductor",
+      "name": "AWS Elemental Conductor",
+      "shortName": "Elemental Conductor",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-Conductor.svg"
+    },
+    {
+      "id": "elementaldelta",
+      "name": "AWS Elemental Delta",
+      "shortName": "Elemental Delta",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-Delta.svg"
+    },
+    {
+      "id": "elementalinference",
+      "name": "AWS Elemental Inference",
+      "shortName": "Elemental Inference",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-Elemental-Inference.svg"
+    },
+    {
+      "id": "elementallink",
+      "name": "AWS Elemental Link",
+      "shortName": "Elemental Link",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-Link.svg"
+    },
+    {
+      "id": "elementallive",
+      "name": "AWS Elemental Live",
+      "shortName": "Elemental Live",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-Live.svg"
+    },
+    {
+      "id": "elementalmediaconnect",
+      "name": "AWS Elemental MediaConnect",
+      "shortName": "Elemental MediaConnect",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-MediaConnect.svg"
+    },
+    {
+      "id": "elementalmediaconvert",
+      "name": "AWS Elemental MediaConvert",
+      "shortName": "Elemental MediaConvert",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-MediaConvert.svg"
+    },
+    {
+      "id": "elementalmedialive",
+      "name": "AWS Elemental MediaLive",
+      "shortName": "Elemental MediaLive",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-MediaLive.svg"
+    },
+    {
+      "id": "elementalmediapackage",
+      "name": "AWS Elemental MediaPackage",
+      "shortName": "Elemental MediaPackage",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-MediaPackage.svg"
+    },
+    {
+      "id": "elementalmediastore",
+      "name": "AWS Elemental MediaStore",
+      "shortName": "Elemental MediaStore",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-MediaStore.svg"
+    },
+    {
+      "id": "elementalmediatailor",
+      "name": "AWS Elemental MediaTailor",
+      "shortName": "Elemental MediaTailor",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-MediaTailor.svg"
+    },
+    {
+      "id": "elementalserver",
+      "name": "AWS Elemental Server",
+      "shortName": "Elemental Server",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Elemental-Server.svg"
+    },
+    {
+      "id": "endusermessaging",
+      "name": "AWS End User Messaging",
+      "shortName": "End User Messaging",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/AWS-End-User-Messaging.svg"
+    },
+    {
+      "id": "entityresolution",
+      "name": "AWS Entity Resolution",
+      "shortName": "Entity Resolution",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/AWS-Entity-Resolution.svg"
+    },
+    {
+      "id": "expressworkflows",
+      "name": "AWS Express Workflows",
+      "shortName": "Express Workflows",
+      "description": "Application Integration",
+      "defaultConfig": {},
+      "category": "integration",
+      "iconPath": "/aws-icons/AWS-Express-Workflows.svg"
+    },
+    {
+      "id": "fargate",
+      "name": "AWS Fargate",
+      "shortName": "Fargate",
+      "category": "containers",
+      "description": "Serverless compute for containers",
+      "defaultConfig": {
+        "cpu": "256",
+        "memory": "512"
+      },
+      "iconPath": "/aws-icons/AWS-Fargate.svg"
+    },
+    {
+      "id": "faultinjectionservice",
+      "name": "AWS Fault Injection Service",
+      "shortName": "Fault Injection Service",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-Fault-Injection-Service.svg"
+    },
+    {
+      "id": "finopsagent",
+      "name": "AWS FinOps Agent",
+      "shortName": "FinOps Agent",
+      "description": "Cloud Financial Management",
+      "defaultConfig": {},
+      "category": "cloud-financial-management",
+      "iconPath": "/aws-icons/AWS-FinOps-Agent.svg"
+    },
+    {
+      "id": "firewallmanager",
+      "name": "AWS Firewall Manager",
+      "shortName": "Firewall Manager",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Firewall-Manager.svg"
+    },
+    {
+      "id": "globalaccelerator",
+      "name": "AWS Global Accelerator",
+      "shortName": "Global Accelerator",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-Global-Accelerator.svg"
+    },
+    {
+      "id": "glue",
+      "name": "AWS Glue",
+      "shortName": "Glue",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/AWS-Glue.svg"
+    },
+    {
+      "id": "gluedatabrew",
+      "name": "AWS Glue DataBrew",
+      "shortName": "Glue DataBrew",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/AWS-Glue-DataBrew.svg"
+    },
+    {
+      "id": "groundstation",
+      "name": "AWS Ground Station",
+      "shortName": "Ground Station",
+      "description": "Satellite",
+      "defaultConfig": {},
+      "category": "satellite",
+      "iconPath": "/aws-icons/AWS-Ground-Station.svg"
+    },
+    {
+      "id": "healthdashboard",
+      "name": "AWS Health Dashboard",
+      "shortName": "Health Dashboard",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Health-Dashboard.svg"
+    },
+    {
+      "id": "healthimaging",
+      "name": "AWS HealthImaging",
+      "shortName": "HealthImaging",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-HealthImaging.svg"
+    },
+    {
+      "id": "healthlake",
+      "name": "AWS HealthLake",
+      "shortName": "HealthLake",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-HealthLake.svg"
+    },
+    {
+      "id": "healthomics",
+      "name": "AWS HealthOmics",
+      "shortName": "HealthOmics",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-HealthOmics.svg"
+    },
+    {
+      "id": "healthscribe",
+      "name": "AWS HealthScribe",
+      "shortName": "HealthScribe",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-HealthScribe.svg"
+    },
+    {
+      "id": "iamidentitycenter",
+      "name": "AWS IAM Identity Center",
+      "shortName": "IAM Identity Center",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-IAM-Identity-Center.svg"
+    },
+    {
+      "id": "iam",
+      "name": "AWS Identity and Access Management",
+      "shortName": "IAM",
+      "category": "security",
+      "description": "Manage access to AWS resources",
+      "defaultConfig": {},
+      "iconPath": "/aws-icons/AWS-Identity-and-Access-Management.svg"
+    },
+    {
+      "id": "infrastructurecomposer",
+      "name": "AWS Infrastructure Composer",
+      "shortName": "Infrastructure Composer",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-Infrastructure-Composer.svg"
+    },
+    {
+      "id": "interconnect",
+      "name": "AWS Interconnect",
+      "shortName": "Interconnect",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-Interconnect.svg"
+    },
+    {
+      "id": "iotcore",
+      "name": "AWS IoT Core",
+      "shortName": "IoT Core",
+      "description": "Internet of Things",
+      "defaultConfig": {},
+      "category": "iot",
+      "iconPath": "/aws-icons/AWS-IoT-Core.svg"
+    },
+    {
+      "id": "iotdevicedefender",
+      "name": "AWS IoT Device Defender",
+      "shortName": "IoT Device Defender",
+      "description": "Internet of Things",
+      "defaultConfig": {},
+      "category": "iot",
+      "iconPath": "/aws-icons/AWS-IoT-Device-Defender.svg"
+    },
+    {
+      "id": "iotdevicemanagement",
+      "name": "AWS IoT Device Management",
+      "shortName": "IoT Device Management",
+      "description": "Internet of Things",
+      "defaultConfig": {},
+      "category": "iot",
+      "iconPath": "/aws-icons/AWS-IoT-Device-Management.svg"
+    },
+    {
+      "id": "iotevents",
+      "name": "AWS IoT Events",
+      "shortName": "IoT Events",
+      "description": "Internet of Things",
+      "defaultConfig": {},
+      "category": "iot",
+      "iconPath": "/aws-icons/AWS-IoT-Events.svg"
+    },
+    {
+      "id": "iotexpresslink",
+      "name": "AWS IoT ExpressLink",
+      "shortName": "IoT ExpressLink",
+      "description": "Internet of Things",
+      "defaultConfig": {},
+      "category": "iot",
+      "iconPath": "/aws-icons/AWS-IoT-ExpressLink.svg"
+    },
+    {
+      "id": "iotfleetwise",
+      "name": "AWS IoT FleetWise",
+      "shortName": "IoT FleetWise",
+      "description": "Internet of Things",
+      "defaultConfig": {},
+      "category": "iot",
+      "iconPath": "/aws-icons/AWS-IoT-FleetWise.svg"
+    },
+    {
+      "id": "iotgreengrass",
+      "name": "AWS IoT Greengrass",
+      "shortName": "IoT Greengrass",
+      "description": "Internet of Things",
+      "defaultConfig": {},
+      "category": "iot",
+      "iconPath": "/aws-icons/AWS-IoT-Greengrass.svg"
+    },
+    {
+      "id": "iotsitewise",
+      "name": "AWS IoT SiteWise",
+      "shortName": "IoT SiteWise",
+      "description": "Internet of Things",
+      "defaultConfig": {},
+      "category": "iot",
+      "iconPath": "/aws-icons/AWS-IoT-SiteWise.svg"
+    },
+    {
+      "id": "iottwinmaker",
+      "name": "AWS IoT TwinMaker",
+      "shortName": "IoT TwinMaker",
+      "description": "Internet of Things",
+      "defaultConfig": {},
+      "category": "iot",
+      "iconPath": "/aws-icons/AWS-IoT-TwinMaker.svg"
+    },
+    {
+      "id": "iq",
+      "name": "AWS IQ",
+      "shortName": "IQ",
+      "description": "Customer Enablement",
+      "defaultConfig": {},
+      "category": "customer-enablement",
+      "iconPath": "/aws-icons/AWS-IQ.svg"
+    },
+    {
+      "id": "kms",
+      "name": "AWS Key Management Service",
+      "shortName": "KMS",
+      "category": "security",
+      "description": "Managed creation and control of encryption keys",
+      "defaultConfig": {
+        "keySpec": "SYMMETRIC_DEFAULT"
+      },
+      "iconPath": "/aws-icons/AWS-Key-Management-Service.svg"
+    },
+    {
+      "id": "lakeformation",
+      "name": "AWS Lake Formation",
+      "shortName": "Lake Formation",
+      "description": "Analytics",
+      "defaultConfig": {},
+      "category": "analytics",
+      "iconPath": "/aws-icons/AWS-Lake-Formation.svg"
+    },
+    {
+      "id": "lambda",
+      "name": "AWS Lambda",
+      "shortName": "Lambda",
+      "category": "compute",
+      "description": "Run code without thinking about servers",
+      "defaultConfig": {
+        "runtime": "nodejs20.x",
+        "memory": "128"
+      },
+      "iconPath": "/aws-icons/AWS-Lambda.svg"
+    },
+    {
+      "id": "launchwizard",
+      "name": "AWS Launch Wizard",
+      "shortName": "Launch Wizard",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Launch-Wizard.svg"
+    },
+    {
+      "id": "licensemanager",
+      "name": "AWS License Manager",
+      "shortName": "License Manager",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-License-Manager.svg"
+    },
+    {
+      "id": "localzones",
+      "name": "AWS Local Zones",
+      "shortName": "Local Zones",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-Local-Zones.svg"
+    },
+    {
+      "id": "mainframemodernization",
+      "name": "AWS Mainframe Modernization",
+      "shortName": "Mainframe Modernization",
+      "description": "Migration Modernization",
+      "defaultConfig": {},
+      "category": "migration-modernization",
+      "iconPath": "/aws-icons/AWS-Mainframe-Modernization.svg"
+    },
+    {
+      "id": "managedservices",
+      "name": "AWS Managed Services",
+      "shortName": "Managed Services",
+      "description": "Customer Enablement",
+      "defaultConfig": {},
+      "category": "customer-enablement",
+      "iconPath": "/aws-icons/AWS-Managed-Services.svg"
+    },
+    {
+      "id": "managementconsole",
+      "name": "AWS Management Console",
+      "shortName": "Management Console",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Management-Console.svg"
+    },
+    {
+      "id": "marketplacedark",
+      "name": "AWS Marketplace_Dark",
+      "shortName": "Marketplace_Dark",
+      "description": "General Icons",
+      "defaultConfig": {},
+      "category": "general-icons",
+      "iconPath": "/aws-icons/AWS-Marketplace_Dark.svg"
+    },
+    {
+      "id": "marketplacelight",
+      "name": "AWS Marketplace_Light",
+      "shortName": "Marketplace_Light",
+      "description": "General Icons",
+      "defaultConfig": {},
+      "category": "general-icons",
+      "iconPath": "/aws-icons/AWS-Marketplace_Light.svg"
+    },
+    {
+      "id": "migrationevaluator",
+      "name": "AWS Migration Evaluator",
+      "shortName": "Migration Evaluator",
+      "description": "Migration Modernization",
+      "defaultConfig": {},
+      "category": "migration-modernization",
+      "iconPath": "/aws-icons/AWS-Migration-Evaluator.svg"
+    },
+    {
+      "id": "networkfirewall",
+      "name": "AWS Network Firewall",
+      "shortName": "Network Firewall",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Network-Firewall.svg"
+    },
+    {
+      "id": "neuron",
+      "name": "AWS Neuron",
+      "shortName": "Neuron",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-Neuron.svg"
+    },
+    {
+      "id": "nitroenclaves",
+      "name": "AWS Nitro Enclaves",
+      "shortName": "Nitro Enclaves",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-Nitro-Enclaves.svg"
+    },
+    {
+      "id": "organizations",
+      "name": "AWS Organizations",
+      "shortName": "Organizations",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Organizations.svg"
+    },
+    {
+      "id": "outpostsfamily",
+      "name": "AWS Outposts family",
+      "shortName": "Outposts family",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-Outposts-family.svg"
+    },
+    {
+      "id": "outpostsrack",
+      "name": "AWS Outposts rack",
+      "shortName": "Outposts rack",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-Outposts-rack.svg"
+    },
+    {
+      "id": "outpostsservers",
+      "name": "AWS Outposts servers",
+      "shortName": "Outposts servers",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-Outposts-servers.svg"
+    },
+    {
+      "id": "panorama",
+      "name": "AWS Panorama",
+      "shortName": "Panorama",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/AWS-Panorama.svg"
+    },
+    {
+      "id": "parallelcluster",
+      "name": "AWS Parallel Cluster",
+      "shortName": "Parallel Cluster",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-Parallel-Cluster.svg"
+    },
+    {
+      "id": "parallelcomputingservice",
+      "name": "AWS Parallel Computing Service",
+      "shortName": "Parallel Computing Service",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-Parallel-Computing-Service.svg"
+    },
+    {
+      "id": "partnercentral",
+      "name": "AWS Partner Central",
+      "shortName": "Partner Central",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Partner-Central.svg"
+    },
+    {
+      "id": "paymentcryptography",
+      "name": "AWS Payment Cryptography",
+      "shortName": "Payment Cryptography",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Payment-Cryptography.svg"
+    },
+    {
+      "id": "privatecertificateauthority",
+      "name": "AWS Private Certificate Authority",
+      "shortName": "Private Certificate Authority",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Private-Certificate-Authority.svg"
+    },
+    {
+      "id": "privatelink",
+      "name": "AWS PrivateLink",
+      "shortName": "PrivateLink",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-PrivateLink.svg"
+    },
+    {
+      "id": "professionalservices",
+      "name": "AWS Professional Services",
+      "shortName": "Professional Services",
+      "description": "Customer Enablement",
+      "defaultConfig": {},
+      "category": "customer-enablement",
+      "iconPath": "/aws-icons/AWS-Professional-Services.svg"
+    },
+    {
+      "id": "proton",
+      "name": "AWS Proton",
+      "shortName": "Proton",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Proton.svg"
+    },
+    {
+      "id": "repost",
+      "name": "AWS rePost",
+      "shortName": "rePost",
+      "description": "Customer Enablement",
+      "defaultConfig": {},
+      "category": "customer-enablement",
+      "iconPath": "/aws-icons/AWS-rePost.svg"
+    },
+    {
+      "id": "repostprivate",
+      "name": "AWS rePost Private",
+      "shortName": "rePost Private",
+      "description": "Customer Enablement",
+      "defaultConfig": {},
+      "category": "customer-enablement",
+      "iconPath": "/aws-icons/AWS-rePost-Private.svg"
+    },
+    {
+      "id": "resiliencehub",
+      "name": "AWS Resilience Hub",
+      "shortName": "Resilience Hub",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Resilience-Hub.svg"
+    },
+    {
+      "id": "resourceaccessmanager",
+      "name": "AWS Resource Access Manager",
+      "shortName": "Resource Access Manager",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Resource-Access-Manager.svg"
+    },
+    {
+      "id": "resourceexplorer",
+      "name": "AWS Resource Explorer",
+      "shortName": "Resource Explorer",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Resource-Explorer.svg"
+    },
+    {
+      "id": "rtbfabric",
+      "name": "AWS RTB Fabric",
+      "shortName": "RTB Fabric",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-RTB-Fabric.svg"
+    },
+    {
+      "id": "secretsmanager",
+      "name": "AWS Secrets Manager",
+      "shortName": "Secrets Manager",
+      "category": "security",
+      "description": "Rotate, manage, and retrieve secrets",
+      "defaultConfig": {},
+      "iconPath": "/aws-icons/AWS-Secrets-Manager.svg"
+    },
+    {
+      "id": "securityagent",
+      "name": "AWS Security Agent",
+      "shortName": "Security Agent",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Security-Agent.svg"
+    },
+    {
+      "id": "securityhub",
+      "name": "AWS Security Hub",
+      "shortName": "Security Hub",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Security-Hub.svg"
+    },
+    {
+      "id": "securityincidentresponse",
+      "name": "AWS Security Incident Response",
+      "shortName": "Security Incident Response",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Security-Incident-Response.svg"
+    },
+    {
+      "id": "serverlessapplicationrepository",
+      "name": "AWS Serverless Application Repository",
+      "shortName": "Serverless Application Repository",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-Serverless-Application-Repository.svg"
+    },
+    {
+      "id": "servicecatalog",
+      "name": "AWS Service Catalog",
+      "shortName": "Service Catalog",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Service-Catalog.svg"
+    },
+    {
+      "id": "servicemanagementconnector",
+      "name": "AWS Service Management Connector",
+      "shortName": "Service Management Connector",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Service-Management-Connector.svg"
+    },
+    {
+      "id": "shield",
+      "name": "AWS Shield",
+      "shortName": "Shield",
+      "category": "security",
+      "description": "DDoS protection",
+      "defaultConfig": {
+        "tier": "Standard"
+      },
+      "iconPath": "/aws-icons/AWS-Shield.svg"
+    },
+    {
+      "id": "signer",
+      "name": "AWS Signer",
+      "shortName": "Signer",
+      "description": "Security Identity",
+      "defaultConfig": {},
+      "category": "security",
+      "iconPath": "/aws-icons/AWS-Signer.svg"
+    },
+    {
+      "id": "simspaceweaver",
+      "name": "AWS SimSpace Weaver",
+      "shortName": "SimSpace Weaver",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-SimSpace-Weaver.svg"
+    },
+    {
+      "id": "sitetositevpn",
+      "name": "AWS Site to Site VPN",
+      "shortName": "Site to Site VPN",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-Site-to-Site-VPN.svg"
+    },
+    {
+      "id": "snowball",
+      "name": "AWS Snowball",
+      "shortName": "Snowball",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/AWS-Snowball.svg"
+    },
+    {
+      "id": "snowballedge",
+      "name": "AWS Snowball Edge",
+      "shortName": "Snowball Edge",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/AWS-Snowball-Edge.svg"
+    },
+    {
+      "id": "stepfunctions",
+      "name": "AWS Step Functions",
+      "shortName": "Step Functions",
+      "category": "integration",
+      "description": "Coordinate distributed applications",
+      "defaultConfig": {
+        "type": "STANDARD"
+      },
+      "iconPath": "/aws-icons/AWS-Step-Functions.svg"
+    },
+    {
+      "id": "storagegateway",
+      "name": "AWS Storage Gateway",
+      "shortName": "Storage Gateway",
+      "description": "Storage",
+      "defaultConfig": {},
+      "category": "storage",
+      "iconPath": "/aws-icons/AWS-Storage-Gateway.svg"
+    },
+    {
+      "id": "supplychain",
+      "name": "AWS Supply Chain",
+      "shortName": "Supply Chain",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/AWS-Supply-Chain.svg"
+    },
+    {
+      "id": "support",
+      "name": "AWS Support",
+      "shortName": "Support",
+      "description": "Customer Enablement",
+      "defaultConfig": {},
+      "category": "customer-enablement",
+      "iconPath": "/aws-icons/AWS-Support.svg"
+    },
+    {
+      "id": "sustainability",
+      "name": "AWS Sustainability",
+      "shortName": "Sustainability",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Sustainability.svg"
+    },
+    {
+      "id": "systemsmanager",
+      "name": "AWS Systems Manager",
+      "shortName": "Systems Manager",
+      "category": "management",
+      "description": "Gain operational insights and take action",
+      "defaultConfig": {},
+      "iconPath": "/aws-icons/AWS-Systems-Manager.svg"
+    },
+    {
+      "id": "telconetworkbuilder",
+      "name": "AWS Telco Network Builder",
+      "shortName": "Telco Network Builder",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Telco-Network-Builder.svg"
+    },
+    {
+      "id": "thinkboxdeadline",
+      "name": "AWS Thinkbox Deadline",
+      "shortName": "Thinkbox Deadline",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Thinkbox-Deadline.svg"
+    },
+    {
+      "id": "thinkboxfrost",
+      "name": "AWS Thinkbox Frost",
+      "shortName": "Thinkbox Frost",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Thinkbox-Frost.svg"
+    },
+    {
+      "id": "thinkboxkrakatoa",
+      "name": "AWS Thinkbox Krakatoa",
+      "shortName": "Thinkbox Krakatoa",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Thinkbox-Krakatoa.svg"
+    },
+    {
+      "id": "thinkboxstoke",
+      "name": "AWS Thinkbox Stoke",
+      "shortName": "Thinkbox Stoke",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Thinkbox-Stoke.svg"
+    },
+    {
+      "id": "thinkboxxmesh",
+      "name": "AWS Thinkbox XMesh",
+      "shortName": "Thinkbox XMesh",
+      "description": "Media Services",
+      "defaultConfig": {},
+      "category": "media-services",
+      "iconPath": "/aws-icons/AWS-Thinkbox-XMesh.svg"
+    },
+    {
+      "id": "toolsandsdks",
+      "name": "AWS Tools and SDKs",
+      "shortName": "Tools and SDKs",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-Tools-and-SDKs.svg"
+    },
+    {
+      "id": "trainingcertification",
+      "name": "AWS Training Certification",
+      "shortName": "Training Certification",
+      "description": "Customer Enablement",
+      "defaultConfig": {},
+      "category": "customer-enablement",
+      "iconPath": "/aws-icons/AWS-Training-Certification.svg"
+    },
+    {
+      "id": "transferfamily",
+      "name": "AWS Transfer Family",
+      "shortName": "Transfer Family",
+      "description": "Migration Modernization",
+      "defaultConfig": {},
+      "category": "migration-modernization",
+      "iconPath": "/aws-icons/AWS-Transfer-Family.svg"
+    },
+    {
+      "id": "transform",
+      "name": "AWS Transform",
+      "shortName": "Transform",
+      "description": "Migration Modernization",
+      "defaultConfig": {},
+      "category": "migration-modernization",
+      "iconPath": "/aws-icons/AWS-Transform.svg"
+    },
+    {
+      "id": "transitgateway",
+      "name": "AWS Transit Gateway",
+      "shortName": "Transit Gateway",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-Transit-Gateway.svg"
+    },
+    {
+      "id": "trustedadvisor",
+      "name": "AWS Trusted Advisor",
+      "shortName": "Trusted Advisor",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Trusted-Advisor.svg"
+    },
+    {
+      "id": "usernotifications",
+      "name": "AWS User Notifications",
+      "shortName": "User Notifications",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-User-Notifications.svg"
+    },
+    {
+      "id": "verifiedaccess",
+      "name": "AWS Verified Access",
+      "shortName": "Verified Access",
+      "description": "Networking Content Delivery",
+      "defaultConfig": {},
+      "category": "networking",
+      "iconPath": "/aws-icons/AWS-Verified-Access.svg"
+    },
+    {
+      "id": "waf",
+      "name": "AWS WAF",
+      "shortName": "WAF",
+      "category": "security",
+      "description": "Web application firewall",
+      "defaultConfig": {
+        "scope": "REGIONAL"
+      },
+      "iconPath": "/aws-icons/AWS-WAF.svg"
+    },
+    {
+      "id": "wavelength",
+      "name": "AWS Wavelength",
+      "shortName": "Wavelength",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/AWS-Wavelength.svg"
+    },
+    {
+      "id": "wellarchitectedtool",
+      "name": "AWS Well Architected Tool",
+      "shortName": "Well Architected Tool",
+      "description": "Management Tools",
+      "defaultConfig": {},
+      "category": "management",
+      "iconPath": "/aws-icons/AWS-Well-Architected-Tool.svg"
+    },
+    {
+      "id": "wickr",
+      "name": "AWS Wickr",
+      "shortName": "Wickr",
+      "description": "Business Applications",
+      "defaultConfig": {},
+      "category": "business-applications",
+      "iconPath": "/aws-icons/AWS-Wickr.svg"
+    },
+    {
+      "id": "xray",
+      "name": "AWS X Ray",
+      "shortName": "X Ray",
+      "description": "Developer Tools",
+      "defaultConfig": {},
+      "category": "developer-tools",
+      "iconPath": "/aws-icons/AWS-X-Ray.svg"
+    },
+    {
+      "id": "bottlerocket",
+      "name": "Bottlerocket",
+      "shortName": "Bottlerocket",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/Bottlerocket.svg"
+    },
+    {
+      "id": "elasticfabricadapter",
+      "name": "Elastic Fabric Adapter",
+      "shortName": "Elastic Fabric Adapter",
+      "description": "Compute",
+      "defaultConfig": {},
+      "category": "compute",
+      "iconPath": "/aws-icons/Elastic-Fabric-Adapter.svg"
+    },
+    {
+      "id": "elb",
+      "name": "Elastic Load Balancing",
+      "shortName": "ELB",
+      "category": "networking",
+      "description": "Distribute incoming traffic across targets",
+      "defaultConfig": {
+        "type": "application"
+      },
+      "iconPath": "/aws-icons/Elastic-Load-Balancing.svg"
+    },
+    {
+      "id": "freertos",
+      "name": "FreeRTOS",
+      "shortName": "FreeRTOS",
+      "description": "Internet of Things",
+      "defaultConfig": {},
+      "category": "iot",
+      "iconPath": "/aws-icons/FreeRTOS.svg"
+    },
+    {
+      "id": "open3dengine",
+      "name": "Open 3D Engine",
+      "shortName": "Open 3D Engine",
+      "description": "Games",
+      "defaultConfig": {},
+      "category": "games",
+      "iconPath": "/aws-icons/Open-3D-Engine.svg"
+    },
+    {
+      "id": "oracledatabaseataws",
+      "name": "Oracle Database at AWS",
+      "shortName": "Oracle Database at AWS",
+      "description": "Databases",
+      "defaultConfig": {},
+      "category": "database",
+      "iconPath": "/aws-icons/Oracle-Database-at-AWS.svg"
+    },
+    {
+      "id": "pytorchonaws",
+      "name": "PyTorch on AWS",
+      "shortName": "PyTorch on AWS",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/PyTorch-on-AWS.svg"
+    },
+    {
+      "id": "redhatopenshiftserviceonaws",
+      "name": "Red Hat OpenShift Service on AWS",
+      "shortName": "Red Hat OpenShift Service on AWS",
+      "description": "Containers",
+      "defaultConfig": {},
+      "category": "containers",
+      "iconPath": "/aws-icons/Red-Hat-OpenShift-Service-on-AWS.svg"
+    },
+    {
+      "id": "reservedinstancereporting",
+      "name": "Reserved Instance Reporting",
+      "shortName": "Reserved Instance Reporting",
+      "description": "Cloud Financial Management",
+      "defaultConfig": {},
+      "category": "cloud-financial-management",
+      "iconPath": "/aws-icons/Reserved-Instance-Reporting.svg"
+    },
+    {
+      "id": "savingsplans",
+      "name": "Savings Plans",
+      "shortName": "Savings Plans",
+      "description": "Cloud Financial Management",
+      "defaultConfig": {},
+      "category": "cloud-financial-management",
+      "iconPath": "/aws-icons/Savings-Plans.svg"
+    },
+    {
+      "id": "tensorflowonaws",
+      "name": "TensorFlow on AWS",
+      "shortName": "TensorFlow on AWS",
+      "description": "Artificial Intelligence",
+      "defaultConfig": {},
+      "category": "ml",
+      "iconPath": "/aws-icons/TensorFlow-on-AWS.svg"
+    }
+  ]
+}

@@ -64,9 +64,12 @@ async function callOpenAI<T>(
   });
 
   try {
+    const signal = options?.signal
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(30_000)])
+      : AbortSignal.timeout(30_000);
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      signal: options?.signal,
+      signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
@@ -103,10 +106,7 @@ export async function callGemini<T>(
   schema: object,
   options?: GeminiCallOptions
 ): Promise<T | null> {
-  const signal = options?.signal
-    ? AbortSignal.any([options.signal, AbortSignal.timeout(20_000)])
-    : AbortSignal.timeout(20_000);
-  options = { ...options, signal };
+  const callerSignal = options?.signal;
   // Check if OpenAI is explicitly chosen or Gemini is unconfigured
   const preferOpenAI =
     process.env.AI_PROVIDER === "openai" ||
@@ -120,15 +120,23 @@ export async function callGemini<T>(
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     // If Gemini key is missing, attempt OpenAI as alternate
-    if (process.env.OPENAI_API_KEY && !preferOpenAI && !signal.aborted) {
+    if (process.env.OPENAI_API_KEY && !preferOpenAI && !callerSignal?.aborted) {
       return callOpenAI<T>(prompt, schema, options);
     }
     return null;
   }
 
-  const primaryModel = options?.modelOverride || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+  const primaryModel = options?.modelOverride || process.env.GEMINI_MODEL?.trim() || "gemini-3.1-flash-lite";
+  const configuredChain = (process.env.GEMINI_MODEL_CHAIN || "")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
   const candidateModels = [
     primaryModel,
+    ...configuredChain,
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.5-flash",
     "gemini-flash-latest",
   ].filter((v, i, a) => a.indexOf(v) === i);
 
@@ -153,13 +161,17 @@ export async function callGemini<T>(
   let lastErrorMsg = "";
 
   for (const model of candidateModels) {
-    if (signal.aborted) return null;
+    if (callerSignal?.aborted) return null;
     try {
+      // Give each fallback a fresh timeout so one slow model cannot starve the chain.
+      const attemptSignal = callerSignal
+        ? AbortSignal.any([callerSignal, AbortSignal.timeout(22_000)])
+        : AbortSignal.timeout(22_000);
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
       const response = await fetch(endpoint, {
         method: "POST",
-        signal,
+        signal: attemptSignal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -534,4 +546,3 @@ export async function generateWorkflowWithGemini(
   const { executeAIPipeline } = await import("./pipeline");
   return executeAIPipeline(prompt, "workflow", context);
 }
-

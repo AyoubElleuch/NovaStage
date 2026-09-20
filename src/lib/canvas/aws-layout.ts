@@ -21,10 +21,22 @@ export function layoutAWSArchitecture(result: AIWorkflowResult, existingNodes: C
       parent_group_id: parentOf(service.tempId, service.parentGroupTempId),
     })),
   ];
-  const startY = existingNodes.length
-    ? Math.max(...existingNodes.map((node) => node.position_y + node.height)) + 200
+  const existingArchitecture = existingNodes.filter(
+    (node) => node.node_type === "aws_service" || node.node_type === "group"
+  );
+  const isUpdate = result.intent === "update_pipeline" && existingArchitecture.length > 0;
+  const startX = isUpdate
+    ? Math.min(...existingArchitecture.map((node) => node.position_x))
     : 100;
+  const nonArchitectureNodes = existingNodes.filter(
+    (node) => node.node_type !== "aws_service" && node.node_type !== "group"
+  );
+  const startY = isUpdate
+    ? Math.min(...existingArchitecture.map((node) => node.position_y))
+    : nonArchitectureNodes.length
+      ? Math.max(...nonArchitectureNodes.map((node) => node.position_y + node.height)) + 240
+      : 100;
   return autoLayoutNodes(nodes, (result.dataFlowEdges || []).map((edge) => ({
     source_node_id: edge.fromId, target_node_id: edge.toId,
-  })), { startX: 100, startY });
+  })), { startX, startY, rankSep: 180, nodeSep: 140 });
 }

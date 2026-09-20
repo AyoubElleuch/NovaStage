@@ -92,7 +92,7 @@ describe("Email Templates & Resend Service", () => {
       expect(html).toContain("Hi Elena,");
       expect(html).toContain("https://novastage.dev/dashboard");
       expect(html).toContain("Official Beta Access");
-      expect(html).toContain("Beta v1.0.6");
+      expect(html).toContain("Beta v1.0.7");
       expect(text).toContain("elena@example.com");
       expect(text).toContain("Hi Elena,");
       expect(text).toContain("https://novastage.dev/dashboard");
@@ -106,7 +106,7 @@ describe("Email Templates & Resend Service", () => {
       expect(html).toContain("Hello,");
       expect(text).toContain("Hello,");
       expect(html).toContain("guest@example.com");
-      expect(html).toContain("Beta v1.0.6");
+      expect(html).toContain("Beta v1.0.7");
     });
   });
 
@@ -141,4 +141,3 @@ describe("Email Templates & Resend Service", () => {
     });
   });
 });
-

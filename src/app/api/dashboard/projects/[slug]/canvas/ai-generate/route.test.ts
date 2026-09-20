@@ -181,4 +181,38 @@ describe("POST /api/dashboard/projects/[slug]/canvas/ai-generate", () => {
       p_project_id: "proj-456",
     });
   });
+
+  it("orchestrates an AWS edit as an update and passes the complete topology context", async () => {
+    const { getProjectCanvasData } = await import("@/lib/canvas/server");
+    const { executeAIPipeline } = await import("@/lib/ai/pipeline");
+    vi.mocked(getProjectCanvasData).mockResolvedValueOnce({
+      nodes: [{
+        id: "svc-1", project_id: "proj-456", title: "API", description: "", status: "draft",
+        position_x: 100, position_y: 100, width: 260, height: 220, color: "default", sort_order: 0,
+        claimed_by: null, version: 1, checkpoints: [], node_type: "aws_service",
+        aws_metadata: { serviceId: "ecs", category: "compute", region: "us-east-1", config: { desiredCount: "2" } },
+        parent_group_id: null,
+      }],
+      edges: [],
+      claimRequests: [],
+    });
+    mockRpc.mockResolvedValue({ data: { success: true, requests_used: 1, requests_remaining: 9 }, error: null });
+
+    const req = new NextRequest("http://localhost:3000/api/test", {
+      method: "POST",
+      body: JSON.stringify({ prompt: "Add autoscaling to the API", mode: "aws_architecture" }),
+    });
+    const res = await POST(req, { params: Promise.resolve({ slug: "test-proj" }) });
+    expect(res.status).toBe(200);
+    expect(vi.mocked(executeAIPipeline)).toHaveBeenCalledWith(
+      "Add autoscaling to the API",
+      "aws_architecture",
+      expect.objectContaining({
+        operation: "update",
+        existingMilestones: [],
+        existingServiceNodes: [expect.objectContaining({ id: "svc-1", serviceId: "ecs" })],
+      }),
+      expect.objectContaining({ operation: "update" })
+    );
+  });
 });

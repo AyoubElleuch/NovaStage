@@ -29,11 +29,18 @@ export function useScrollChoreography() {
     window.scrollTo({ top: 0, behavior: "instant" });
     const documentOverflow = document.documentElement.style.overflow;
     const bodyOverflow = document.body.style.overflow;
+    const bodyPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
     unlockRef.current = () => {
       document.documentElement.style.overflow = documentOverflow;
       document.body.style.overflow = bodyOverflow;
+      document.body.style.paddingRight = bodyPaddingRight;
     };
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const duration = reduced ? 0 : TRANSITION_DURATION;

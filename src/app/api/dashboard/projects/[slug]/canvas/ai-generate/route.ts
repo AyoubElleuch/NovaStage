@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { executeAIPipeline } from "@/lib/ai/pipeline";
 import { CanvasAIContext } from "@/lib/ai/types";
+import { resolveGenerationOperation } from "@/lib/ai/orchestration";
 import { getProjectCanvasData, applyAIWorkflowResult, applyAWSServiceNodes } from "@/lib/canvas/server";
 
 export const maxDuration = 120;
@@ -35,7 +36,9 @@ export async function POST(
 
     const body = await request.json().catch(() => ({}));
     const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
-    const mode = typeof body?.mode === "string" ? body.mode : "workflow";
+    const mode = body?.mode === "aws_architecture" || body?.mode === "full_stack"
+      ? body.mode
+      : "workflow";
 
     if (!prompt) {
       return NextResponse.json(
@@ -194,8 +197,21 @@ export async function POST(
 
     // 3. Load current canvas graph state to provide as context
     const currentCanvasData = await getProjectCanvasData(project.id);
+    const operation = resolveGenerationOperation(
+      mode,
+      prompt,
+      currentCanvasData.nodes,
+      body?.operation
+    );
+    const architectureNodeIds = new Set(
+      currentCanvasData.nodes
+        .filter((node) => node.node_type === "aws_service" || node.node_type === "group")
+        .map((node) => node.id)
+    );
     const aiContext: CanvasAIContext = {
-      existingMilestones: currentCanvasData.nodes.map((n, idx) => ({
+      existingMilestones: currentCanvasData.nodes
+        .filter((node) => !node.node_type || node.node_type === "milestone")
+        .map((n, idx) => ({
         id: n.id,
         order: n.sort_order ?? idx,
         title: n.title,
@@ -209,17 +225,57 @@ export async function POST(
           sort_order: cp.sort_order,
         })),
       })),
-      existingEdges: currentCanvasData.edges.map((e) => ({
+      existingEdges: currentCanvasData.edges
+        .filter((edge) => {
+          const source = currentCanvasData.nodes.find((node) => node.id === edge.source_node_id);
+          const target = currentCanvasData.nodes.find((node) => node.id === edge.target_node_id);
+          return (!source?.node_type || source.node_type === "milestone") &&
+            (!target?.node_type || target.node_type === "milestone");
+        })
+        .map((e) => ({
         id: e.id,
         sourceId: e.source_node_id,
         targetId: e.target_node_id,
       })),
+      existingServiceNodes: currentCanvasData.nodes
+        .filter((node) => node.node_type === "aws_service" && node.aws_metadata)
+        .map((node) => ({
+          id: node.id,
+          serviceId: node.aws_metadata!.serviceId,
+          name: node.title,
+          description: node.description,
+          region: node.aws_metadata!.region,
+          config: node.aws_metadata!.config,
+          parentGroupId: node.parent_group_id,
+        })),
+      existingGroups: currentCanvasData.nodes
+        .filter((node) => node.node_type === "group" && node.group_metadata)
+        .map((node) => ({
+          id: node.id,
+          label: node.group_metadata!.label,
+          style: node.group_metadata!.style,
+          childNodeIds: node.group_metadata!.childNodeIds,
+          parentGroupId: node.parent_group_id,
+        })),
+      existingDataFlowEdges: currentCanvasData.edges
+        .filter((edge) => architectureNodeIds.has(edge.source_node_id) || architectureNodeIds.has(edge.target_node_id))
+        .map((edge) => ({
+          id: edge.id,
+          sourceId: edge.source_node_id,
+          targetId: edge.target_node_id,
+          edgeType: edge.edge_type,
+          label: edge.label,
+        })),
+      operation,
     };
 
     // 4. Call Multi-Phase AI Pipeline to generate or update structured DAG workflow
     let workflowResult;
     try {
-      workflowResult = await executeAIPipeline(prompt, mode, aiContext, { plan: userPlan });
+      workflowResult = await executeAIPipeline(prompt, mode, aiContext, {
+        plan: userPlan,
+        operation,
+      });
     } catch (aiErr: unknown) {
       console.error("Gemini AI Processing failed:", aiErr);
 
@@ -276,6 +332,7 @@ export async function POST(
       success: true,
       intent: workflowResult.intent,
       mode: workflowResult.mode,
+      operation,
       summary: workflowResult.summary,
       nodes: finalNodes,
       edges: finalEdges,

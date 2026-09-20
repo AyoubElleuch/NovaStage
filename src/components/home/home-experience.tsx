@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import HomeNavbar from "./navigation/home-navbar";
 import HeroSection from "./hero/hero-section";
 import CanvasScrollStage from "./canvas/canvas-scroll-stage";
@@ -22,6 +22,44 @@ import "./pricing/pricing.css";
 
 export default function HomeExperience() {
   const { phase, busy, revealed, atHero, surfaceRef, begin } = useScrollChoreography();
+  const [heroEntered, setHeroEntered] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setHeroEntered(true);
+      return;
+    }
+
+    const loadingState = typeof document !== "undefined" ? document.documentElement.getAttribute("data-loading-state") : null;
+    const hasLoader = typeof document !== "undefined" && Boolean(document.querySelector(".loading-screen"));
+
+    if (loadingState === "complete" || (!hasLoader && loadingState !== "loading")) {
+      setHeroEntered(true);
+      return;
+    }
+
+    const handleLoaderExit = () => {
+      // Trigger kinetic entrance right as the curtain slides up
+      window.setTimeout(() => {
+        setHeroEntered(true);
+      }, 50);
+    };
+
+    window.addEventListener("novastage:loader-exit", handleLoaderExit, { once: true });
+    window.addEventListener("novastage:loader-complete", () => setHeroEntered(true), { once: true });
+
+    // Safety fallback ensures page always reveals within 3.5s
+    const fallbackTimer = window.setTimeout(() => {
+      setHeroEntered(true);
+    }, 3500);
+
+    return () => {
+      window.removeEventListener("novastage:loader-exit", handleLoaderExit);
+      window.removeEventListener("novastage:loader-complete", () => setHeroEntered(true));
+      window.clearTimeout(fallbackTimer);
+    };
+  }, []);
+
   useEffect(() => {
     const root = document.documentElement;
     const wasDark = root.classList.contains("dark");
@@ -55,7 +93,7 @@ export default function HomeExperience() {
   const features = () => begin("forward", () => document.getElementById("capabilities")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }));
   const pricing = () => begin("forward", () => document.getElementById("pricing")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }));
 
-  return <div ref={surfaceRef} className="novastage-home" data-phase={phase} data-revealed={revealed} aria-busy={busy}>
+  return <div ref={surfaceRef} className="novastage-home" data-phase={phase} data-revealed={revealed} data-hero-entered={heroEntered} aria-busy={busy}>
     <div inert={busy} className="home-interactive-content">
       <HomeNavbar onExplore={explore} onHome={() => begin("reverse")} onFeatures={features} onPricing={pricing} />
       <main>

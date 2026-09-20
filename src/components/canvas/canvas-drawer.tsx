@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { CanvasNode, CanvasEdge } from "@/lib/canvas/types";
-import { AwsIcon } from "./aws-icons";
+import { AwsIcon, AWS_SERVICE_REGISTRY } from "./aws-icons";
 import {
   calculateCompletionPercentage,
   isNodeFullyComplete,
@@ -321,56 +321,12 @@ function MilestoneDrawerContent({
               <AwsIcon serviceId={node.aws_metadata?.serviceId || ""} size={36} />
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold text-neutral-900 dark:text-white truncate">
-                  {node.aws_metadata?.serviceId?.toUpperCase() || "AWS Service"}
+                  {AWS_SERVICE_REGISTRY[node.aws_metadata?.serviceId || ""]?.name || node.aws_metadata?.serviceId || "AWS Service"}
                 </div>
                 <div className="text-[11px] text-neutral-500 dark:text-neutral-400 capitalize">
                   Category: {node.aws_metadata?.category?.replace("_", " ") || "Compute"}
                 </div>
               </div>
-            </div>
-
-            {/* Deployment Lifecycle Status */}
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
-                Deployment Lifecycle
-              </label>
-              <div className="flex items-center gap-2 rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-1.5 dark:border-[#283548] dark:bg-[#121721]">
-                <button
-                  type="button"
-                  disabled={!isClaimedByMe && !isProjectOwner}
-                  onClick={() => {
-                    onUpdateNode(node.id, { status: "draft" });
-                  }}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
-                    node.status !== "completed"
-                      ? "bg-white shadow-xs text-neutral-900 border border-neutral-200/90 dark:bg-[#1e2634] dark:text-white dark:border-[#283548]"
-                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-                  }`}
-                >
-                  <span className="h-2 w-2 rounded-full bg-neutral-400 dark:bg-neutral-500" />
-                  Planned
-                </button>
-                <button
-                  type="button"
-                  disabled={!isClaimedByMe && !isProjectOwner}
-                  onClick={() => {
-                    onUpdateNode(node.id, { status: "completed" });
-                  }}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
-                    node.status === "completed"
-                      ? "bg-emerald-600 text-white shadow-xs shadow-emerald-600/30 dark:bg-emerald-600"
-                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-                  }`}
-                >
-                  <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-                  Active / Live
-                </button>
-              </div>
-              <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1 pl-1">
-                {node.status === "completed"
-                  ? "Resource is Active / Live. Connected downstream data wires glow active."
-                  : "Resource is in planning. Wires show planned architecture flow."}
-              </p>
             </div>
 
             {/* Region Configuration */}
@@ -408,14 +364,16 @@ function MilestoneDrawerContent({
                   Object.entries(node.aws_metadata.config).map(([key, value]) => (
                     <div key={key} className="flex items-center justify-between text-xs py-1 border-b border-neutral-200/60 dark:border-[#283548] last:border-0">
                       <span className="font-semibold text-neutral-600 dark:text-neutral-400">{key}</span>
-                      <span className="font-mono text-neutral-900 dark:text-neutral-200 bg-white dark:bg-[#161d27] px-2 py-0.5 rounded border border-neutral-200 dark:border-[#283548]">
-                        {value}
-                      </span>
+                      <input aria-label={key} value={value} disabled={!isClaimedByMe}
+                        onChange={(event) => onUpdateNode(node.id, { aws_metadata: {
+                          ...node.aws_metadata!, config: { ...node.aws_metadata?.config, [key]: event.target.value },
+                        } })}
+                        className="w-1/2 min-w-0 font-mono text-neutral-900 dark:text-neutral-200 bg-white dark:bg-[#161d27] px-2 py-1 rounded border border-neutral-200 dark:border-[#283548]" />
                     </div>
                   ))
                 ) : (
                   <p className="text-xs text-neutral-400 dark:text-neutral-500 italic py-1">
-                    Standard AWS managed configuration defaults applied.
+                    No resource configuration specified.
                   </p>
                 )}
               </div>

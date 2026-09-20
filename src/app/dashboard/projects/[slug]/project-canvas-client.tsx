@@ -1375,6 +1375,9 @@ export default function ProjectCanvasClient({
           });
         }
       })
+      .on("broadcast", { event: "edge:updated" }, ({ payload }) => {
+        if (payload?.edge) setEdges((previous) => previous.map((edge) => edge.id === payload.edge.id ? payload.edge : edge));
+      })
       .on("broadcast", { event: "edge:deleted" }, ({ payload }) => {
         if (payload?.edgeId) {
           setEdges((prev) => prev.filter((e) => e.id !== payload.edgeId));
@@ -1711,7 +1714,7 @@ export default function ProjectCanvasClient({
         const nearest = findNearestHandle(worldPos, nodes, draftEdgeRef.current.sourceNode.id, 50);
         if (nearest) {
           setSnappedHandle({ node: nearest.node, handle: nearest.handle });
-          const cycle = detectCycle(edges, {
+          const cycle = ![draftEdgeRef.current.sourceNode, nearest.node].every((item) => item.node_type === "aws_service" || item.node_type === "group") && detectCycle(edges, {
             sourceNodeId: draftEdgeRef.current.sourceNode.id,
             targetNodeId: nearest.node.id,
           });
@@ -1732,7 +1735,7 @@ export default function ProjectCanvasClient({
             const bestHandle = getClosestHandleToPoint(hoveredCandidate, worldPos);
             const bestPos = getNodeHandlePosition(hoveredCandidate, bestHandle);
             setSnappedHandle({ node: hoveredCandidate, handle: bestHandle });
-            const cycle = detectCycle(edges, {
+            const cycle = ![draftEdgeRef.current.sourceNode, hoveredCandidate].every((item) => item.node_type === "aws_service" || item.node_type === "group") && detectCycle(edges, {
               sourceNodeId: draftEdgeRef.current.sourceNode.id,
               targetNodeId: hoveredCandidate.id,
             });
@@ -1958,7 +1961,8 @@ export default function ProjectCanvasClient({
     }
 
     // Check for circular dependency
-    const cycle = detectCycle(edges, { sourceNodeId, targetNodeId });
+    const architectureLink = [activeDraft.sourceNode, node].every((item) => item.node_type === "aws_service" || item.node_type === "group");
+    const cycle = !architectureLink && detectCycle(edges, { sourceNodeId, targetNodeId });
     if (cycle) {
       notify({
         tone: "error",
@@ -2079,6 +2083,17 @@ export default function ProjectCanvasClient({
   ) => {
     e.preventDefault();
     void handlePortClick(node, handle);
+  };
+
+  const handleUpdateEdge = async (edgeId: string, updates: { label: string; edge_type: EdgeType }) => {
+    const response = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update_edge", edge_id: edgeId, updates }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success || !data.edge) throw new Error(data.error || "Unable to save connection");
+    setEdges((previous) => previous.map((edge) => edge.id === edgeId ? data.edge : edge));
+    broadcastEvent("edge:updated", { edge: data.edge });
   };
 
   const handleDeleteEdge = async (edgeId: string) => {
@@ -2311,6 +2326,7 @@ export default function ProjectCanvasClient({
           nodes={nodes}
           draftEdge={draftEdge}
           onDeleteEdge={handleDeleteEdge}
+          onUpdateEdge={handleUpdateEdge}
           currentUserId={currentUser.id}
           isOwner={isOwner}
           isCycleDetected={isCycleDetected}

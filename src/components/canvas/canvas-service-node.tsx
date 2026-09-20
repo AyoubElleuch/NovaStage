@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Lock, Plus, Unlock } from "lucide-react";
 import { CanvasNode, HandlePosition, AWSServiceCategory } from "@/lib/canvas/types";
 import { getUserColor } from "@/lib/canvas/coordinate-math";
-import { AwsIcon } from "./aws-icons";
+import { AwsIcon, AWS_SERVICE_REGISTRY } from "./aws-icons";
 
 export interface CanvasServiceNodeProps {
   node: CanvasNode;
@@ -71,6 +71,7 @@ export default function CanvasServiceNode({
   const category = (node.aws_metadata?.category || "compute") as AWSServiceCategory;
   const categoryStyles = CATEGORY_COLORS[category] || CATEGORY_COLORS.compute;
 
+  const compact = (node.height || 220) < 190;
   const handles: HandlePosition[] = ["top", "right", "bottom", "left"];
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -123,6 +124,7 @@ export default function CanvasServiceNode({
 
   return (
     <div
+      data-node-type="aws_service"
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
@@ -131,18 +133,16 @@ export default function CanvasServiceNode({
       style={{
         transform: `translate3d(${node.position_x}px, ${node.position_y}px, 0)`,
         width: `${node.width || 200}px`,
-        minHeight: `${node.height || 220}px`,
+        height: `${node.height || 220}px`,
       }}
-      className={`group absolute top-0 left-0 cursor-move rounded-xl border bg-white/95 p-3 shadow-sm backdrop-blur-md transition-all duration-150 select-none dark:bg-[#161d27]/95 flex flex-col border-l-4 ${
-        categoryStyles.border
-      } ${
+      className={`group absolute top-0 left-0 cursor-move rounded-xl border bg-white/95 p-2 shadow-sm transition-shadow duration-150 select-none flex flex-col items-center justify-center dark:border-[#283548] dark:bg-[#161d27]/95 ${
         isLinking
           ? "cursor-pointer ring-2 ring-emerald-500/30 hover:ring-emerald-500 hover:border-emerald-500 hover:shadow-lg"
           : isSelected || isMultiSelected
           ? "ring-2 ring-neutral-900/20 shadow-md dark:ring-emerald-500/30"
           : isClaimedByOther
           ? "border-amber-300/80 hover:border-amber-400 dark:border-amber-700/60 dark:hover:border-amber-500"
-          : "border-neutral-200/90 hover:border-neutral-300 hover:shadow-md dark:border-[#283548] dark:hover:border-[#384961] dark:hover:shadow-[0_8px_25px_rgba(0,0,0,0.4)]"
+          : "border-neutral-200/90 hover:border-neutral-300 hover:shadow-md dark:hover:border-[#384961] dark:hover:shadow-[0_8px_25px_rgba(0,0,0,0.4)]"
       }`}
     >
       {handles.map((handle) => {
@@ -169,26 +169,9 @@ export default function CanvasServiceNode({
         );
       })}
 
-      <div className="flex items-start justify-between gap-1.5">
-        <div
-          data-no-drag="true"
-          className={`shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold tracking-wider uppercase transition-all ${
-            node.status === "completed"
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/80 shadow-[0_0_8px_rgba(16,185,129,0.2)]"
-              : "bg-neutral-100 text-neutral-500 border border-neutral-200 dark:bg-[#121721] dark:text-neutral-400 dark:border-[#283548]"
-          }`}
-          title={node.status === "completed" ? "Resource is Active / Live" : "Resource is Planned"}
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              node.status === "completed" ? "bg-emerald-500 animate-pulse" : "bg-neutral-400 dark:bg-neutral-500"
-            }`}
-          />
-          <span>{node.status === "completed" ? "Live" : "Plan"}</span>
-        </div>
-
+      <div className="flex w-full items-center justify-center gap-1.5">
         <div className="flex-1 flex justify-center py-1">
-          <AwsIcon serviceId={node.aws_metadata?.serviceId || ""} size={36} className="w-9 h-9" />
+          <AwsIcon serviceId={node.aws_metadata?.serviceId || ""} size={compact ? 40 : 64} className={compact ? "h-10 w-10" : "h-16 w-16"} />
         </div>
 
         <div
@@ -203,7 +186,7 @@ export default function CanvasServiceNode({
               onSelect(node);
             }
           }}
-          className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all ${
+          className={`absolute right-2 top-2 shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all ${
             isClaimedByMe
               ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
               : isClaimedByOther
@@ -236,7 +219,8 @@ export default function CanvasServiceNode({
         </div>
       </div>
 
-      <div className="text-center mt-1">
+      <div className="text-center mt-1 w-full">
+        <p className="truncate text-[10px] font-medium text-neutral-500 dark:text-neutral-400">{AWS_SERVICE_REGISTRY[node.aws_metadata?.serviceId || ""]?.name || node.aws_metadata?.serviceId}</p>
         {isEditingTitle ? (
           <div data-no-drag="true">
             <input
@@ -264,7 +248,7 @@ export default function CanvasServiceNode({
                 setIsEditingTitle(true);
               }
             }}
-            className="text-[15px] font-bold text-neutral-900 line-clamp-2 break-words leading-snug cursor-text dark:text-white"
+            className="text-[13px] font-bold text-neutral-900 line-clamp-2 break-words leading-snug cursor-text dark:text-white"
             title={node.title}
           >
             {node.title}
@@ -272,10 +256,10 @@ export default function CanvasServiceNode({
         )}
       </div>
 
-      <div className="flex flex-col items-center gap-1.5 mt-2">
-        <span className={`inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${categoryStyles.bg} ${categoryStyles.text}`}>
+      <div className="flex flex-col items-center gap-1 mt-1">
+        {!compact && <span className={`inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded ${categoryStyles.bg} ${categoryStyles.text}`}>
           {category.replace("_", " ")}
-        </span>
+        </span>}
         
         {node.aws_metadata?.region && (
           <span className="inline-block bg-neutral-100 text-neutral-600 border border-neutral-200 px-1.5 py-0.5 text-[10px] rounded dark:bg-[#1e2634] dark:text-neutral-300 dark:border-[#283548]">
@@ -283,7 +267,7 @@ export default function CanvasServiceNode({
           </span>
         )}
         
-        {node.aws_metadata?.config && Object.entries(node.aws_metadata.config).length > 0 && (
+        {!compact && node.aws_metadata?.config && Object.entries(node.aws_metadata.config).length > 0 && (
           <div className="flex flex-wrap justify-center gap-1 mt-1">
             {Object.values(node.aws_metadata.config).slice(0, 2).map((val, idx) => (
               <span key={idx} className="inline-block bg-neutral-100 text-neutral-600 border border-neutral-200 px-1.5 py-0.5 text-[10px] rounded max-w-[80px] truncate dark:bg-[#1e2634] dark:text-neutral-300 dark:border-[#283548]">

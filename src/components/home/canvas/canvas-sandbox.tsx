@@ -11,7 +11,7 @@ import CanvasDrawer from "@/components/canvas/canvas-drawer";
 import CanvasReleasePulse from "@/components/canvas/canvas-release-pulse";
 import CanvasServicePalette from "@/components/canvas/canvas-service-palette";
 import { AWS_SERVICE_REGISTRY } from "@/components/canvas/aws-icons";
-import { getNodeHandlePosition, screenToWorld } from "@/lib/canvas/coordinate-math";
+import { getNodeHandlePosition } from "@/lib/canvas/coordinate-math";
 import type { CanvasNode, CanvasTool, CanvasViewport, HandlePosition } from "@/lib/canvas/types";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
 import { connectNodes, createGroup, createInitialGraph, createMilestone, createService, deleteNodes, initialHistory, moveNode, sandboxReducer, VISITOR_ID } from "./sandbox-state";
@@ -286,20 +286,14 @@ export default function CanvasSandbox({ active, interactive = true }: { active: 
       onKeyDown={(event) => { if (event.key === "Escape") setLink(null); }}
       onWheelCapture={(event) => { if (!event.ctrlKey && !event.metaKey && tool !== "hand") event.stopPropagation(); }}>
       <CanvasViewportContainer viewport={viewport} onViewportChange={setViewport} activeTool={tool} isDraggingNode={dragging} selectionMarquee={selectionMarquee}
-        onPointerMove={(_world, screen) => {
-          const host = hostRef.current;
-          if (!host) return;
-          const rect = host.getBoundingClientRect();
-          const frameScale = rect.width / Math.max(host.clientWidth, 1);
-          const localX = (screen.x - rect.left) / frameScale;
-          const localY = (screen.y - rect.top) / frameScale;
-          setPointer(screenToWorld(localX, localY, viewport));
+        onPointerMove={(world) => {
+          setPointer(world);
         }} onCanvasClick={() => { setSelectedNodeId(null); setSelectedNodeIds(new Set()); setLink(null); }}
         onMarqueeStart={(world) => { const next = { startX: world.x, startY: world.y, currentX: world.x, currentY: world.y }; selectionMarqueeRef.current = next; setSelectionMarquee(next); setSelectedNodeId(null); setSelectedNodeIds(new Set()); }}
         onMarqueeChange={(world) => { const current = selectionMarqueeRef.current; if (!current) return; current.currentX = world.x; current.currentY = world.y; setSelectionMarquee({ ...current }); updateMarquee(current.startX, current.startY, world.x, world.y); }}
         onMarqueeEnd={() => { selectionMarqueeRef.current = null; setSelectionMarquee(null); }}>
         <div className="home-assembled-edges">
-          <CanvasEdgeLayer nodes={graph.nodes} edges={graph.edges} draftEdge={sourceNode && link ? { sourceNode, sourceHandle: link.handle, currentPos: pointer } : null}
+          <CanvasEdgeLayer onUpdateEdge={async (edgeId, updates) => { dispatch({ type: "commit", graph: { ...graph, edges: graph.edges.map((edge) => edge.id === edgeId ? { ...edge, ...updates } : edge) } }); }} nodes={graph.nodes} edges={graph.edges} draftEdge={sourceNode && link ? { sourceNode, sourceHandle: link.handle, currentPos: pointer } : null}
             currentUserId={VISITOR_ID} isOwner onDeleteEdge={deleteEdge} />
           <CanvasPacketLayer nodes={graph.nodes} edges={graph.edges} active={active} />
         </div>

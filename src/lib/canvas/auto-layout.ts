@@ -7,7 +7,7 @@ type LayoutNode = Pick<CanvasNode, "id" | "position_x" | "position_y" | "width" 
 export function autoLayoutNodes<Node extends LayoutNode>(
   nodes: Node[],
   edges: Pick<CanvasEdge, "source_node_id" | "target_node_id">[],
-  options?: { startX?: number; startY?: number }
+  options?: { startX?: number; startY?: number; rankSep?: number; nodeSep?: number }
 ): Node[] {
   if (nodes.length === 0) return [];
   const byId = new Map(nodes.map((node) => [node.id, { ...node }]));
@@ -41,13 +41,19 @@ export function autoLayoutNodes<Node extends LayoutNode>(
   const arrange = (parentId?: string): { width: number; height: number } => {
     const siblings = children.get(parentId) || [];
     const graph = new graphlib.Graph().setGraph({
-      rankdir: "LR", ranksep: 140, nodesep: 100, marginx: 0, marginy: 0,
+      rankdir: "LR",
+      ranksep: options?.rankSep ?? 160,
+      nodesep: options?.nodeSep ?? 120,
+      marginx: 0,
+      marginy: 0,
     }).setDefaultEdgeLabel(() => ({}));
     for (const node of siblings) {
       if (node.node_type === "group") {
         const content = arrange(node.id);
-        node.width = Math.max(node.width || 0, 400, content.width + 112);
-        node.height = Math.max(node.height || 0, 300, content.height + 144);
+        // Keep a visible safety buffer between a boundary and its direct children.
+        // The larger top inset protects the floating group label from child cards.
+        node.width = Math.max(node.width || 0, 440, content.width + 144);
+        node.height = Math.max(node.height || 0, 320, content.height + 184);
       } else {
         node.width = Math.max(node.width || 0, node.node_type === "aws_service" ? 260 : 320);
         node.height = Math.max(node.height || 0, node.node_type === "aws_service" ? 220 : 300);
@@ -86,10 +92,9 @@ export function autoLayoutNodes<Node extends LayoutNode>(
     for (const node of children.get(parentId) || []) {
       node.position_x += originX;
       node.position_y += originY;
-      if (node.node_type === "group") place(node.id, node.position_x + 56, node.position_y + 88);
+      if (node.node_type === "group") place(node.id, node.position_x + 72, node.position_y + 104);
     }
   };
   place(undefined, options?.startX ?? 120, options?.startY ?? 120);
   return nodes.map((node) => byId.get(node.id)!);
 }
-

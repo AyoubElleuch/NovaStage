@@ -15,9 +15,9 @@ import {
 } from "../types";
 import { buildFullStackSystemInstruction } from "../prompts/system-generate-aws";
 import { callGemini } from "../gemini";
-import { FULL_STACK_FEW_SHOT_EXAMPLE } from "../prompts/aws-few-shot-examples";
+import { evaluateArchitectureQuality, hasUsableArchitecture, normalizeArchitectureResult } from "../architecture-quality";
 
-const FULL_STACK_SCHEMA = {
+export const FULL_STACK_SCHEMA = {
   type: "OBJECT",
   properties: {
     intent: {
@@ -30,6 +30,7 @@ const FULL_STACK_SCHEMA = {
       items: {
         type: "OBJECT",
         properties: {
+          id: { type: "STRING" },
           tempId: { type: "STRING" },
           title: { type: "STRING" },
           description: { type: "STRING" },
@@ -69,14 +70,22 @@ const FULL_STACK_SCHEMA = {
       items: {
         type: "OBJECT",
         properties: {
+          id: { type: "STRING" },
           tempId: { type: "STRING" },
           serviceId: { type: "STRING" },
           name: { type: "STRING" },
           description: { type: "STRING" },
           region: { type: "STRING" },
-          config: {
-            type: "OBJECT",
-            additionalProperties: { type: "STRING" },
+          configEntries: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                key: { type: "STRING" },
+                value: { type: "STRING" },
+              },
+              required: ["key", "value"],
+            },
           },
           parentGroupTempId: { type: "STRING" },
         },
@@ -88,6 +97,7 @@ const FULL_STACK_SCHEMA = {
       items: {
         type: "OBJECT",
         properties: {
+          id: { type: "STRING" },
           tempId: { type: "STRING" },
           label: { type: "STRING" },
           style: {
@@ -117,6 +127,8 @@ const FULL_STACK_SCHEMA = {
         required: ["fromId", "toId", "edgeType"],
       },
     },
+    deletedServiceNodeIds: { type: "ARRAY", items: { type: "STRING" } },
+    deletedGroupIds: { type: "ARRAY", items: { type: "STRING" } },
   },
   required: ["intent", "summary", "milestones", "edges", "serviceNodes", "groups", "dataFlowEdges"],
 };
@@ -209,9 +221,15 @@ export async function generateFullStack(
 ): Promise<AIWorkflowResult> {
   const systemInstruction = buildFullStackSystemInstruction(prompt, decomposition);
 
-  const contextSnippet = context?.existingMilestones?.length
-    ? `\nEXISTING CANVAS MILESTONES TO EXTEND:\n${context.existingMilestones.map((m) => `- ${m.title}`).join("\n")}\n`
-    : "";
+  const contextSnippet = (context?.existingMilestones?.length || context?.existingServiceNodes?.length)
+    ? `\nORCHESTRATION OPERATION: ${context?.operation || "update"}\nEXISTING CANVAS STATE (preserve retained UUIDs during updates):\n${JSON.stringify({
+        milestones: context?.existingMilestones || [],
+        milestoneEdges: context?.existingEdges || [],
+        serviceNodes: context?.existingServiceNodes || [],
+        groups: context?.existingGroups || [],
+        dataFlowEdges: context?.existingDataFlowEdges || [],
+      }, null, 2)}\n`
+    : "\nORCHESTRATION OPERATION: create\nThe canvas has no relevant existing topology.\n";
 
   const userContent = `USER SYSTEM ARCHITECTURE & PROJECT REQUEST:
 "${prompt}"
@@ -219,13 +237,14 @@ ${contextSnippet}
 Produce a complete, senior-architect-grade Full-Stack Architecture and Execution Roadmap.
 Ensure:
 1. Every milestone is an actionable engineering step with deep technical checkpoints.
-2. The AWS architecture has a proper VPC container with public, private, and database subnets.
+2. The AWS architecture uses accurate VPC/AZ/subnet containment when the workload requires VPC networking.
 3. Edge services (CloudFront, Route 53) are outside the VPC.
 4. Add interlocking cross-edges in dataFlowEdges connecting each milestone to its corresponding AWS resource.
+5. On update, return the complete desired result, keep retained UUIDs in id and tempId, and use deletion arrays only for explicit removals.
 `;
 
   try {
-    const rawResult = await callGemini<AIWorkflowResult>(
+    let rawResult = await callGemini<AIWorkflowResult>(
       userContent,
       FULL_STACK_SCHEMA,
       {
@@ -234,7 +253,22 @@ Ensure:
       }
     );
 
-    if (rawResult && rawResult.serviceNodes && rawResult.serviceNodes.length > 0) {
+    rawResult = normalizeArchitectureResult(rawResult);
+    let quality = evaluateArchitectureQuality(rawResult, prompt, decomposition);
+    if (!quality.ok) {
+      rawResult = await callGemini<AIWorkflowResult>(
+        `${userContent}\nThe previous draft was rejected:\n- ${quality.issues.join("\n- ")}\nReturn a complete corrected full-stack result.`,
+        FULL_STACK_SCHEMA,
+        { systemInstruction, temperature: 0.15 }
+      );
+      rawResult = normalizeArchitectureResult(rawResult);
+      quality = evaluateArchitectureQuality(rawResult, prompt, decomposition);
+    }
+
+    if (hasUsableArchitecture(rawResult)) {
+      if (!quality.ok) {
+        console.warn("[AI Pipeline] Accepting a usable full-stack topology after quality retry:", quality.issues);
+      }
       const bridgedDataFlowEdges = ensureInterlockingBridges(
         rawResult.milestones || [],
         rawResult.serviceNodes || [],
@@ -243,7 +277,7 @@ Ensure:
       );
 
       return {
-        intent: rawResult.intent || "create_pipeline",
+        intent: context?.operation === "update" ? "update_pipeline" : "create_pipeline",
         mode: "full_stack" as const,
         summary: rawResult.summary || "Generated interlocked full-stack architecture and roadmap.",
         milestones: rawResult.milestones || [],
@@ -255,14 +289,10 @@ Ensure:
       };
     }
   } catch (err) {
-    console.warn("Gemini full-stack generation error, activating gold-standard fallback:", err);
+    console.warn("Full-stack generation failed before any canvas mutation:", err);
   }
 
-  // Safe fallback to the gold-standard interlocked example
-  return {
-    ...FULL_STACK_FEW_SHOT_EXAMPLE,
-    mode: "full_stack" as const,
-    decomposition,
-  };
+  throw new Error(
+    "The AI provider did not return a valid full-stack topology. No canvas changes were applied; please retry."
+  );
 }
-

@@ -8,6 +8,7 @@ import {
   deleteCanvasNode,
   createCanvasEdge,
   deleteCanvasEdge,
+  updateCanvasEdge,
 } from "@/lib/canvas/server";
 
 export async function GET(
@@ -119,6 +120,11 @@ export async function POST(
         body.edge_type
       );
       return NextResponse.json({ success: Boolean(newEdge), edge: newEdge });
+    }
+
+    if (action === "update_edge") {
+      const result = await updateCanvasEdge(body.edge_id, project.id, session.user.id, isOwner, body.updates);
+      return NextResponse.json(result, { status: result.success ? 200 : 400 });
     }
 
     if (action === "delete_edge") {

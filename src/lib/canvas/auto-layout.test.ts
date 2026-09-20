@@ -73,10 +73,28 @@ describe("Canvas Auto-Layout Algorithm", () => {
       ],
       serviceNodes: [{ tempId: "lambda", serviceId: "lambda", name: "Handler" }],
     }, [{ ...createMockNode("existing", 100, 900), height: 400 }]);
-    expect(result[0].position_y).toBe(1500);
+    expect(result[0].position_y).toBe(1540);
     expect(result[1].parent_group_id).toBe("region");
     expect(result[2].parent_group_id).toBe("vpc");
     expect(result[2].position_y).toBeGreaterThan(result[1].position_y + 80);
+  });
+
+  it("keeps update layouts anchored to the existing architecture instead of appending a duplicate", () => {
+    const existingArchitecture = [
+      { ...createMockNode("existing-vpc", 420, 300), node_type: "group" as const },
+      { ...createMockNode("existing-api", 600, 500), node_type: "aws_service" as const },
+    ];
+    const result = layoutAWSArchitecture({
+      intent: "update_pipeline", summary: "Update AWS", milestones: [], edges: [],
+      groups: [{ id: "existing-vpc", tempId: "existing-vpc", label: "VPC", style: "vpc", childTempIds: ["existing-api"] }],
+      serviceNodes: [{ id: "existing-api", tempId: "existing-api", serviceId: "ecs", parentGroupTempId: "existing-vpc" }],
+      dataFlowEdges: [],
+    }, existingArchitecture);
+
+    expect(result[0].position_x).toBe(420);
+    expect(result[0].position_y).toBe(300);
+    expect(result[1].position_x - result[0].position_x).toBeGreaterThanOrEqual(72);
+    expect(result[1].position_y - result[0].position_y).toBeGreaterThanOrEqual(104);
   });
 
   it("returns empty array when input is empty", () => {

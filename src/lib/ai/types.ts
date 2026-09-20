@@ -11,6 +11,7 @@ export type AIWorkflowIntent = "create_pipeline" | "update_pipeline" | "create_p
 
 /** Generation mode selector for the AI pipeline */
 export type AIGenerationMode = "workflow" | "aws_architecture" | "full_stack";
+export type AIGenerationOperation = "create" | "update";
 
 export type MilestonePhase = "planning" | "architecture" | "implementation" | "testing" | "deployment" | "operations";
 
@@ -37,9 +38,39 @@ export interface CanvasContextEdge {
   targetId: string;
 }
 
+export interface CanvasContextServiceNode {
+  id: string;
+  serviceId: string;
+  name: string;
+  description?: string;
+  region?: string;
+  config?: Record<string, string>;
+  parentGroupId?: string | null;
+}
+
+export interface CanvasContextGroup {
+  id: string;
+  label: string;
+  style: "vpc" | "subnet" | "region" | "availability_zone" | "custom";
+  childNodeIds: string[];
+  parentGroupId?: string | null;
+}
+
+export interface CanvasContextDataFlowEdge {
+  id?: string;
+  sourceId: string;
+  targetId: string;
+  edgeType?: EdgeType;
+  label?: string | null;
+}
+
 export interface CanvasAIContext {
   existingMilestones: CanvasContextMilestone[];
   existingEdges: CanvasContextEdge[];
+  existingServiceNodes?: CanvasContextServiceNode[];
+  existingGroups?: CanvasContextGroup[];
+  existingDataFlowEdges?: CanvasContextDataFlowEdge[];
+  operation?: AIGenerationOperation;
   selectedMilestoneId?: string | null;
 }
 
@@ -96,6 +127,8 @@ export interface AIProcessedEdge {
 
 /** AI-generated AWS service node */
 export interface AIProcessedServiceNode {
+  /** Existing canvas UUID when updating a service in place. */
+  id?: string;
   tempId: string;
   /** AWS service key from the service registry (e.g. "ec2", "rds", "lambda") */
   serviceId: string;
@@ -106,12 +139,16 @@ export interface AIProcessedServiceNode {
   region?: string;
   /** Service-specific configuration key-value pairs */
   config?: Record<string, string>;
+  /** Provider-compatible wire representation, normalized into config before persistence. */
+  configEntries?: Array<{ key: string; value: string }>;
   /** Parent group tempId if this service is inside a VPC/subnet */
   parentGroupTempId?: string;
 }
 
 /** AI-generated grouping container (VPC, subnet, region, AZ) */
 export interface AIProcessedGroup {
+  /** Existing canvas UUID when updating a group in place. */
+  id?: string;
   tempId: string;
   label: string;
   style: "vpc" | "subnet" | "region" | "availability_zone" | "custom";
@@ -156,7 +193,9 @@ export interface AIWorkflowResult {
 
   /** Optional array of existing milestone IDs explicitly removed */
   deletedMilestoneIds?: string[];
+  /** Existing AWS node/group UUIDs explicitly removed during an update. */
+  deletedServiceNodeIds?: string[];
+  deletedGroupIds?: string[];
   /** Optional decomposition metadata */
   decomposition?: PromptDecomposition;
 }
-

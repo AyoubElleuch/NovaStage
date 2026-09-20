@@ -40,6 +40,10 @@ export default function LoadingScreen({ ready = true, onComplete }: { ready?: bo
     let progressTimer: number | undefined;
     let exitTimer: number | undefined;
 
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-loading-state", "loading");
+    }
+
     const removeScreen = () => {
       if (hasFinished || !ready) return;
       hasFinished = true;
@@ -47,7 +51,18 @@ export default function LoadingScreen({ ready = true, onComplete }: { ready?: bo
       if (readyTimer) window.clearTimeout(readyTimer);
       setProgress(100);
       setIsExiting(true);
-      exitTimer = window.setTimeout(() => { setIsVisible(false); completeRef.current?.(); }, EXIT_DURATION);
+      if (typeof document !== "undefined") {
+        document.documentElement.setAttribute("data-loading-state", "exiting");
+        window.dispatchEvent(new CustomEvent("novastage:loader-exit"));
+      }
+      exitTimer = window.setTimeout(() => {
+        setIsVisible(false);
+        if (typeof document !== "undefined") {
+          document.documentElement.setAttribute("data-loading-state", "complete");
+          window.dispatchEvent(new CustomEvent("novastage:loader-complete"));
+        }
+        completeRef.current?.();
+      }, EXIT_DURATION);
     };
 
     const beginWaiting = () => {

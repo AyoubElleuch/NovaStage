@@ -11,6 +11,7 @@ import { autoLayoutNodes } from "./auto-layout";
 import { layoutAWSArchitecture } from "./aws-layout";
 import { AIWorkflowResult } from "@/lib/ai/types";
 import { getProjectCanvasData } from "./server";
+import { getAWSServiceCategory } from "./aws-catalog-lookup";
 
 export async function applyAIWorkflowResult(
   projectId: string,
@@ -452,10 +453,51 @@ export async function applyAWSServiceNodes(
   const serviceNodes = result.serviceNodes || [];
   const layout = layoutAWSArchitecture(result, existingData.nodes);
   const placements = new Map(layout.map((node) => [node.id, node]));
+  const existingGroups = new Map(
+    existingData.nodes.filter((node) => node.node_type === "group").map((node) => [node.id, node])
+  );
+  const existingServices = new Map(
+    existingData.nodes.filter((node) => node.node_type === "aws_service").map((node) => [node.id, node])
+  );
+  const isUpdate = result.intent === "update_pipeline";
 
-  // 2. Insert Groups
+  const deletedIds = [
+    ...(result.deletedServiceNodeIds || []).filter((id) => existingServices.has(id)),
+    ...(result.deletedGroupIds || []).filter((id) => existingGroups.has(id)),
+  ];
+  if (isUpdate && deletedIds.length > 0) {
+    const { error } = await adminClient
+      .from("canvas_nodes")
+      .delete()
+      .eq("project_id", projectId)
+      .in("id", deletedIds);
+    if (error) throw new Error("Failed to remove AWS architecture resources");
+  }
+
+  // 2. Upsert groups, preserving UUIDs for update operations.
   for (const group of groups) {
     const pos = placements.get(group.tempId)!;
+    const requestedGroupId = group.id || group.tempId;
+    const existingId = isUpdate && existingGroups.has(requestedGroupId) ? requestedGroupId : null;
+    if (existingId) {
+      const { error } = await adminClient
+        .from("canvas_nodes")
+        .update({
+          title: group.label,
+          position_x: pos.position_x,
+          position_y: pos.position_y,
+          width: pos.width || 440,
+          height: pos.height || 320,
+          group_metadata: { label: group.label, style: group.style, childNodeIds: [] },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("project_id", projectId)
+        .eq("id", existingId);
+      if (error) throw new Error("Failed to update AWS architecture group");
+      tempIdToUuid[group.tempId] = existingId;
+      if (group.id) tempIdToUuid[group.id] = existingId;
+      continue;
+    }
     const { data: createdGroup, error: groupErr } = await adminClient
       .from("canvas_nodes")
       .insert({
@@ -465,8 +507,8 @@ export async function applyAWSServiceNodes(
         node_type: "group",
         position_x: pos.position_x,
         position_y: pos.position_y,
-        width: pos.width || 400,
-        height: pos.height || 280,
+        width: pos.width || 440,
+        height: pos.height || 320,
         color: "default",
         sort_order: 0,
         claimed_by: null,
@@ -479,12 +521,11 @@ export async function applyAWSServiceNodes(
       .select()
       .single();
 
-    if (!groupErr && createdGroup) {
-      tempIdToUuid[group.tempId] = createdGroup.id;
-    }
+    if (groupErr || !createdGroup) throw new Error("Failed to create AWS architecture group");
+    tempIdToUuid[group.tempId] = createdGroup.id;
   }
 
-  // 3. Insert AWS Service Nodes
+  // 3. Upsert AWS service nodes.
   for (let sIdx = 0; sIdx < serviceNodes.length; sIdx++) {
     const svc = serviceNodes[sIdx];
     const pos = placements.get(svc.tempId)!;
@@ -492,6 +533,36 @@ export async function applyAWSServiceNodes(
       ? tempIdToUuid[pos.parent_group_id]
       : null;
 
+    const metadata = {
+      serviceId: svc.serviceId,
+      category: getAWSServiceCategory(svc.serviceId),
+      region: svc.region || "us-east-1",
+      config: svc.config || {},
+    };
+    const requestedServiceId = svc.id || svc.tempId;
+    const existingId = isUpdate && existingServices.has(requestedServiceId) ? requestedServiceId : null;
+    if (existingId) {
+      const { error } = await adminClient
+        .from("canvas_nodes")
+        .update({
+          title: svc.name || svc.serviceId.toUpperCase(),
+          description: svc.description || "",
+          position_x: pos.position_x,
+          position_y: pos.position_y,
+          width: pos.width || 260,
+          height: pos.height || 220,
+          sort_order: sIdx,
+          parent_group_id: parentGroupUuid,
+          aws_metadata: metadata,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("project_id", projectId)
+        .eq("id", existingId);
+      if (error) throw new Error("Failed to update AWS architecture service");
+      tempIdToUuid[svc.tempId] = existingId;
+      if (svc.id) tempIdToUuid[svc.id] = existingId;
+      continue;
+    }
     const { data: createdNode, error: nodeErr } = await adminClient
       .from("canvas_nodes")
       .insert({
@@ -501,25 +572,19 @@ export async function applyAWSServiceNodes(
         node_type: "aws_service",
         position_x: pos.position_x,
         position_y: pos.position_y,
-        width: pos.width || 200,
-        height: pos.height || 140,
+        width: pos.width || 260,
+        height: pos.height || 220,
         color: "default",
         sort_order: sIdx,
         claimed_by: null,
         parent_group_id: parentGroupUuid,
-        aws_metadata: {
-          serviceId: svc.serviceId,
-          category: getServiceCategory(svc.serviceId),
-          region: svc.region || "us-east-1",
-          config: svc.config || {},
-        },
+        aws_metadata: metadata,
       })
       .select()
       .single();
 
-    if (!nodeErr && createdNode) {
-      tempIdToUuid[svc.tempId] = createdNode.id;
-    }
+    if (nodeErr || !createdNode) throw new Error("Failed to create AWS architecture service");
+    tempIdToUuid[svc.tempId] = createdNode.id;
   }
 
   // Update group childNodeIds
@@ -546,7 +611,26 @@ export async function applyAWSServiceNodes(
     }
   }
 
-  // 5. Insert Data Flow & Interlocking Bridges
+  // 5. Replace architecture connections as one coherent desired topology on updates.
+  if (isUpdate) {
+    const architectureIds = [
+      ...existingGroups.keys(),
+      ...existingServices.keys(),
+      ...groups.map((group) => tempIdToUuid[group.tempId]).filter(Boolean),
+      ...serviceNodes.map((service) => tempIdToUuid[service.tempId]).filter(Boolean),
+    ];
+    if (architectureIds.length > 0) {
+      const idList = [...new Set(architectureIds)].join(",");
+      const { error } = await adminClient
+        .from("canvas_edges")
+        .delete()
+        .eq("project_id", projectId)
+        .or(`source_node_id.in.(${idList}),target_node_id.in.(${idList})`);
+      if (error) throw new Error("Failed to reconcile AWS architecture connections");
+    }
+  }
+
+  // 6. Insert Data Flow & Interlocking Bridges
   if (result.dataFlowEdges && result.dataFlowEdges.length > 0) {
     const edgeInserts: Array<{
       project_id: string;
@@ -591,7 +675,7 @@ export async function applyAWSServiceNodes(
     }
   }
 
-  // 6. Return complete refreshed canvas graph
+  // 7. Return complete refreshed canvas graph
   const finalCanvas = await getProjectCanvasData(projectId);
   return {
     nodes: finalCanvas.nodes,
@@ -617,29 +701,4 @@ function normalizeEdgeType(edgeType?: string, protocol?: string): EdgeType {
     return "event";
   }
   return "data_flow";
-}
-
-/**
- * Resolve AWS service category from serviceId
- */
-function getServiceCategory(serviceId: string): string {
-  const CATEGORY_MAP: Record<string, string> = {
-    ec2: "compute", lambda: "compute", ecs: "compute", eks: "compute",
-    fargate: "compute", elastic_beanstalk: "compute",
-    s3: "storage", ebs: "storage", efs: "storage", glacier: "storage",
-    rds: "database", dynamodb: "database", aurora: "database",
-    elasticache: "database", redshift: "database", documentdb: "database",
-    vpc: "networking", cloudfront: "networking", route53: "networking",
-    api_gateway: "networking", elb: "networking", direct_connect: "networking",
-    iam: "security", kms: "security", secrets_manager: "security",
-    waf: "security", shield: "security", cognito: "security",
-    certificate_manager: "security",
-    sqs: "integration", sns: "integration", eventbridge: "integration",
-    step_functions: "integration", mq: "integration",
-    cloudwatch: "management", cloudtrail: "management",
-    cloudformation: "management", systems_manager: "management",
-    sagemaker: "ai_ml", bedrock: "ai_ml", rekognition: "ai_ml",
-    comprehend: "ai_ml",
-  };
-  return CATEGORY_MAP[serviceId] || "compute";
 }

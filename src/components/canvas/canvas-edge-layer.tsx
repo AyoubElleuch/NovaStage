@@ -8,6 +8,7 @@ import {
   getNodeHandlePosition,
   isNodeFullyComplete,
 } from "@/lib/canvas/coordinate-math";
+import ConnectionEditor, { type ConnectionUpdate } from "./connection-editor";
 import { X } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
 
@@ -20,6 +21,7 @@ interface CanvasEdgeLayerProps {
     currentPos: { x: number; y: number };
   } | null;
   onDeleteEdge: (edgeId: string) => void;
+  onUpdateEdge?: (edgeId: string, updates: ConnectionUpdate) => Promise<void>;
   currentUserId?: string;
   isOwner?: boolean;
   isCycleDetected?: boolean;
@@ -31,12 +33,14 @@ export default function CanvasEdgeLayer({
   nodes,
   draftEdge,
   onDeleteEdge,
+  onUpdateEdge,
   currentUserId,
   isOwner,
   isCycleDetected = false,
   snappedHandle = null,
 }: CanvasEdgeLayerProps) {
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const padding = 200;
@@ -55,13 +59,14 @@ export default function CanvasEdgeLayer({
 
   return (
     <svg
-      aria-label="Milestone dependency wires"
+      aria-label="Canvas connections"
       className="pointer-events-none absolute overflow-visible"
       width={width}
       height={height}
       viewBox={`${minX} ${minY} ${width} ${height}`}
       style={{
         position: "absolute",
+        zIndex: editingEdgeId ? 40 : 10,
         left: `${minX}px`,
         top: `${minY}px`,
         width: `${width}px`,
@@ -132,7 +137,8 @@ export default function CanvasEdgeLayer({
           edge.target_handle
         );
 
-        const isNeonActive = isNodeFullyComplete(sourceNode);
+        const isArchitecture = sourceNode.node_type === "aws_service" || sourceNode.node_type === "group" || targetNode.node_type === "aws_service" || targetNode.node_type === "group";
+        const isNeonActive = !isArchitecture && isNodeFullyComplete(sourceNode);
         const isHovered = hoveredEdgeId === edge.id;
         const canDelete =
           Boolean(isOwner) ||
@@ -176,14 +182,14 @@ export default function CanvasEdgeLayer({
           strokeColor = isDark ? "#60a5fa" : "#3B48CC"; // bright electric blue in dark mode
           strokeDasharray = "8 6";
           markerId = "url(#arrow-data-flow)";
-          if (isNeonActive || sourceNode.status === "completed") {
+          if (isNeonActive) {
             animationClass = "animate-[dash-flow_1.2s_linear_infinite]";
           }
         } else if (edgeType === "network") {
           strokeColor = isDark ? "#34d399" : "#3F8624"; // bright emerald green in dark mode
           strokeDasharray = "4 4";
           markerId = "url(#arrow-network)";
-          if (isNeonActive || sourceNode.status === "completed") {
+          if (isNeonActive) {
             animationClass = "animate-[dash-flow_1s_linear_infinite]";
           }
         } else if (edgeType === "event") {
@@ -225,7 +231,7 @@ export default function CanvasEdgeLayer({
             <path
               d={pathData}
               fill="none"
-              stroke={isHovered && canDelete ? "#ef4444" : strokeColor}
+              stroke={strokeColor}
               strokeWidth={isHovered ? 2.5 : isInterlockingBridge ? 2 : 1.75}
               strokeDasharray={strokeDasharray}
               strokeLinecap="round"
@@ -234,17 +240,23 @@ export default function CanvasEdgeLayer({
             />
 
             {/* Edge Label Badge */}
-            {edge.label && (
+            {(edge.label || isArchitecture) && (
               <foreignObject
-                x={center.x - 70}
-                y={center.y - 12}
-                width="140"
+                x={center.x - 110}
+                y={center.y - 32}
+                width="220"
                 height="24"
-                className="overflow-visible pointer-events-none"
+                className="overflow-visible pointer-events-auto"
               >
                 <div className="flex w-full items-center justify-center">
-                  <span
-                    className={`rounded px-2 py-0.5 text-[10px] font-semibold shadow-xs border ${
+                  <button
+                    type="button"
+                    disabled={!onUpdateEdge || !canDelete}
+                    aria-label={`Edit connection: ${edge.label || "Add label"}`}
+                    title={`${edge.label || "Add label"} — ${canDelete ? "Edit connection label and type" : "Claim a connected resource to edit"}`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => { event.stopPropagation(); setEditingEdgeId(edge.id); }}
+                    className={`max-w-full truncate rounded px-2 py-0.5 text-[10px] font-semibold shadow-xs border ${
                       isInterlockingBridge
                         ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800"
                         : edgeType === "data_flow"
@@ -256,14 +268,14 @@ export default function CanvasEdgeLayer({
                         : "bg-white/95 text-neutral-600 border-neutral-200 dark:bg-[#161d27]/95 dark:text-neutral-300 dark:border-[#283548]"
                     }`}
                   >
-                    {edge.label}
-                  </span>
+                    {edge.label || "Add label"}
+                  </button>
                 </div>
               </foreignObject>
             )}
 
             {/* Delete link button centered directly on the bezier curve - only if user owns a connected node or is owner */}
-            {isHovered && canDelete && (
+            {isHovered && canDelete && editingEdgeId !== edge.id && (
               <foreignObject
                 x={center.x - 13}
                 y={center.y - 13}
@@ -278,7 +290,7 @@ export default function CanvasEdgeLayer({
                     e.stopPropagation();
                     onDeleteEdge(edge.id);
                   }}
-                  title="Remove dependency wire"
+                  title="Remove connection"
                   className="flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white shadow-md ring-2 ring-white hover:bg-red-700 transition-all hover:scale-115 cursor-pointer active:scale-95"
                 >
                   <X className="h-3.5 w-3.5 stroke-[2.5]" />
@@ -341,6 +353,18 @@ export default function CanvasEdgeLayer({
         </g>
       )}
 
+      {editingEdgeId && onUpdateEdge && (() => {
+        const edge = edges.find((item) => item.id === editingEdgeId);
+        const source = edge && nodeMap.get(edge.source_node_id);
+        const target = edge && nodeMap.get(edge.target_node_id);
+        if (!edge || !source || !target) return null;
+        const p1 = getNodeHandlePosition(source, edge.source_handle);
+        const p2 = getNodeHandlePosition(target, edge.target_handle);
+        const center = getBezierPoint(0.5, p1.x, p1.y, p2.x, p2.y, edge.source_handle, edge.target_handle);
+        return <foreignObject x={center.x - 140} y={center.y - 30} width="280" height="260" className="pointer-events-auto overflow-visible">
+          <ConnectionEditor key={edge.id} edge={edge} onSave={onUpdateEdge} onClose={() => setEditingEdgeId(null)} />
+        </foreignObject>;
+      })()}
       {/* SVG Animation Keyframes */}
       <style jsx>{`
         @keyframes dash-flow {

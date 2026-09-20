@@ -413,6 +413,33 @@ export async function createCanvasEdge(
   return edge as CanvasEdge;
 }
 
+export async function updateCanvasEdge(
+  edgeId: string, projectId: string, userId: string, isOwner: boolean,
+  updates: { label: string; edge_type: EdgeType }
+): Promise<{ success: boolean; error?: string; edge?: CanvasEdge }> {
+  if (typeof updates?.label !== "string" || updates.label.length > 120 ||
+      !["dependency", "data_flow", "network", "event"].includes(updates?.edge_type)) {
+    return { success: false, error: "Provide a label of at most 120 characters and a valid connection type" };
+  }
+  const client = createAdminClient();
+  const { data: existing } = await client.from("canvas_edges").select("source_node_id, target_node_id")
+    .eq("id", edgeId).eq("project_id", projectId).maybeSingle();
+  if (!existing) return { success: false, error: "Connection not found" };
+  if (!isOwner) {
+    const { data: nodes } = await client.from("canvas_nodes").select("claimed_by, claim_expires_at")
+      .in("id", [existing.source_node_id, existing.target_node_id]).eq("project_id", projectId);
+    if (!nodes?.some((node) => node.claimed_by === userId &&
+      (!node.claim_expires_at || new Date(node.claim_expires_at) > new Date()))) {
+      return { success: false, error: "Claim a connected resource before editing its connection" };
+    }
+  }
+  const { data: edge, error } = await client.from("canvas_edges")
+    .update({ label: updates.label.trim() || null, edge_type: updates.edge_type })
+    .eq("id", edgeId).eq("project_id", projectId).select().single();
+  if (error || !edge) return { success: false, error: error?.message || "Unable to save connection" };
+  return { success: true, edge: edge as CanvasEdge };
+}
+
 export async function deleteCanvasEdge(
   edgeId: string,
   projectId: string,
@@ -693,4 +720,3 @@ export async function createBatchCanvasWorkflow(
 
   return { nodes: layoutedNodes, edges: createdEdges };
 }
-

@@ -141,4 +141,27 @@ describe("Phase 3: Validation & Auto-Repair Engine", () => {
     expect(workflow.edges.length).toBe(1);
     expect(workflow.edges[0]).toEqual({ fromId: "m1", toId: "m2" });
   });
+
+  it("repairs AWS containment and removes invalid architecture edges", () => {
+    const result: AIWorkflowResult = {
+      intent: "create_pipeline",
+      summary: "AWS",
+      milestones: [],
+      edges: [],
+      groups: [{ tempId: "vpc", label: "VPC", style: "vpc", childTempIds: ["subnet"] }, {
+        tempId: "subnet", label: "Private subnet", style: "subnet", childTempIds: ["api"],
+      }],
+      serviceNodes: [{ tempId: "api", serviceId: "ecs" }],
+      dataFlowEdges: [
+        { fromId: "api", toId: "missing", edgeType: "network" },
+        { fromId: "api", toId: "api", edgeType: "network" },
+      ],
+    };
+
+    const { workflow, report } = validateAndRepairWorkflow(result);
+    expect(workflow.groups?.find((group) => group.tempId === "subnet")?.parentGroupTempId).toBe("vpc");
+    expect(workflow.serviceNodes?.[0].parentGroupTempId).toBe("subnet");
+    expect(workflow.dataFlowEdges).toEqual([]);
+    expect(report.architectureEdgesRemoved).toBe(2);
+  });
 });

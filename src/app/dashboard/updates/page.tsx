@@ -2,6 +2,18 @@ import { Check, Sparkles } from "lucide-react";
 
 const releases = [
   {
+    version: "Beta v1.0.7",
+    date: "September 20, 2026",
+    title: "AWS Architecture & AI Orchestration Upgrade",
+    summary:
+      "Expanded cloud architecture modeling with a complete AWS service catalog, richer topology generation, and more reliable AI-powered canvas updates.",
+    changes: [
+      "Complete AWS Service Catalog: Added the full AWS service library with official service icons, canonical service metadata, category styling, and configuration details rendered directly on the canvas.",
+      "Reliable AI Create & Update Flows: Improved orchestration so new architectures and edits to existing workflows use the correct context, preserve resources, and avoid duplicate topology nodes.",
+      "Production-Grade Topology Layouts: Added deeper AWS architecture responses, validated service connections, nested VPC/subnet containment, generous spacing, and safer edge routing without overlaps.",
+    ],
+  },
+  {
     version: "Beta v1.0.6",
     date: "September 7, 2026",
     title: "Early Landing Page",

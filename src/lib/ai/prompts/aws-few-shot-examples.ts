@@ -47,7 +47,7 @@ export const AWS_WEB_APP_FEW_SHOT_EXAMPLE: AIWorkflowResult = {
     {
       tempId: "alb_1",
       parentGroupTempId: "subnet_public_1",
-      serviceId: "alb",
+      serviceId: "elb",
       name: "Application Load Balancer",
       description: "Dual-AZ public load balancer with SSL termination and path routing.",
       region: "us-east-1",
