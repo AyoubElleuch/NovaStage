@@ -20,23 +20,23 @@ import "./canvas/canvas.css";
 import "./features/features.css";
 import "./pricing/pricing.css";
 
+function shouldRevealHeroImmediately() {
+  if (typeof window === "undefined") return false;
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return true;
+
+  const loadingState = document.documentElement.getAttribute("data-loading-state");
+  const hasLoader = Boolean(document.querySelector(".loading-screen"));
+
+  return loadingState === "complete" || (!hasLoader && loadingState !== "loading");
+}
+
 export default function HomeExperience() {
   const { phase, busy, revealed, atHero, surfaceRef, begin } = useScrollChoreography();
-  const [heroEntered, setHeroEntered] = useState(false);
+  const [heroEntered, setHeroEntered] = useState(shouldRevealHeroImmediately);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setHeroEntered(true);
-      return;
-    }
-
-    const loadingState = typeof document !== "undefined" ? document.documentElement.getAttribute("data-loading-state") : null;
-    const hasLoader = typeof document !== "undefined" && Boolean(document.querySelector(".loading-screen"));
-
-    if (loadingState === "complete" || (!hasLoader && loadingState !== "loading")) {
-      setHeroEntered(true);
-      return;
-    }
+    if (heroEntered) return;
 
     const handleLoaderExit = () => {
       // Trigger kinetic entrance right as the curtain slides up
@@ -44,9 +44,10 @@ export default function HomeExperience() {
         setHeroEntered(true);
       }, 50);
     };
+    const handleLoaderComplete = () => setHeroEntered(true);
 
     window.addEventListener("novastage:loader-exit", handleLoaderExit, { once: true });
-    window.addEventListener("novastage:loader-complete", () => setHeroEntered(true), { once: true });
+    window.addEventListener("novastage:loader-complete", handleLoaderComplete, { once: true });
 
     // Safety fallback ensures page always reveals within 3.5s
     const fallbackTimer = window.setTimeout(() => {
@@ -55,10 +56,10 @@ export default function HomeExperience() {
 
     return () => {
       window.removeEventListener("novastage:loader-exit", handleLoaderExit);
-      window.removeEventListener("novastage:loader-complete", () => setHeroEntered(true));
+      window.removeEventListener("novastage:loader-complete", handleLoaderComplete);
       window.clearTimeout(fallbackTimer);
     };
-  }, []);
+  }, [heroEntered]);
 
   useEffect(() => {
     const root = document.documentElement;

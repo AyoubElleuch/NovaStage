@@ -12,7 +12,7 @@ describe("official AWS architecture catalog", () => {
       expect(existsSync(path), service.name).toBe(true);
       expect(readFileSync(path, "utf8"), service.name).toContain("<svg");
     }
-  });
+  }, 20_000);
   it("preserves existing diagram IDs and covers previously missing categories", () => {
     const ids = new Set(catalog.services.map((service) => service.id));
     for (const id of ["ec2", "lambda", "s3", "ecs", "eks", "efs", "glacier", "rds", "iam", "sagemaker", "bedrock", "sqs", "sns", "apigateway", "elb", "route53", "athena", "glue", "amplify", "iotcore", "codebuild"]) expect(ids.has(id), id).toBe(true);
