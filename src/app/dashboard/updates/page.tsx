@@ -5,6 +5,17 @@ const releases = [
   {
     version: RELEASE_LABEL,
     date: "September 28, 2026",
+    title: "Workspace Reliability & Team Capacity",
+    summary: "Made project and account pages clearer when loading fails and corrected team limits across plans.",
+    changes: [
+      "Accurate Team Capacity: Project cards and join approvals now use each project's plan limit.",
+      "Clear Recovery: Projects and settings show a retry option if their data cannot load.",
+      "Fresh Team Details: Switching projects clears old member, request, and blocked lists while new data loads.",
+    ],
+  },
+  {
+    version: "Beta v1.0.8",
+    date: "September 28, 2026",
     title: "Admin Reliability & Quota Accuracy",
     summary: "Improved the existing admin experience and aligned release labels across the app.",
     changes: [

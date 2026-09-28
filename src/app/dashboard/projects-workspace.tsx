@@ -46,7 +46,7 @@ export default function ProjectsWorkspace() {
   const { mutate } = useSWRConfig();
   const { notify } = useNotifications();
 
-  const { data, isLoading } = useSWR<DashboardProjectsData>(
+  const { data, error, isLoading, mutate: revalidateProjects } = useSWR<DashboardProjectsData>(
     "/api/dashboard/projects",
     fetcher<DashboardProjectsData>
   );
@@ -86,6 +86,7 @@ export default function ProjectsWorkspace() {
   const menuRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const dialogTriggerRef = useRef<HTMLElement | null>(null);
+  const membersRequestId = useRef(0);
   const activePendingSlug = pendingSlug && !pathname.includes(pendingSlug) ? pendingSlug : null;
   const isDialogInteractionLocked = useEffectEvent(
     () =>
@@ -169,18 +170,23 @@ export default function ProjectsWorkspace() {
     project: DashboardProject,
     initialTab: "members" | "requests" | "banned" = "members"
   ) => {
+    const requestId = ++membersRequestId.current;
     setSelectedProject(project);
     setActiveModal("members");
     setMemberTab(initialTab);
     setMenuOpenProjectId(null);
     setConfirmKickTarget(null);
+    setProjectMembers([]);
+    setProjectRequests([]);
+    setProjectBanned([]);
     setIsLoadingMembers(true);
-    setIsLoadingRequests(true);
-    setIsLoadingBanned(true);
+    setIsLoadingRequests(project.role === "owner");
+    setIsLoadingBanned(project.role === "owner");
 
     try {
       const res = await fetch(`/api/dashboard/projects/members?projectId=${project.id}`);
       const json = await res.json();
+      if (requestId !== membersRequestId.current) return;
       if (res.ok && json.success) {
         setProjectMembers(json.members || []);
       } else {
@@ -192,9 +198,12 @@ export default function ProjectsWorkspace() {
         });
       }
     } catch {
-      setProjectMembers([]);
+      if (requestId === membersRequestId.current) {
+        setProjectMembers([]);
+        notify({ tone: "error", title: "Could not load members", message: "Please try again." });
+      }
     } finally {
-      setIsLoadingMembers(false);
+      if (requestId === membersRequestId.current) setIsLoadingMembers(false);
     }
 
     if (project.role === "owner") {
@@ -205,13 +214,21 @@ export default function ProjectsWorkspace() {
         ]);
         const reqJson = await reqRes.json();
         const banJson = await banRes.json();
+        if (requestId !== membersRequestId.current) return;
         if (reqRes.ok && reqJson.success) setProjectRequests(reqJson.requests || []);
+        else notify({ tone: "error", title: "Could not load requests", message: reqJson.error || "Please try again." });
         if (banRes.ok && banJson.success) setProjectBanned(banJson.bannedMembers || []);
+        else notify({ tone: "error", title: "Could not load blocked members", message: banJson.error || "Please try again." });
       } catch (err) {
         console.warn("Failed to load requests/banned:", err);
+        if (requestId === membersRequestId.current) {
+          notify({ tone: "error", title: "Could not load team details", message: "Please try again." });
+        }
       } finally {
-        setIsLoadingRequests(false);
-        setIsLoadingBanned(false);
+        if (requestId === membersRequestId.current) {
+          setIsLoadingRequests(false);
+          setIsLoadingBanned(false);
+        }
       }
     }
   };
@@ -652,6 +669,16 @@ export default function ProjectsWorkspace() {
     return <DashboardLoading />;
   }
 
+  if (error && !data) {
+    return (
+      <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">
+        <h1 className="text-lg font-semibold">Projects could not load</h1>
+        <p className="mt-2 text-sm">Check your connection and try again.</p>
+        <button type="button" onClick={() => void revalidateProjects()} className="mt-4 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-emerald-600">Retry</button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-10">
       <header className="dash-enter flex flex-wrap items-end justify-between gap-6">
@@ -916,8 +943,8 @@ export default function ProjectsWorkspace() {
                       <span className="inline-flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
                         <Users className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
                         <span>
-                          {project.members}/5 members
-                          {project.members >= 5 && (
+                          {project.members}/{project.maxMembers || 5} members
+                          {project.members >= (project.maxMembers || 5) && (
                             <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                               (Full)
                             </span>
@@ -1285,7 +1312,7 @@ export default function ProjectsWorkspace() {
                       }`}
                     >
                       <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>Members ({projectMembers.length}/5)</span>
+                      <span>Members ({projectMembers.length}/{selectedProject.maxMembers || 5})</span>
                     </button>
 
                     <button
@@ -1490,7 +1517,7 @@ export default function ProjectsWorkspace() {
                           const displayName = req.fullName || req.email?.split("@")[0] || "User";
                           const displaySub = req.email || (req.username ? `@${req.username}` : "");
                           const isBusy = resolvingRequestId === req.id;
-                          const isProjectFull = projectMembers.length >= 5;
+                          const isProjectFull = projectMembers.length >= (selectedProject.maxMembers || 5);
 
                           return (
                             <div
@@ -1519,7 +1546,7 @@ export default function ProjectsWorkspace() {
                                   type="button"
                                   disabled={isBusy || isProjectFull}
                                   onClick={() => handleResolveRequest(req.id, "approve")}
-                                  title={isProjectFull ? "Project is at maximum capacity (5/5 members)" : "Approve join request"}
+                                  title={isProjectFull ? `Project is at maximum capacity (${selectedProject.maxMembers || 5}/${selectedProject.maxMembers || 5} members)` : "Approve join request"}
                                   className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-2xs transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                                 >
                                   {isBusy ? (

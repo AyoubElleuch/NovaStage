@@ -8,13 +8,23 @@ import { AppearanceForm, DeleteAccountForm, ProfileForm, PasswordForm } from "./
 import SettingsLoading from "./loading";
 
 export default function SettingsWorkspace() {
-  const { data, isLoading } = useSWR<DashboardSettingsData>(
+  const { data, error, isLoading, mutate } = useSWR<DashboardSettingsData>(
     "/api/dashboard/settings",
     fetcher<DashboardSettingsData>
   );
 
   if (isLoading && !data) {
     return <SettingsLoading />;
+  }
+
+  if (error && !data) {
+    return (
+      <div role="alert" className="max-w-3xl rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-900 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">
+        <h1 className="text-lg font-semibold">Settings could not load</h1>
+        <p className="mt-2 text-sm">Check your connection and try again.</p>
+        <button type="button" onClick={() => void mutate()} className="mt-4 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-emerald-600">Retry</button>
+      </div>
+    );
   }
 
   const email = data?.email || "";
