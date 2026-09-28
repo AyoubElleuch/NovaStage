@@ -23,6 +23,8 @@ const mockUsers: UserAiLimitRecord[] = [
     username: "alice_dev",
     avatar_url: null,
     role: "developer",
+    plan: "free",
+    ai_requests_limit: 10,
     ai_requests_count: 3,
     ai_requests_remaining: 7,
     created_at: "2026-01-01T00:00:00Z",
@@ -35,6 +37,8 @@ const mockUsers: UserAiLimitRecord[] = [
     username: "bob_admin",
     avatar_url: null,
     role: "admin",
+    plan: "free",
+    ai_requests_limit: 10,
     ai_requests_count: 10,
     ai_requests_remaining: 0,
     created_at: "2026-01-03T00:00:00Z",
@@ -47,6 +51,8 @@ const mockUsers: UserAiLimitRecord[] = [
     username: null,
     avatar_url: null,
     role: "developer",
+    plan: "free",
+    ai_requests_limit: 10,
     ai_requests_count: 0,
     ai_requests_remaining: 10,
     created_at: "2026-01-05T00:00:00Z",
@@ -110,6 +116,34 @@ describe("AiLimitsTable", () => {
     });
 
     expect(screen.queryByText("0 / 10 left")).toBeNull();
+  });
+
+  it("uses each plan's limit in summaries, filters, progress, and reset state", async () => {
+    vi.mocked(resetUserAiQuota).mockResolvedValueOnce({ success: true });
+    const proUser: UserAiLimitRecord = {
+      ...mockUsers[0],
+      id: "pro-user",
+      email: "pro@example.com",
+      plan: "pro",
+      ai_requests_limit: 50,
+      ai_requests_count: 8,
+      ai_requests_remaining: 42,
+    };
+    render(<AiLimitsTable initialData={[mockUsers[2], proUser]} />);
+
+    expect(screen.getByText("52")).not.toBeNull();
+    expect(screen.getByText("/ 60")).not.toBeNull();
+    expect(screen.getByText("42 / 50 left")).not.toBeNull();
+    expect(screen.getByRole("progressbar", { name: "pro@example.com AI requests remaining" }).getAttribute("aria-valuemax")).toBe("50");
+
+    fireEvent.click(screen.getByRole("tab", { name: /In Use/i }));
+    expect(screen.getByText("pro@example.com")).not.toBeNull();
+    expect(screen.queryByText("charlie@example.com")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset to 50/50" }));
+    await waitFor(() => expect(resetUserAiQuota).toHaveBeenCalledWith("pro-user"));
+    fireEvent.click(screen.getByRole("tab", { name: /Full quota/i }));
+    expect(screen.getByText("50 / 50 left")).not.toBeNull();
   });
 
   it("handles the full Reset All confirmation modal workflow: open, cancel, validation, and execution", async () => {

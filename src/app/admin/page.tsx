@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 export default async function AdminOverviewPage() {
-  const { data: users = [], stats, error } = await getAdminOverviewUsers();
+  const { data: users = [], stats, referenceTime, error } = await getAdminOverviewUsers();
 
   const totalUsers = stats?.totalUsers ?? users.length;
   const activeRecently = stats?.activeRecently ?? 0;
@@ -106,7 +106,7 @@ export default async function AdminOverviewPage() {
             ))}
           </section>
 
-          <OverviewUsersTable initialData={users} />
+          <OverviewUsersTable initialData={users} referenceTime={referenceTime ?? 0} />
         </>
       )}
     </div>

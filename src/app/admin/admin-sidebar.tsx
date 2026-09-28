@@ -24,6 +24,7 @@ import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal"
 import { TermsOfServiceTrigger } from "@/components/terms/terms-of-service-modal";
 import { useMobileNav } from "@/lib/mobile-nav-context";
 import { useTheme } from "@/lib/theme-context";
+import { RELEASE_LABEL } from "@/lib/release";
 
 interface AdminSidebarProps {
   userEmail: string | undefined;
@@ -195,7 +196,7 @@ export default function AdminSidebar({ userEmail, userRole }: AdminSidebarProps)
           </Link>
           {(!collapsed || isMobile) && (
             <span className="rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300">
-              Beta v1.0.7
+              {RELEASE_LABEL}
             </span>
           )}
         </div>
