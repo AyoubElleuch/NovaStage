@@ -1,6 +1,18 @@
 import { Check, Sparkles } from "lucide-react";
+import { RELEASE_LABEL } from "@/lib/release";
 
 const releases = [
+  {
+    version: RELEASE_LABEL,
+    date: "September 28, 2026",
+    title: "Admin Reliability & Quota Accuracy",
+    summary: "Improved the existing admin experience and aligned release labels across the app.",
+    changes: [
+      "Accurate AI Limits: Admin usage totals, filters, progress, and reset feedback now reflect each user's plan limit.",
+      "Stable Admin Dates: User directory dates render consistently across server and browser time zones.",
+      "Consistent Version Labels: Login, sign-up, workspace, admin, and welcome email now display the current beta version.",
+    ],
+  },
   {
     version: "Beta v1.0.7",
     date: "September 20, 2026",

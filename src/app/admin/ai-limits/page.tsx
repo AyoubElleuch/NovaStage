@@ -15,7 +15,7 @@ export default async function AdminAiLimitsPage() {
           AI Limits &amp; Quotas
         </h1>
         <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-          Monitor user AI prompt quotas (10 requests per user) and reset limits.
+          Monitor AI prompt usage against each user&apos;s plan limit and reset usage.
         </p>
       </header>
 

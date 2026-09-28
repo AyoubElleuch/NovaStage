@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { sendWaitlistApprovedEmail } from "@/lib/email/resend";
 import { generateSecurePassword } from "@/lib/security/password";
 import { broadcastPlatformAnnouncementChange } from "@/lib/announcements/server";
+import { getAiRequestLimit, type SubscriptionPlan } from "@/lib/subscription-plans";
 import {
   AnnouncementSeverity,
   isAnnouncementSeverity,
@@ -327,6 +328,7 @@ export interface AdminOverviewStats {
 export async function getAdminOverviewUsers(): Promise<{
   data?: AdminOverviewUser[];
   stats?: AdminOverviewStats;
+  referenceTime?: number;
   error?: string;
 }> {
   try {
@@ -417,6 +419,7 @@ export async function getAdminOverviewUsers(): Promise<{
 
     return {
       data: users,
+      referenceTime: now,
       stats: {
         totalUsers,
         activeRecently,
@@ -436,6 +439,8 @@ export interface UserAiLimitRecord {
   username: string | null;
   avatar_url: string | null;
   role: string;
+  plan: SubscriptionPlan;
+  ai_requests_limit: number;
   ai_requests_count: number;
   ai_requests_remaining: number;
   created_at: string;
@@ -452,7 +457,7 @@ export async function getUserAiLimits(): Promise<{ data?: UserAiLimitRecord[]; e
 
     const { data: profiles, error } = await adminClient
       .from("profiles")
-      .select("id, email, full_name, username, avatar_url, role, ai_requests_count, created_at, updated_at")
+      .select("id, email, full_name, username, avatar_url, role, plan, ai_requests_count, created_at, updated_at")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -461,7 +466,9 @@ export async function getUserAiLimits(): Promise<{ data?: UserAiLimitRecord[]; e
 
     const records: UserAiLimitRecord[] = (profiles || []).map((row) => {
       const used = typeof row.ai_requests_count === "number" ? row.ai_requests_count : 0;
-      const remaining = Math.max(0, 10 - used);
+      const plan = (["free", "plus", "pro", "enterprise"] as const).find((value) => value === row.plan) ?? "free";
+      const limit = getAiRequestLimit(plan);
+      const remaining = Math.max(0, limit - used);
       return {
         id: row.id,
         email: row.email,
@@ -469,6 +476,8 @@ export async function getUserAiLimits(): Promise<{ data?: UserAiLimitRecord[]; e
         username: row.username || null,
         avatar_url: row.avatar_url || null,
         role: row.role || "developer",
+        plan,
+        ai_requests_limit: limit,
         ai_requests_count: used,
         ai_requests_remaining: remaining,
         created_at: row.created_at,
@@ -483,7 +492,7 @@ export async function getUserAiLimits(): Promise<{ data?: UserAiLimitRecord[]; e
 }
 
 /**
- * Resets AI request quota for a single user back to 10 out of 10 (ai_requests_count = 0).
+ * Resets AI request usage for a single user (ai_requests_count = 0).
  */
 export async function resetUserAiQuota(userId: string): Promise<AdminActionResult> {
   try {
@@ -504,14 +513,14 @@ export async function resetUserAiQuota(userId: string): Promise<AdminActionResul
 
     revalidatePath("/admin/ai-limits");
     revalidatePath("/admin");
-    return { success: true, message: "User AI quota reset to 10/10 successfully." };
+    return { success: true, message: "User AI quota reset successfully." };
   } catch (err: unknown) {
     return { error: err instanceof Error ? err.message : "Failed to reset user AI quota." };
   }
 }
 
 /**
- * Resets AI request quota for all users across the platform back to 10 out of 10 (ai_requests_count = 0).
+ * Resets AI request usage for all users across the platform (ai_requests_count = 0).
  */
 export async function resetAllUsersAiQuota(): Promise<AdminActionResult> {
   try {
@@ -532,13 +541,13 @@ export async function resetAllUsersAiQuota(): Promise<AdminActionResult> {
 
     revalidatePath("/admin/ai-limits");
     revalidatePath("/admin");
-    return { success: true, message: "All users' AI quotas have been reset to 10/10." };
+    return { success: true, message: "All users' AI quotas have been reset." };
   } catch (err: unknown) {
     return { error: err instanceof Error ? err.message : "Failed to reset all users' AI quotas." };
   }
 }
 
-export type SubscriptionPlan = "free" | "plus" | "pro" | "enterprise";
+export type { SubscriptionPlan } from "@/lib/subscription-plans";
 
 export interface AdminSubscriptionUser {
   id: string;

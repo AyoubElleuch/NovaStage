@@ -7,6 +7,7 @@ import {
   updateUserSubscriptionPlan,
 } from "../actions";
 import UserAvatar from "@/components/ui/user-avatar";
+import { getAiRequestLimit } from "@/lib/subscription-plans";
 import {
   Search,
   Users,
@@ -28,28 +29,28 @@ const PLAN_CONFIG: Record<
 > = {
   free: {
     label: "Free",
-    maxAi: 10,
+    maxAi: getAiRequestLimit("free"),
     badgeClass:
       "border-neutral-200 bg-neutral-100 text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300",
     borderClass: "border-neutral-200 dark:border-[#2b374a]",
   },
   plus: {
     label: "Plus ($1.99)",
-    maxAi: 30,
+    maxAi: getAiRequestLimit("plus"),
     badgeClass:
       "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
     borderClass: "border-blue-300 dark:border-blue-800",
   },
   pro: {
     label: "Pro ($4.99)",
-    maxAi: 50,
+    maxAi: getAiRequestLimit("pro"),
     badgeClass:
       "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-900/60 dark:bg-purple-950/60 dark:text-purple-300",
     borderClass: "border-purple-300 dark:border-purple-800",
   },
   enterprise: {
     label: "Enterprise",
-    maxAi: 999,
+    maxAi: getAiRequestLimit("enterprise"),
     badgeClass:
       "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
     borderClass: "border-emerald-300 dark:border-emerald-800",
@@ -313,6 +314,7 @@ export default function SubscriptionsTable({ initialData }: SubscriptionsTablePr
                           month: "short",
                           day: "numeric",
                           year: "numeric",
+                          timeZone: "UTC",
                         })}
                       </td>
 

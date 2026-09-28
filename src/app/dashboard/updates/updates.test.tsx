@@ -2,18 +2,19 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import UpdatesPage from "./page";
 
-describe("Updates Page — Beta v1.0.7 & Product Release Archive", () => {
-  it("renders Beta v1.0.7 as the latest release with three bullet points", () => {
+describe("Updates Page — Beta v1.0.8 & Product Release Archive", () => {
+  it("renders Beta v1.0.8 as the latest release with three bullet points", () => {
     render(<UpdatesPage />);
+    expect(screen.getByText("Beta v1.0.8")).toBeDefined();
     expect(screen.getByText("Beta v1.0.7")).toBeDefined();
-    expect(screen.getByText("AWS Architecture & AI Orchestration Upgrade")).toBeDefined();
+    expect(screen.getByText("Admin Reliability & Quota Accuracy")).toBeDefined();
     expect(screen.getByText("Latest")).toBeDefined();
 
-    const latestArticle = screen.getByText("Beta v1.0.7").closest("article");
+    const latestArticle = screen.getByText("Beta v1.0.8").closest("article");
     expect(latestArticle).not.toBeNull();
     const listItems = latestArticle!.querySelectorAll("li");
     expect(listItems).toHaveLength(3);
-    expect(latestArticle?.textContent).toContain("Complete AWS Service Catalog");
+    expect(latestArticle?.textContent).toContain("Accurate AI Limits");
   });
 
   it("renders Beta v1.0.2, Beta v1.0.1, Beta v1.0.0 and Alpha releases down to Alpha v1.0.0", () => {

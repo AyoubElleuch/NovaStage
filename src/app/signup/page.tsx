@@ -6,6 +6,7 @@ import LoginForm from "@/app/login/login-form";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
 import { TermsOfServiceTrigger } from "@/components/terms/terms-of-service-modal";
 import { ThemeToggle } from "@/lib/theme-context";
+import { RELEASE_LABEL } from "@/lib/release";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export default async function SignUpPage() {
         </div>
 
         <div className="flex items-center justify-center gap-3 text-xs pt-4">
-          <span className="font-semibold text-neutral-900 dark:text-white">Beta v1.0.7</span>
+          <span className="font-semibold text-neutral-900 dark:text-white">{RELEASE_LABEL}</span>
           <span className="text-neutral-300 dark:text-neutral-600">&bull;</span>
           <TermsOfServiceTrigger />
           <span className="text-neutral-300 dark:text-neutral-600">&bull;</span>

@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import OverviewUsersTable from "./overview-users-table";
 import { AdminOverviewUser } from "./actions";
@@ -49,7 +50,7 @@ describe("OverviewUsersTable", () => {
   });
 
   it("renders the table headers and user list", () => {
-    render(<OverviewUsersTable initialData={mockUsers} />);
+    render(<OverviewUsersTable initialData={mockUsers} referenceTime={now.getTime()} />);
 
     expect(screen.getByText("All registered users")).not.toBeNull();
     expect(screen.getByText("3 signed up")).not.toBeNull();
@@ -66,7 +67,7 @@ describe("OverviewUsersTable", () => {
   });
 
   it("displays relative last signed in time and 'Never signed in' correctly", () => {
-    render(<OverviewUsersTable initialData={mockUsers} />);
+    render(<OverviewUsersTable initialData={mockUsers} referenceTime={now.getTime()} />);
 
     // User 1 was 2 hours ago
     expect(screen.getByText("2h ago")).not.toBeNull();
@@ -76,7 +77,7 @@ describe("OverviewUsersTable", () => {
   });
 
   it("filters users using the search box", () => {
-    render(<OverviewUsersTable initialData={mockUsers} />);
+    render(<OverviewUsersTable initialData={mockUsers} referenceTime={now.getTime()} />);
 
     const searchInput = screen.getByPlaceholderText("Search users…");
     fireEvent.change(searchInput, { target: { value: "bob" } });
@@ -87,7 +88,7 @@ describe("OverviewUsersTable", () => {
   });
 
   it("filters users using quick filter tabs", () => {
-    render(<OverviewUsersTable initialData={mockUsers} />);
+    render(<OverviewUsersTable initialData={mockUsers} referenceTime={now.getTime()} />);
 
     // Click Active (7d) tab
     const activeTab = screen.getByRole("button", { name: /Active \(7d\)/i });
@@ -109,7 +110,7 @@ describe("OverviewUsersTable", () => {
   });
 
   it("displays empty state message when search matches no users", () => {
-    render(<OverviewUsersTable initialData={mockUsers} />);
+    render(<OverviewUsersTable initialData={mockUsers} referenceTime={now.getTime()} />);
 
     const searchInput = screen.getByPlaceholderText("Search users…");
     fireEvent.change(searchInput, { target: { value: "nonexistentuser" } });
@@ -121,5 +122,19 @@ describe("OverviewUsersTable", () => {
     fireEvent.click(resetButton);
 
     expect(screen.getByText("alice@example.com")).not.toBeNull();
+  });
+
+  it("renders the same dates across server and browser time zones", () => {
+    const originalTimeZone = process.env.TZ;
+    const users = [{ ...mockUsers[0], created_at: "2026-09-27T00:30:00Z", last_sign_in_at: "2026-09-27T00:30:00Z" }];
+    try {
+      process.env.TZ = "UTC";
+      const serverMarkup = renderToString(<OverviewUsersTable initialData={users} referenceTime={new Date("2026-09-28T00:30:00Z").getTime()} />);
+      process.env.TZ = "America/Los_Angeles";
+      const browserMarkup = renderToString(<OverviewUsersTable initialData={users} referenceTime={new Date("2026-09-28T00:30:00Z").getTime()} />);
+      expect(browserMarkup).toBe(serverMarkup);
+    } finally {
+      process.env.TZ = originalTimeZone;
+    }
   });
 });

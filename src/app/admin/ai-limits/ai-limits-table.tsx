@@ -33,9 +33,10 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
   // Summary counts
   const totalUsers = data.length;
   const depletedUsers = data.filter((u) => u.ai_requests_remaining === 0).length;
-  const inUseUsers = data.filter((u) => u.ai_requests_remaining < 10 && u.ai_requests_remaining > 0).length;
-  const fullUsers = data.filter((u) => u.ai_requests_remaining === 10).length;
+  const inUseUsers = data.filter((u) => u.ai_requests_remaining < u.ai_requests_limit && u.ai_requests_remaining > 0).length;
+  const fullUsers = data.filter((u) => u.ai_requests_remaining === u.ai_requests_limit).length;
   const totalAvailableRequests = data.reduce((acc, u) => acc + u.ai_requests_remaining, 0);
+  const totalRequestLimit = data.reduce((acc, u) => acc + u.ai_requests_limit, 0);
 
   const filteredData = data.filter((user) => {
     const searchLower = searchTerm.toLowerCase().trim();
@@ -49,9 +50,9 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
     if (statusFilter === "depleted") {
       matchesStatus = user.ai_requests_remaining === 0;
     } else if (statusFilter === "in_use") {
-      matchesStatus = user.ai_requests_remaining < 10 && user.ai_requests_remaining > 0;
+      matchesStatus = user.ai_requests_remaining < user.ai_requests_limit && user.ai_requests_remaining > 0;
     } else if (statusFilter === "full") {
-      matchesStatus = user.ai_requests_remaining === 10;
+      matchesStatus = user.ai_requests_remaining === user.ai_requests_limit;
     }
 
     return matchesSearch && matchesStatus;
@@ -66,7 +67,7 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
       if (res.success) {
         notify({
           title: "AI Quota Reset",
-          message: `Reset AI requests to 10/10 for ${user.email}.`,
+          message: `Reset AI requests to ${user.ai_requests_limit}/${user.ai_requests_limit} for ${user.email}.`,
         });
         setData((prev) =>
           prev.map((item) =>
@@ -74,7 +75,7 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
               ? {
                   ...item,
                   ai_requests_count: 0,
-                  ai_requests_remaining: 10,
+                  ai_requests_remaining: item.ai_requests_limit,
                   updated_at: new Date().toISOString(),
                 }
               : item
@@ -103,13 +104,13 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
       if (res.success) {
         notify({
           title: "All AI Quotas Reset",
-          message: "All users have been reset to 10/10 AI requests.",
+          message: "All users have been reset to their plan's AI request limit.",
         });
         setData((prev) =>
           prev.map((item) => ({
             ...item,
             ai_requests_count: 0,
-            ai_requests_remaining: 10,
+            ai_requests_remaining: item.ai_requests_limit,
             updated_at: new Date().toISOString(),
           }))
         );
@@ -160,19 +161,19 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
         <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all duration-150 hover:border-neutral-300 dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]">
           <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">In Active Use</p>
           <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">{inUseUsers}</p>
-          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">Users with 1–9 requests left</p>
+          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">Users below their plan limit</p>
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all duration-150 hover:border-neutral-300 dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]">
           <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Exhausted Quota</p>
           <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">{depletedUsers}</p>
-          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">Users at 0 / 10 remaining</p>
+          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">Users with no requests remaining</p>
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all duration-150 hover:border-neutral-300 dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]">
           <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Available Prompts</p>
           <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-            {totalAvailableRequests} <span className="text-sm font-normal text-neutral-400 dark:text-neutral-500">/ {totalUsers * 10}</span>
+            {totalAvailableRequests} <span className="text-sm font-normal text-neutral-400 dark:text-neutral-500">/ {totalRequestLimit}</span>
           </p>
           <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">Across all platform users</p>
         </div>
@@ -189,8 +190,8 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
           {[
             { id: "all" as const, label: "All Users", count: totalUsers },
             { id: "depleted" as const, label: "Depleted (0)", count: depletedUsers },
-            { id: "in_use" as const, label: "In Use (<10)", count: inUseUsers },
-            { id: "full" as const, label: "Full (10/10)", count: fullUsers },
+            { id: "in_use" as const, label: "In Use", count: inUseUsers },
+            { id: "full" as const, label: "Full quota", count: fullUsers },
           ].map(({ id, label, count }) => {
             const isActive = statusFilter === id;
             return (
@@ -240,7 +241,7 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
           <button
             type="button"
             onClick={() => setIsResetAllModalOpen(true)}
-            title="Reset AI requests to 10/10 for all users"
+            title="Reset AI usage for all users to their plan limits"
             className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3.5 text-xs font-medium text-white shadow-xs transition-all duration-150 hover:bg-neutral-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 active:scale-[0.98]"
           >
             <Sparkles className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
@@ -302,7 +303,8 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
                   const isUserPending = isPending && activeResetUserId === user.id;
                   const remaining = user.ai_requests_remaining;
                   const used = user.ai_requests_count;
-                  const isFull = remaining === 10;
+                  const limit = user.ai_requests_limit;
+                  const isFull = remaining === limit;
                   const isDepleted = remaining === 0;
 
                   return (
@@ -318,7 +320,7 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
                               {user.email}
                             </p>
                             <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                              Joined {user.created_at ? new Date(user.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                              Joined {user.created_at ? new Date(user.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—"}
                             </p>
                           </div>
                         </div>
@@ -352,34 +354,15 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
                               ) : (
                                 <Sparkles className="h-3.5 w-3.5 shrink-0" />
                               )}
-                              <span>{remaining} / 10 left</span>
+                              <span>{remaining} / {limit} left</span>
                             </span>
                             <span className="text-[11px] text-neutral-400 dark:text-neutral-500 font-mono">
                               ({used} used)
                             </span>
                           </div>
 
-                          {/* 10-step visual indicator */}
-                          <div className="grid grid-cols-10 gap-1 h-1.5 w-full bg-neutral-100 dark:bg-[#1e2634] rounded-full p-0.5 overflow-hidden">
-                            {Array.from({ length: 10 }).map((_, i) => {
-                              const isRemainingSlot = i < remaining;
-                              let slotColor = "bg-neutral-200 dark:bg-[#283548]";
-                              if (isRemainingSlot) {
-                                if (isFull) slotColor = "bg-emerald-500";
-                                else if (remaining > 3) slotColor = "bg-emerald-500";
-                                else slotColor = "bg-amber-500";
-                              } else {
-                                slotColor = "bg-neutral-200/70 dark:bg-[#283548]/70";
-                              }
-
-                              return (
-                                <span
-                                  key={i}
-                                  className={`h-full rounded-sm transition-colors ${slotColor}`}
-                                  title={`${remaining} of 10 requests remaining`}
-                                />
-                              );
-                            })}
+                          <div role="progressbar" aria-label={`${user.email} AI requests remaining`} aria-valuemin={0} aria-valuemax={limit} aria-valuenow={remaining} className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-[#1e2634]">
+                            <div className={`h-full rounded-full ${isDepleted ? "bg-red-500" : remaining / limit <= 0.3 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${(remaining / limit) * 100}%` }} />
                           </div>
                         </div>
                       </td>
@@ -405,8 +388,8 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
                               onClick={() => handleResetUser(user)}
                               title={
                                 isFull
-                                  ? "Already at maximum quota (10/10)"
-                                  : "Reset quota back to 10 out of 10"
+                                  ? `Already at maximum quota (${limit}/${limit})`
+                                  : `Reset quota back to ${limit} out of ${limit}`
                               }
                               className={`inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-all duration-150 active:scale-[0.98] ${
                                 isFull
@@ -415,7 +398,7 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
                               }`}
                             >
                               <RotateCcw className="h-3 w-3 text-neutral-600 dark:text-neutral-400" />
-                              <span>Reset to 10/10</span>
+                              <span>Reset to {limit}/{limit}</span>
                             </button>
                           )}
                         </div>
@@ -469,7 +452,7 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
             </div>
 
             <p id="reset-all-modal-description" className="mt-4 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-              This will reset the AI prompt quota back to <strong className="font-semibold text-neutral-900 dark:text-white">10 out of 10</strong> for all <strong className="font-semibold text-neutral-900 dark:text-white">{totalUsers} registered users</strong> across NovaStage.
+              This will reset AI usage for <strong className="font-semibold text-neutral-900 dark:text-white">{totalUsers} registered users</strong> to each user&apos;s plan limit across NovaStage.
             </p>
 
             {/* Strict Confirmation Input */}

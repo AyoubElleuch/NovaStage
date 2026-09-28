@@ -7,13 +7,13 @@ import { Search, X, Users, Clock, Shield } from "lucide-react";
 
 interface OverviewUsersTableProps {
   initialData: AdminOverviewUser[];
+  referenceTime: number;
 }
 
-function formatRelativeTime(dateString: string | null): string {
+function formatRelativeTime(dateString: string | null, referenceTime: number): string {
   if (!dateString) return "Never signed in";
   const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffInSeconds = Math.floor((referenceTime - date.getTime()) / 1000);
 
   if (isNaN(diffInSeconds)) return "Never signed in";
   if (diffInSeconds < 0) return "Just now";
@@ -34,27 +34,27 @@ function formatRelativeTime(dateString: string | null): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
-function isWithinPast7Days(dateString: string | null): boolean {
+function isWithinPast7Days(dateString: string | null, referenceTime: number): boolean {
   if (!dateString) return false;
   const date = new Date(dateString);
-  const now = new Date();
-  const diffInMs = now.getTime() - date.getTime();
+  const diffInMs = referenceTime - date.getTime();
   return diffInMs >= 0 && diffInMs <= 7 * 24 * 60 * 60 * 1000;
 }
 
-export default function OverviewUsersTable({ initialData }: OverviewUsersTableProps) {
+export default function OverviewUsersTable({ initialData, referenceTime }: OverviewUsersTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTab, setFilterTab] = useState<"all" | "active" | "never">("all");
 
   const counts = useMemo(() => {
     const total = initialData.length;
-    const active = initialData.filter((u) => isWithinPast7Days(u.last_sign_in_at)).length;
+    const active = initialData.filter((u) => isWithinPast7Days(u.last_sign_in_at, referenceTime)).length;
     const never = initialData.filter((u) => !u.last_sign_in_at).length;
     return { total, active, never };
-  }, [initialData]);
+  }, [initialData, referenceTime]);
 
   const filteredUsers = useMemo(() => {
     return initialData.filter((user) => {
@@ -69,14 +69,14 @@ export default function OverviewUsersTable({ initialData }: OverviewUsersTablePr
 
       let matchesTab = true;
       if (filterTab === "active") {
-        matchesTab = isWithinPast7Days(user.last_sign_in_at);
+        matchesTab = isWithinPast7Days(user.last_sign_in_at, referenceTime);
       } else if (filterTab === "never") {
         matchesTab = !user.last_sign_in_at;
       }
 
       return matchesSearch && matchesTab;
     });
-  }, [initialData, searchTerm, filterTab]);
+  }, [initialData, searchTerm, filterTab, referenceTime]);
 
   return (
     <section
@@ -220,12 +220,13 @@ export default function OverviewUsersTable({ initialData }: OverviewUsersTablePr
             ) : (
               filteredUsers.map((user) => {
                 const hasSignedIn = Boolean(user.last_sign_in_at);
-                const activeRecently = isWithinPast7Days(user.last_sign_in_at);
-                const relativeLastSeen = formatRelativeTime(user.last_sign_in_at);
+                const activeRecently = isWithinPast7Days(user.last_sign_in_at, referenceTime);
+                const relativeLastSeen = formatRelativeTime(user.last_sign_in_at, referenceTime);
                 const fullLastSeen = user.last_sign_in_at
                   ? new Date(user.last_sign_in_at).toLocaleString("en-US", {
                       dateStyle: "medium",
                       timeStyle: "short",
+                      timeZone: "UTC",
                     })
                   : null;
 
@@ -234,6 +235,7 @@ export default function OverviewUsersTable({ initialData }: OverviewUsersTablePr
                       month: "short",
                       day: "numeric",
                       year: "numeric",
+                      timeZone: "UTC",
                     })
                   : "—";
 
@@ -297,7 +299,7 @@ export default function OverviewUsersTable({ initialData }: OverviewUsersTablePr
                       {hasSignedIn ? (
                         <div
                           className="flex flex-col"
-                          title={fullLastSeen || undefined}
+                          title={fullLastSeen ? `${fullLastSeen} UTC` : undefined}
                         >
                           <div className="flex items-center gap-1.5">
                             <span
@@ -314,7 +316,7 @@ export default function OverviewUsersTable({ initialData }: OverviewUsersTablePr
                           </div>
                           {fullLastSeen && (
                             <span className="mt-0.5 text-[11px] text-neutral-400 dark:text-neutral-500">
-                              {fullLastSeen}
+                              {fullLastSeen} UTC
                             </span>
                           )}
                         </div>
