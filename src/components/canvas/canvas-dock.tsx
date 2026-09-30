@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import {
   Activity,
   Grid,
@@ -21,6 +21,7 @@ import { CanvasTool, CanvasViewport } from "@/lib/canvas/types";
 
 interface CanvasDockProps {
   className?: string;
+  isBusy?: boolean;
   activeTool: CanvasTool;
   onSelectTool: (tool: CanvasTool) => void;
   viewport: CanvasViewport;
@@ -46,6 +47,7 @@ interface CanvasDockProps {
 
 export default function CanvasDock({
   className,
+  isBusy = false,
   activeTool,
   onSelectTool,
   viewport,
@@ -69,13 +71,31 @@ export default function CanvasDock({
   onToggleServicePalette,
 }: CanvasDockProps) {
   const [isQuickToolsOpen, setIsQuickToolsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const quickToolsRef = useRef<HTMLButtonElement>(null);
+  const quickToolsId = useId();
   const zoomPct = Math.round(viewport.zoom * 100);
 
+  useEffect(() => {
+    if (!isQuickToolsOpen) return;
+    const closeOnOutside = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setIsQuickToolsOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutside);
+    return () => document.removeEventListener("pointerdown", closeOnOutside);
+  }, [isQuickToolsOpen]);
+
   return (
-    <div className="relative">
+    <div ref={rootRef} data-canvas-ui="true" onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => {
+      event.stopPropagation();
+      if (event.key === "Escape" && isQuickToolsOpen) { event.preventDefault(); setIsQuickToolsOpen(false); quickToolsRef.current?.focus(); }
+    }} className="relative min-w-0 max-w-full [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-emerald-500 [&_button:disabled]:cursor-not-allowed [&_button:disabled]:opacity-40">
       {/* Mobile Quick Tools Popover */}
       {isQuickToolsOpen && (
         <div
+          id={quickToolsId}
+          role="region"
+          aria-label="Canvas tools"
           className="dash-pop absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-30 flex flex-col gap-2 rounded-2xl border border-neutral-200/90 bg-white/95 p-3 shadow-2xl backdrop-blur-xl sm:hidden min-w-[260px] dark:border-[#283548] dark:bg-[#161d27]/95"
           onClick={(e) => e.stopPropagation()}
         >
@@ -140,6 +160,7 @@ export default function CanvasDock({
                 onTidyLayout();
                 setIsQuickToolsOpen(false);
               }}
+              disabled={isBusy}
               className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-2.5 py-2 font-medium text-neutral-700 hover:bg-neutral-50 cursor-pointer dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
             >
               <Waypoints className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
@@ -148,6 +169,7 @@ export default function CanvasDock({
             <button
               type="button"
               onClick={onToggleSnapGrid}
+              aria-pressed={snapGrid}
               className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 font-medium cursor-pointer transition-colors ${
                 snapGrid
                   ? "border-neutral-900 bg-neutral-900 text-white dark:border-emerald-600 dark:bg-emerald-600"
@@ -199,7 +221,7 @@ export default function CanvasDock({
         aria-label="Canvas control dock"
         className={
           className ||
-          "flex shrink-0 items-center gap-1 sm:gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1 sm:p-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all select-none max-w-[calc(100vw-16px)] overflow-x-auto no-scrollbar dark:border-[#283548] dark:bg-[#161d27]/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+          "flex min-w-0 shrink-0 items-center gap-1 sm:gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1 sm:p-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all select-none max-w-full overflow-x-auto no-scrollbar dark:border-[#283548] dark:bg-[#161d27]/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
         }
       >
         {/* Primary Interaction Tools (Pan & Select) */}
@@ -207,6 +229,8 @@ export default function CanvasDock({
           <button
             type="button"
             onClick={() => onSelectTool("select")}
+            aria-label="Select and move nodes"
+            aria-pressed={activeTool === "select"}
             title="Select & Marquee tool (V)"
             className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
               activeTool === "select"
@@ -220,6 +244,8 @@ export default function CanvasDock({
           <button
             type="button"
             onClick={() => onSelectTool("hand")}
+            aria-label="Pan canvas"
+            aria-pressed={activeTool === "hand"}
             title="Hand / Pan tool (H or Spacebar)"
             className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
               activeTool === "hand"
@@ -235,11 +261,13 @@ export default function CanvasDock({
         <button
           type="button"
           onClick={onAddNode}
+          disabled={isBusy}
+          aria-label="Add milestone"
           title="Add Milestone Node (N)"
           className="inline-flex h-8 sm:h-9 shrink-0 items-center gap-1 sm:gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-2 sm:px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 hover:scale-[1.02] cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
         >
           <Plus className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">Add Node</span>
+          <span className="hidden sm:inline">Milestone</span>
         </button>
 
         {/* Add Group Action Button */}
@@ -247,6 +275,7 @@ export default function CanvasDock({
           <button
             type="button"
             onClick={onAddGroup}
+            disabled={isBusy}
             title="Add Group"
             className="inline-flex h-8 sm:h-9 shrink-0 items-center gap-1 sm:gap-1.5 whitespace-nowrap rounded-xl border border-neutral-200/80 bg-white/90 px-2 sm:px-3 text-xs font-semibold text-neutral-700 shadow-[0_2px_5px_rgba(0,0,0,0.04)] transition-all hover:bg-neutral-50 hover:scale-[1.02] cursor-pointer dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
           >
@@ -260,6 +289,7 @@ export default function CanvasDock({
           <button
             type="button"
             onClick={onToggleServicePalette}
+            disabled={isBusy}
             title="AWS Services"
             className="inline-flex h-8 sm:h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-[#FF9900]/30 bg-[#FF9900]/10 px-2 sm:px-2.5 text-xs font-bold text-[#FF9900] shadow-[0_2px_5px_rgba(255,153,0,0.08)] transition-all hover:bg-[#FF9900]/20 hover:scale-[1.02] cursor-pointer"
           >
@@ -269,8 +299,12 @@ export default function CanvasDock({
 
         {/* Mobile Tools Trigger Button (Replaces 8 desktop buttons on mobile screens) */}
         <button
+          ref={quickToolsRef}
           type="button"
           onClick={() => setIsQuickToolsOpen((v) => !v)}
+          aria-label="Canvas tools"
+          aria-expanded={isQuickToolsOpen}
+          aria-controls={quickToolsId}
           title="Open Canvas Tools"
           className={`sm:hidden flex h-8 items-center gap-1 rounded-xl px-2 text-xs font-semibold transition-colors cursor-pointer ${
             isQuickToolsOpen
@@ -287,6 +321,7 @@ export default function CanvasDock({
           <button
             type="button"
             onClick={onTidyLayout}
+            disabled={isBusy}
             title="Auto-Layout / Tidy Graph"
             className="flex h-9 items-center gap-1 rounded-xl px-2 text-xs font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
           >
@@ -297,6 +332,8 @@ export default function CanvasDock({
           <button
             type="button"
             onClick={onToggleSnapGrid}
+            aria-label="Snap to grid"
+            aria-pressed={snapGrid}
             title={snapGrid ? "Snap to Grid: ON" : "Snap to Grid: OFF"}
             className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
               snapGrid
@@ -311,6 +348,8 @@ export default function CanvasDock({
             <button
               type="button"
               onClick={onToggleMinimap}
+              aria-label="Minimap"
+              aria-pressed={Boolean(isMinimapOpen)}
               title={isMinimapOpen ? "Radar Minimap: Visible" : "Radar Minimap: Hidden"}
               className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
                 isMinimapOpen
@@ -385,7 +424,7 @@ export default function CanvasDock({
             <button
               type="button"
               onClick={onUndo}
-              disabled={!canUndo}
+              disabled={!canUndo || isBusy}
               title="Undo (Ctrl Z)"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >
@@ -394,7 +433,7 @@ export default function CanvasDock({
             <button
               type="button"
               onClick={onRedo}
-              disabled={!canRedo}
+              disabled={!canRedo || isBusy}
               title="Redo (Ctrl Shift Z)"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >

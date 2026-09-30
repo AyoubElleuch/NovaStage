@@ -92,4 +92,16 @@ describe("CanvasHud Component", () => {
     fireEvent.click(mermaidOption);
     expect(onExportMermaid).toHaveBeenCalled();
   });
+
+  it("dismisses exports on outside interactions and Escape", () => {
+    render(<CanvasHud {...baseProps} onExportJSON={vi.fn()} />);
+    const trigger = screen.getByRole("button", { name: "Export canvas" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("region", { name: "Canvas export options" })).not.toBeNull();
+    fireEvent.keyDown(trigger, { key: "Escape" });
+    expect(screen.queryByRole("region", { name: "Canvas export options" })).toBeNull();
+    fireEvent.click(trigger);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("region", { name: "Canvas export options" })).toBeNull();
+  });
 });

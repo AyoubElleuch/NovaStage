@@ -106,4 +106,45 @@ describe("CanvasNodeComponent", () => {
     );
     expect((container.firstChild as HTMLElement).className).toContain("border-neutral-900");
   });
+
+  it("supports keyboard selection and cancels renaming with Escape", () => {
+    const onSelect = vi.fn();
+    const onUpdateTitle = vi.fn();
+    render(<CanvasNodeComponent {...defaultProps} onSelect={onSelect} onUpdateTitle={onUpdateTitle} />);
+    const card = screen.getByRole("group");
+    fireEvent.keyDown(card, { key: "Enter" });
+    expect(onSelect).toHaveBeenCalledWith(mockNode, false);
+    fireEvent.keyDown(card, { key: "F2" });
+    fireEvent.change(screen.getByLabelText("Milestone title"), { target: { value: "Discard this" } });
+    fireEvent.keyDown(screen.getByLabelText("Milestone title"), { key: "Escape" });
+    expect(screen.queryByLabelText("Milestone title")).toBeNull();
+    expect(onUpdateTitle).not.toHaveBeenCalled();
+  });
+
+  it("commits a rename only once when Enter also blurs the input", () => {
+    const onUpdateTitle = vi.fn();
+    render(<CanvasNodeComponent {...defaultProps} onUpdateTitle={onUpdateTitle} />);
+    fireEvent.click(screen.getByRole("button", { name: "Rename Database Schema" }));
+    fireEvent.change(screen.getByLabelText("Milestone title"), { target: { value: "New title" } });
+    fireEvent.keyDown(screen.getByLabelText("Milestone title"), { key: "Enter" });
+    expect(onUpdateTitle).toHaveBeenCalledTimes(1);
+  });
+
+  it("exposes keyboard connection ports and uses stored node geometry", () => {
+    const onStartLink = vi.fn((node, handle, event) => event.preventDefault());
+    render(<CanvasNodeComponent {...defaultProps} onStartLink={onStartLink} />);
+    fireEvent.click(screen.getByRole("button", { name: "Link from right port of Database Schema" }), { detail: 0 });
+    expect(onStartLink).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("group").style.height).toBe("170px");
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("0");
+  });
+
+  it("requests edit access instead of toggling someone else's checkpoint", () => {
+    const onRequestClaim = vi.fn();
+    const onToggleCheckpoint = vi.fn();
+    render(<CanvasNodeComponent {...defaultProps} node={{ ...mockNode, claimed_by: "other" }} onRequestClaim={onRequestClaim} onToggleCheckpoint={onToggleCheckpoint} />);
+    fireEvent.click(screen.getByRole("button", { name: 'Request access to edit "Create tables"' }));
+    expect(onRequestClaim).toHaveBeenCalled();
+    expect(onToggleCheckpoint).not.toHaveBeenCalled();
+  });
 });

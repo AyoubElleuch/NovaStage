@@ -1,13 +1,16 @@
 import type { AIWorkflowResult } from "../ai/types";
 import type { CanvasNode } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
+import { getNodeDimensions } from "./coordinate-math";
 
 export function layoutAWSArchitecture(result: AIWorkflowResult, existingNodes: CanvasNode[]) {
   const groups = result.groups || [];
   const services = result.serviceNodes || [];
   const groupIds = new Set(groups.map((group) => group.tempId));
   const parentOf = (id: string, explicit?: string) =>
-    explicit && groupIds.has(explicit) ? explicit : groups.find((group) => group.childTempIds?.includes(id))?.tempId;
+    explicit && explicit !== id && groupIds.has(explicit)
+      ? explicit
+      : groups.find((group) => group.tempId !== id && group.childTempIds?.includes(id))?.tempId;
   const nodes = [
     ...groups.map((group) => ({
       id: group.tempId, node_type: "group" as const,
@@ -28,13 +31,10 @@ export function layoutAWSArchitecture(result: AIWorkflowResult, existingNodes: C
   const startX = isUpdate
     ? Math.min(...existingArchitecture.map((node) => node.position_x))
     : 100;
-  const nonArchitectureNodes = existingNodes.filter(
-    (node) => node.node_type !== "aws_service" && node.node_type !== "group"
-  );
   const startY = isUpdate
     ? Math.min(...existingArchitecture.map((node) => node.position_y))
-    : nonArchitectureNodes.length
-      ? Math.max(...nonArchitectureNodes.map((node) => node.position_y + node.height)) + 240
+    : existingNodes.length
+      ? Math.max(...existingNodes.map((node) => node.position_y + getNodeDimensions(node).height)) + 240
       : 100;
   return autoLayoutNodes(nodes, (result.dataFlowEdges || []).map((edge) => ({
     source_node_id: edge.fromId, target_node_id: edge.toId,

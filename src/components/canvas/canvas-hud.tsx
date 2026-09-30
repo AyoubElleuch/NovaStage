@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -32,7 +32,7 @@ interface CanvasHudProps {
   networkStatus?: CanvasNetworkStatus;
   latencyMs?: number | null;
   followingUserId?: string | null;
-  onCopyInvite: () => void;
+  onCopyInvite: () => void | Promise<void>;
   onToggleFollowUser?: (userId: string) => void;
   onExportMermaid?: () => void;
   onExportJSON?: () => void;
@@ -56,12 +56,31 @@ export default function CanvasHud({
 }: CanvasHudProps) {
   const [copied, setCopied] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const exportTriggerRef = useRef<HTMLButtonElement>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const exportId = useId();
 
-  const handleCopy = () => {
-    onCopyInvite();
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    setIsCopying(true);
+    try {
+      await onCopyInvite();
+      setCopied(true);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+    } finally { setIsCopying(false); }
   };
+
+  useEffect(() => () => { if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current); }, []);
+  useEffect(() => {
+    if (!isExportOpen) return;
+    const outside = (event: PointerEvent) => {
+      if (!exportRef.current?.contains(event.target as Node)) setIsExportOpen(false);
+    };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, [isExportOpen]);
 
   const { theme, toggleTheme } = useTheme();
 
@@ -71,7 +90,10 @@ export default function CanvasHud({
   const followedUser = collaborators.find((c) => c.userId === followingUserId);
 
   return (
-    <header className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2.5 sm:p-5 select-none gap-2">
+    <header data-canvas-ui="true" onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => {
+      event.stopPropagation();
+      if (event.key === "Escape" && isExportOpen) { event.preventDefault(); setIsExportOpen(false); exportTriggerRef.current?.focus(); }
+    }} className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2.5 sm:p-5 select-none gap-2 [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-emerald-500">
       {/* Top Left: Project Identity & Breadcrumb */}
       <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-3 min-w-0">
         <Link
@@ -150,10 +172,14 @@ export default function CanvasHud({
 
         {/* Export Dropdown */}
         {(onExportMermaid || onExportJSON) && (
-          <div className="relative">
+          <div ref={exportRef} className="relative">
             <button
               type="button"
+              ref={exportTriggerRef}
               onClick={() => setIsExportOpen((prev) => !prev)}
+              aria-label="Export canvas"
+              aria-expanded={isExportOpen}
+              aria-controls={exportId}
               title="Export Roadmap"
               className="flex h-9 w-9 sm:w-auto items-center justify-center sm:justify-start gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-0 sm:px-3 text-xs font-semibold text-neutral-700 shadow-sm backdrop-blur-md hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >
@@ -163,6 +189,9 @@ export default function CanvasHud({
 
             {isExportOpen && (
               <div
+                id={exportId}
+                role="region"
+                aria-label="Canvas export options"
                 className="absolute right-0 mt-2 w-48 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl backdrop-blur-xl z-30 space-y-1 dark:border-[#283548] dark:bg-[#161d27]"
                 onClick={() => setIsExportOpen(false)}
               >
@@ -193,6 +222,8 @@ export default function CanvasHud({
 
         {/* Network Quality / Connection Pill */}
         <div
+          role="status"
+          aria-label={`Connection ${networkStatus}${latencyMs !== null ? `, ${latencyMs} milliseconds` : ""}`}
           title={
             networkStatus === "online"
               ? `Real-time connection active${latencyMs ? ` (${latencyMs}ms latency)` : ""}`
@@ -237,7 +268,7 @@ export default function CanvasHud({
           ) : (
             <>
               <WifiOff className="h-3.5 w-3.5 text-red-500" />
-              <span className="hidden sm:inline font-semibold text-[10px]">Offline</span>
+              <span className="font-semibold text-[10px]">Offline</span>
             </>
           )}
         </div>
@@ -258,6 +289,8 @@ export default function CanvasHud({
                       onToggleFollowUser(c.userId);
                     }
                   }}
+                  aria-label={isMe ? `${c.fullName || c.email}, you` : `${isFollowingThis ? "Stop following" : "Follow"} ${c.fullName || c.email}`}
+                  aria-pressed={isFollowingThis}
                   title={
                     isMe
                       ? `${c.fullName || c.email} (You)`
@@ -294,7 +327,9 @@ export default function CanvasHud({
         {inviteCode && (
           <button
             type="button"
-            onClick={handleCopy}
+            onClick={() => { void handleCopy().catch(() => setCopied(false)); }}
+            disabled={isCopying}
+            aria-label={copied ? "Invite code copied" : "Copy invite code"}
             title={copied ? "Copied!" : `Copy invite code: ${inviteCode}`}
             className="flex h-9 w-9 sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-0 sm:px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm backdrop-blur-md hover:bg-neutral-100 transition-colors cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-200 dark:hover:bg-[#1e2634]"
           >

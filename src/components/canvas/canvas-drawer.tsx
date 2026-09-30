@@ -1,27 +1,10 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  Check,
-  ChevronDown,
-  Circle,
-  Lock,
-  Plus,
-  Sparkles,
-  Trash2,
-  Unlock,
-  X,
-} from "lucide-react";
-import { CanvasNode, CanvasEdge } from "@/lib/canvas/types";
-import { AwsIcon, AWS_SERVICE_REGISTRY } from "./aws-icons";
-import {
-  calculateCompletionPercentage,
-  isNodeFullyComplete,
-  getUserColor,
-} from "@/lib/canvas/coordinate-math";
+import React, { useEffect, useId, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Circle, Lock, Plus, Trash2, Unlock, X } from "lucide-react";
+import { CanvasNode, CanvasEdge, NodeStatus } from "@/lib/canvas/types";
+import { AwsIcon, getAWSService } from "./aws-icons";
+import { calculateCompletionPercentage, isNodeFullyComplete } from "@/lib/canvas/coordinate-math";
 
 interface CanvasDrawerProps {
   node: CanvasNode | null;
@@ -30,7 +13,7 @@ interface CanvasDrawerProps {
   currentUserId: string;
   isProjectOwner: boolean;
   onClose: () => void;
-  onUpdateNode: (nodeId: string, updates: Partial<CanvasNode>) => void;
+  onUpdateNode: (nodeId: string, updates: Partial<CanvasNode>) => void | Promise<void>;
   onDeleteNode: (nodeId: string) => void;
   onToggleCheckpoint: (checkpointId: string, nodeId: string, nextCompleted: boolean) => void;
   onAddCheckpoint: (nodeId: string, title: string) => void;
@@ -42,703 +25,227 @@ interface CanvasDrawerProps {
   onJumpToNode: (nodeId: string) => void;
 }
 
-const GROUP_STYLE_OPTIONS = [
-  ["vpc", "Virtual Private Cloud (VPC)"],
-  ["subnet", "Subnet (Public / Private)"],
-  ["region", "AWS Region Boundary"],
-  ["availability_zone", "Availability Zone (AZ)"],
-  ["custom", "Custom Group"],
+const GROUP_STYLES = [
+  ["vpc", "Virtual Private Cloud (VPC)"], ["subnet", "Subnet"],
+  ["region", "AWS Region"], ["availability_zone", "Availability Zone"], ["custom", "Custom group"],
 ] as const;
+const FIELD = "w-full min-w-0 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:disabled:bg-[#161d27]";
+const LABEL = "mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400";
+const BUTTON = "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-[#283548] dark:text-neutral-300 dark:hover:bg-[#1e2634]";
 
-function DrawerDropdown({ value, disabled, onChange }: { value: string; disabled: boolean; onChange: (value: string) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const selected = GROUP_STYLE_OPTIONS.find(([key]) => key === value) || GROUP_STYLE_OPTIONS[0];
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const close = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
-    };
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") setIsOpen(false); };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", escape);
-    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
-  }, [isOpen]);
-
-  return <div ref={rootRef} className="relative">
-    <button type="button" disabled={disabled} aria-haspopup="listbox" aria-expanded={isOpen} onMouseDown={(event) => event.preventDefault()} onClick={() => setIsOpen((open) => !open)}
-      className="flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-xs font-semibold text-neutral-900 shadow-2xs outline-none transition-colors hover:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-500 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:hover:border-[#384961] dark:disabled:bg-[#161d27] dark:disabled:text-neutral-500">
-      <span>{selected[1]}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 text-neutral-400" aria-hidden="true" />
-    </button>
-    {isOpen && <div role="listbox" className="absolute inset-x-0 top-[calc(100%+6px)] z-20 rounded-lg border border-neutral-200 bg-white p-1 shadow-xl dark:border-[#283548] dark:bg-[#161d27]">
-      {GROUP_STYLE_OPTIONS.map(([key, label]) => <button key={key} type="button" role="option" aria-selected={key === value} onMouseDown={(event) => event.preventDefault()} onClick={() => { onChange(key); setIsOpen(false); }}
-        className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-[#1e2634]">
-        <span>{label}</span>{key === value && <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />}
-      </button>)}
-    </div>}
-  </div>;
+// Reconcile remote changes without replacing another field's unsaved draft.
+function useDraft<T>(value: T) {
+  const serialized = JSON.stringify(value);
+  const [source, setSource] = useState(serialized);
+  const [draft, setDraft] = useState(value);
+  if (source !== serialized) {
+    setSource(serialized);
+    if (JSON.stringify(draft) === source) setDraft(value);
+  }
+  return [draft, setDraft] as const;
 }
 
-function MilestoneDrawerContent({
-  node,
-  allNodes,
-  edges,
-  currentUserId,
-  isProjectOwner,
-  onClose,
-  onUpdateNode,
-  onDeleteNode,
-  onToggleCheckpoint,
-  onAddCheckpoint,
-  onDeleteCheckpoint,
-  onClaimNode,
-  onReleaseNode,
-  onRequestClaim,
-  onForceUnlock,
-  onJumpToNode,
+function NodeDrawer({ node, allNodes, edges, currentUserId, isProjectOwner, onClose, onUpdateNode,
+  onDeleteNode, onToggleCheckpoint, onAddCheckpoint, onDeleteCheckpoint, onClaimNode, onReleaseNode,
+  onRequestClaim, onForceUnlock, onJumpToNode,
 }: Omit<CanvasDrawerProps, "node"> & { node: CanvasNode }) {
-  const [title, setTitle] = useState(node.title);
-  const [description, setDescription] = useState(node.description || "");
-  const [newCheckpointTitle, setNewCheckpointTitle] = useState("");
+  const id = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
+  const pendingSaveRef = useRef(new Map<string, Promise<void>>());
+  const [isReleasing, setIsReleasing] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [title, setTitle] = useDraft(node.title);
+  const [description, setDescription] = useDraft(node.description || "");
+  const [region, setRegion] = useDraft(node.aws_metadata?.region || "");
+  const [config, setConfig] = useDraft<Record<string, string>>(node.aws_metadata?.config || {});
+  const [annotation, setAnnotation] = useDraft(node.annotation_metadata?.content || "");
+  const [newCheckpoint, setNewCheckpoint] = useState("");
+  const [newConfigKey, setNewConfigKey] = useState("");
+  const [newConfigValue, setNewConfigValue] = useState("");
+  const [configError, setConfigError] = useState("");
+  const [titleError, setTitleError] = useState("");
 
-  const completionPct = calculateCompletionPercentage(node.checkpoints);
-  const isComplete = isNodeFullyComplete(node);
-  const isClaimedByMe = node.claimed_by === currentUserId;
-  const isClaimedByOther = Boolean(node.claimed_by && !isClaimedByMe);
-  const isUnclaimed = !node.claimed_by;
-  const claimColor = node.claimed_by ? getUserColor(node.claimed_by) : "#a3a3a3";
-  const otherClaimName =
-    node.claim_holder?.fullName && node.claim_holder.fullName !== "You"
-      ? node.claim_holder.fullName
-      : "Collaborator";
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    closeRef.current?.focus({ preventScroll: true });
+    return () => {
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, []);
 
-  // Find incoming (prerequisite) and outgoing (unlocked) dependencies
-  const incomingEdges = edges.filter((e) => e.target_node_id === node.id);
-  const outgoingEdges = edges.filter((e) => e.source_node_id === node.id);
+  const isMilestone = !node.node_type || node.node_type === "milestone";
+  const isAws = node.node_type === "aws_service";
+  const isGroup = node.node_type === "group";
+  const isAnnotation = node.node_type === "annotation";
+  const kind = isAws ? "AWS resource" : isGroup ? "Group" : isAnnotation ? "Note" : "Milestone";
+  const editable = node.claimed_by === currentUserId;
+  const claimedByOther = Boolean(node.claimed_by && !editable);
+  const holderName = node.claim_holder?.fullName && node.claim_holder.fullName !== "You" ? node.claim_holder.fullName : "a collaborator";
+  const completion = calculateCompletionPercentage(node.checkpoints);
+  const completedCount = node.checkpoints.filter((checkpoint) => checkpoint.is_completed).length;
+  const complete = isNodeFullyComplete(node);
+  const service = getAWSService(node.aws_metadata?.serviceId || "");
+  const incoming = [...new Set(edges.filter((edge) => edge.target_node_id === node.id).map((edge) => edge.source_node_id))];
+  const outgoing = [...new Set(edges.filter((edge) => edge.source_node_id === node.id).map((edge) => edge.target_node_id))];
 
-  const prerequisiteNodes = incomingEdges
-    .map((e) => allNodes.find((n) => n.id === e.source_node_id))
-    .filter((n): n is CanvasNode => Boolean(n));
-
-  const unlockedNodes = outgoingEdges
-    .map((e) => allNodes.find((n) => n.id === e.target_node_id))
-    .filter((n): n is CanvasNode => Boolean(n));
-
-  const handleTitleBlur = () => {
-    if (title.trim() && title !== node.title && isClaimedByMe) {
-      onUpdateNode(node.id, { title: title.trim() });
-    }
+  const close = () => {
+    const active = document.activeElement;
+    if ((active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active instanceof HTMLSelectElement) && drawerRef.current?.contains(active)) active.blur();
+    onClose();
   };
 
-  const handleDescriptionBlur = () => {
-    if (description !== node.description && isClaimedByMe) {
-      onUpdateNode(node.id, { description });
-    }
+  const persist = (updates: Partial<CanvasNode>) => {
+    setSaveError("");
+    const request = Promise.resolve(onUpdateNode(node.id, updates));
+    pendingSaveRef.current.set(Object.keys(updates).sort().join(","), request);
+    void request.catch(() => setSaveError("This change could not be saved. Keep edit access and try again."));
   };
 
-  const handleAddCheckpoint = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCheckpointTitle.trim()) return;
-    if (isClaimedByMe || isUnclaimed) {
-      onAddCheckpoint(node.id, newCheckpointTitle.trim());
-      setNewCheckpointTitle("");
-    } else {
-      onRequestClaim(node);
-    }
+  const release = async () => {
+    setIsReleasing(true);
+    try { await Promise.all(pendingSaveRef.current.values()); onReleaseNode(node.id); }
+    catch { setSaveError("Save your changes before releasing edit access."); }
+    finally { setIsReleasing(false); }
   };
 
-  return (
-    <>
-      <div
-        className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs md:hidden dark:bg-black/60"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <aside
-        aria-label="Milestone inspector drawer"
-        className="fixed top-0 right-0 z-50 flex h-dvh w-full sm:max-w-[420px] flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] dark:border-[#283548] dark:bg-[#161d27]/95"
-      >
-      {/* Drawer Header */}
-      <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4 dark:border-[#283548]">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">
-            {node.node_type === "aws_service"
-              ? "AWS Service Details"
-              : node.node_type === "group"
-              ? "Group Container Details"
-              : node.node_type === "annotation"
-              ? "Annotation Details"
-              : "Milestone Details"}
-          </span>
-          {isComplete && node.node_type !== "aws_service" && node.node_type !== "group" && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60">
-              <Sparkles className="h-3 w-3" /> Complete
-            </span>
-          )}
-        </div>
+  const saveTitle = () => {
+    if (!editable) return;
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setTitleError("Add a title so this node is easy to find.");
+      setTitle(node.title);
+      return;
+    }
+    setTitleError("");
+    setTitle(trimmed);
+    if (trimmed !== node.title) persist({ title: trimmed, ...(isGroup ? { group_metadata: { label: trimmed, style: node.group_metadata?.style || "custom", childNodeIds: node.group_metadata?.childNodeIds || [] } } : {}) });
+  };
+  const saveDescription = () => {
+    if (editable && description !== (node.description || "")) persist({ description });
+  };
+  const saveMetadata = (nextConfig = config) => {
+    if (!editable || !isAws) return;
+    const nextRegion = region.trim();
+    if (nextRegion === (node.aws_metadata?.region || "") && JSON.stringify(nextConfig) === JSON.stringify(node.aws_metadata?.config || {})) return;
+    persist({ aws_metadata: {
+      ...node.aws_metadata, serviceId: node.aws_metadata?.serviceId || "", category: node.aws_metadata?.category || "compute",
+      region: nextRegion || undefined, config: nextConfig,
+    } });
+  };
 
-        <button
-          type="button"
-          onClick={onClose}
-          title="Close drawer (Esc)"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:hover:bg-[#1e2634] dark:hover:text-white"
-        >
-          <X className="h-4 w-4" />
-        </button>
+  const renderConnections = (nodeIds: string[], direction: "incoming" | "outgoing") => {
+    const connectedNodes = nodeIds.map((nodeId) => allNodes.find((item) => item.id === nodeId)).filter((item): item is CanvasNode => Boolean(item));
+    return <div>
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-400">
+        {direction === "incoming" ? <ArrowLeft className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}
+        {isMilestone ? direction === "incoming" ? "Prerequisites" : "Next milestones" : direction === "incoming" ? "Incoming connections" : "Outgoing connections"} <span className="text-neutral-400">({connectedNodes.length})</span>
+      </p>
+      {connectedNodes.length ? <div className="space-y-2">{connectedNodes.map((connected) => <button key={connected.id} type="button" onClick={() => onJumpToNode(connected.id)}
+        className="flex w-full items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-left text-xs hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]">
+        <span className="min-w-0 truncate font-medium text-neutral-800 dark:text-neutral-200">{connected.title}</span>
+        <span className={`shrink-0 text-[10px] font-semibold ${isNodeFullyComplete(connected) ? "text-emerald-600 dark:text-emerald-400" : connected.status === "blocked" ? "text-red-600 dark:text-red-400" : "text-neutral-500"}`}>{isNodeFullyComplete(connected) ? connected.node_type === "aws_service" ? "Ready" : "Complete" : connected.status === "blocked" ? "Blocked" : "Pending"}</span>
+      </button>)}</div> : <p className="text-xs text-neutral-500 dark:text-neutral-400">{direction === "incoming" ? "No incoming connections." : "No outgoing connections."}</p>}
+    </div>;
+  };
+
+  return <>
+    <div className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs md:hidden" onClick={close} aria-hidden="true" />
+    <aside ref={drawerRef} data-canvas-ui="true" aria-label={`${kind} details`}
+      onPointerDown={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); close(); }
+      }}
+      className="fixed inset-y-0 right-0 z-50 flex h-dvh w-full max-w-[420px] flex-col border-l border-neutral-200 bg-white shadow-2xl dark:border-[#283548] dark:bg-[#161d27]">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-100 px-5 py-4 dark:border-[#283548]">
+        <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-500 dark:text-neutral-400">{kind} details</p><h2 className="mt-1 truncate text-sm font-semibold text-neutral-900 dark:text-white" title={node.title}>{node.title}</h2></div>
+        <button ref={closeRef} type="button" onClick={close} aria-label="Close details" title="Close details (Esc)" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-[#1e2634]"><X className="h-4 w-4" /></button>
       </div>
 
-      {/* Claim Lock Notification Banner */}
-      <div className="border-b border-neutral-100 bg-neutral-50/60 px-5 py-3 dark:border-[#283548] dark:bg-[#121721]/60">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            {isClaimedByMe ? (
-              <span
-                className="h-2.5 w-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: claimColor }}
-              />
-            ) : isClaimedByOther ? (
-              <Lock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-            ) : (
-              <Unlock className="h-4 w-4 shrink-0 text-neutral-400" />
-            )}
-
-            <div className="min-w-0 text-xs">
-              {isClaimedByMe ? (
-                <p className="font-semibold text-emerald-700 dark:text-emerald-400 truncate">
-                  You are editing this box
-                </p>
-              ) : isClaimedByOther ? (
-                <p className="font-medium text-amber-800 dark:text-amber-300 truncate">
-                  Claimed by{" "}
-                  <strong>{otherClaimName}</strong>
-                </p>
-              ) : (
-                <p className="font-medium text-neutral-500 dark:text-neutral-400 truncate">
-                  {node.node_type === "aws_service"
-                    ? "Unclaimed AWS resource"
-                    : node.node_type === "group"
-                    ? "Unclaimed group container"
-                    : "Unclaimed milestone"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Claim Action Button */}
-          <div className="shrink-0">
-            {isClaimedByMe ? (
-              <button
-                type="button"
-                onClick={() => onReleaseNode(node.id)}
-                className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer shadow-2xs dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300 dark:hover:bg-[#283548]"
-              >
-                Release
-              </button>
-            ) : isClaimedByOther ? (
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => onRequestClaim(node)}
-                  className="rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-700 transition-colors cursor-pointer shadow-2xs"
-                >
-                  Request Edit
-                </button>
-                {isProjectOwner && onForceUnlock && (
-                  <button
-                    type="button"
-                    onClick={() => onForceUnlock(node.id)}
-                    title="Owner Override: Force unlock"
-                    className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-600 hover:bg-red-100 transition-colors cursor-pointer dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400"
-                  >
-                    Force Free
-                  </button>
-                )}
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onClaimNode(node.id)}
-                className="rounded-lg bg-neutral-900 px-3 py-1 text-[11px] font-semibold text-white hover:bg-neutral-800 transition-colors cursor-pointer shadow-2xs dark:bg-emerald-600 dark:hover:bg-emerald-500"
-              >
-                Claim to Edit
-              </button>
-            )}
-          </div>
+      <div className={`shrink-0 border-b px-5 py-3 ${claimedByOther ? "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20" : "border-neutral-100 bg-neutral-50 dark:border-[#283548] dark:bg-[#121721]/60"}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300">{claimedByOther ? <Lock className="h-3.5 w-3.5 shrink-0 text-amber-600" /> : <Unlock className="h-3.5 w-3.5 shrink-0" />}<span>{editable ? "You have edit access" : claimedByOther ? `Editing: ${holderName}` : "Claim this node to make changes"}</span></p>
+          {editable ? <button type="button" disabled={isReleasing} onClick={() => void release()} className={`${BUTTON} disabled:opacity-50`}>{isReleasing ? "Saving…" : "Release"}</button> : claimedByOther ? <button type="button" onClick={() => onRequestClaim(node)} className={BUTTON}>Request access</button> : <button type="button" onClick={() => onClaimNode(node.id)} className="rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:bg-emerald-600">Claim to edit</button>}
         </div>
+        {claimedByOther && isProjectOwner && onForceUnlock && <button type="button" onClick={() => onForceUnlock(node.id)} className="mt-2 text-[11px] font-semibold text-amber-800 underline underline-offset-2 dark:text-amber-400">Release collaborator&apos;s lock as owner</button>}
+        {saveError && <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">{saveError}</p>}
       </div>
 
-      {/* Drawer Body Scroll */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
-        {/* Title Input */}
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5">
         <div>
-          <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
-            {node.node_type === "aws_service"
-              ? "Service Name / Resource Label"
-              : node.node_type === "group"
-              ? "Container Label"
-              : "Step Title"}
-          </label>
-          <input
-            type="text"
-            value={title}
-            disabled={!isClaimedByMe}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={handleTitleBlur}
-            placeholder="e.g. Setup Supabase Database"
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20 dark:disabled:bg-[#161d27] dark:disabled:text-neutral-500"
-          />
+          <label htmlFor={`${id}-title`} className={LABEL}>{isAws ? "Resource label" : isGroup ? "Group name" : isAnnotation ? "Note title" : "Milestone title"}</label>
+          <input id={`${id}-title`} value={title} disabled={!editable} maxLength={200} onChange={(event) => { setTitle(event.target.value); setTitleError(""); }} onBlur={saveTitle}
+            onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); saveTitle(); } if (event.key === "Escape") { event.preventDefault(); setTitle(node.title); setTitleError(""); } }}
+            aria-invalid={Boolean(titleError)} aria-describedby={titleError ? `${id}-title-error` : undefined} className={`${FIELD} font-semibold`} />
+          {titleError && <p id={`${id}-title-error`} className="mt-1 text-xs text-red-600" role="alert">{titleError}</p>}
+          <p className="mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400">Changes save when you leave a field. Press Enter to save the title.</p>
         </div>
 
-        {/* Progress Bar & Readout (Milestones only) */}
-        {(!node.node_type || node.node_type === "milestone") && node.checkpoints.length > 0 && (
-          <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4 dark:border-[#283548] dark:bg-[#121721]">
-            <div className="flex items-center justify-between text-xs font-semibold mb-2">
-              <span className="text-neutral-700 dark:text-neutral-300">Milestone Completion</span>
-              <span className={isComplete ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-neutral-900 dark:text-white"}>
-                {completionPct}% ({node.checkpoints.filter((c) => c.is_completed).length}/{node.checkpoints.length})
-              </span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-[#1e2634]">
-              <div
-                className={`h-full transition-all duration-300 ease-out rounded-full ${
-                  isComplete
-                    ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.7)]"
-                    : completionPct > 0
-                    ? "bg-neutral-900 dark:bg-emerald-500"
-                    : "bg-transparent"
-                }`}
-                style={{ width: `${completionPct}%` }}
-              />
-            </div>
+        {!isAnnotation && <div>
+          <label htmlFor={`${id}-status`} className={LABEL}>{isAws ? "Resource status" : "Status"}</label>
+          <select id={`${id}-status`} value={isMilestone && complete ? "completed" : node.status} disabled={!editable || (isMilestone && node.checkpoints.length > 0 && complete)}
+            onChange={(event) => persist({ status: event.target.value as NodeStatus })} className={FIELD}>
+            <option value="draft">Planned</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="completed" disabled={isMilestone && node.checkpoints.length > 0 && !complete}>{isAws ? "Ready" : "Complete"}</option>
+          </select>
+          {isMilestone && node.checkpoints.length > 0 && <p className="mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400">Completion follows the checklist below.</p>}
+        </div>}
+
+        {isMilestone && <section aria-label="Milestone checkpoints">
+          <div className="mb-3 flex items-center justify-between gap-2"><h3 className={`${LABEL} mb-0`}>Checkpoints</h3><span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400">{completedCount}/{node.checkpoints.length}{node.checkpoints.length > 0 && ` · ${completion}%`}</span></div>
+          {node.checkpoints.length > 0 && <div role="progressbar" aria-label="Milestone completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completion} className="mb-3 h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-[#1e2634]"><div className="h-full rounded-full bg-emerald-500 transition-[width] motion-reduce:transition-none" style={{ width: `${completion}%` }} /></div>}
+          {!node.checkpoints.length && <p className="mb-3 rounded-lg border border-dashed border-neutral-200 p-3 text-xs leading-relaxed text-neutral-500 dark:border-[#283548] dark:text-neutral-400">Break this milestone into clear steps to track progress.{!editable && " Claim edit access to add your first checkpoint."}</p>}
+          <div className="space-y-2">{node.checkpoints.map((checkpoint) => <div key={checkpoint.id} className={`flex items-start gap-2 rounded-lg border p-2.5 ${checkpoint.is_completed ? "border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20" : "border-neutral-200 dark:border-[#283548]"}`}>
+            <button type="button" aria-pressed={checkpoint.is_completed} aria-label={editable ? `Mark "${checkpoint.title}" as ${checkpoint.is_completed ? "incomplete" : "complete"}` : `Get edit access for "${checkpoint.title}"`}
+              onClick={() => editable ? onToggleCheckpoint(checkpoint.id, node.id, !checkpoint.is_completed) : claimedByOther ? onRequestClaim(node) : onClaimNode(node.id)}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+              {checkpoint.is_completed ? <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> : <Circle className="h-4 w-4 text-neutral-400" />}
+            </button>
+            <p className={`min-w-0 flex-1 self-center break-words text-xs leading-relaxed ${checkpoint.is_completed ? "text-neutral-500 line-through" : "text-neutral-800 dark:text-neutral-200"}`}>{checkpoint.title}</p>
+            {editable && <button type="button" aria-label={`Delete checkpoint "${checkpoint.title}"`} title="Delete checkpoint" onClick={() => onDeleteCheckpoint(checkpoint.id, node.id)} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-red-950/30"><Trash2 className="h-3.5 w-3.5" /></button>}
+          </div>)}</div>
+          {editable && <form className="mt-3 flex items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (newCheckpoint.trim()) { onAddCheckpoint(node.id, newCheckpoint.trim()); setNewCheckpoint(""); } }}>
+            <input aria-label="New checkpoint" placeholder="Add a checkpoint…" maxLength={500} value={newCheckpoint} onChange={(event) => setNewCheckpoint(event.target.value)} className={`${FIELD} flex-1 text-xs`} />
+            <button type="submit" aria-label="Add checkpoint" disabled={!newCheckpoint.trim()} className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-neutral-900 text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:bg-emerald-600"><Plus className="h-4 w-4" /></button>
+          </form>}
+        </section>}
+
+        {isAws && <section aria-label="AWS resource configuration" className="space-y-4">
+          <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-[#283548] dark:bg-[#121721]"><AwsIcon serviceId={node.aws_metadata?.serviceId || ""} size={36} /><div className="min-w-0"><p className="text-xs font-semibold text-neutral-900 dark:text-white">{service?.name || node.aws_metadata?.serviceId || "AWS service"}</p><p className="mt-1 text-[11px] capitalize text-neutral-500 dark:text-neutral-400">{(service?.category || node.aws_metadata?.category || "").replaceAll("-", " ").replaceAll("_", " ")}</p></div></div>
+          <div><label htmlFor={`${id}-region`} className={LABEL}>AWS Region</label><input id={`${id}-region`} value={region} disabled={!editable} onChange={(event) => setRegion(event.target.value)} onBlur={() => saveMetadata()} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); saveMetadata(); } }} placeholder="Unspecified · e.g. eu-west-1" className={FIELD} /><p className="mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400">Leave blank for a global service or an undecided region.</p></div>
+          <div><h3 className={LABEL}>Resource configuration</h3>
+            <div className="space-y-2">{Object.entries(config).map(([key, value]) => <div key={key} className="flex items-center gap-2">
+              <label htmlFor={`${id}-config-${key}`} className="w-1/3 shrink-0 break-words text-xs font-medium text-neutral-600 dark:text-neutral-400">{key}</label>
+              <input id={`${id}-config-${key}`} value={value} disabled={!editable} onChange={(event) => setConfig((previous) => ({ ...previous, [key]: event.target.value }))} onBlur={() => saveMetadata()} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); saveMetadata(); } }} className={`${FIELD} flex-1 px-2 py-2 font-mono text-xs`} />
+              {editable && <button type="button" aria-label={`Remove configuration ${key}`} onClick={() => { const next = { ...config }; delete next[key]; setConfig(next); saveMetadata(next); }} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-neutral-400 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"><Trash2 className="h-3.5 w-3.5" /></button>}
+            </div>)}</div>
+            {!Object.keys(config).length && <p className="text-xs text-neutral-500 dark:text-neutral-400">No properties added yet.</p>}
+            {editable && <form className="mt-3 space-y-2 rounded-lg border border-dashed border-neutral-200 p-3 dark:border-[#283548]" onSubmit={(event) => {
+              event.preventDefault(); const key = newConfigKey.trim(); if (!key) return;
+              if (Object.hasOwn(config, key)) { setConfigError("This key already exists. Edit its value above."); return; }
+              const next = { ...config, [key]: newConfigValue }; setConfig(next); saveMetadata(next); setNewConfigKey(""); setNewConfigValue(""); setConfigError("");
+            }}>
+              <div className="flex gap-2"><input aria-label="Configuration key" value={newConfigKey} onChange={(event) => { setNewConfigKey(event.target.value); setConfigError(""); }} placeholder="Key" className={`${FIELD} flex-1 px-2 py-2 text-xs`} /><input aria-label="Configuration value" value={newConfigValue} onChange={(event) => setNewConfigValue(event.target.value)} placeholder="Value" className={`${FIELD} flex-1 px-2 py-2 text-xs`} /></div>
+              {configError && <p role="alert" className="text-xs text-red-600">{configError}</p>}
+              <button type="submit" disabled={!newConfigKey.trim()} className={`${BUTTON} w-full disabled:opacity-40`}><Plus className="h-3.5 w-3.5" />Add property</button>
+            </form>}
           </div>
-        )}
+        </section>}
 
-        {/* AWS Service Details & Configuration */}
-        {node.node_type === "aws_service" && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-3.5 dark:border-[#283548] dark:bg-[#121721]">
-              <AwsIcon serviceId={node.aws_metadata?.serviceId || ""} size={36} />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold text-neutral-900 dark:text-white truncate">
-                  {AWS_SERVICE_REGISTRY[node.aws_metadata?.serviceId || ""]?.name || node.aws_metadata?.serviceId || "AWS Service"}
-                </div>
-                <div className="text-[11px] text-neutral-500 dark:text-neutral-400 capitalize">
-                  Category: {node.aws_metadata?.category?.replace("_", " ") || "Compute"}
-                </div>
-              </div>
-            </div>
+        {isGroup && <div><label htmlFor={`${id}-style`} className={LABEL}>Boundary style</label><select id={`${id}-style`} disabled={!editable} value={node.group_metadata?.style || "custom"} onChange={(event) => persist({ group_metadata: { label: node.group_metadata?.label || node.title, style: event.target.value as NonNullable<CanvasNode["group_metadata"]>["style"], childNodeIds: node.group_metadata?.childNodeIds || [] } })} className={FIELD}>{GROUP_STYLES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">{node.group_metadata?.childNodeIds?.length || 0} resources in this group</p></div>}
 
-            {/* Region Configuration */}
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
-                AWS Region
-              </label>
-              <input
-                type="text"
-                disabled={!isClaimedByMe}
-                value={node.aws_metadata?.region || "us-east-1"}
-                onChange={(e) => {
-                  if (isClaimedByMe) {
-                    onUpdateNode(node.id, {
-                      aws_metadata: {
-                        ...node.aws_metadata,
-                        serviceId: node.aws_metadata?.serviceId || "",
-                        category: node.aws_metadata?.category || "compute",
-                        region: e.target.value,
-                      },
-                    });
-                  }
-                }}
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 dark:border-[#283548] dark:bg-[#121721] dark:text-white"
-              />
-            </div>
+        {isAnnotation && <div><label htmlFor={`${id}-note`} className={LABEL}>Note content</label><textarea id={`${id}-note`} rows={6} disabled={!editable} value={annotation} onChange={(event) => setAnnotation(event.target.value)} onBlur={() => { if (editable && annotation !== (node.annotation_metadata?.content || "")) persist({ annotation_metadata: { ...node.annotation_metadata, content: annotation } }); }} className={`${FIELD} resize-y leading-relaxed`} /></div>}
 
-            {/* Configuration Key-Values */}
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
-                Resource Configuration
-              </label>
-              <div className="space-y-2 rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-3 dark:border-[#283548] dark:bg-[#121721]">
-                {node.aws_metadata?.config && Object.entries(node.aws_metadata.config).length > 0 ? (
-                  Object.entries(node.aws_metadata.config).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between text-xs py-1 border-b border-neutral-200/60 dark:border-[#283548] last:border-0">
-                      <span className="font-semibold text-neutral-600 dark:text-neutral-400">{key}</span>
-                      <input aria-label={key} value={value} disabled={!isClaimedByMe}
-                        onChange={(event) => onUpdateNode(node.id, { aws_metadata: {
-                          ...node.aws_metadata!, config: { ...node.aws_metadata?.config, [key]: event.target.value },
-                        } })}
-                        className="w-1/2 min-w-0 font-mono text-neutral-900 dark:text-neutral-200 bg-white dark:bg-[#161d27] px-2 py-1 rounded border border-neutral-200 dark:border-[#283548]" />
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-neutral-400 dark:text-neutral-500 italic py-1">
-                    No resource configuration specified.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <div><label htmlFor={`${id}-description`} className={LABEL}>Description & notes</label><textarea id={`${id}-description`} rows={4} disabled={!editable} value={description} onChange={(event) => setDescription(event.target.value)} onBlur={saveDescription} placeholder="Add context, requirements, links, or decisions…" className={`${FIELD} resize-y text-xs leading-relaxed`} /></div>
 
-        {/* Group Container Configuration */}
-        {node.node_type === "group" && (
-          <div className="space-y-4">
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
-                Container Style & Boundary
-              </label>
-              <DrawerDropdown value={node.group_metadata?.style || "vpc"} disabled={!isClaimedByMe} onChange={(value) => {
-                if (isClaimedByMe) {
-                  onUpdateNode(node.id, {
-                    group_metadata: {
-                      label: node.group_metadata?.label || node.title,
-                      style: value as "vpc" | "subnet" | "region" | "availability_zone" | "custom",
-                      childNodeIds: node.group_metadata?.childNodeIds || [],
-                    },
-                  });
-                }
-              }} />
-            </div>
-            <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-3 dark:border-[#283548] dark:bg-[#121721]">
-              <span className="text-xs text-neutral-600 dark:text-neutral-400">
-                Encapsulated resources: {node.group_metadata?.childNodeIds?.length || 0}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Checkpoints Checklist (Milestones only) */}
-        {(!node.node_type || node.node_type === "milestone") && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                Checkpoints ({node.checkpoints.length})
-              </label>
-              {!isClaimedByMe && (
-                <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium italic">
-                  (View-only)
-                </span>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              {node.checkpoints.length === 0 && (
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic py-1">
-                  No checkpoints yet. {isClaimedByMe ? "Add your first step below." : "Claim this milestone to add checklist steps."}
-                </p>
-              )}
-              {node.checkpoints.map((cp) => (
-                <div
-                  key={cp.id}
-                  className={`group relative flex items-start justify-between gap-3 rounded-xl border p-3 transition-all ${
-                    cp.is_completed
-                      ? "border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/40 dark:bg-emerald-950/20"
-                      : "border-neutral-200/90 bg-white hover:border-neutral-300 hover:shadow-2xs dark:border-[#283548] dark:bg-[#121721] dark:hover:border-[#384961]"
-                  }`}
-                >
-                  {/* Dedicated Checkbox Toggle Button */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (isClaimedByMe) {
-                        onToggleCheckpoint(cp.id, node.id, !cp.is_completed);
-                      } else if (isClaimedByOther) {
-                        onRequestClaim(node);
-                      } else {
-                        onClaimNode(node.id);
-                      }
-                    }}
-                    aria-label={cp.is_completed ? "Mark checkpoint as incomplete" : "Mark checkpoint as complete"}
-                    title={
-                      isClaimedByMe
-                        ? cp.is_completed
-                          ? "Click to mark as incomplete"
-                          : "Click to mark as complete"
-                        : isClaimedByOther
-                        ? "Claimed by collaborator. Click to request edit."
-                        : "Unclaimed milestone. Click to claim edit lock."
-                    }
-                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/20 dark:focus-visible:ring-emerald-500/20 ${
-                      cp.is_completed
-                        ? "text-emerald-600 hover:text-emerald-700 hover:scale-110 dark:text-emerald-400"
-                        : "text-neutral-300 hover:text-neutral-600 hover:scale-110 dark:text-neutral-600 dark:hover:text-neutral-400"
-                    }`}
-                  >
-                    {cp.is_completed ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0" />
-                    ) : (
-                      <Circle className="h-4 w-4 shrink-0" />
-                    )}
-                  </button>
-
-                  {/* Checkpoint Text Content */}
-                  <div className="flex-1 min-w-0 pr-1">
-                    <p
-                      className={`text-xs leading-relaxed break-words select-text ${
-                        cp.is_completed
-                          ? "text-neutral-400 line-through decoration-neutral-300 dark:text-neutral-500 dark:decoration-neutral-600"
-                          : "text-neutral-800 font-medium dark:text-neutral-200"
-                      }`}
-                    >
-                      {cp.title}
-                    </p>
-                  </div>
-
-                  {/* Delete Checkpoint Button - Only when Claimed */}
-                  {isClaimedByMe && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteCheckpoint(cp.id, node.id);
-                      }}
-                      title="Delete checkpoint"
-                      className="opacity-0 group-hover:opacity-100 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer dark:hover:bg-red-950/40 dark:hover:text-red-400"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-
-              {/* Inline Add Checkpoint Form - Only available to Claim holder */}
-              {isClaimedByMe && (
-                <form onSubmit={handleAddCheckpoint} className="mt-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newCheckpointTitle}
-                      onChange={(e) => setNewCheckpointTitle(e.target.value)}
-                      placeholder="Add new checkpoint item (press Enter)…"
-                      className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-900 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newCheckpointTitle.trim()}
-                      className="inline-flex h-8 items-center justify-center rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Description Field */}
-        <div>
-          <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-1.5">
-            Description & Notes
-          </label>
-          <textarea
-            rows={3}
-            value={description}
-            disabled={!isClaimedByMe}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={handleDescriptionBlur}
-            placeholder="Document technical requirements, schema links, or architecture guidelines…"
-            className="w-full rounded-lg border border-neutral-200 bg-white p-3 text-xs leading-relaxed text-neutral-800 shadow-2xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed resize-none dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20 dark:disabled:bg-[#161d27] dark:disabled:text-neutral-500"
-          />
-        </div>
-
-        {/* Architecture Connections (AWS / Group) OR Dependency Flow (Milestones) */}
-        {node.node_type === "aws_service" || node.node_type === "group" ? (
-          <div className="border-t border-neutral-100 dark:border-[#283548] pt-5">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-3">
-              Architecture Connections
-            </label>
-
-            {/* Inbound Sources */}
-            <div className="mb-4">
-              <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
-                <ArrowLeft className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
-                Inbound Sources ({prerequisiteNodes.length})
-              </p>
-              {prerequisiteNodes.length === 0 ? (
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No inbound traffic or connections</p>
-              ) : (
-                <div className="space-y-1.5 pl-2">
-                  {prerequisiteNodes.map((pn) => {
-                    const isSourceActive = pn.status === "completed";
-                    const isAws = pn.node_type === "aws_service";
-                    return (
-                      <div
-                        key={pn.id}
-                        onClick={() => onJumpToNode(pn.id)}
-                        className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
-                      >
-                        <div className="flex items-center gap-2 min-w-0 pr-2">
-                          <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{pn.title}</span>
-                          {pn.aws_metadata?.serviceId && (
-                            <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase font-mono">
-                              ({pn.aws_metadata.serviceId})
-                            </span>
-                          )}
-                        </div>
-                        <span
-                          className={`text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
-                            isSourceActive
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                              : "bg-neutral-200 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-400"
-                          }`}
-                        >
-                          {isAws ? (isSourceActive ? "Live" : "Planned") : isSourceActive ? "Done" : "In Progress"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Outbound Destinations */}
-            <div>
-              <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
-                <ArrowRight className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
-                Outbound Destinations ({unlockedNodes.length})
-              </p>
-              {unlockedNodes.length === 0 ? (
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No outbound services connected</p>
-              ) : (
-                <div className="space-y-1.5 pl-2">
-                  {unlockedNodes.map((un) => {
-                    const isTargetActive = un.status === "completed";
-                    const isAws = un.node_type === "aws_service";
-                    return (
-                      <div
-                        key={un.id}
-                        onClick={() => onJumpToNode(un.id)}
-                        className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
-                      >
-                        <div className="flex items-center gap-2 min-w-0 pr-2">
-                          <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{un.title}</span>
-                          {un.aws_metadata?.serviceId && (
-                            <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase font-mono">
-                              ({un.aws_metadata.serviceId})
-                            </span>
-                          )}
-                        </div>
-                        <span
-                          className={`text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded shrink-0 ${
-                            isTargetActive
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                              : "bg-neutral-200 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-400"
-                          }`}
-                        >
-                          {isAws ? (isTargetActive ? "Live" : "Planned") : isTargetActive ? "Done" : "In Progress"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          /* Dependency Chain Section for Milestones */
-          <div className="border-t border-neutral-100 dark:border-[#283548] pt-5">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-3">
-              Dependency Flow
-            </label>
-
-            {/* Prerequisites */}
-            <div className="mb-3">
-              <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
-                <ArrowLeft className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
-                Prerequisites ({prerequisiteNodes.length})
-              </p>
-              {prerequisiteNodes.length === 0 ? (
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No prerequisites (Root step)</p>
-              ) : (
-                <div className="space-y-1.5 pl-2">
-                  {prerequisiteNodes.map((pn) => {
-                    const prereqComplete = isNodeFullyComplete(pn);
-                    return (
-                      <div
-                        key={pn.id}
-                        onClick={() => onJumpToNode(pn.id)}
-                        className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
-                      >
-                        <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{pn.title}</span>
-                        <span
-                          className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                            prereqComplete
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                              : "bg-neutral-200 text-neutral-600 dark:bg-[#1e2634] dark:text-neutral-400"
-                          }`}
-                        >
-                          {prereqComplete ? "Done" : "Pending"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Unlocked Downstream Steps */}
-            <div>
-              <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 mb-1.5">
-                <ArrowRight className="h-3 w-3 text-neutral-400 dark:text-neutral-500" />
-                Unlocks Downstream ({unlockedNodes.length})
-              </p>
-              {unlockedNodes.length === 0 ? (
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic pl-4">No downstream steps</p>
-              ) : (
-                <div className="space-y-1.5 pl-2">
-                  {unlockedNodes.map((un) => (
-                    <div
-                      key={un.id}
-                      onClick={() => onJumpToNode(un.id)}
-                      className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/70 px-3 py-2 text-xs transition-colors hover:bg-neutral-100 cursor-pointer dark:border-[#283548] dark:bg-[#121721] dark:hover:bg-[#1e2634]"
-                    >
-                      <span className="font-medium text-neutral-800 dark:text-neutral-200 truncate">{un.title}</span>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                        {isComplete ? "Wire Glowing" : "Waiting"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {!isAnnotation && <section aria-label="Connected nodes" className="space-y-4 border-t border-neutral-100 pt-5 dark:border-[#283548]"><h3 className={LABEL}>{isMilestone ? "Dependency flow" : "Architecture connections"}</h3>{renderConnections(incoming, "incoming")}{renderConnections(outgoing, "outgoing")}</section>}
       </div>
 
-      {/* Drawer Footer Actions - Only available if claimed or owner */}
-      {(isClaimedByMe || isProjectOwner) && (
-        <div className="border-t border-neutral-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-neutral-50/50 dark:border-[#283548] dark:bg-[#121721]/50">
-          <button
-            type="button"
-            onClick={() => onDeleteNode(node.id)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white py-2 text-xs font-semibold text-red-600 shadow-2xs hover:bg-red-50 transition-colors cursor-pointer dark:border-red-900/50 dark:bg-[#161d27] dark:text-red-400 dark:hover:bg-red-950/30"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            <span>
-              {node.node_type === "aws_service"
-                ? "Delete AWS Service"
-                : node.node_type === "group"
-                ? "Delete Group Container"
-                : "Delete Milestone Box"}
-            </span>
-          </button>
-        </div>
-      )}
+      {(editable || isProjectOwner) && <div className="shrink-0 border-t border-neutral-100 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-[#283548]"><button type="button" onClick={() => onDeleteNode(node.id)} className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30"><Trash2 className="h-3.5 w-3.5" />Delete {kind.toLowerCase()}</button></div>}
     </aside>
-    </>
-  );
+  </>;
 }
 
 export default function CanvasDrawer(props: CanvasDrawerProps) {
-  if (!props.node) return null;
-  return (
-    <MilestoneDrawerContent
-      key={`${props.node.id}:${props.node.title}:${props.node.description || ""}`}
-      {...props}
-      node={props.node}
-    />
-  );
+  return props.node ? <NodeDrawer key={props.node.id} {...props} node={props.node} /> : null;
 }

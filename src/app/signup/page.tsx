@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { APP_RELEASE } from "@/lib/release";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, isAdminRole, isProfileComplete } from "@/lib/auth/session";
@@ -56,7 +57,7 @@ export default async function SignUpPage() {
         </div>
 
         <div className="flex items-center justify-center gap-3 text-xs pt-4">
-          <span className="font-semibold text-neutral-900 dark:text-white">Beta v1.0.7</span>
+          <span className="font-semibold text-neutral-900 dark:text-white">{APP_RELEASE}</span>
           <span className="text-neutral-300 dark:text-neutral-600">&bull;</span>
           <TermsOfServiceTrigger />
           <span className="text-neutral-300 dark:text-neutral-600">&bull;</span>

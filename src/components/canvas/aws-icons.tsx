@@ -3,6 +3,7 @@
 import React from "react";
 import type { AWSServiceCategory } from "@/lib/canvas/types";
 import catalog from "@/lib/canvas/aws-catalog.json";
+import { normalizeAWSServiceId } from "@/lib/canvas/aws-catalog-lookup";
 
 export interface AWSIconProps { size?: number; className?: string }
 export interface AWSServiceDef {
@@ -28,9 +29,13 @@ export const AWS_SERVICE_REGISTRY: Record<string, AWSServiceDef> = Object.fromEn
 export function getServicesByCategory(category: AWSServiceCategory): AWSServiceDef[] {
   return Object.values(AWS_SERVICE_REGISTRY).filter((service) => service.category === category);
 }
+/** Resolve legacy diagram IDs without changing persisted node metadata. */
+export function getAWSService(serviceId: string): AWSServiceDef | undefined {
+  return AWS_SERVICE_REGISTRY[normalizeAWSServiceId(serviceId)];
+}
 export interface AwsIconProps extends AWSIconProps { serviceId: string }
 export function AwsIcon({ serviceId, ...props }: AwsIconProps) {
-  const service = AWS_SERVICE_REGISTRY[serviceId?.toLowerCase()];
+  const service = getAWSService(serviceId || "");
   if (service) { const Icon = service.icon; return <Icon {...props} />; }
   return <AWSLogoIcon {...props} />;
 }

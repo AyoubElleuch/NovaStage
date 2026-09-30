@@ -1,4 +1,5 @@
 "use client";
+import { APP_RELEASE } from "@/lib/release";
 
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -52,7 +53,7 @@ export default function AdminContentFrame({
               />
             </Link>
             <span className="rounded-md border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300">
-              Beta v1.0.7
+              {APP_RELEASE}
             </span>
           </div>
         </div>

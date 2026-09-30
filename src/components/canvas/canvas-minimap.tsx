@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useId } from "react";
 import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { CanvasNode, CanvasViewport } from "@/lib/canvas/types";
-import { getCanvasBoundingBox, isNodeFullyComplete } from "@/lib/canvas/coordinate-math";
+import { getCanvasBoundingBox, getNodeDimensions, isNodeFullyComplete } from "@/lib/canvas/coordinate-math";
 
 interface CanvasMinimapProps {
   nodes: CanvasNode[];
@@ -11,6 +11,7 @@ interface CanvasMinimapProps {
   onViewportChange: (newViewport: CanvasViewport) => void;
   isOpen?: boolean;
   onToggleOpen?: () => void;
+  rightInset?: number;
 }
 
 const MINIMAP_WIDTH = 190;
@@ -22,22 +23,51 @@ export default function CanvasMinimap({
   onViewportChange,
   isOpen = true,
   onToggleOpen,
+  rightInset = 0,
 }: CanvasMinimapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [windowSize, setWindowSize] = useState({ width: 1280, height: 800 });
+  const asideRef = useRef<HTMLElement>(null);
+  const mapId = useId();
+  const [dragBounds, setDragBounds] = useState<ReturnType<typeof getCanvasBoundingBox> | null>(null);
+  const activePointerRef = useRef<number | null>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 1280, height: 800 });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const canvas = asideRef.current?.parentElement?.querySelector<HTMLElement>("[data-canvas-viewport]");
     const updateSize = () => {
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+      setCanvasSize({ width: canvas?.clientWidth || window.innerWidth, height: canvas?.clientHeight || window.innerHeight });
     };
     updateSize();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateSize) : null;
+    if (canvas) observer?.observe(canvas);
     window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
   }, []);
 
-  const bounds = getCanvasBoundingBox(nodes, 80);
+  useEffect(() => {
+    const cancelDrag = () => { activePointerRef.current = null; setDragBounds(null); };
+    window.addEventListener("blur", cancelDrag);
+    return () => window.removeEventListener("blur", cancelDrag);
+  }, []);
+
+  // Include the visible world so the view indicator remains visible even far from the graph.
+  const visibleCanvasWidth = Math.max(1, canvasSize.width - rightInset);
+  const viewWorldW = visibleCanvasWidth / viewport.zoom;
+  const viewWorldH = canvasSize.height / viewport.zoom;
+  const viewWorldX = -viewport.x / viewport.zoom;
+  const viewWorldY = -viewport.y / viewport.zoom;
+  const graphBounds = getCanvasBoundingBox(nodes, 80);
+  const minX = Math.min(graphBounds.minX, viewWorldX);
+  const minY = Math.min(graphBounds.minY, viewWorldY);
+  const maxX = Math.max(graphBounds.maxX, viewWorldX + viewWorldW);
+  const maxY = Math.max(graphBounds.maxY, viewWorldY + viewWorldH);
+  // Freeze the map projection while dragging to prevent the target drifting under the pointer.
+  const bounds = dragBounds || {
+    minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY,
+  };
   const scaleX = MINIMAP_WIDTH / bounds.width;
   const scaleY = MINIMAP_HEIGHT / bounds.height;
   const mapScale = Math.min(scaleX, scaleY);
@@ -62,27 +92,21 @@ export default function CanvasMinimap({
     };
   };
 
-  // Viewport box in world coords
-  const viewWorldW = windowSize.width / viewport.zoom;
-  const viewWorldH = windowSize.height / viewport.zoom;
-  const viewWorldX = -viewport.x / viewport.zoom;
-  const viewWorldY = -viewport.y / viewport.zoom;
-
   const viewMapPos = worldToMap(viewWorldX, viewWorldY);
-  const viewMapW = Math.max(14, viewWorldW * mapScale);
-  const viewMapH = Math.max(10, viewWorldH * mapScale);
+  const viewMapW = viewWorldW * mapScale;
+  const viewMapH = viewWorldH * mapScale;
 
   const handlePointerAction = (e: React.PointerEvent) => {
     if (!mapRef.current) return;
     const rect = mapRef.current.getBoundingClientRect();
-    const mapX = Math.max(0, Math.min(MINIMAP_WIDTH, e.clientX - rect.left));
-    const mapY = Math.max(0, Math.min(MINIMAP_HEIGHT, e.clientY - rect.top));
+    const mapX = Math.max(0, Math.min(MINIMAP_WIDTH, (e.clientX - rect.left) * MINIMAP_WIDTH / (rect.width || MINIMAP_WIDTH)));
+    const mapY = Math.max(0, Math.min(MINIMAP_HEIGHT, (e.clientY - rect.top) * MINIMAP_HEIGHT / (rect.height || MINIMAP_HEIGHT)));
 
     const worldTarget = mapToWorld(mapX, mapY);
 
     // Center screen on clicked world point
-    const newViewportX = windowSize.width / 2 - worldTarget.x * viewport.zoom;
-    const newViewportY = windowSize.height / 2 - worldTarget.y * viewport.zoom;
+    const newViewportX = visibleCanvasWidth / 2 - worldTarget.x * viewport.zoom;
+    const newViewportY = canvasSize.height / 2 - worldTarget.y * viewport.zoom;
 
     onViewportChange({
       ...viewport,
@@ -92,8 +116,12 @@ export default function CanvasMinimap({
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0 && e.pointerType !== "touch") return;
+    if (activePointerRef.current !== null) return;
+    e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    activePointerRef.current = e.pointerId;
+    setDragBounds(bounds);
     try {
       mapRef.current?.setPointerCapture?.(e.pointerId);
     } catch {}
@@ -101,14 +129,15 @@ export default function CanvasMinimap({
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (isDragging) {
+    if (activePointerRef.current === e.pointerId) {
       handlePointerAction(e);
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    if (isDragging) {
-      setIsDragging(false);
+    if (activePointerRef.current === e.pointerId) {
+      activePointerRef.current = null;
+      setDragBounds(null);
       try {
         mapRef.current?.releasePointerCapture?.(e.pointerId);
       } catch {}
@@ -117,6 +146,8 @@ export default function CanvasMinimap({
 
   return (
     <aside
+      style={rightInset ? { right: rightInset + 16, bottom: 96 } : undefined}
+      ref={asideRef}
       aria-label="Canvas Minimap Radar"
       className={`absolute bottom-24 right-3 sm:bottom-6 sm:right-6 z-20 flex flex-col items-end pointer-events-auto ${
         !isOpen ? "hidden sm:flex" : ""
@@ -127,6 +158,8 @@ export default function CanvasMinimap({
         <button
           type="button"
           onClick={onToggleOpen}
+          aria-expanded={isOpen}
+          aria-controls={isOpen ? mapId : undefined}
           title={isOpen ? "Collapse Minimap" : "Expand Minimap"}
           className="flex items-center gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-neutral-700 shadow-sm backdrop-blur-md hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"
         >
@@ -144,12 +177,33 @@ export default function CanvasMinimap({
       {isOpen && (
         <div
           ref={mapRef}
+          id={mapId}
+          role="region"
+          aria-label="Canvas overview. Click or drag to navigate."
+          aria-describedby={`${mapId}-help`}
+          tabIndex={0}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onLostPointerCapture={handlePointerUp}
+          onKeyDown={(e) => {
+            const step = e.shiftKey ? 160 : 48;
+            const delta: Record<string, { x: number; y: number }> = {
+              ArrowLeft: { x: step, y: 0 }, ArrowRight: { x: -step, y: 0 },
+              ArrowUp: { x: 0, y: step }, ArrowDown: { x: 0, y: -step },
+            };
+            if (!delta[e.key] || e.ctrlKey || e.metaKey || e.altKey) return;
+            e.preventDefault();
+            e.stopPropagation();
+            onViewportChange({ ...viewport, x: viewport.x + delta[e.key].x, y: viewport.y + delta[e.key].y });
+          }}
           style={{ width: `${MINIMAP_WIDTH}px`, height: `${MINIMAP_HEIGHT}px` }}
-          className="relative overflow-hidden rounded-2xl border border-neutral-200/90 bg-white/95 shadow-xl backdrop-blur-xl transition-all select-none cursor-crosshair dark:border-[#283548] dark:bg-[#161d27]/95"
+          className="relative overflow-hidden rounded-2xl border border-neutral-200/90 bg-white/95 shadow-xl backdrop-blur-xl select-none touch-none cursor-crosshair focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-[#283548] dark:bg-[#161d27]/95"
         >
+          <span id={`${mapId}-help`} className="sr-only pointer-events-none">
+            Use arrow keys to pan the canvas. Hold Shift to pan further.
+          </span>
           {/* Subtle grid background */}
           <div
             className="absolute inset-0 opacity-20 pointer-events-none"
@@ -163,8 +217,9 @@ export default function CanvasMinimap({
           {/* Render Miniature Nodes */}
           {nodes.map((node) => {
             const pos = worldToMap(node.position_x, node.position_y);
-            const w = Math.max(6, (node.width || 280) * mapScale);
-            const h = Math.max(4, (node.height || 170) * mapScale);
+            const dimensions = getNodeDimensions(node);
+            const w = Math.max(6, dimensions.width * mapScale);
+            const h = Math.max(4, dimensions.height * mapScale);
             const isDone = isNodeFullyComplete(node);
             const isClaimed = Boolean(node.claimed_by);
 
@@ -179,7 +234,11 @@ export default function CanvasMinimap({
                   height: `${h}px`,
                 }}
                 className={`absolute rounded-xs pointer-events-none transition-colors ${
-                  isDone
+                  node.node_type === "group"
+                    ? "border border-dashed border-blue-400/80 bg-blue-400/10"
+                    : node.node_type === "annotation"
+                    ? "bg-yellow-300 ring-1 ring-yellow-500/50"
+                    : isDone
                     ? "bg-emerald-500 ring-1 ring-emerald-600/50"
                     : isClaimed
                     ? "bg-amber-400 ring-1 ring-amber-500/50"
@@ -197,7 +256,8 @@ export default function CanvasMinimap({
               width: `${viewMapW}px`,
               height: `${viewMapH}px`,
             }}
-            className="absolute rounded-sm border-2 border-blue-500 bg-blue-500/10 pointer-events-none shadow-xs transition-all duration-75 ease-out dark:border-emerald-400 dark:bg-emerald-400/15"
+            data-testid="minimap-viewport"
+            className="absolute rounded-sm border-2 border-blue-500 bg-blue-500/10 pointer-events-none shadow-xs dark:border-emerald-400 dark:bg-emerald-400/15"
           />
         </div>
       )}

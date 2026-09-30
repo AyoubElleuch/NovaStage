@@ -14,6 +14,7 @@ import {
   findNearestHandle,
   getClosestHandleToPoint,
   getCanvasBoundingBox,
+  getNodeDimensions,
   exportToMermaid,
 } from "./coordinate-math";
 import type { CanvasCheckpoint, CanvasNode, CanvasViewport } from "./types";
@@ -420,6 +421,24 @@ describe("Canvas Coordinate Math & Utilities", () => {
       expect(box.width).toBe(600);
       expect(box.height).toBe(400);
     });
+
+    it("uses rendered fallback dimensions consistently for each node type", () => {
+      const base: CanvasNode = {
+        id: "node", project_id: "p", title: "Node", description: "", status: "draft",
+        position_x: 100, position_y: 50, width: 0, height: 0, color: "default",
+        sort_order: 0, claimed_by: null, version: 1, checkpoints: [],
+      };
+      for (const [nodeType, width, height] of [
+        ["milestone", 280, 170], ["aws_service", 200, 220], ["group", 400, 300], ["annotation", 200, 150],
+      ] as const) {
+        const node = { ...base, node_type: nodeType };
+        expect(getNodeDimensions(node)).toEqual({ width, height });
+        expect(getNodeHandlePosition(node, "bottom")).toEqual({ x: 100 + width / 2, y: 50 + height });
+        const bounds = getCanvasBoundingBox([node], 0);
+        expect(bounds.width).toBe(width);
+        expect(bounds.height).toBe(height);
+      }
+    });
   });
 
   describe("exportToMermaid", () => {
@@ -477,4 +496,3 @@ describe("Canvas Coordinate Math & Utilities", () => {
     });
   });
 });
-

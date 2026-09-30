@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
-import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import React, { useState } from "react";
+import { cleanup, render, screen, fireEvent } from "@testing-library/react";
 import CanvasMinimap from "./canvas-minimap";
 import type { CanvasNode, CanvasViewport } from "@/lib/canvas/types";
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("CanvasMinimap Component", () => {
   const mockNodes: CanvasNode[] = [
@@ -96,5 +97,60 @@ describe("CanvasMinimap Component", () => {
     const toggleBtn = screen.getByTitle(/collapse minimap/i);
     fireEvent.click(toggleBtn);
     expect(handleToggle).toHaveBeenCalled();
+  });
+
+  it("centers on the actual canvas area and keeps the map projection stable while dragging", () => {
+    vi.stubGlobal("PointerEvent", MouseEvent);
+    const changed = vi.fn();
+    const observe = vi.fn();
+    vi.stubGlobal("ResizeObserver", class { observe = observe; disconnect = vi.fn(); });
+    function Harness() {
+      const [viewport, setViewport] = useState(mockViewport);
+      return <div>
+        <div data-canvas-viewport ref={element => {
+          if (element) Object.defineProperties(element, { clientWidth: { value: 600 }, clientHeight: { value: 400 } });
+        }} />
+        <CanvasMinimap nodes={mockNodes} viewport={viewport} onViewportChange={next => { changed(next); setViewport(next); }} />
+      </div>;
+    }
+    render(<Harness />);
+    expect(observe).toHaveBeenCalledOnce();
+    const radar = screen.getByRole("region", { name: /canvas overview/i });
+    // Bounds are x=0..860, y=0..400. Center is world (430, 200).
+    fireEvent.pointerDown(radar, { button: 0, clientX: 95, clientY: 60 });
+    expect(changed).toHaveBeenLastCalledWith({ x: -130, y: 0, zoom: 1 });
+    const first = changed.mock.calls.at(-1)![0];
+    fireEvent.pointerMove(radar, { clientX: 95, clientY: 60 });
+    expect(changed).toHaveBeenLastCalledWith(first);
+    fireEvent.pointerCancel(radar);
+    changed.mockClear();
+    fireEvent.pointerMove(radar, { clientX: 170, clientY: 100 });
+    expect(changed).not.toHaveBeenCalled();
+  });
+
+  it("keeps the viewport indicator visible far from the graph and supports keyboard panning", () => {
+    const changed = vi.fn();
+    render(<CanvasMinimap nodes={mockNodes} viewport={{ x: -5000, y: -3000, zoom: 1 }} onViewportChange={changed} />);
+    const indicator = screen.getByTestId("minimap-viewport");
+    expect(parseFloat(indicator.style.left)).toBeGreaterThanOrEqual(0);
+    expect(parseFloat(indicator.style.left) + parseFloat(indicator.style.width)).toBeLessThanOrEqual(190.001);
+    expect(parseFloat(indicator.style.top) + parseFloat(indicator.style.height)).toBeLessThanOrEqual(120.001);
+    fireEvent.keyDown(screen.getByRole("region", { name: /canvas overview/i }), { key: "ArrowLeft", shiftKey: true });
+    expect(changed).toHaveBeenLastCalledWith({ x: -4840, y: -3000, zoom: 1 });
+  });
+
+  it("centers radar navigation in the visible canvas space beside the inspector", () => {
+    vi.stubGlobal("PointerEvent", MouseEvent);
+    const changed = vi.fn();
+    render(<div>
+      <div data-canvas-viewport ref={element => {
+        if (element) Object.defineProperties(element, { clientWidth: { value: 1000 }, clientHeight: { value: 400 } });
+      }} />
+      <CanvasMinimap nodes={mockNodes} viewport={mockViewport} rightInset={420} onViewportChange={changed} />
+    </div>);
+    const indicator = screen.getByTestId("minimap-viewport");
+    expect(parseFloat(indicator.style.width)).toBeCloseTo(580 / 860 * 190);
+    fireEvent.pointerDown(screen.getByRole("region", { name: /canvas overview/i }), { button: 0, clientX: 95, clientY: 60 });
+    expect(changed).toHaveBeenLastCalledWith({ x: -140, y: 0, zoom: 1 });
   });
 });

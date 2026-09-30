@@ -1,6 +1,20 @@
 import { Check, Sparkles } from "lucide-react";
+import { APP_RELEASE, APP_RELEASE_DATE } from "@/lib/release";
 
 const releases = [
+  {
+    version: APP_RELEASE,
+    date: APP_RELEASE_DATE,
+    title: "Canvas Experience, from Milestones to AWS",
+    summary: "A more comfortable workspace for planning delivery, exploring cloud resources, and navigating complex diagrams on desktop and mobile.",
+    changes: [
+      "Canvas navigation: Find milestones, AWS services, regions, and tasks with canvas search. Fit the diagram or selection, zoom around the visible center, and navigate with a more accurate minimap.",
+      "Clearer milestones: Improved card hierarchy, task progress, editing feedback, and milestone details, with consistent numbering that stays separate from cloud resources.",
+      "AWS resource discovery: Search the service catalog by name and category, browse popular services, and inspect readable configuration summaries and deployment states.",
+      "Better architecture controls: Move nested groups together, keep connected resources readable, and work with clearer selection and connection affordances.",
+      "Everyday polish: Improved touch controls, keyboard shortcuts, empty-state guidance, inspector behavior, and feedback when canvas changes cannot be saved.",
+    ],
+  },
   {
     version: "Beta v1.0.7",
     date: "September 20, 2026",

@@ -7,6 +7,7 @@ import {
   getBezierPoint,
   getNodeHandlePosition,
   isNodeFullyComplete,
+  getNodeDimensions,
 } from "@/lib/canvas/coordinate-math";
 import ConnectionEditor, { type ConnectionUpdate } from "./connection-editor";
 import { X } from "lucide-react";
@@ -52,8 +53,8 @@ export default function CanvasEdgeLayer({
 
   const minX = Math.min(...nodes.map((node) => node.position_x), 0) - padding;
   const minY = Math.min(...nodes.map((node) => node.position_y), 0) - padding;
-  const maxX = Math.max(...nodes.map((node) => node.position_x + (node.width || 280)), 1) + padding;
-  const maxY = Math.max(...nodes.map((node) => node.position_y + (node.height || 170)), 1) + padding;
+  const maxX = Math.max(...nodes.map((node) => node.position_x + getNodeDimensions(node).width), 1) + padding;
+  const maxY = Math.max(...nodes.map((node) => node.position_y + getNodeDimensions(node).height), 1) + padding;
   const width = maxX - minX;
   const height = maxY - minY;
 
@@ -201,6 +202,17 @@ export default function CanvasEdgeLayer({
         return (
           <g
             key={edge.id}
+            data-canvas-ui
+            role="button"
+            tabIndex={0}
+            aria-label={`Connection from ${sourceNode.title} to ${targetNode.title}${edge.label ? `: ${edge.label}` : ""}`}
+            onFocus={() => setHoveredEdgeId(edge.id)}
+            onBlur={() => setHoveredEdgeId(null)}
+            onKeyDown={(event) => {
+              if ((event.key === "Enter" || event.key === " ") && onUpdateEdge && canDelete) {
+                event.preventDefault(); event.stopPropagation(); setEditingEdgeId(edge.id);
+              }
+            }}
             className="pointer-events-auto cursor-pointer group"
             onMouseEnter={() => setHoveredEdgeId(edge.id)}
             onMouseLeave={() => setHoveredEdgeId(null)}
@@ -240,7 +252,7 @@ export default function CanvasEdgeLayer({
             />
 
             {/* Edge Label Badge */}
-            {(edge.label || isArchitecture) && (
+            {(edge.label || isHovered) && (
               <foreignObject
                 x={center.x - 110}
                 y={center.y - 32}
@@ -291,6 +303,7 @@ export default function CanvasEdgeLayer({
                     onDeleteEdge(edge.id);
                   }}
                   title="Remove connection"
+                  aria-label={`Remove connection from ${sourceNode.title} to ${targetNode.title}`}
                   className="flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white shadow-md ring-2 ring-white hover:bg-red-700 transition-all hover:scale-115 cursor-pointer active:scale-95"
                 >
                   <X className="h-3.5 w-3.5 stroke-[2.5]" />

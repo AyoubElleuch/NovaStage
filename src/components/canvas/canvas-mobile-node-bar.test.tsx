@@ -90,4 +90,21 @@ describe("CanvasMobileNodeBar", () => {
     fireEvent.click(screen.getByTitle("Mark next step complete"));
     expect(handleToggle).toHaveBeenCalledWith("cp-1", "node-1", true);
   });
+
+  it("uses AWS context instead of milestone numbering for resources", () => {
+    render(<CanvasMobileNodeBar {...defaultProps} stepIndex={-1} node={{ ...mockNode, node_type: "aws_service", aws_metadata: { serviceId: "ec2", category: "compute" }, checkpoints: [] }} />);
+    expect(screen.getByText("AWS")).not.toBeNull();
+    expect(screen.queryByText("STEP 00")).toBeNull();
+    expect(screen.getByText(/Region unspecified/)).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Deselect AWS resource" })).not.toBeNull();
+  });
+
+  it("deselects the mobile panel on Escape without reaching the canvas", () => {
+    const onDeselect = vi.fn();
+    const canvasKeyDown = vi.fn();
+    render(<div onKeyDown={canvasKeyDown}><CanvasMobileNodeBar {...defaultProps} onDeselect={onDeselect} /></div>);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Details" }), { key: "Escape" });
+    expect(onDeselect).toHaveBeenCalledTimes(1);
+    expect(canvasKeyDown).not.toHaveBeenCalled();
+  });
 });

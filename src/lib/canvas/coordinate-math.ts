@@ -65,12 +65,26 @@ export function isNodeFullyComplete(node: CanvasNode): boolean {
   );
 }
 
+/** Shared fallback sizes keep handles, fitting and the radar aligned with rendered nodes. */
+export function getNodeDimensions(node: CanvasNode): { width: number; height: number } {
+  const fallback = node.node_type === "aws_service"
+    ? { width: 200, height: 220 }
+    : node.node_type === "group"
+    ? { width: 400, height: 300 }
+    : node.node_type === "annotation"
+    ? { width: 200, height: 150 }
+    : { width: 280, height: 170 };
+  return {
+    width: node.width > 0 ? node.width : fallback.width,
+    height: node.height > 0 ? node.height : fallback.height,
+  };
+}
+
 export function getNodeHandlePosition(
   node: CanvasNode,
   handle: HandlePosition
 ): { x: number; y: number } {
-  const width = node.width || (node.node_type === "aws_service" ? 200 : node.node_type === "group" ? 440 : 280);
-  const height = node.height || (node.node_type === "aws_service" ? 140 : node.node_type === "group" ? 320 : 170);
+  const { width, height } = getNodeDimensions(node);
   const { position_x, position_y } = node;
 
   switch (handle) {
@@ -353,10 +367,11 @@ export function getCanvasBoundingBox(
   let maxY = -Infinity;
 
   for (const node of nodes) {
+    const { width, height } = getNodeDimensions(node);
     minX = Math.min(minX, node.position_x);
     minY = Math.min(minY, node.position_y);
-    maxX = Math.max(maxX, node.position_x + (node.width || 280));
-    maxY = Math.max(maxY, node.position_y + (node.height || 170));
+    maxX = Math.max(maxX, node.position_x + width);
+    maxY = Math.max(maxY, node.position_y + height);
   }
 
   minX -= padding;
@@ -408,5 +423,3 @@ export function exportToMermaid(nodes: CanvasNode[], edges: CanvasEdge[]): strin
 
   return lines.join("\n");
 }
-
-
