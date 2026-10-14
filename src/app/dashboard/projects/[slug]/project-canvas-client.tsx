@@ -2325,26 +2325,26 @@ export default function ProjectCanvasClient({
 
       {!nodes.length && !isAIGenerating && (
         <section data-canvas-ui aria-label="Start your canvas" className="absolute inset-0 z-10 flex items-center justify-center px-5 pb-32 pt-28 pointer-events-none">
-          <div className="pointer-events-auto w-full max-w-md rounded-3xl border border-neutral-200/80 bg-white/95 p-5 text-center shadow-lg backdrop-blur sm:p-7 dark:border-slate-700 dark:bg-slate-900/95">
-            <span className="mx-auto grid h-11 w-11 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"><Sparkles className="h-5 w-5" /></span>
-            <h2 className="mt-4 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">Make room for your next idea</h2>
-            <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-slate-400">Plan a milestone, map your cloud architecture, or let AI help you start.</p>
+          <div className="pointer-events-auto w-full max-w-lg rounded-3xl border border-neutral-200/80 bg-linear-to-br from-white via-white/95 to-emerald-50/80 p-6 text-center shadow-xl shadow-emerald-950/5 backdrop-blur-xl sm:p-8 dark:border-[#283548] dark:from-[#161d27] dark:via-[#161d27]/95 dark:to-[#1e2634]">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-emerald-200/60 bg-emerald-50 shadow-sm dark:border-emerald-500/20 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"><Sparkles className="h-5 w-5" /></span>
+            <h2 className="mt-5 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">Make room for your next idea</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-300">Plan a milestone, map your cloud architecture, or let AI help you start.</p>
             <div className="mt-5 grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => handleAddNode()} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-emerald-400 hover:bg-emerald-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Flag className="h-5 w-5 text-emerald-600" />Milestone</button>
-              <button type="button" onClick={() => setIsServicePaletteOpen(true)} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-orange-400 hover:bg-orange-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Box className="h-5 w-5 text-orange-500" />AWS service</button>
-              <button type="button" onClick={() => setIsAIAssistantOpen(true)} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-violet-400 hover:bg-violet-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Sparkles className="h-5 w-5 text-violet-500" />Ask AI</button>
+              <button type="button" onClick={() => handleAddNode()} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-emerald-400 hover:bg-emerald-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100/70 dark:bg-emerald-500/10"><Flag className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /></span>Add Milestone</button>
+              <button type="button" onClick={() => setIsServicePaletteOpen(true)} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-orange-400 hover:bg-orange-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-100/70 dark:bg-orange-500/10"><Box className="h-5 w-5 text-orange-500" /></span>AWS Services</button>
+              <button type="button" onClick={() => setIsAIAssistantOpen(true)} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-violet-400 hover:bg-violet-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-100/70 dark:bg-violet-500/10"><Sparkles className="h-5 w-5 text-violet-500 dark:text-violet-400" /></span>Ask AI</button>
             </div>
-            <p className="mt-4 hidden text-[11px] text-neutral-400 sm:block dark:text-slate-500">Drag to select · Space to pan · Ctrl K to find</p>
+            <p className="mt-6 border-t border-neutral-200/70 pt-4 text-[11px] leading-5 text-neutral-500 dark:border-[#283548] dark:text-neutral-300">Drag to select · Space to pan · Ctrl K to find</p>
           </div>
         </section>
       )}
 
       {selectedNodeIds.size > 1 && !isAIGenerating && (
-        <div data-canvas-ui role="toolbar" aria-label="Selected items" className="absolute left-1/2 top-24 z-30 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-neutral-200 bg-white/95 p-1.5 text-neutral-600 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-300">
+        <div data-canvas-ui role="toolbar" aria-label="Selected items" className="absolute left-1/2 top-24 z-30 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-neutral-200 bg-white/95 p-1.5 text-neutral-600 shadow-lg backdrop-blur dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-neutral-300">
           <span className="whitespace-nowrap px-2 text-xs font-semibold">{selectedNodeIds.size} selected</span>
-          <button type="button" aria-label="Fit selected items" title="Fit selection (Shift 2)" onClick={() => handleFitView(true)} className="rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-slate-800"><Scan className="h-4 w-4" /></button>
+          <button type="button" aria-label="Fit selected items" title="Fit selection (Shift 2)" onClick={() => handleFitView(true)} className="rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><Scan className="h-4 w-4" /></button>
           <button type="button" aria-label="Delete selected items" onClick={handleDeleteSelectedNodes} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></button>
-          <button type="button" aria-label="Deselect all items" onClick={() => { setSelectedNodeId(null); setSelectedNodeIds(new Set()); }} className="rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-slate-800"><X className="h-4 w-4" /></button>
+          <button type="button" aria-label="Deselect all items" onClick={() => { setSelectedNodeId(null); setSelectedNodeIds(new Set()); }} className="rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -2567,9 +2567,8 @@ export default function ProjectCanvasClient({
       )}
 
       {/* Bottom Floating Control Bar (Canvas Tools Dock + AI Assistant) */}
-      <div style={{ right: selectedNode && !isMobile ? 420 : 0 }} className="pointer-events-none absolute inset-x-0 bottom-3 sm:bottom-6 z-20 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-2.5 px-3">
+      <div className="pointer-events-none absolute inset-x-0 bottom-3 sm:bottom-6 z-20 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-2.5 px-3">
         {/* On mobile: AI Assistant & Notebook stack above toolbar (order-1). On desktop: sit alongside dock (sm:order-2) */}
-        {!selectedNode && (
           <div className="order-1 sm:order-2 pointer-events-auto flex items-center justify-end sm:justify-start gap-2 w-full max-w-[340px] sm:w-auto sm:max-w-none">
             <CanvasAIAssistant
               isOpen={isAIAssistantOpen}
@@ -2598,7 +2597,6 @@ export default function ProjectCanvasClient({
               onClose={() => setIsNotebookOpen(false)}
             />
           </div>
-        )}
 
         {/* Primary Canvas Dock: order-2 on mobile (at bottom), sm:order-1 on desktop (on left) */}
         <div className="order-2 sm:order-1 pointer-events-auto flex items-center justify-center max-w-full">

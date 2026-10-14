@@ -217,13 +217,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     exitTimers.current.forEach((timer) => window.clearTimeout(timer));
   }, []);
 
-  const isLeft = isCanvasRoute || notifications.some((n) => n.position === "bottom-left");
+  const isLeft = !isCanvasRoute && notifications.some((n) => n.position === "bottom-left");
 
   return (
     <NotificationContext.Provider value={{ notify, dismiss }}>
       {children}
       <div
-        className={`site-notifications ${isLeft ? "site-notifications--left" : ""}`}
+        className={`site-notifications ${isCanvasRoute ? "site-notifications--top-center" : isLeft ? "site-notifications--left" : ""}`}
         aria-label="Notifications"
         aria-live="polite"
       >
