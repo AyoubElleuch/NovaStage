@@ -1,0 +1,15 @@
+# AWS architecture generation and layout
+
+The provider describes topology: catalog service IDs, configuration entries, semantic boundaries, and directed connections. It does not choose coordinates or sizes. Both AWS and full-stack generation use the same containment normalization and structural acceptance checks before canvas mutation.
+
+Normalization chooses explicit parent membership over a group's child list, rebuilds direct membership, breaks containment cycles, and removes empty boundaries. Update operations also remove saved boundaries that become empty. Invalid resource IDs, duplicate IDs, unknown services, and dangling connections trigger one regeneration attempt and then fail without applying the result. Small requests may contain one or two services. Quality checks still request production detail for larger designs; after the retry, a structurally usable draft may be accepted with a server-side quality warning.
+
+The layout engine computes actual card dimensions and lays out groups from the inside out. It uses global service flow to order children whose connections cross boundaries. When collapsing descendants creates an artificial cycle, only the forward projection influences ranking; all original connections remain in the canvas. Independent boundaries form parallel rows, and operational/security services form a compact shelf below the main graph. External ingress cards align to their actual destinations rather than the center of a large boundary. Existing architecture updates retain their canvas anchor and service card dimensions.
+
+Architecture connections choose handles from relative geometry. The renderer uses orthogonal routes that avoid card rectangles, with a visibility graph for obstructed paths. Groups remain traversable. Route labels sit halfway along the drawn route. Manually overlapping cards fall back to the existing curved connection when no safe route exists. Routing does not guarantee that different connections or their labels never share a channel.
+
+Run `npm run test:aws-layout` for six offline fixtures: single S3 bucket, CDN website, three-tier VPC, serverless events, multi-AZ application, and multi-region platform. Tests cover the mocked provider contract through orchestration, graph preservation, deterministic layout under shuffled input, containment, card/boundary overlap, and card avoidance by routed edges. Additional tests cover invalid provider responses, feedback edges, update anchoring, and malformed containment.
+
+Run `npm run preview:aws-layout` to generate `.tmp/aws-layout-preview.html`. Open it in a browser to review all six layouts using the production placement and routing algorithms. The preview uses simplified labeled rectangles; it is a geometry review, not a screenshot of the canvas service cards.
+
+New AI generations and the canvas auto-layout action use the updated engine. Existing saved canvases are not migrated automatically. The fixtures test structural and geometric behavior without making paid provider calls; live model adherence and the application appearance should also be checked manually before release.

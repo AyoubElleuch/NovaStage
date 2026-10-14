@@ -253,7 +253,7 @@ Ensure:
       }
     );
 
-    rawResult = normalizeArchitectureResult(rawResult);
+    rawResult = normalizeArchitectureResult(rawResult && context?.operation === "update" ? { ...rawResult, intent: "update_pipeline" } : rawResult);
     let quality = evaluateArchitectureQuality(rawResult, prompt, decomposition);
     if (!quality.ok) {
       rawResult = await callGemini<AIWorkflowResult>(
@@ -261,7 +261,7 @@ Ensure:
         FULL_STACK_SCHEMA,
         { systemInstruction, temperature: 0.15 }
       );
-      rawResult = normalizeArchitectureResult(rawResult);
+      rawResult = normalizeArchitectureResult(rawResult && context?.operation === "update" ? { ...rawResult, intent: "update_pipeline" } : rawResult);
       quality = evaluateArchitectureQuality(rawResult, prompt, decomposition);
     }
 
@@ -285,6 +285,8 @@ Ensure:
         serviceNodes: rawResult.serviceNodes || [],
         groups: rawResult.groups || [],
         dataFlowEdges: bridgedDataFlowEdges,
+        deletedServiceNodeIds: rawResult.deletedServiceNodeIds,
+        deletedGroupIds: rawResult.deletedGroupIds,
         decomposition,
       };
     }

@@ -67,7 +67,10 @@ describe("Canvas Auto-Layout Algorithm", () => {
       expect(child.position_y + child.height).toBeLessThanOrEqual(parent.position_y + parent.height - 56);
     }
     const services = result.filter((node) => node.node_type === "aws_service");
-    expect(services[1].position_y).toBeGreaterThanOrEqual(services[0].position_y + services[0].height + 100);
+    expect(services[1].position_x + services[1].width + 100 <= services[0].position_x ||
+      services[0].position_x + services[0].width + 100 <= services[1].position_x ||
+      services[1].position_y + services[1].height + 100 <= services[0].position_y ||
+      services[0].position_y + services[0].height + 100 <= services[1].position_y).toBe(true);
     expect(nodes[0].position_x).toBe(0);
     expect(autoLayoutNodes(result, [])).toEqual(result);
   });

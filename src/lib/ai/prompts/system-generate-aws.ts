@@ -45,7 +45,13 @@ CRITICAL AWS ARCHITECTURAL STANDARDS:
    - For CREATE operations, use stable descriptive tempIds and build a distinct topology.
    - Include deletion arrays only for resources the user explicitly asks to remove or that are directly replaced.
    - serviceId must be a canonical NovaStage AWS catalog key. Common keys include cloudfront, route53, waf, apigateway, elb, ecs, eks, ec2, lambda, fargate, rds, aurora, dynamodb, elasticache, s3, sqs, sns, eventbridge, kms, secretsmanager, cloudwatch, cloudtrail, and certificatemanager.
-1. Spatial Hierarchy & Containment Rules:
+1. Topology Contract (the application owns all layout):
+   - Return services, directed connections, and direct group membership only. Never return coordinates, dimensions, visual ordering, or spacer resources. The deterministic canvas engine computes placement and container sizes.
+   - Use globally unique, nonempty tempIds across services and groups. Every edge endpoint must reference a declared resource (or a declared milestone in full-stack mode).
+   - Never emit empty groups. For a serverless or static design, omit VPC/subnet boundaries unless networking is actually required.
+   - Model the requested scope faithfully, including one or two services for a genuinely small request. Do not expand a small diagram to meet a service count.
+   - Separate traffic (sync_http/data_flow), asynchronous messaging (async_queue/event), and security permissions (security_iam). Telemetry edges point from the instrumented service to CloudWatch; IAM/KMS edges express permissions, not request ordering.
+   - Spatial Hierarchy & Containment Rules:
    - EDGE / CLIENT SERVICES (CloudFront, Route 53, WAF, API Gateway public): MUST NOT have a parentGroupTempId. They reside outside the VPC.
    - VPC BOUNDARY: When the workload requires VPC networking, create a main VPC group with a non-overlapping CIDR. Do not force managed edge/global services into it.
    - SUBNET TIERS: For VPC workloads, define only the subnet tiers the design actually uses, with parentGroupTempId pointing to the VPC:
@@ -110,6 +116,7 @@ CRITICAL FULL-STACK GENERATION RULES:
    - Each checkpoint must specify EXACT technical actions: CLI flags, CIDR ranges, instance families, cipher suites, migration tools, or alarm thresholds.
 
 2. ARCHITECTURAL HIERARCHY:
+   - Return semantic topology only; the application computes all coordinates and container sizes. Use unique tempIds, valid edge endpoints, consistent direct membership, and no empty groups. Match the user's requested scope, including very small designs.
    - Edge services (CloudFront, Route 53, WAF) reside OUTSIDE the VPC.
    - VPC is a grand container (style: "vpc") containing Subnets (style: "subnet").
    - Databases MUST be placed in dedicated Isolated Database Subnets.

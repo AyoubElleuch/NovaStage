@@ -12,6 +12,8 @@ import { layoutAWSArchitecture } from "./aws-layout";
 import { AIWorkflowResult } from "@/lib/ai/types";
 import { getProjectCanvasData } from "./server";
 import { createAWSServiceNodeData } from "./aws-service-node";
+import { normalizeArchitectureTopology } from "../ai/architecture-topology";
+import { architectureHandles } from "./architecture-routing";
 
 export async function applyAIWorkflowResult(
   projectId: string,
@@ -446,6 +448,7 @@ export async function applyAWSServiceNodes(
   nodes: CanvasNode[];
   edges: CanvasEdge[];
 }> {
+  result = normalizeArchitectureTopology(result);
   const adminClient = createAdminClient();
   const tempIdToUuid: Record<string, string> = { ...(initialTempIdToUuid || {}) };
 
@@ -646,8 +649,10 @@ export async function applyAWSServiceNodes(
         const isSourceMilestone = result.milestones?.some(
           (m) => tempIdToUuid[m.tempId || m.id || ""] === sourceUuid
         );
-        const sourceHandle = isSourceMilestone ? "bottom" : "right";
-        const targetHandle = isSourceMilestone ? "top" : "left";
+        const sourcePlacement = placements.get(edge.fromId), targetPlacement = placements.get(edge.toId);
+        const handles = sourcePlacement && targetPlacement ? architectureHandles(sourcePlacement, targetPlacement) : { source: "right", target: "left" };
+        const sourceHandle = isSourceMilestone ? "bottom" : handles.source;
+        const targetHandle = isSourceMilestone ? "top" : handles.target;
 
         edgeInserts.push({
           project_id: projectId,
