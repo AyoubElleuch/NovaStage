@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)](https://supabase.com/)
 [![Redis](https://img.shields.io/badge/Upstash-Redis-FF4438?logo=redis)](https://upstash.com/)
-[![Vitest](https://img.shields.io/badge/Tests-330%20Passing-6E9F18?logo=vitest)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Tests-38%20Passing-6E9F18?logo=vitest)](https://vitest.dev/)
 
 ---
 
@@ -175,7 +175,7 @@ Security boundaries in NovaStage are enforced strictly at the database layer usi
 
 ## Testing & CI/CD
 
-NovaStage maintains a comprehensive test suite of **330 tests across 65 test suites** validating frontend components, canvas math, auto-layout algorithms, Redis client resilience, AI decomposition, and session authorization.
+NovaStage maintains a lean, high-performance test suite of **38 tests across 9 test suites** validating canvas coordinate math, Kahn's topological sort, auto-layout algorithms, Redis distributed leases, AI orchestration, enterprise RBAC/PBAC, and API quota enforcement.
 
 ### Running Tests Locally
 
@@ -200,7 +200,7 @@ Every pull request and push to `main` / `master` triggers `.github/workflows/ci.
 1. **`test-and-lint`**:
    - Performs a clean dependency install via `npm ci`.
    - Runs `npm run lint` for code style and static analysis.
-   - Executes `npm test` across all 330 unit and integration tests.
+   - Executes `npm test` across all 38 unit and integration tests.
 2. **`build-verification`**:
    - Injects mock environment variables.
    - Executes `npm run build` to verify zero Next.js App Router bundle errors and type safety.

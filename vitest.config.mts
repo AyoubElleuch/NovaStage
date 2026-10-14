@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: "jsdom",
+    environment: "node",
     globals: true,
     setupFiles: [],
     include: ["src/**/*.test.{ts,tsx}"],
