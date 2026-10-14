@@ -11,7 +11,7 @@ import { autoLayoutNodes } from "./auto-layout";
 import { layoutAWSArchitecture } from "./aws-layout";
 import { AIWorkflowResult } from "@/lib/ai/types";
 import { getProjectCanvasData } from "./server";
-import { getAWSServiceCategory } from "./aws-catalog-lookup";
+import { createAWSServiceNodeData } from "./aws-service-node";
 
 export async function applyAIWorkflowResult(
   projectId: string,
@@ -533,27 +533,22 @@ export async function applyAWSServiceNodes(
       ? tempIdToUuid[pos.parent_group_id]
       : null;
 
-    const metadata = {
-      serviceId: svc.serviceId,
-      category: getAWSServiceCategory(svc.serviceId),
-      region: svc.region || "us-east-1",
-      config: svc.config || {},
-    };
+    const serviceData = createAWSServiceNodeData(svc.serviceId, svc.region, svc.config);
     const requestedServiceId = svc.id || svc.tempId;
     const existingId = isUpdate && existingServices.has(requestedServiceId) ? requestedServiceId : null;
     if (existingId) {
       const { error } = await adminClient
         .from("canvas_nodes")
         .update({
-          title: svc.name || svc.serviceId.toUpperCase(),
+          title: svc.name || existingServices.get(existingId)!.title,
           description: svc.description || "",
           position_x: pos.position_x,
           position_y: pos.position_y,
-          width: pos.width || 260,
-          height: pos.height || 220,
+          width: pos.width || serviceData.width,
+          height: pos.height || serviceData.height,
           sort_order: sIdx,
           parent_group_id: parentGroupUuid,
-          aws_metadata: metadata,
+          aws_metadata: serviceData.aws_metadata,
           updated_at: new Date().toISOString(),
         })
         .eq("project_id", projectId)
@@ -567,18 +562,18 @@ export async function applyAWSServiceNodes(
       .from("canvas_nodes")
       .insert({
         project_id: projectId,
-        title: svc.name || svc.serviceId.toUpperCase(),
-        description: svc.description || "",
+        title: serviceData.title,
+        description: [svc.name && svc.name !== serviceData.title ? svc.name : "", svc.description].filter(Boolean).join("\n\n"),
         node_type: "aws_service",
         position_x: pos.position_x,
         position_y: pos.position_y,
-        width: pos.width || 260,
-        height: pos.height || 220,
+        width: pos.width || serviceData.width,
+        height: pos.height || serviceData.height,
         color: "default",
         sort_order: sIdx,
         claimed_by: null,
         parent_group_id: parentGroupUuid,
-        aws_metadata: metadata,
+        aws_metadata: serviceData.aws_metadata,
       })
       .select()
       .single();

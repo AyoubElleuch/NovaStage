@@ -46,7 +46,7 @@ import CanvasNotebook from "@/components/canvas/canvas-notebook";
 import CanvasReleasePulse from "@/components/canvas/canvas-release-pulse";
 import CanvasServicePalette from "@/components/canvas/canvas-service-palette";
 import CanvasNavigator from "@/components/canvas/canvas-navigator";
-import { AWS_SERVICE_REGISTRY } from "@/components/canvas/aws-icons";
+import { createAWSServiceNodeData, AWS_SERVICE_NODE_SIZE } from "@/lib/canvas/aws-service-node";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
 
@@ -405,15 +405,14 @@ export default function ProjectCanvasClient({
   const handleAddAWSService = useCallback(
     (serviceId: string, customPos?: { x: number; y: number }) => {
       if (isAIGenerating) return;
-      const position = customPos || getOpenNodePosition(nodes, viewport, { ...getCanvasArea(), rightInset: isMobile ? 0 : 420 }, { width: 200, height: 220 });
+      const position = customPos || getOpenNodePosition(nodes, viewport, { ...getCanvasArea(), rightInset: isMobile ? 0 : 420 }, AWS_SERVICE_NODE_SIZE);
       const posX = position.x;
       const posY = position.y;
       const finalX = snapGrid ? snapToGrid(posX) : posX;
       const finalY = snapGrid ? snapToGrid(posY) : posY;
 
-      const serviceDef = AWS_SERVICE_REGISTRY[serviceId.toLowerCase()];
-      const serviceName = serviceDef ? serviceDef.name : serviceId.toUpperCase();
-      const category = serviceDef ? serviceDef.category : "compute";
+      const serviceData = createAWSServiceNodeData(serviceId);
+      const serviceName = serviceData.title;
       const clientNodeId = crypto.randomUUID();
 
       const myHolder = {
@@ -431,8 +430,8 @@ export default function ProjectCanvasClient({
         status: "draft",
         position_x: finalX,
         position_y: finalY,
-        width: 200,
-        height: 220,
+        width: serviceData.width,
+        height: serviceData.height,
         color: "default",
         sort_order: nodes.length,
         claimed_by: currentUser.id,
@@ -440,12 +439,7 @@ export default function ProjectCanvasClient({
         version: 1,
         checkpoints: [],
         node_type: "aws_service",
-        aws_metadata: {
-          serviceId,
-          category,
-          region: "us-east-1",
-          config: serviceDef?.defaultConfig || {},
-        },
+        aws_metadata: serviceData.aws_metadata,
       };
 
       // 0ms instant local insertion & close palette
@@ -467,16 +461,11 @@ export default function ProjectCanvasClient({
           id: clientNodeId,
           title: serviceName,
           node_type: "aws_service",
-          width: 200,
-          height: 220,
+          width: serviceData.width,
+          height: serviceData.height,
           position_x: finalX,
           position_y: finalY,
-          aws_metadata: {
-            serviceId,
-            category,
-            region: "us-east-1",
-            config: serviceDef?.defaultConfig || {},
-          },
+          aws_metadata: serviceData.aws_metadata,
           checkpoints: [],
         }),
       }).then(assertCanvasSaved).catch(async (e) => {

@@ -1,5 +1,6 @@
 import { graphlib, layout } from "@dagrejs/dagre";
 import type { CanvasNode, CanvasEdge } from "./types";
+import { AWS_SERVICE_NODE_SIZE } from "./aws-service-node";
 
 type LayoutNode = Pick<CanvasNode, "id" | "position_x" | "position_y" | "width" | "height"> &
   Partial<Pick<CanvasNode, "node_type" | "parent_group_id" | "group_metadata">>;
@@ -55,8 +56,8 @@ export function autoLayoutNodes<Node extends LayoutNode>(
         node.width = Math.max(node.width || 0, 440, content.width + 144);
         node.height = Math.max(node.height || 0, 320, content.height + 184);
       } else {
-        node.width = Math.max(node.width || 0, node.node_type === "aws_service" ? 260 : 320);
-        node.height = Math.max(node.height || 0, node.node_type === "aws_service" ? 220 : 300);
+        node.width = Math.max(node.width || 0, node.node_type === "aws_service" ? AWS_SERVICE_NODE_SIZE.width : 320);
+        node.height = Math.max(node.height || 0, node.node_type === "aws_service" ? AWS_SERVICE_NODE_SIZE.height : 300);
       }
       graph.setNode(node.id, { width: node.width, height: node.height });
     }
