@@ -209,6 +209,10 @@ Every pull request and push to `main` / `master` triggers `.github/workflows/ci.
 
 ## Local Development Setup
 
+### SDK generation / OpenAPI
+
+Use [`public/openapi.yaml`](public/openapi.yaml) for the complete NovaStage HTTP API specification. See [`docs/api-sdk.md`](docs/api-sdk.md) for the endpoint inventory, suggested SDK testing scope, and session-cookie authentication instructions.
+
 ### Prerequisites
 
 - **Node.js**: `v22.x` or higher
