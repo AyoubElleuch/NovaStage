@@ -1,5 +1,7 @@
 "use client";
 
+import Dropdown from "@/components/ui/dropdown";
+import { getAWSServiceAliases, normalizeAWSServiceId } from "@/lib/canvas/aws-catalog-lookup";
 import React, { useState, useMemo, useRef, useEffect, useId } from "react";
 import { Search, X, ChevronRight, ChevronDown, Plus } from "lucide-react";
 import { AWS_SERVICE_REGISTRY, AWS_CATEGORIES, AWSLogoIcon } from "./aws-icons";
@@ -30,7 +32,7 @@ const CATEGORIES = (Object.entries(AWS_CATEGORIES) as [AWSServiceCategory, { lab
 const SERVICES_BY_CATEGORY = new Map(CATEGORIES.map(([category]) => [category, SERVICES.filter((service) => service.category === category)]));
 
 function searchText(service: AWSServiceDef) {
-  return `${service.name} ${service.shortName} ${service.id} ${service.description} ${AWS_CATEGORIES[service.category]?.label ?? ""} ${SEARCH_ALIASES[service.id] ?? ""}`.toLowerCase();
+  return `${service.name} ${service.shortName} ${service.id} ${service.description} ${AWS_CATEGORIES[service.category]?.label ?? ""} ${SEARCH_ALIASES[service.id] ?? ""} ${getAWSServiceAliases(service.id).join(" ")}`.toLowerCase();
 }
 
 export default function CanvasServicePalette({ isOpen, onClose, onAddService }: CanvasServicePaletteProps) {
@@ -60,8 +62,8 @@ export default function CanvasServicePalette({ isOpen, onClose, onAddService }: 
       (!categoryFilter || service.category === categoryFilter) && tokens.every((token) => searchText(service).includes(token))
     ).sort((a, b) => {
       const query = searchQuery.trim().toLowerCase();
-      const aExact = a.id === query || a.shortName.toLowerCase() === query;
-      const bExact = b.id === query || b.shortName.toLowerCase() === query;
+      const aExact = a.id === normalizeAWSServiceId(query) || a.shortName.toLowerCase() === query;
+      const bExact = b.id === normalizeAWSServiceId(query) || b.shortName.toLowerCase() === query;
       return Number(bExact) - Number(aExact) || a.shortName.localeCompare(b.shortName);
     });
   }, [searchQuery, categoryFilter]);
@@ -113,7 +115,7 @@ export default function CanvasServicePalette({ isOpen, onClose, onAddService }: 
           <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
           <input
             ref={searchInputRef}
-            type="search"
+            type="text"
             aria-label="Search AWS services"
             placeholder="Search by service, use case, or category"
             value={searchQuery}
@@ -131,10 +133,8 @@ export default function CanvasServicePalette({ isOpen, onClose, onAddService }: 
           />
           {searchQuery && <button type="button" aria-label="Clear service search" onClick={() => { setSearchQuery(""); searchInputRef.current?.focus(); }} className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-200 dark:hover:bg-[#283548]"><X className="h-3.5 w-3.5" /></button>}
         </div>
-        <select aria-label="Filter AWS services by category" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-600 outline-none focus:border-emerald-500 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-300">
-          <option value="">All categories</option>
-          {CATEGORIES.filter(([key]) => SERVICES_BY_CATEGORY.get(key)?.length).map(([key, meta]) => <option key={key} value={key}>{meta.label}</option>)}
-        </select>
+        <Dropdown aria-label="Filter AWS services by category" value={categoryFilter} onChange={setCategoryFilter}
+          options={[{ value: "", label: "All categories" }, ...CATEGORIES.filter(([key]) => SERVICES_BY_CATEGORY.get(key)?.length).map(([value, meta]) => ({ value, label: meta.label, indicator: <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: meta.color }} /> }))]} />
       </div>
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3 scrollbar-thin" onKeyDown={(e) => {
         if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;

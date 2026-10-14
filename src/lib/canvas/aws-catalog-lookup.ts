@@ -10,6 +10,14 @@ const aliases: Record<string, string> = {
   step_functions: "stepfunctions",
 };
 
+for (const service of catalog.services) {
+  for (const alias of service.aliases) aliases[alias.toLowerCase().replace(/[\s-]+/g, "_")] = service.id;
+}
+
+export function getAWSServiceAliases(serviceId: string): string[] {
+  return byId.get(normalizeAWSServiceId(serviceId))?.aliases ?? [];
+}
+
 const byId = new Map(catalog.services.map((service) => [service.id, service]));
 
 export function normalizeAWSServiceId(serviceId: string): string {

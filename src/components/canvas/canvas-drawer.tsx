@@ -1,5 +1,6 @@
 "use client";
 
+import Dropdown from "@/components/ui/dropdown";
 import React, { useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, Circle, Lock, Plus, Trash2, Unlock, X } from "lucide-react";
 import { CanvasNode, CanvasEdge, NodeStatus } from "@/lib/canvas/types";
@@ -184,10 +185,13 @@ function NodeDrawer({ node, allNodes, edges, currentUserId, isProjectOwner, onCl
 
         {!isAnnotation && <div>
           <label htmlFor={`${id}-status`} className={LABEL}>{isAws ? "Resource status" : "Status"}</label>
-          <select id={`${id}-status`} value={isMilestone && complete ? "completed" : node.status} disabled={!editable || (isMilestone && node.checkpoints.length > 0 && complete)}
-            onChange={(event) => persist({ status: event.target.value as NodeStatus })} className={FIELD}>
-            <option value="draft">Planned</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="completed" disabled={isMilestone && node.checkpoints.length > 0 && !complete}>{isAws ? "Ready" : "Complete"}</option>
-          </select>
+          <Dropdown id={`${id}-status`} aria-label={isAws ? "Resource status" : "Status"} value={isMilestone && complete ? "completed" : node.status} disabled={!editable || (isMilestone && node.checkpoints.length > 0 && complete)}
+            onChange={value => persist({ status: value as NodeStatus })} options={[
+              { value: "draft", label: "Planned", indicator: <span className="h-2 w-2 rounded-full bg-neutral-400" /> },
+              { value: "in_progress", label: "In progress", indicator: <span className="h-2 w-2 rounded-full bg-blue-500" /> },
+              { value: "blocked", label: "Blocked", indicator: <span className="h-2 w-2 rounded-full bg-red-500" /> },
+              { value: "completed", label: isAws ? "Ready" : "Complete", disabled: isMilestone && node.checkpoints.length > 0 && !complete, indicator: <span className="h-2 w-2 rounded-full bg-emerald-500" /> },
+            ]} />
           {isMilestone && node.checkpoints.length > 0 && <p className="mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400">Completion follows the checklist below.</p>}
         </div>}
 
@@ -232,7 +236,7 @@ function NodeDrawer({ node, allNodes, edges, currentUserId, isProjectOwner, onCl
           </div>
         </section>}
 
-        {isGroup && <div><label htmlFor={`${id}-style`} className={LABEL}>Boundary style</label><select id={`${id}-style`} disabled={!editable} value={node.group_metadata?.style || "custom"} onChange={(event) => persist({ group_metadata: { label: node.group_metadata?.label || node.title, style: event.target.value as NonNullable<CanvasNode["group_metadata"]>["style"], childNodeIds: node.group_metadata?.childNodeIds || [] } })} className={FIELD}>{GROUP_STYLES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">{node.group_metadata?.childNodeIds?.length || 0} resources in this group</p></div>}
+        {isGroup && <div><label htmlFor={`${id}-style`} className={LABEL}>Boundary style</label><Dropdown id={`${id}-style`} aria-label="Boundary style" disabled={!editable} value={node.group_metadata?.style || "custom"} onChange={value => persist({ group_metadata: { label: node.group_metadata?.label || node.title, style: value as NonNullable<CanvasNode["group_metadata"]>["style"], childNodeIds: node.group_metadata?.childNodeIds || [] } })} options={GROUP_STYLES.map(([value, label], index) => ({ value, label, indicator: <span className="h-3 w-3 rounded border-2" style={{ borderColor: ["#8b5cf6", "#10b981", "#3b82f6", "#f59e0b", "#737373"][index] }} /> }))} /><p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">{node.group_metadata?.childNodeIds?.length || 0} resources in this group</p></div>}
 
         {isAnnotation && <div><label htmlFor={`${id}-note`} className={LABEL}>Note content</label><textarea id={`${id}-note`} rows={6} disabled={!editable} value={annotation} onChange={(event) => setAnnotation(event.target.value)} onBlur={() => { if (editable && annotation !== (node.annotation_metadata?.content || "")) persist({ annotation_metadata: { ...node.annotation_metadata, content: annotation } }); }} className={`${FIELD} resize-y leading-relaxed`} /></div>}
 

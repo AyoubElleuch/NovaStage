@@ -1,5 +1,7 @@
 "use client";
 
+import Dropdown from "@/components/ui/dropdown";
+
 import { useState, useMemo, useTransition } from "react";
 import {
   AdminSubscriptionUser,
@@ -322,20 +324,7 @@ export default function SubscriptionsTable({ initialData }: SubscriptionsTablePr
                           {isUpdating && (
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
                           )}
-                          <select
-                            disabled={isUpdating}
-                            value={user.plan}
-                            onChange={(e) =>
-                              handlePlanChange(user.id, e.target.value as SubscriptionPlan)
-                            }
-                            aria-label={`Change plan for ${user.email}`}
-                            className="h-8 cursor-pointer rounded-lg border border-neutral-200 bg-white px-2.5 text-xs font-medium text-neutral-800 transition-colors hover:border-neutral-300 focus:border-blue-500 focus:outline-none dark:border-[#2b374a] dark:bg-[#1a2230] dark:text-neutral-200 dark:hover:border-[#3b4b66] disabled:opacity-50"
-                          >
-                            <option value="free">Free ($0)</option>
-                            <option value="plus">Plus ($1.99)</option>
-                            <option value="pro">Pro ($4.99)</option>
-                            <option value="enterprise">Enterprise (Custom)</option>
-                          </select>
+                          <Dropdown disabled={isUpdating} value={user.plan} onChange={value => handlePlanChange(user.id, value as SubscriptionPlan)} aria-label={`Change plan for ${user.email}`} options={[{ value: "free", label: "Free ($0)" }, { value: "plus", label: "Plus ($1.99)" }, { value: "pro", label: "Pro ($4.99)" }, { value: "enterprise", label: "Enterprise (Custom)" }]} />
                         </div>
                       </td>
                     </tr>
