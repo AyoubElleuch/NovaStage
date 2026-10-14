@@ -2,6 +2,7 @@ import type { AIWorkflowResult } from "../ai/types";
 import type { CanvasNode } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
 import { getNodeDimensions } from "./coordinate-math";
+import { AWS_SERVICE_NODE_SIZE } from "./aws-service-node";
 
 export function layoutAWSArchitecture(result: AIWorkflowResult, existingNodes: CanvasNode[]) {
   const groups = result.groups || [];
@@ -18,11 +19,17 @@ export function layoutAWSArchitecture(result: AIWorkflowResult, existingNodes: C
       parent_group_id: parentOf(group.tempId, group.parentGroupTempId),
       group_metadata: { label: group.label, style: group.style, childNodeIds: group.childTempIds || [] },
     })),
-    ...services.map((service) => ({
-      id: service.tempId, node_type: "aws_service" as const,
-      position_x: 0, position_y: 0, width: 260, height: 220,
-      parent_group_id: parentOf(service.tempId, service.parentGroupTempId),
-    })),
+    ...services.map((service) => {
+      const existing = result.intent === "update_pipeline"
+        ? existingNodes.find((node) => node.node_type === "aws_service" && node.id === (service.id || service.tempId))
+        : undefined;
+      return {
+        id: service.tempId, node_type: "aws_service" as const,
+        position_x: 0, position_y: 0,
+        ...(existing ? getNodeDimensions(existing) : AWS_SERVICE_NODE_SIZE),
+        parent_group_id: parentOf(service.tempId, service.parentGroupTempId),
+      };
+    }),
   ];
   const existingArchitecture = existingNodes.filter(
     (node) => node.node_type === "aws_service" || node.node_type === "group"
