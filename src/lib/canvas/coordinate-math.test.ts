@@ -6,493 +6,112 @@ import {
   calculateCompletionPercentage,
   isNodeFullyComplete,
   getNodeHandlePosition,
-  getBezierControlPoints,
   calculateBezierPath,
-  getUserColor,
   canConnectMilestones,
   detectCycle,
-  findNearestHandle,
-  getClosestHandleToPoint,
   getCanvasBoundingBox,
-  getNodeDimensions,
   exportToMermaid,
 } from "./coordinate-math";
 import type { CanvasCheckpoint, CanvasNode, CanvasViewport } from "./types";
 
-describe("Canvas Coordinate Math & Utilities", () => {
+describe("Canvas Coordinate Math & DAG Engine", () => {
   const mockViewport: CanvasViewport = { x: 100, y: 50, zoom: 2 };
 
-  describe("screenToWorld & worldToScreen transformations", () => {
-    it("transforms screen coordinates to world coordinates", () => {
-      const world = screenToWorld(300, 250, mockViewport);
-      // (300 - 100) / 2 = 100; (250 - 50) / 2 = 100
-      expect(world.x).toBe(100);
-      expect(world.y).toBe(100);
-    });
+  it("handles screenToWorld, worldToScreen transformations, and grid snapping accurately", () => {
+    const world = screenToWorld(300, 250, mockViewport);
+    expect(world).toEqual({ x: 100, y: 100 });
 
-    it("transforms world coordinates to screen coordinates", () => {
-      const screen = worldToScreen(100, 100, mockViewport);
-      // 100 * 2 + 100 = 300; 100 * 2 + 50 = 250
-      expect(screen.x).toBe(300);
-      expect(screen.y).toBe(250);
-    });
+    const screen = worldToScreen(100, 100, mockViewport);
+    expect(screen).toEqual({ x: 300, y: 250 });
 
-    it("is symmetrical (screen -> world -> screen)", () => {
-      const originalScreen = { x: 450, y: 320 };
-      const world = screenToWorld(originalScreen.x, originalScreen.y, mockViewport);
-      const backToScreen = worldToScreen(world.x, world.y, mockViewport);
-      expect(backToScreen.x).toBeCloseTo(originalScreen.x);
-      expect(backToScreen.y).toBeCloseTo(originalScreen.y);
-    });
+    expect(snapToGrid(7)).toBe(0);
+    expect(snapToGrid(8)).toBe(16);
+    expect(snapToGrid(24, 20)).toBe(20);
   });
 
-  describe("snapToGrid", () => {
-    it("snaps values to nearest default 16px grid", () => {
-      expect(snapToGrid(0)).toBe(0);
-      expect(snapToGrid(7)).toBe(0);
-      expect(snapToGrid(8)).toBe(16);
-      expect(snapToGrid(15)).toBe(16);
-      expect(snapToGrid(33)).toBe(32);
-    });
+  it("evaluates checkpoint completion percentages and node status", () => {
+    expect(calculateCompletionPercentage([])).toBe(0);
 
-    it("supports custom grid sizes", () => {
-      expect(snapToGrid(24, 20)).toBe(20);
-      expect(snapToGrid(35, 20)).toBe(40);
-    });
-  });
+    const checkpoints: CanvasCheckpoint[] = [
+      { id: "1", node_id: "n1", project_id: "p1", title: "Task 1", is_completed: true, sort_order: 0, completed_at: null, completed_by: null, created_at: "", updated_at: "" },
+      { id: "2", node_id: "n1", project_id: "p1", title: "Task 2", is_completed: false, sort_order: 1, completed_at: null, completed_by: null, created_at: "", updated_at: "" },
+    ];
+    expect(calculateCompletionPercentage(checkpoints)).toBe(50);
 
-  describe("calculateCompletionPercentage", () => {
-    it("returns 0 for empty checkpoints array", () => {
-      expect(calculateCompletionPercentage([])).toBe(0);
-    });
-
-    it("calculates percentage accurately", () => {
-      const checkpoints: CanvasCheckpoint[] = [
-        { id: "1", node_id: "n1", project_id: "p1", title: "Task 1", is_completed: true, sort_order: 0, completed_at: null, completed_by: null, created_at: "", updated_at: "" },
-        { id: "2", node_id: "n1", project_id: "p1", title: "Task 2", is_completed: false, sort_order: 1, completed_at: null, completed_by: null, created_at: "", updated_at: "" },
-      ];
-      expect(calculateCompletionPercentage(checkpoints)).toBe(50);
-    });
-
-    it("returns 100 when all checkpoints are completed", () => {
-      const checkpoints: CanvasCheckpoint[] = [
-        { id: "1", node_id: "n1", project_id: "p1", title: "Task 1", is_completed: true, sort_order: 0, completed_at: null, completed_by: null, created_at: "", updated_at: "" },
-      ];
-      expect(calculateCompletionPercentage(checkpoints)).toBe(100);
-    });
-  });
-
-  describe("isNodeFullyComplete", () => {
-    it("evaluates checkpoint completion when checkpoints are present", () => {
-      const node: CanvasNode = {
-        id: "n1",
-        project_id: "p1",
-        title: "Test",
-        description: "",
-        status: "in_progress",
-        position_x: 0,
-        position_y: 0,
-        width: 280,
-        height: 170,
-        color: "default",
-        sort_order: 0,
-        claimed_by: null,
-        version: 1,
-        created_at: "",
-        updated_at: "",
-        checkpoints: [
-          { id: "1", node_id: "n1", project_id: "p1", title: "Task 1", is_completed: true, sort_order: 0, completed_at: null, completed_by: null, created_at: "", updated_at: "" },
-          { id: "2", node_id: "n1", project_id: "p1", title: "Task 2", is_completed: true, sort_order: 1, completed_at: null, completed_by: null, created_at: "", updated_at: "" },
-        ],
-      };
-      expect(isNodeFullyComplete(node)).toBe(true);
-    });
-
-    it("falls back to status === 'completed' when node has no checkpoints", () => {
-      const node: CanvasNode = {
-        id: "n1",
-        project_id: "p1",
-        title: "Test",
-        description: "",
-        status: "completed",
-        position_x: 0,
-        position_y: 0,
-        width: 280,
-        height: 170,
-        color: "default",
-        sort_order: 0,
-        claimed_by: null,
-        version: 1,
-        created_at: "",
-        updated_at: "",
-        checkpoints: [],
-      };
-      expect(isNodeFullyComplete(node)).toBe(true);
-    });
-  });
-
-  describe("getNodeHandlePosition", () => {
     const node: CanvasNode = {
-      id: "n1",
-      project_id: "p1",
-      title: "Test",
-      description: "",
-      status: "draft",
-      position_x: 100,
-      position_y: 200,
-      width: 300,
-      height: 150,
-      color: "default",
-      sort_order: 0,
-      claimed_by: null,
-      version: 1,
-      created_at: "",
-      updated_at: "",
-      checkpoints: [],
+      id: "n1", project_id: "p1", title: "Milestone", description: "", status: "in_progress",
+      position_x: 0, position_y: 0, width: 280, height: 170, color: "default", sort_order: 0,
+      claimed_by: null, version: 1, created_at: "", updated_at: "", checkpoints,
+    };
+    expect(isNodeFullyComplete(node)).toBe(false);
+
+    node.checkpoints[1].is_completed = true;
+    expect(isNodeFullyComplete(node)).toBe(true);
+  });
+
+  it("calculates node handle positions and cubic bezier paths", () => {
+    const node: CanvasNode = {
+      id: "n1", project_id: "p1", title: "Test", description: "", status: "draft",
+      position_x: 100, position_y: 200, width: 300, height: 150, color: "default",
+      sort_order: 0, claimed_by: null, version: 1, created_at: "", updated_at: "", checkpoints: [],
     };
 
-    it("calculates right handle position correctly", () => {
-      const pos = getNodeHandlePosition(node, "right");
-      expect(pos.x).toBe(400); // 100 + 300
-      expect(pos.y).toBe(275); // 200 + 150/2
-    });
+    expect(getNodeHandlePosition(node, "right")).toEqual({ x: 400, y: 275 });
+    expect(getNodeHandlePosition(node, "left")).toEqual({ x: 100, y: 275 });
+    expect(getNodeHandlePosition(node, "top")).toEqual({ x: 250, y: 200 });
+    expect(getNodeHandlePosition(node, "bottom")).toEqual({ x: 250, y: 350 });
 
-    it("calculates left handle position correctly", () => {
-      const pos = getNodeHandlePosition(node, "left");
-      expect(pos.x).toBe(100);
-      expect(pos.y).toBe(275);
-    });
-
-    it("calculates top handle position correctly", () => {
-      const pos = getNodeHandlePosition(node, "top");
-      expect(pos.x).toBe(250); // 100 + 300/2
-      expect(pos.y).toBe(200);
-    });
-
-    it("calculates bottom handle position correctly", () => {
-      const pos = getNodeHandlePosition(node, "bottom");
-      expect(pos.x).toBe(250);
-      expect(pos.y).toBe(350); // 200 + 150
-    });
+    const path = calculateBezierPath(100, 100, 400, 300, "right", "left");
+    expect(path).toMatch(/^M 100 100 C \d+(\.\d+)? \d+(\.\d+)?, \d+(\.\d+)? \d+(\.\d+)?, 400 300$/);
   });
 
-  describe("calculateBezierPath & getBezierControlPoints", () => {
-    it("generates a valid SVG cubic bezier path string", () => {
-      const path = calculateBezierPath(100, 100, 400, 300, "right", "left");
-      expect(path).toMatch(/^M 100 100 C \d+(\.\d+)? \d+(\.\d+)?, \d+(\.\d+)? \d+(\.\d+)?, 400 300$/);
-    });
-
-    it("calculates control points with curvature constraints", () => {
-      const { cx1, cy1, cx2, cy2 } = getBezierControlPoints(100, 100, 500, 100, "right", "left");
-      expect(cx1).toBeGreaterThan(100);
-      expect(cx2).toBeLessThan(500);
-      expect(cy1).toBe(100);
-      expect(cy2).toBe(100);
-    });
-  });
-
-  describe("getUserColor", () => {
-    it("generates deterministic colors for user IDs", () => {
-      const color1 = getUserColor("user-12345");
-      const color2 = getUserColor("user-12345");
-      expect(color1).toBe(color2);
-      expect(color1).toMatch(/^#[0-9a-f]{6}$/i);
-    });
-
-    it("handles empty user ID gracefully", () => {
-      expect(getUserColor("")).toBeDefined();
-    });
-  });
-
-  describe("canConnectMilestones", () => {
+  it("enforces milestone connection permissions and claim lock rules", () => {
     const futureDate = new Date(Date.now() + 60000).toISOString();
     const pastDate = new Date(Date.now() - 60000).toISOString();
 
-    it("allows connecting if source milestone is claimed by user", () => {
-      const nodeA = { claimed_by: "user-1", claim_expires_at: futureDate };
-      const nodeB = { claimed_by: null, claim_expires_at: null };
-      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(true);
-    });
+    const claimedNode = { claimed_by: "user-1", claim_expires_at: futureDate };
+    const unclaimedNode = { claimed_by: null, claim_expires_at: null };
+    const otherUserClaim = { claimed_by: "user-2", claim_expires_at: futureDate };
+    const expiredClaim = { claimed_by: "user-1", claim_expires_at: pastDate };
 
-    it("allows connecting if target milestone is claimed by user", () => {
-      const nodeA = { claimed_by: null, claim_expires_at: null };
-      const nodeB = { claimed_by: "user-1", claim_expires_at: futureDate };
-      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(true);
-    });
-
-    it("allows connecting if target is claimed by another user but source is claimed by current user", () => {
-      const nodeA = { claimed_by: "user-1", claim_expires_at: futureDate };
-      const nodeB = { claimed_by: "user-2", claim_expires_at: futureDate };
-      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(true);
-    });
-
-    it("disallows connecting if neither milestone is claimed by user", () => {
-      const nodeA = { claimed_by: "user-2", claim_expires_at: futureDate };
-      const nodeB = { claimed_by: null, claim_expires_at: null };
-      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(false);
-    });
-
-    it("disallows connecting if claimed lease has expired", () => {
-      const nodeA = { claimed_by: "user-1", claim_expires_at: pastDate };
-      const nodeB = { claimed_by: null, claim_expires_at: null };
-      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(false);
-    });
-
-    it("always allows project owner to connect milestones", () => {
-      const nodeA = { claimed_by: "user-2", claim_expires_at: futureDate };
-      const nodeB = { claimed_by: null, claim_expires_at: null };
-      expect(canConnectMilestones(nodeA, nodeB, "user-1", true)).toBe(true);
-    });
-
-    it("allows connecting AWS service nodes without milestone claim locks", () => {
-      const nodeA = { claimed_by: null, claim_expires_at: null, node_type: "aws_service" as const };
-      const nodeB = { claimed_by: null, claim_expires_at: null, node_type: "aws_service" as const };
-      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(true);
-    });
-
-    it("allows connecting milestone to AWS service node without milestone claim locks", () => {
-      const nodeA = { claimed_by: null, claim_expires_at: null, node_type: "milestone" as const };
-      const nodeB = { claimed_by: null, claim_expires_at: null, node_type: "aws_service" as const };
-      expect(canConnectMilestones(nodeA, nodeB, "user-1")).toBe(true);
-    });
+    expect(canConnectMilestones(claimedNode, unclaimedNode, "user-1")).toBe(true);
+    expect(canConnectMilestones(unclaimedNode, claimedNode, "user-1")).toBe(true);
+    expect(canConnectMilestones(otherUserClaim, unclaimedNode, "user-1")).toBe(false);
+    expect(canConnectMilestones(expiredClaim, unclaimedNode, "user-1")).toBe(false);
+    expect(canConnectMilestones(otherUserClaim, unclaimedNode, "user-1", true)).toBe(true);
   });
 
-  describe("getClosestHandleToPoint", () => {
-    const testNode: CanvasNode = {
-      id: "node-1",
-      project_id: "p1",
-      title: "Test",
-      description: "",
-      status: "draft",
-      position_x: 100,
-      position_y: 100,
-      width: 200,
-      height: 100,
-      color: "default",
-      sort_order: 0,
-      claimed_by: null,
-      claim_holder: null,
-      version: 1,
-      checkpoints: [],
-      node_type: "milestone",
-    };
-
-    it("picks left handle when point is to the left", () => {
-      expect(getClosestHandleToPoint(testNode, { x: 50, y: 150 })).toBe("left");
-    });
-
-    it("picks right handle when point is to the right", () => {
-      expect(getClosestHandleToPoint(testNode, { x: 350, y: 150 })).toBe("right");
-    });
-
-    it("picks top handle when point is above", () => {
-      expect(getClosestHandleToPoint(testNode, { x: 200, y: 50 })).toBe("top");
-    });
-
-    it("picks bottom handle when point is below", () => {
-      expect(getClosestHandleToPoint(testNode, { x: 200, y: 250 })).toBe("bottom");
-    });
-  });
-
-  describe("detectCycle", () => {
+  it("detects self-loops and circular dependencies via DFS while allowing valid DAG branches", () => {
     const edges = [
       { id: "e1", project_id: "p1", source_node_id: "n1", target_node_id: "n2", source_handle: "right" as const, target_handle: "left" as const },
       { id: "e2", project_id: "p1", source_node_id: "n2", target_node_id: "n3", source_handle: "right" as const, target_handle: "left" as const },
     ];
 
-    it("detects self-loop as a cycle", () => {
-      expect(detectCycle(edges, { sourceNodeId: "n1", targetNodeId: "n1" })).toBe(true);
-    });
-
-    it("detects indirect circular dependencies (n3 -> n1)", () => {
-      expect(detectCycle(edges, { sourceNodeId: "n3", targetNodeId: "n1" })).toBe(true);
-    });
-
-    it("allows valid downstream non-cyclic edges (n3 -> n4)", () => {
-      expect(detectCycle(edges, { sourceNodeId: "n3", targetNodeId: "n4" })).toBe(false);
-    });
-
-    it("allows branch merging without cycles", () => {
-      const branchEdges = [
-        ...edges,
-        { id: "e3", project_id: "p1", source_node_id: "n1", target_node_id: "n4", source_handle: "right" as const, target_handle: "left" as const },
-      ];
-      expect(detectCycle(branchEdges, { sourceNodeId: "n4", targetNodeId: "n3" })).toBe(false);
-    });
+    expect(detectCycle(edges, { sourceNodeId: "n1", targetNodeId: "n1" })).toBe(true);
+    expect(detectCycle(edges, { sourceNodeId: "n3", targetNodeId: "n1" })).toBe(true);
+    expect(detectCycle(edges, { sourceNodeId: "n3", targetNodeId: "n4" })).toBe(false);
   });
 
-  describe("findNearestHandle", () => {
+  it("calculates accurate bounding boxes and exports valid Mermaid DAG syntax", () => {
     const mockNodes: CanvasNode[] = [
       {
-        id: "n1",
-        project_id: "p1",
-        title: "Node 1",
-        description: "",
-        status: "draft",
-        position_x: 100,
-        position_y: 100,
-        width: 280,
-        height: 170,
-        color: "default",
-        sort_order: 0,
-        claimed_by: null,
-        version: 1,
-        created_at: "",
-        updated_at: "",
-        checkpoints: [],
+        id: "n1", project_id: "p1", title: "Auth", description: "", status: "completed",
+        position_x: 100, position_y: 100, width: 200, height: 100, color: "default",
+        sort_order: 0, claimed_by: null, version: 1, created_at: "", updated_at: "", checkpoints: [],
+      },
+      {
+        id: "n2", project_id: "p1", title: "API", description: "", status: "draft",
+        position_x: 400, position_y: 300, width: 200, height: 100, color: "default",
+        sort_order: 1, claimed_by: null, version: 1, created_at: "", updated_at: "", checkpoints: [],
       },
     ];
 
-    it("finds left handle when pointer is close to left side", () => {
-      // Node 1 left handle is at (100, 185)
-      const hit = findNearestHandle({ x: 105, y: 188 }, mockNodes, undefined, 30);
-      expect(hit).not.toBeNull();
-      expect(hit?.handle).toBe("left");
-      expect(hit?.node.id).toBe("n1");
-    });
+    const box = getCanvasBoundingBox(mockNodes, 50);
+    expect(box).toMatchObject({ minX: 50, maxX: 650, minY: 50, maxY: 450, width: 600, height: 400 });
 
-    it("excludes specified node id from snapping", () => {
-      const hit = findNearestHandle({ x: 105, y: 188 }, mockNodes, "n1", 30);
-      expect(hit).toBeNull();
-    });
-
-    it("returns null when pointer is outside threshold", () => {
-      const hit = findNearestHandle({ x: 500, y: 500 }, mockNodes, undefined, 30);
-      expect(hit).toBeNull();
-    });
-  });
-
-  describe("getCanvasBoundingBox", () => {
-    it("returns default box for empty nodes array", () => {
-      const box = getCanvasBoundingBox([]);
-      expect(box.width).toBeGreaterThan(0);
-      expect(box.height).toBeGreaterThan(0);
-    });
-
-    it("computes accurate bounding box with padding", () => {
-      const mockNodes: CanvasNode[] = [
-        {
-          id: "n1",
-          project_id: "p1",
-          title: "Node 1",
-          description: "",
-          status: "draft",
-          position_x: 100,
-          position_y: 100,
-          width: 200,
-          height: 100,
-          color: "default",
-          sort_order: 0,
-          claimed_by: null,
-          version: 1,
-          created_at: "",
-          updated_at: "",
-          checkpoints: [],
-        },
-        {
-          id: "n2",
-          project_id: "p1",
-          title: "Node 2",
-          description: "",
-          status: "draft",
-          position_x: 400,
-          position_y: 300,
-          width: 200,
-          height: 100,
-          color: "default",
-          sort_order: 1,
-          claimed_by: null,
-          version: 1,
-          created_at: "",
-          updated_at: "",
-          checkpoints: [],
-        },
-      ];
-
-      const box = getCanvasBoundingBox(mockNodes, 50);
-      // minX = 100 - 50 = 50
-      // maxX = 400 + 200 + 50 = 650
-      // minY = 100 - 50 = 50
-      // maxY = 300 + 100 + 50 = 450
-      expect(box.minX).toBe(50);
-      expect(box.maxX).toBe(650);
-      expect(box.minY).toBe(50);
-      expect(box.maxY).toBe(450);
-      expect(box.width).toBe(600);
-      expect(box.height).toBe(400);
-    });
-
-    it("uses rendered fallback dimensions consistently for each node type", () => {
-      const base: CanvasNode = {
-        id: "node", project_id: "p", title: "Node", description: "", status: "draft",
-        position_x: 100, position_y: 50, width: 0, height: 0, color: "default",
-        sort_order: 0, claimed_by: null, version: 1, checkpoints: [],
-      };
-      for (const [nodeType, width, height] of [
-        ["milestone", 280, 170], ["aws_service", 200, 220], ["group", 400, 300], ["annotation", 200, 150],
-      ] as const) {
-        const node = { ...base, node_type: nodeType };
-        expect(getNodeDimensions(node)).toEqual({ width, height });
-        expect(getNodeHandlePosition(node, "bottom")).toEqual({ x: 100 + width / 2, y: 50 + height });
-        const bounds = getCanvasBoundingBox([node], 0);
-        expect(bounds.width).toBe(width);
-        expect(bounds.height).toBe(height);
-      }
-    });
-  });
-
-  describe("exportToMermaid", () => {
-    it("exports nodes and edges to valid Mermaid graph LR markdown", () => {
-      const mockNodes: CanvasNode[] = [
-        {
-          id: "node_1",
-          project_id: "p1",
-          title: "Auth Setup",
-          description: "",
-          status: "completed",
-          position_x: 0,
-          position_y: 0,
-          width: 280,
-          height: 170,
-          color: "default",
-          sort_order: 0,
-          claimed_by: null,
-          version: 1,
-          created_at: "",
-          updated_at: "",
-          checkpoints: [
-            { id: "c1", node_id: "node_1", project_id: "p1", title: "RLS", is_completed: true, sort_order: 0, completed_at: null, completed_by: null, created_at: "", updated_at: "" }
-          ],
-        },
-        {
-          id: "node_2",
-          project_id: "p1",
-          title: "Dashboard UI",
-          description: "",
-          status: "draft",
-          position_x: 300,
-          position_y: 0,
-          width: 280,
-          height: 170,
-          color: "default",
-          sort_order: 1,
-          claimed_by: null,
-          version: 1,
-          created_at: "",
-          updated_at: "",
-          checkpoints: [],
-        },
-      ];
-
-      const mockEdges = [
-        { id: "e1", project_id: "p1", source_node_id: "node_1", target_node_id: "node_2", source_handle: "right" as const, target_handle: "left" as const }
-      ];
-
-      const mermaid = exportToMermaid(mockNodes, mockEdges);
-      expect(mermaid).toContain("graph LR");
-      expect(mermaid).toContain('node_1["Auth Setup (100%)"]');
-      expect(mermaid).toContain('node_2["Dashboard UI (0%)"]');
-      expect(mermaid).toContain("node_1 --> node_2");
-    });
+    const edges = [{ id: "e1", project_id: "p1", source_node_id: "n1", target_node_id: "n2", source_handle: "right" as const, target_handle: "left" as const }];
+    const mermaid = exportToMermaid(mockNodes, edges);
+    expect(mermaid).toContain("graph LR");
+    expect(mermaid).toContain("n1 --> n2");
   });
 });

@@ -9,7 +9,7 @@ import {
   resetRedisClientInstance,
 } from "./client";
 
-describe("Redis Client & Fallback Safety Layer", () => {
+describe("Redis Client & Distributed Lease Fallback", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -31,36 +31,14 @@ describe("Redis Client & Fallback Safety Layer", () => {
     expect(getRedis()).toBeNull();
   });
 
-  it("safely handles safeRedisGet without throwing when unconfigured", async () => {
+  it("safely handles get, set, delete, and expire operations without throwing when unconfigured", async () => {
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
 
-    const result = await safeRedisGet<string>("test-key");
-    expect(result).toBeNull();
-  });
-
-  it("safely handles safeRedisSet without throwing when unconfigured", async () => {
-    delete process.env.UPSTASH_REDIS_REST_URL;
-    delete process.env.UPSTASH_REDIS_REST_TOKEN;
-
-    const result = await safeRedisSet("test-key", "value", { ex: 60 });
-    expect(result).toBe(false);
-  });
-
-  it("safely handles safeRedisDel without throwing when unconfigured", async () => {
-    delete process.env.UPSTASH_REDIS_REST_URL;
-    delete process.env.UPSTASH_REDIS_REST_TOKEN;
-
-    const result = await safeRedisDel("test-key");
-    expect(result).toBe(false);
-  });
-
-  it("safely handles safeRedisExpire without throwing when unconfigured", async () => {
-    delete process.env.UPSTASH_REDIS_REST_URL;
-    delete process.env.UPSTASH_REDIS_REST_TOKEN;
-
-    const result = await safeRedisExpire("test-key", 300);
-    expect(result).toBe(false);
+    expect(await safeRedisGet<string>("test-key")).toBeNull();
+    expect(await safeRedisSet("test-key", "value", { ex: 60 })).toBe(false);
+    expect(await safeRedisDel("test-key")).toBe(false);
+    expect(await safeRedisExpire("test-key", 300)).toBe(false);
   });
 
   it("initializes Redis client when valid URL and token are set", () => {
@@ -68,7 +46,6 @@ describe("Redis Client & Fallback Safety Layer", () => {
     process.env.UPSTASH_REDIS_REST_TOKEN = "fake-token-123";
 
     expect(isRedisConfigured()).toBe(true);
-    const client = getRedis();
-    expect(client).not.toBeNull();
+    expect(getRedis()).not.toBeNull();
   });
 });
