@@ -432,7 +432,7 @@ export default function CanvasViewportContainer({
       onPointerCancel={handlePointerUp}
       onLostPointerCapture={handlePointerUp}
       onClickCapture={handleClick}
-      className={`relative h-full w-full select-none overflow-hidden bg-[#faf8f5] dark:bg-[#10151f] touch-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-500 ${cursorClass}`}
+      className={`relative h-full w-full select-none overflow-hidden bg-[#faf8f5] dark:bg-[#10151f] touch-none outline-none focus:outline-none focus-visible:outline-none ${cursorClass}`}
       style={{
         backgroundImage: `
           radial-gradient(circle, ${dotColor} 1px, transparent 1px)

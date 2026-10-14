@@ -148,7 +148,8 @@
       "defaultConfig": {
         "endpointType": "REGIONAL"
       },
-      "iconPath": "/aws-icons/Amazon-API-Gateway.svg"
+      "iconPath": "/aws-icons/Amazon-API-Gateway.svg",
+      "aliases": []
     },
     {
       "id": "appflow",
@@ -157,7 +158,8 @@
       "description": "Application Integration",
       "defaultConfig": {},
       "category": "integration",
-      "iconPath": "/aws-icons/Amazon-AppFlow.svg"
+      "iconPath": "/aws-icons/Amazon-AppFlow.svg",
+      "aliases": []
     },
     {
       "id": "applicationrecoverycontroller",
@@ -166,7 +168,10 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/Amazon-Application-Recovery-Controller.svg"
+      "iconPath": "/aws-icons/Amazon-Application-Recovery-Controller.svg",
+      "aliases": [
+        "ARC"
+      ]
     },
     {
       "id": "athena",
@@ -175,7 +180,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-Athena.svg"
+      "iconPath": "/aws-icons/Amazon-Athena.svg",
+      "aliases": []
     },
     {
       "id": "augmentedaia2i",
@@ -184,7 +190,10 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Augmented-AI-A2I.svg"
+      "iconPath": "/aws-icons/Amazon-Augmented-AI-A2I.svg",
+      "aliases": [
+        "A2I"
+      ]
     },
     {
       "id": "aurora",
@@ -195,7 +204,8 @@
       "defaultConfig": {
         "engine": "aurora-postgresql"
       },
-      "iconPath": "/aws-icons/Amazon-Aurora.svg"
+      "iconPath": "/aws-icons/Amazon-Aurora.svg",
+      "aliases": []
     },
     {
       "id": "bedrock",
@@ -204,7 +214,8 @@
       "category": "ml",
       "description": "Build and scale generative AI applications",
       "defaultConfig": {},
-      "iconPath": "/aws-icons/Amazon-Bedrock.svg"
+      "iconPath": "/aws-icons/Amazon-Bedrock.svg",
+      "aliases": []
     },
     {
       "id": "bedrockagentcore",
@@ -213,7 +224,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Bedrock-AgentCore.svg"
+      "iconPath": "/aws-icons/Amazon-Bedrock-AgentCore.svg",
+      "aliases": []
     },
     {
       "id": "braket",
@@ -222,7 +234,8 @@
       "description": "Quantum Technologies",
       "defaultConfig": {},
       "category": "quantum-technologies",
-      "iconPath": "/aws-icons/Amazon-Braket.svg"
+      "iconPath": "/aws-icons/Amazon-Braket.svg",
+      "aliases": []
     },
     {
       "id": "chime",
@@ -231,7 +244,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/Amazon-Chime.svg"
+      "iconPath": "/aws-icons/Amazon-Chime.svg",
+      "aliases": []
     },
     {
       "id": "chimesdk",
@@ -240,7 +254,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/Amazon-Chime-SDK.svg"
+      "iconPath": "/aws-icons/Amazon-Chime-SDK.svg",
+      "aliases": []
     },
     {
       "id": "clouddirectory",
@@ -249,7 +264,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/Amazon-Cloud-Directory.svg"
+      "iconPath": "/aws-icons/Amazon-Cloud-Directory.svg",
+      "aliases": []
     },
     {
       "id": "cloudfront",
@@ -260,7 +276,8 @@
       "defaultConfig": {
         "priceClass": "PriceClass_100"
       },
-      "iconPath": "/aws-icons/Amazon-CloudFront.svg"
+      "iconPath": "/aws-icons/Amazon-CloudFront.svg",
+      "aliases": []
     },
     {
       "id": "cloudsearch",
@@ -269,7 +286,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-CloudSearch.svg"
+      "iconPath": "/aws-icons/Amazon-CloudSearch.svg",
+      "aliases": []
     },
     {
       "id": "cloudwatch",
@@ -278,7 +296,8 @@
       "category": "management",
       "description": "Monitor resources and applications",
       "defaultConfig": {},
-      "iconPath": "/aws-icons/Amazon-CloudWatch.svg"
+      "iconPath": "/aws-icons/Amazon-CloudWatch.svg",
+      "aliases": []
     },
     {
       "id": "codecatalyst",
@@ -287,7 +306,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/Amazon-CodeCatalyst.svg"
+      "iconPath": "/aws-icons/Amazon-CodeCatalyst.svg",
+      "aliases": []
     },
     {
       "id": "codeguru",
@@ -296,7 +316,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-CodeGuru.svg"
+      "iconPath": "/aws-icons/Amazon-CodeGuru.svg",
+      "aliases": []
     },
     {
       "id": "codewhisperer",
@@ -305,7 +326,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-CodeWhisperer.svg"
+      "iconPath": "/aws-icons/Amazon-CodeWhisperer.svg",
+      "aliases": []
     },
     {
       "id": "cognito",
@@ -316,7 +338,8 @@
       "defaultConfig": {
         "type": "UserPool"
       },
-      "iconPath": "/aws-icons/Amazon-Cognito.svg"
+      "iconPath": "/aws-icons/Amazon-Cognito.svg",
+      "aliases": []
     },
     {
       "id": "comprehend",
@@ -325,7 +348,8 @@
       "category": "ml",
       "description": "Discover insights and relationships in text",
       "defaultConfig": {},
-      "iconPath": "/aws-icons/Amazon-Comprehend.svg"
+      "iconPath": "/aws-icons/Amazon-Comprehend.svg",
+      "aliases": []
     },
     {
       "id": "comprehendmedical",
@@ -334,7 +358,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Comprehend-Medical.svg"
+      "iconPath": "/aws-icons/Amazon-Comprehend-Medical.svg",
+      "aliases": []
     },
     {
       "id": "connect",
@@ -343,7 +368,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/Amazon-Connect.svg"
+      "iconPath": "/aws-icons/Amazon-Connect.svg",
+      "aliases": []
     },
     {
       "id": "corretto",
@@ -352,7 +378,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/Amazon-Corretto.svg"
+      "iconPath": "/aws-icons/Amazon-Corretto.svg",
+      "aliases": []
     },
     {
       "id": "datafirehose",
@@ -361,7 +388,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-Data-Firehose.svg"
+      "iconPath": "/aws-icons/Amazon-Data-Firehose.svg",
+      "aliases": []
     },
     {
       "id": "datazone",
@@ -370,7 +398,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-DataZone.svg"
+      "iconPath": "/aws-icons/Amazon-DataZone.svg",
+      "aliases": []
     },
     {
       "id": "dcv",
@@ -379,7 +408,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/Amazon-DCV.svg"
+      "iconPath": "/aws-icons/Amazon-DCV.svg",
+      "aliases": []
     },
     {
       "id": "detective",
@@ -388,7 +418,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/Amazon-Detective.svg"
+      "iconPath": "/aws-icons/Amazon-Detective.svg",
+      "aliases": []
     },
     {
       "id": "devopsguru",
@@ -397,7 +428,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-DevOps-Guru.svg"
+      "iconPath": "/aws-icons/Amazon-DevOps-Guru.svg",
+      "aliases": []
     },
     {
       "id": "documentdb",
@@ -408,7 +440,8 @@
       "defaultConfig": {
         "instanceClass": "db.r5.large"
       },
-      "iconPath": "/aws-icons/Amazon-DocumentDB.svg"
+      "iconPath": "/aws-icons/Amazon-DocumentDB.svg",
+      "aliases": []
     },
     {
       "id": "dynamodb",
@@ -419,7 +452,10 @@
       "defaultConfig": {
         "billingMode": "PAY_PER_REQUEST"
       },
-      "iconPath": "/aws-icons/Amazon-DynamoDB.svg"
+      "iconPath": "/aws-icons/Amazon-DynamoDB.svg",
+      "aliases": [
+        "DDB"
+      ]
     },
     {
       "id": "ec2autoscaling",
@@ -428,7 +464,10 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/Amazon-EC2-Auto-Scaling.svg"
+      "iconPath": "/aws-icons/Amazon-EC2-Auto-Scaling.svg",
+      "aliases": [
+        "ASG"
+      ]
     },
     {
       "id": "ec2imagebuilder",
@@ -437,7 +476,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/Amazon-EC2-Image-Builder.svg"
+      "iconPath": "/aws-icons/Amazon-EC2-Image-Builder.svg",
+      "aliases": []
     },
     {
       "id": "ecsanywhere",
@@ -446,7 +486,8 @@
       "description": "Containers",
       "defaultConfig": {},
       "category": "containers",
-      "iconPath": "/aws-icons/Amazon-ECS-Anywhere.svg"
+      "iconPath": "/aws-icons/Amazon-ECS-Anywhere.svg",
+      "aliases": []
     },
     {
       "id": "eksanywhere",
@@ -455,7 +496,8 @@
       "description": "Containers",
       "defaultConfig": {},
       "category": "containers",
-      "iconPath": "/aws-icons/Amazon-EKS-Anywhere.svg"
+      "iconPath": "/aws-icons/Amazon-EKS-Anywhere.svg",
+      "aliases": []
     },
     {
       "id": "eksdistro",
@@ -464,7 +506,8 @@
       "description": "Containers",
       "defaultConfig": {},
       "category": "containers",
-      "iconPath": "/aws-icons/Amazon-EKS-Distro.svg"
+      "iconPath": "/aws-icons/Amazon-EKS-Distro.svg",
+      "aliases": []
     },
     {
       "id": "ebs",
@@ -476,7 +519,8 @@
         "volumeType": "gp3",
         "size": "20"
       },
-      "iconPath": "/aws-icons/Amazon-Elastic-Block-Store.svg"
+      "iconPath": "/aws-icons/Amazon-Elastic-Block-Store.svg",
+      "aliases": []
     },
     {
       "id": "ec2",
@@ -487,7 +531,10 @@
       "defaultConfig": {
         "instanceType": "t3.micro"
       },
-      "iconPath": "/aws-icons/Amazon-EC2.svg"
+      "iconPath": "/aws-icons/Amazon-EC2.svg",
+      "aliases": [
+        "EC2"
+      ]
     },
     {
       "id": "elasticcontainerregistry",
@@ -496,7 +543,10 @@
       "description": "Containers",
       "defaultConfig": {},
       "category": "containers",
-      "iconPath": "/aws-icons/Amazon-Elastic-Container-Registry.svg"
+      "iconPath": "/aws-icons/Amazon-Elastic-Container-Registry.svg",
+      "aliases": [
+        "ECR"
+      ]
     },
     {
       "id": "ecs",
@@ -507,7 +557,10 @@
       "defaultConfig": {
         "launchType": "FARGATE"
       },
-      "iconPath": "/aws-icons/Amazon-Elastic-Container-Service.svg"
+      "iconPath": "/aws-icons/Amazon-Elastic-Container-Service.svg",
+      "aliases": [
+        "ECS"
+      ]
     },
     {
       "id": "efs",
@@ -518,7 +571,8 @@
       "defaultConfig": {
         "performanceMode": "generalPurpose"
       },
-      "iconPath": "/aws-icons/Amazon-EFS.svg"
+      "iconPath": "/aws-icons/Amazon-EFS.svg",
+      "aliases": []
     },
     {
       "id": "elasticinference",
@@ -527,7 +581,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Elastic-Inference.svg"
+      "iconPath": "/aws-icons/Amazon-Elastic-Inference.svg",
+      "aliases": []
     },
     {
       "id": "eks",
@@ -538,7 +593,10 @@
       "defaultConfig": {
         "version": "1.29"
       },
-      "iconPath": "/aws-icons/Amazon-Elastic-Kubernetes-Service.svg"
+      "iconPath": "/aws-icons/Amazon-Elastic-Kubernetes-Service.svg",
+      "aliases": [
+        "EKS"
+      ]
     },
     {
       "id": "elasticvmwareservice",
@@ -547,7 +605,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/Amazon-Elastic-VMware-Service.svg"
+      "iconPath": "/aws-icons/Amazon-Elastic-VMware-Service.svg",
+      "aliases": []
     },
     {
       "id": "elasticache",
@@ -558,7 +617,8 @@
       "defaultConfig": {
         "engine": "redis"
       },
-      "iconPath": "/aws-icons/Amazon-ElastiCache.svg"
+      "iconPath": "/aws-icons/Amazon-ElastiCache.svg",
+      "aliases": []
     },
     {
       "id": "emr",
@@ -567,7 +627,10 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-EMR.svg"
+      "iconPath": "/aws-icons/Amazon-EMR.svg",
+      "aliases": [
+        "elastic mapreduce"
+      ]
     },
     {
       "id": "eventbridge",
@@ -576,7 +639,8 @@
       "category": "integration",
       "description": "Serverless event bus",
       "defaultConfig": {},
-      "iconPath": "/aws-icons/Amazon-EventBridge.svg"
+      "iconPath": "/aws-icons/Amazon-EventBridge.svg",
+      "aliases": []
     },
     {
       "id": "filecache",
@@ -585,7 +649,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/Amazon-File-Cache.svg"
+      "iconPath": "/aws-icons/Amazon-File-Cache.svg",
+      "aliases": []
     },
     {
       "id": "finspace",
@@ -594,7 +659,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-FinSpace.svg"
+      "iconPath": "/aws-icons/Amazon-FinSpace.svg",
+      "aliases": []
     },
     {
       "id": "forecast",
@@ -603,7 +669,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Forecast.svg"
+      "iconPath": "/aws-icons/Amazon-Forecast.svg",
+      "aliases": []
     },
     {
       "id": "frauddetector",
@@ -612,7 +679,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Fraud-Detector.svg"
+      "iconPath": "/aws-icons/Amazon-Fraud-Detector.svg",
+      "aliases": []
     },
     {
       "id": "fsx",
@@ -621,7 +689,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/Amazon-FSx.svg"
+      "iconPath": "/aws-icons/Amazon-FSx.svg",
+      "aliases": []
     },
     {
       "id": "fsxforlustre",
@@ -630,7 +699,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/Amazon-FSx-for-Lustre.svg"
+      "iconPath": "/aws-icons/Amazon-FSx-for-Lustre.svg",
+      "aliases": []
     },
     {
       "id": "fsxfornetappontap",
@@ -639,7 +709,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/Amazon-FSx-for-NetApp-ONTAP.svg"
+      "iconPath": "/aws-icons/Amazon-FSx-for-NetApp-ONTAP.svg",
+      "aliases": []
     },
     {
       "id": "fsxforopenzfs",
@@ -648,7 +719,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/Amazon-FSx-for-OpenZFS.svg"
+      "iconPath": "/aws-icons/Amazon-FSx-for-OpenZFS.svg",
+      "aliases": []
     },
     {
       "id": "fsxforwfs",
@@ -657,7 +729,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/Amazon-FSx-for-WFS.svg"
+      "iconPath": "/aws-icons/Amazon-FSx-for-WFS.svg",
+      "aliases": []
     },
     {
       "id": "gameliftservers",
@@ -666,7 +739,8 @@
       "description": "Games",
       "defaultConfig": {},
       "category": "games",
-      "iconPath": "/aws-icons/Amazon-GameLift-Servers.svg"
+      "iconPath": "/aws-icons/Amazon-GameLift-Servers.svg",
+      "aliases": []
     },
     {
       "id": "gameliftstreams",
@@ -675,7 +749,8 @@
       "description": "Games",
       "defaultConfig": {},
       "category": "games",
-      "iconPath": "/aws-icons/Amazon-GameLift-Streams.svg"
+      "iconPath": "/aws-icons/Amazon-GameLift-Streams.svg",
+      "aliases": []
     },
     {
       "id": "guardduty",
@@ -684,7 +759,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/Amazon-GuardDuty.svg"
+      "iconPath": "/aws-icons/Amazon-GuardDuty.svg",
+      "aliases": []
     },
     {
       "id": "inspector",
@@ -693,7 +769,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/Amazon-Inspector.svg"
+      "iconPath": "/aws-icons/Amazon-Inspector.svg",
+      "aliases": []
     },
     {
       "id": "interactivevideoservice",
@@ -702,7 +779,10 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/Amazon-Interactive-Video-Service.svg"
+      "iconPath": "/aws-icons/Amazon-Interactive-Video-Service.svg",
+      "aliases": [
+        "IVS"
+      ]
     },
     {
       "id": "kendra",
@@ -711,7 +791,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Kendra.svg"
+      "iconPath": "/aws-icons/Amazon-Kendra.svg",
+      "aliases": []
     },
     {
       "id": "keyspaces",
@@ -720,7 +801,8 @@
       "description": "Databases",
       "defaultConfig": {},
       "category": "database",
-      "iconPath": "/aws-icons/Amazon-Keyspaces.svg"
+      "iconPath": "/aws-icons/Amazon-Keyspaces.svg",
+      "aliases": []
     },
     {
       "id": "kinesis",
@@ -729,7 +811,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-Kinesis.svg"
+      "iconPath": "/aws-icons/Amazon-Kinesis.svg",
+      "aliases": []
     },
     {
       "id": "kinesisdatastreams",
@@ -738,7 +821,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-Kinesis-Data-Streams.svg"
+      "iconPath": "/aws-icons/Amazon-Kinesis-Data-Streams.svg",
+      "aliases": []
     },
     {
       "id": "kinesisvideostreams",
@@ -747,7 +831,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-Kinesis-Video-Streams.svg"
+      "iconPath": "/aws-icons/Amazon-Kinesis-Video-Streams.svg",
+      "aliases": []
     },
     {
       "id": "lex",
@@ -756,7 +841,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Lex.svg"
+      "iconPath": "/aws-icons/Amazon-Lex.svg",
+      "aliases": []
     },
     {
       "id": "lightsail",
@@ -765,7 +851,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/Amazon-Lightsail.svg"
+      "iconPath": "/aws-icons/Amazon-Lightsail.svg",
+      "aliases": []
     },
     {
       "id": "lightsailforresearch",
@@ -774,7 +861,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/Amazon-Lightsail-for-Research.svg"
+      "iconPath": "/aws-icons/Amazon-Lightsail-for-Research.svg",
+      "aliases": []
     },
     {
       "id": "locationservice",
@@ -783,7 +871,8 @@
       "description": "Front End Web Mobile",
       "defaultConfig": {},
       "category": "front-end",
-      "iconPath": "/aws-icons/Amazon-Location-Service.svg"
+      "iconPath": "/aws-icons/Amazon-Location-Service.svg",
+      "aliases": []
     },
     {
       "id": "lookoutforequipment",
@@ -792,7 +881,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Lookout-for-Equipment.svg"
+      "iconPath": "/aws-icons/Amazon-Lookout-for-Equipment.svg",
+      "aliases": []
     },
     {
       "id": "lookoutforvision",
@@ -801,7 +891,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Lookout-for-Vision.svg"
+      "iconPath": "/aws-icons/Amazon-Lookout-for-Vision.svg",
+      "aliases": []
     },
     {
       "id": "macie",
@@ -810,7 +901,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/Amazon-Macie.svg"
+      "iconPath": "/aws-icons/Amazon-Macie.svg",
+      "aliases": []
     },
     {
       "id": "managedblockchain",
@@ -819,7 +911,8 @@
       "description": "Blockchain",
       "defaultConfig": {},
       "category": "blockchain",
-      "iconPath": "/aws-icons/Amazon-Managed-Blockchain.svg"
+      "iconPath": "/aws-icons/Amazon-Managed-Blockchain.svg",
+      "aliases": []
     },
     {
       "id": "managedgrafana",
@@ -828,7 +921,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/Amazon-Managed-Grafana.svg"
+      "iconPath": "/aws-icons/Amazon-Managed-Grafana.svg",
+      "aliases": []
     },
     {
       "id": "managedserviceforapacheflink",
@@ -837,7 +931,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-Managed-Service-for-Apache-Flink.svg"
+      "iconPath": "/aws-icons/Amazon-Managed-Service-for-Apache-Flink.svg",
+      "aliases": []
     },
     {
       "id": "managedserviceforprometheus",
@@ -846,7 +941,10 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/Amazon-Managed-Service-for-Prometheus.svg"
+      "iconPath": "/aws-icons/Amazon-Managed-Service-for-Prometheus.svg",
+      "aliases": [
+        "AMP"
+      ]
     },
     {
       "id": "managedstreamingforapachekafka",
@@ -855,7 +953,10 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-Managed-Streaming-for-Apache-Kafka.svg"
+      "iconPath": "/aws-icons/Amazon-Managed-Streaming-for-Apache-Kafka.svg",
+      "aliases": [
+        "MSK"
+      ]
     },
     {
       "id": "managedworkflowsforapacheairflow",
@@ -864,7 +965,10 @@
       "description": "Application Integration",
       "defaultConfig": {},
       "category": "integration",
-      "iconPath": "/aws-icons/Amazon-Managed-Workflows-for-Apache-Airflow.svg"
+      "iconPath": "/aws-icons/Amazon-Managed-Workflows-for-Apache-Airflow.svg",
+      "aliases": [
+        "MWAA"
+      ]
     },
     {
       "id": "memorydb",
@@ -873,7 +977,8 @@
       "description": "Databases",
       "defaultConfig": {},
       "category": "database",
-      "iconPath": "/aws-icons/Amazon-MemoryDB.svg"
+      "iconPath": "/aws-icons/Amazon-MemoryDB.svg",
+      "aliases": []
     },
     {
       "id": "monitron",
@@ -882,7 +987,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Monitron.svg"
+      "iconPath": "/aws-icons/Amazon-Monitron.svg",
+      "aliases": []
     },
     {
       "id": "mq",
@@ -893,7 +999,8 @@
       "defaultConfig": {
         "engine": "RabbitMQ"
       },
-      "iconPath": "/aws-icons/Amazon-MQ.svg"
+      "iconPath": "/aws-icons/Amazon-MQ.svg",
+      "aliases": []
     },
     {
       "id": "neptune",
@@ -902,7 +1009,8 @@
       "description": "Databases",
       "defaultConfig": {},
       "category": "database",
-      "iconPath": "/aws-icons/Amazon-Neptune.svg"
+      "iconPath": "/aws-icons/Amazon-Neptune.svg",
+      "aliases": []
     },
     {
       "id": "nova",
@@ -911,7 +1019,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Nova.svg"
+      "iconPath": "/aws-icons/Amazon-Nova.svg",
+      "aliases": []
     },
     {
       "id": "opensearchservice",
@@ -920,7 +1029,11 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/Amazon-OpenSearch-Service.svg"
+      "iconPath": "/aws-icons/Amazon-OpenSearch-Service.svg",
+      "aliases": [
+        "OpenSearch",
+        "ES"
+      ]
     },
     {
       "id": "personalize",
@@ -929,7 +1042,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Personalize.svg"
+      "iconPath": "/aws-icons/Amazon-Personalize.svg",
+      "aliases": []
     },
     {
       "id": "pinpoint",
@@ -938,7 +1052,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/Amazon-Pinpoint.svg"
+      "iconPath": "/aws-icons/Amazon-Pinpoint.svg",
+      "aliases": []
     },
     {
       "id": "pinpointapis",
@@ -947,7 +1062,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/Amazon-Pinpoint-APIs.svg"
+      "iconPath": "/aws-icons/Amazon-Pinpoint-APIs.svg",
+      "aliases": []
     },
     {
       "id": "polly",
@@ -956,7 +1072,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Polly.svg"
+      "iconPath": "/aws-icons/Amazon-Polly.svg",
+      "aliases": []
     },
     {
       "id": "q",
@@ -965,7 +1082,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Q.svg"
+      "iconPath": "/aws-icons/Amazon-Q.svg",
+      "aliases": []
     },
     {
       "id": "quick",
@@ -974,7 +1092,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/Amazon-Quick.svg"
+      "iconPath": "/aws-icons/Amazon-Quick.svg",
+      "aliases": []
     },
     {
       "id": "redshift",
@@ -985,7 +1104,8 @@
       "defaultConfig": {
         "nodeType": "dc2.large"
       },
-      "iconPath": "/aws-icons/Amazon-Redshift.svg"
+      "iconPath": "/aws-icons/Amazon-Redshift.svg",
+      "aliases": []
     },
     {
       "id": "rekognition",
@@ -994,7 +1114,8 @@
       "category": "ml",
       "description": "Analyze image and video",
       "defaultConfig": {},
-      "iconPath": "/aws-icons/Amazon-Rekognition.svg"
+      "iconPath": "/aws-icons/Amazon-Rekognition.svg",
+      "aliases": []
     },
     {
       "id": "rds",
@@ -1006,7 +1127,10 @@
         "engine": "postgres",
         "instanceClass": "db.t3.micro"
       },
-      "iconPath": "/aws-icons/Amazon-RDS.svg"
+      "iconPath": "/aws-icons/Amazon-RDS.svg",
+      "aliases": [
+        "RDS"
+      ]
     },
     {
       "id": "route53",
@@ -1017,7 +1141,8 @@
       "defaultConfig": {
         "type": "A"
       },
-      "iconPath": "/aws-icons/Amazon-Route-53.svg"
+      "iconPath": "/aws-icons/Amazon-Route-53.svg",
+      "aliases": []
     },
     {
       "id": "glacier",
@@ -1028,7 +1153,8 @@
       "defaultConfig": {
         "retrievalTier": "Standard"
       },
-      "iconPath": "/aws-icons/Amazon-Simple-Storage-Service-Glacier.svg"
+      "iconPath": "/aws-icons/Amazon-Simple-Storage-Service-Glacier.svg",
+      "aliases": []
     },
     {
       "id": "s3onoutposts",
@@ -1037,7 +1163,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/Amazon-S3-on-Outposts.svg"
+      "iconPath": "/aws-icons/Amazon-S3-on-Outposts.svg",
+      "aliases": []
     },
     {
       "id": "sagemaker",
@@ -1046,7 +1173,8 @@
       "category": "analytics",
       "description": "Build, train, and deploy machine learning models",
       "defaultConfig": {},
-      "iconPath": "/aws-icons/Amazon-SageMaker.svg"
+      "iconPath": "/aws-icons/Amazon-SageMaker.svg",
+      "aliases": []
     },
     {
       "id": "sagemakerai",
@@ -1055,7 +1183,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-SageMaker-AI.svg"
+      "iconPath": "/aws-icons/Amazon-SageMaker-AI.svg",
+      "aliases": []
     },
     {
       "id": "sagemakergroundtruth",
@@ -1064,7 +1193,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-SageMaker-Ground-Truth.svg"
+      "iconPath": "/aws-icons/Amazon-SageMaker-Ground-Truth.svg",
+      "aliases": []
     },
     {
       "id": "sagemakerstudiolab",
@@ -1073,7 +1203,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-SageMaker-Studio-Lab.svg"
+      "iconPath": "/aws-icons/Amazon-SageMaker-Studio-Lab.svg",
+      "aliases": []
     },
     {
       "id": "securitylake",
@@ -1082,7 +1213,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/Amazon-Security-Lake.svg"
+      "iconPath": "/aws-icons/Amazon-Security-Lake.svg",
+      "aliases": []
     },
     {
       "id": "simpleemailservice",
@@ -1091,7 +1223,10 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/Amazon-Simple-Email-Service.svg"
+      "iconPath": "/aws-icons/Amazon-Simple-Email-Service.svg",
+      "aliases": [
+        "SES"
+      ]
     },
     {
       "id": "sns",
@@ -1102,7 +1237,10 @@
       "defaultConfig": {
         "type": "standard"
       },
-      "iconPath": "/aws-icons/Amazon-Simple-Notification-Service.svg"
+      "iconPath": "/aws-icons/Amazon-Simple-Notification-Service.svg",
+      "aliases": [
+        "SNS"
+      ]
     },
     {
       "id": "sqs",
@@ -1113,7 +1251,10 @@
       "defaultConfig": {
         "type": "standard"
       },
-      "iconPath": "/aws-icons/Amazon-Simple-Queue-Service.svg"
+      "iconPath": "/aws-icons/Amazon-Simple-Queue-Service.svg",
+      "aliases": [
+        "SQS"
+      ]
     },
     {
       "id": "s3",
@@ -1125,7 +1266,10 @@
         "versioning": "enabled",
         "encryption": "AES256"
       },
-      "iconPath": "/aws-icons/Amazon-Simple-Storage-Service.svg"
+      "iconPath": "/aws-icons/Amazon-Simple-Storage-Service.svg",
+      "aliases": [
+        "S3"
+      ]
     },
     {
       "id": "textract",
@@ -1134,7 +1278,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Textract.svg"
+      "iconPath": "/aws-icons/Amazon-Textract.svg",
+      "aliases": []
     },
     {
       "id": "timestream",
@@ -1143,7 +1288,8 @@
       "description": "Databases",
       "defaultConfig": {},
       "category": "database",
-      "iconPath": "/aws-icons/Amazon-Timestream.svg"
+      "iconPath": "/aws-icons/Amazon-Timestream.svg",
+      "aliases": []
     },
     {
       "id": "transcribe",
@@ -1152,7 +1298,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Transcribe.svg"
+      "iconPath": "/aws-icons/Amazon-Transcribe.svg",
+      "aliases": []
     },
     {
       "id": "translate",
@@ -1161,7 +1308,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Amazon-Translate.svg"
+      "iconPath": "/aws-icons/Amazon-Translate.svg",
+      "aliases": []
     },
     {
       "id": "verifiedpermissions",
@@ -1170,7 +1318,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/Amazon-Verified-Permissions.svg"
+      "iconPath": "/aws-icons/Amazon-Verified-Permissions.svg",
+      "aliases": []
     },
     {
       "id": "vpc",
@@ -1181,7 +1330,8 @@
       "defaultConfig": {
         "cidrBlock": "10.0.0.0/16"
       },
-      "iconPath": "/aws-icons/Amazon-Virtual-Private-Cloud.svg"
+      "iconPath": "/aws-icons/Amazon-Virtual-Private-Cloud.svg",
+      "aliases": []
     },
     {
       "id": "vpclattice",
@@ -1190,7 +1340,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/Amazon-VPC-Lattice.svg"
+      "iconPath": "/aws-icons/Amazon-VPC-Lattice.svg",
+      "aliases": []
     },
     {
       "id": "workdocs",
@@ -1199,7 +1350,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/Amazon-WorkDocs.svg"
+      "iconPath": "/aws-icons/Amazon-WorkDocs.svg",
+      "aliases": []
     },
     {
       "id": "workdocssdk",
@@ -1208,7 +1360,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/Amazon-WorkDocs-SDK.svg"
+      "iconPath": "/aws-icons/Amazon-WorkDocs-SDK.svg",
+      "aliases": []
     },
     {
       "id": "workmail",
@@ -1217,7 +1370,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/Amazon-WorkMail.svg"
+      "iconPath": "/aws-icons/Amazon-WorkMail.svg",
+      "aliases": []
     },
     {
       "id": "workspaces",
@@ -1226,7 +1380,8 @@
       "description": "End User Computing",
       "defaultConfig": {},
       "category": "end-user-computing",
-      "iconPath": "/aws-icons/Amazon-WorkSpaces.svg"
+      "iconPath": "/aws-icons/Amazon-WorkSpaces.svg",
+      "aliases": []
     },
     {
       "id": "apachemxnetonaws",
@@ -1235,7 +1390,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/Apache-MXNet-on-AWS.svg"
+      "iconPath": "/aws-icons/Apache-MXNet-on-AWS.svg",
+      "aliases": []
     },
     {
       "id": "activate",
@@ -1244,7 +1400,8 @@
       "description": "Customer Enablement",
       "defaultConfig": {},
       "category": "customer-enablement",
-      "iconPath": "/aws-icons/AWS-Activate.svg"
+      "iconPath": "/aws-icons/AWS-Activate.svg",
+      "aliases": []
     },
     {
       "id": "amplify",
@@ -1253,7 +1410,8 @@
       "description": "Front End Web Mobile",
       "defaultConfig": {},
       "category": "front-end",
-      "iconPath": "/aws-icons/AWS-Amplify.svg"
+      "iconPath": "/aws-icons/AWS-Amplify.svg",
+      "aliases": []
     },
     {
       "id": "appmesh",
@@ -1262,7 +1420,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-App-Mesh.svg"
+      "iconPath": "/aws-icons/AWS-App-Mesh.svg",
+      "aliases": []
     },
     {
       "id": "apprunner",
@@ -1271,7 +1430,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-App-Runner.svg"
+      "iconPath": "/aws-icons/AWS-App-Runner.svg",
+      "aliases": []
     },
     {
       "id": "appstudio",
@@ -1280,7 +1440,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-App-Studio.svg"
+      "iconPath": "/aws-icons/AWS-App-Studio.svg",
+      "aliases": []
     },
     {
       "id": "appconfig",
@@ -1289,7 +1450,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-AppConfig.svg"
+      "iconPath": "/aws-icons/AWS-AppConfig.svg",
+      "aliases": []
     },
     {
       "id": "appfabric",
@@ -1298,7 +1460,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/AWS-AppFabric.svg"
+      "iconPath": "/aws-icons/AWS-AppFabric.svg",
+      "aliases": []
     },
     {
       "id": "applicationautoscaling",
@@ -1307,7 +1470,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Application-Auto-Scaling.svg"
+      "iconPath": "/aws-icons/AWS-Application-Auto-Scaling.svg",
+      "aliases": []
     },
     {
       "id": "applicationdiscoveryservice",
@@ -1316,7 +1480,8 @@
       "description": "Migration Modernization",
       "defaultConfig": {},
       "category": "migration-modernization",
-      "iconPath": "/aws-icons/AWS-Application-Discovery-Service.svg"
+      "iconPath": "/aws-icons/AWS-Application-Discovery-Service.svg",
+      "aliases": []
     },
     {
       "id": "applicationmigrationservice",
@@ -1325,7 +1490,10 @@
       "description": "Migration Modernization",
       "defaultConfig": {},
       "category": "migration-modernization",
-      "iconPath": "/aws-icons/AWS-Application-Migration-Service.svg"
+      "iconPath": "/aws-icons/AWS-Application-Migration-Service.svg",
+      "aliases": [
+        "MGN"
+      ]
     },
     {
       "id": "appsync",
@@ -1334,7 +1502,8 @@
       "description": "Application Integration",
       "defaultConfig": {},
       "category": "integration",
-      "iconPath": "/aws-icons/AWS-AppSync.svg"
+      "iconPath": "/aws-icons/AWS-AppSync.svg",
+      "aliases": []
     },
     {
       "id": "artifact",
@@ -1343,7 +1512,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Artifact.svg"
+      "iconPath": "/aws-icons/AWS-Artifact.svg",
+      "aliases": []
     },
     {
       "id": "auditmanager",
@@ -1352,7 +1522,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Audit-Manager.svg"
+      "iconPath": "/aws-icons/AWS-Audit-Manager.svg",
+      "aliases": []
     },
     {
       "id": "autoscaling",
@@ -1361,7 +1532,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Auto-Scaling.svg"
+      "iconPath": "/aws-icons/AWS-Auto-Scaling.svg",
+      "aliases": []
     },
     {
       "id": "b2bdatainterchange",
@@ -1370,7 +1542,8 @@
       "description": "Application Integration",
       "defaultConfig": {},
       "category": "integration",
-      "iconPath": "/aws-icons/AWS-B2B-Data-Interchange.svg"
+      "iconPath": "/aws-icons/AWS-B2B-Data-Interchange.svg",
+      "aliases": []
     },
     {
       "id": "backintagent",
@@ -1379,7 +1552,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Backint-Agent.svg"
+      "iconPath": "/aws-icons/AWS-Backint-Agent.svg",
+      "aliases": []
     },
     {
       "id": "backup",
@@ -1388,7 +1562,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/AWS-Backup.svg"
+      "iconPath": "/aws-icons/AWS-Backup.svg",
+      "aliases": []
     },
     {
       "id": "batch",
@@ -1397,7 +1572,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-Batch.svg"
+      "iconPath": "/aws-icons/AWS-Batch.svg",
+      "aliases": []
     },
     {
       "id": "billingconductor",
@@ -1406,7 +1582,8 @@
       "description": "Cloud Financial Management",
       "defaultConfig": {},
       "category": "cloud-financial-management",
-      "iconPath": "/aws-icons/AWS-Billing-Conductor.svg"
+      "iconPath": "/aws-icons/AWS-Billing-Conductor.svg",
+      "aliases": []
     },
     {
       "id": "budgets",
@@ -1415,7 +1592,8 @@
       "description": "Cloud Financial Management",
       "defaultConfig": {},
       "category": "cloud-financial-management",
-      "iconPath": "/aws-icons/AWS-Budgets.svg"
+      "iconPath": "/aws-icons/AWS-Budgets.svg",
+      "aliases": []
     },
     {
       "id": "certificatemanager",
@@ -1426,7 +1604,10 @@
       "defaultConfig": {
         "validationMethod": "DNS"
       },
-      "iconPath": "/aws-icons/AWS-Certificate-Manager.svg"
+      "iconPath": "/aws-icons/AWS-Certificate-Manager.svg",
+      "aliases": [
+        "ACM"
+      ]
     },
     {
       "id": "chatbot",
@@ -1435,7 +1616,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Chatbot.svg"
+      "iconPath": "/aws-icons/AWS-Chatbot.svg",
+      "aliases": []
     },
     {
       "id": "cleanrooms",
@@ -1444,7 +1626,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/AWS-Clean-Rooms.svg"
+      "iconPath": "/aws-icons/AWS-Clean-Rooms.svg",
+      "aliases": []
     },
     {
       "id": "clientvpn",
@@ -1453,7 +1636,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-Client-VPN.svg"
+      "iconPath": "/aws-icons/AWS-Client-VPN.svg",
+      "aliases": []
     },
     {
       "id": "cloudcontrolapi",
@@ -1462,7 +1646,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-Cloud-Control-API.svg"
+      "iconPath": "/aws-icons/AWS-Cloud-Control-API.svg",
+      "aliases": []
     },
     {
       "id": "clouddevelopmentkit",
@@ -1471,7 +1656,10 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-Cloud-Development-Kit.svg"
+      "iconPath": "/aws-icons/AWS-Cloud-Development-Kit.svg",
+      "aliases": [
+        "CDK"
+      ]
     },
     {
       "id": "cloudmap",
@@ -1480,7 +1668,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-Cloud-Map.svg"
+      "iconPath": "/aws-icons/AWS-Cloud-Map.svg",
+      "aliases": []
     },
     {
       "id": "cloudwan",
@@ -1489,7 +1678,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-Cloud-WAN.svg"
+      "iconPath": "/aws-icons/AWS-Cloud-WAN.svg",
+      "aliases": []
     },
     {
       "id": "cloud9",
@@ -1498,7 +1688,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-Cloud9.svg"
+      "iconPath": "/aws-icons/AWS-Cloud9.svg",
+      "aliases": []
     },
     {
       "id": "cloudformation",
@@ -1507,7 +1698,8 @@
       "category": "management",
       "description": "Create and manage resources with templates",
       "defaultConfig": {},
-      "iconPath": "/aws-icons/AWS-CloudFormation.svg"
+      "iconPath": "/aws-icons/AWS-CloudFormation.svg",
+      "aliases": []
     },
     {
       "id": "cloudhsm",
@@ -1516,7 +1708,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-CloudHSM.svg"
+      "iconPath": "/aws-icons/AWS-CloudHSM.svg",
+      "aliases": []
     },
     {
       "id": "cloudshell",
@@ -1525,7 +1718,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-CloudShell.svg"
+      "iconPath": "/aws-icons/AWS-CloudShell.svg",
+      "aliases": []
     },
     {
       "id": "cloudtrail",
@@ -1536,7 +1730,8 @@
       "defaultConfig": {
         "multiRegion": "true"
       },
-      "iconPath": "/aws-icons/AWS-CloudTrail.svg"
+      "iconPath": "/aws-icons/AWS-CloudTrail.svg",
+      "aliases": []
     },
     {
       "id": "codeartifact",
@@ -1545,7 +1740,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-CodeArtifact.svg"
+      "iconPath": "/aws-icons/AWS-CodeArtifact.svg",
+      "aliases": []
     },
     {
       "id": "codebuild",
@@ -1554,7 +1750,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-CodeBuild.svg"
+      "iconPath": "/aws-icons/AWS-CodeBuild.svg",
+      "aliases": []
     },
     {
       "id": "codecommit",
@@ -1563,7 +1760,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-CodeCommit.svg"
+      "iconPath": "/aws-icons/AWS-CodeCommit.svg",
+      "aliases": []
     },
     {
       "id": "codedeploy",
@@ -1572,7 +1770,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-CodeDeploy.svg"
+      "iconPath": "/aws-icons/AWS-CodeDeploy.svg",
+      "aliases": []
     },
     {
       "id": "codepipeline",
@@ -1581,7 +1780,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-CodePipeline.svg"
+      "iconPath": "/aws-icons/AWS-CodePipeline.svg",
+      "aliases": []
     },
     {
       "id": "commandlineinterface",
@@ -1590,7 +1790,10 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-Command-Line-Interface.svg"
+      "iconPath": "/aws-icons/AWS-Command-Line-Interface.svg",
+      "aliases": [
+        "CLI"
+      ]
     },
     {
       "id": "computeoptimizer",
@@ -1599,7 +1802,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Compute-Optimizer.svg"
+      "iconPath": "/aws-icons/AWS-Compute-Optimizer.svg",
+      "aliases": []
     },
     {
       "id": "config",
@@ -1608,7 +1812,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Config.svg"
+      "iconPath": "/aws-icons/AWS-Config.svg",
+      "aliases": []
     },
     {
       "id": "consolemobileapplication",
@@ -1617,7 +1822,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Console-Mobile-Application.svg"
+      "iconPath": "/aws-icons/AWS-Console-Mobile-Application.svg",
+      "aliases": []
     },
     {
       "id": "controltower",
@@ -1626,7 +1832,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Control-Tower.svg"
+      "iconPath": "/aws-icons/AWS-Control-Tower.svg",
+      "aliases": []
     },
     {
       "id": "costandusagereport",
@@ -1635,7 +1842,10 @@
       "description": "Cloud Financial Management",
       "defaultConfig": {},
       "category": "cloud-financial-management",
-      "iconPath": "/aws-icons/AWS-Cost-and-Usage-Report.svg"
+      "iconPath": "/aws-icons/AWS-Cost-and-Usage-Report.svg",
+      "aliases": [
+        "CUR"
+      ]
     },
     {
       "id": "costexplorer",
@@ -1644,7 +1854,8 @@
       "description": "Cloud Financial Management",
       "defaultConfig": {},
       "category": "cloud-financial-management",
-      "iconPath": "/aws-icons/AWS-Cost-Explorer.svg"
+      "iconPath": "/aws-icons/AWS-Cost-Explorer.svg",
+      "aliases": []
     },
     {
       "id": "dataexchange",
@@ -1653,7 +1864,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/AWS-Data-Exchange.svg"
+      "iconPath": "/aws-icons/AWS-Data-Exchange.svg",
+      "aliases": []
     },
     {
       "id": "datatransferterminal",
@@ -1662,7 +1874,8 @@
       "description": "Migration Modernization",
       "defaultConfig": {},
       "category": "migration-modernization",
-      "iconPath": "/aws-icons/AWS-Data-Transfer-Terminal.svg"
+      "iconPath": "/aws-icons/AWS-Data-Transfer-Terminal.svg",
+      "aliases": []
     },
     {
       "id": "databasemigrationservice",
@@ -1671,7 +1884,10 @@
       "description": "Databases",
       "defaultConfig": {},
       "category": "database",
-      "iconPath": "/aws-icons/AWS-Database-Migration-Service.svg"
+      "iconPath": "/aws-icons/AWS-Database-Migration-Service.svg",
+      "aliases": [
+        "DMS"
+      ]
     },
     {
       "id": "datasync",
@@ -1680,7 +1896,8 @@
       "description": "Migration Modernization",
       "defaultConfig": {},
       "category": "migration-modernization",
-      "iconPath": "/aws-icons/AWS-DataSync.svg"
+      "iconPath": "/aws-icons/AWS-DataSync.svg",
+      "aliases": []
     },
     {
       "id": "deadlinecloud",
@@ -1689,7 +1906,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Deadline-Cloud.svg"
+      "iconPath": "/aws-icons/AWS-Deadline-Cloud.svg",
+      "aliases": []
     },
     {
       "id": "deeplearningamis",
@@ -1698,7 +1916,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-Deep-Learning-AMIs.svg"
+      "iconPath": "/aws-icons/AWS-Deep-Learning-AMIs.svg",
+      "aliases": []
     },
     {
       "id": "deeplearningcontainers",
@@ -1707,7 +1926,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-Deep-Learning-Containers.svg"
+      "iconPath": "/aws-icons/AWS-Deep-Learning-Containers.svg",
+      "aliases": []
     },
     {
       "id": "deepracer",
@@ -1716,7 +1936,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-DeepRacer.svg"
+      "iconPath": "/aws-icons/AWS-DeepRacer.svg",
+      "aliases": []
     },
     {
       "id": "devicefarm",
@@ -1725,7 +1946,8 @@
       "description": "Front End Web Mobile",
       "defaultConfig": {},
       "category": "front-end",
-      "iconPath": "/aws-icons/AWS-Device-Farm.svg"
+      "iconPath": "/aws-icons/AWS-Device-Farm.svg",
+      "aliases": []
     },
     {
       "id": "devopsagent",
@@ -1734,7 +1956,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-DevOps-Agent.svg"
+      "iconPath": "/aws-icons/AWS-DevOps-Agent.svg",
+      "aliases": []
     },
     {
       "id": "directconnect",
@@ -1745,7 +1968,10 @@
       "defaultConfig": {
         "bandwidth": "1Gbps"
       },
-      "iconPath": "/aws-icons/AWS-Direct-Connect.svg"
+      "iconPath": "/aws-icons/AWS-Direct-Connect.svg",
+      "aliases": [
+        "DX"
+      ]
     },
     {
       "id": "directoryservice",
@@ -1754,7 +1980,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Directory-Service.svg"
+      "iconPath": "/aws-icons/AWS-Directory-Service.svg",
+      "aliases": []
     },
     {
       "id": "distroforopentelemetry",
@@ -1763,7 +1990,10 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Distro-for-OpenTelemetry.svg"
+      "iconPath": "/aws-icons/AWS-Distro-for-OpenTelemetry.svg",
+      "aliases": [
+        "ADOT"
+      ]
     },
     {
       "id": "elasticbeanstalk",
@@ -1774,7 +2004,8 @@
       "defaultConfig": {
         "platform": "Node.js"
       },
-      "iconPath": "/aws-icons/AWS-Elastic-Beanstalk.svg"
+      "iconPath": "/aws-icons/AWS-Elastic-Beanstalk.svg",
+      "aliases": []
     },
     {
       "id": "elasticdisasterrecovery",
@@ -1783,7 +2014,10 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/AWS-Elastic-Disaster-Recovery.svg"
+      "iconPath": "/aws-icons/AWS-Elastic-Disaster-Recovery.svg",
+      "aliases": [
+        "DRS"
+      ]
     },
     {
       "id": "elementalappliancessoftware",
@@ -1792,7 +2026,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-Appliances-&-Software.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-Appliances-&-Software.svg",
+      "aliases": []
     },
     {
       "id": "elementalconductor",
@@ -1801,7 +2036,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-Conductor.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-Conductor.svg",
+      "aliases": []
     },
     {
       "id": "elementaldelta",
@@ -1810,7 +2046,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-Delta.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-Delta.svg",
+      "aliases": []
     },
     {
       "id": "elementalinference",
@@ -1819,7 +2056,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-Elemental-Inference.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-Inference.svg",
+      "aliases": []
     },
     {
       "id": "elementallink",
@@ -1828,7 +2066,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-Link.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-Link.svg",
+      "aliases": []
     },
     {
       "id": "elementallive",
@@ -1837,7 +2076,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-Live.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-Live.svg",
+      "aliases": []
     },
     {
       "id": "elementalmediaconnect",
@@ -1846,7 +2086,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-MediaConnect.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-MediaConnect.svg",
+      "aliases": []
     },
     {
       "id": "elementalmediaconvert",
@@ -1855,7 +2096,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-MediaConvert.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-MediaConvert.svg",
+      "aliases": []
     },
     {
       "id": "elementalmedialive",
@@ -1864,7 +2106,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-MediaLive.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-MediaLive.svg",
+      "aliases": []
     },
     {
       "id": "elementalmediapackage",
@@ -1873,7 +2116,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-MediaPackage.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-MediaPackage.svg",
+      "aliases": []
     },
     {
       "id": "elementalmediastore",
@@ -1882,7 +2126,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-MediaStore.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-MediaStore.svg",
+      "aliases": []
     },
     {
       "id": "elementalmediatailor",
@@ -1891,7 +2136,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-MediaTailor.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-MediaTailor.svg",
+      "aliases": []
     },
     {
       "id": "elementalserver",
@@ -1900,7 +2146,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Elemental-Server.svg"
+      "iconPath": "/aws-icons/AWS-Elemental-Server.svg",
+      "aliases": []
     },
     {
       "id": "endusermessaging",
@@ -1909,7 +2156,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/AWS-End-User-Messaging.svg"
+      "iconPath": "/aws-icons/AWS-End-User-Messaging.svg",
+      "aliases": []
     },
     {
       "id": "entityresolution",
@@ -1918,7 +2166,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/AWS-Entity-Resolution.svg"
+      "iconPath": "/aws-icons/AWS-Entity-Resolution.svg",
+      "aliases": []
     },
     {
       "id": "expressworkflows",
@@ -1927,7 +2176,8 @@
       "description": "Application Integration",
       "defaultConfig": {},
       "category": "integration",
-      "iconPath": "/aws-icons/AWS-Express-Workflows.svg"
+      "iconPath": "/aws-icons/AWS-Express-Workflows.svg",
+      "aliases": []
     },
     {
       "id": "fargate",
@@ -1939,7 +2189,8 @@
         "cpu": "256",
         "memory": "512"
       },
-      "iconPath": "/aws-icons/AWS-Fargate.svg"
+      "iconPath": "/aws-icons/AWS-Fargate.svg",
+      "aliases": []
     },
     {
       "id": "faultinjectionservice",
@@ -1948,7 +2199,10 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-Fault-Injection-Service.svg"
+      "iconPath": "/aws-icons/AWS-Fault-Injection-Service.svg",
+      "aliases": [
+        "FIS"
+      ]
     },
     {
       "id": "finopsagent",
@@ -1957,7 +2211,8 @@
       "description": "Cloud Financial Management",
       "defaultConfig": {},
       "category": "cloud-financial-management",
-      "iconPath": "/aws-icons/AWS-FinOps-Agent.svg"
+      "iconPath": "/aws-icons/AWS-FinOps-Agent.svg",
+      "aliases": []
     },
     {
       "id": "firewallmanager",
@@ -1966,7 +2221,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Firewall-Manager.svg"
+      "iconPath": "/aws-icons/AWS-Firewall-Manager.svg",
+      "aliases": []
     },
     {
       "id": "globalaccelerator",
@@ -1975,7 +2231,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-Global-Accelerator.svg"
+      "iconPath": "/aws-icons/AWS-Global-Accelerator.svg",
+      "aliases": []
     },
     {
       "id": "glue",
@@ -1984,7 +2241,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/AWS-Glue.svg"
+      "iconPath": "/aws-icons/AWS-Glue.svg",
+      "aliases": []
     },
     {
       "id": "gluedatabrew",
@@ -1993,7 +2251,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/AWS-Glue-DataBrew.svg"
+      "iconPath": "/aws-icons/AWS-Glue-DataBrew.svg",
+      "aliases": []
     },
     {
       "id": "groundstation",
@@ -2002,7 +2261,8 @@
       "description": "Satellite",
       "defaultConfig": {},
       "category": "satellite",
-      "iconPath": "/aws-icons/AWS-Ground-Station.svg"
+      "iconPath": "/aws-icons/AWS-Ground-Station.svg",
+      "aliases": []
     },
     {
       "id": "healthdashboard",
@@ -2011,7 +2271,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Health-Dashboard.svg"
+      "iconPath": "/aws-icons/AWS-Health-Dashboard.svg",
+      "aliases": []
     },
     {
       "id": "healthimaging",
@@ -2020,7 +2281,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-HealthImaging.svg"
+      "iconPath": "/aws-icons/AWS-HealthImaging.svg",
+      "aliases": []
     },
     {
       "id": "healthlake",
@@ -2029,7 +2291,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-HealthLake.svg"
+      "iconPath": "/aws-icons/AWS-HealthLake.svg",
+      "aliases": []
     },
     {
       "id": "healthomics",
@@ -2038,7 +2301,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-HealthOmics.svg"
+      "iconPath": "/aws-icons/AWS-HealthOmics.svg",
+      "aliases": []
     },
     {
       "id": "healthscribe",
@@ -2047,7 +2311,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-HealthScribe.svg"
+      "iconPath": "/aws-icons/AWS-HealthScribe.svg",
+      "aliases": []
     },
     {
       "id": "iamidentitycenter",
@@ -2056,7 +2321,10 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-IAM-Identity-Center.svg"
+      "iconPath": "/aws-icons/AWS-IAM-Identity-Center.svg",
+      "aliases": [
+        "SSO"
+      ]
     },
     {
       "id": "iam",
@@ -2065,7 +2333,8 @@
       "category": "security",
       "description": "Manage access to AWS resources",
       "defaultConfig": {},
-      "iconPath": "/aws-icons/AWS-Identity-and-Access-Management.svg"
+      "iconPath": "/aws-icons/AWS-Identity-and-Access-Management.svg",
+      "aliases": []
     },
     {
       "id": "infrastructurecomposer",
@@ -2074,7 +2343,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-Infrastructure-Composer.svg"
+      "iconPath": "/aws-icons/AWS-Infrastructure-Composer.svg",
+      "aliases": []
     },
     {
       "id": "interconnect",
@@ -2083,7 +2353,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-Interconnect.svg"
+      "iconPath": "/aws-icons/AWS-Interconnect.svg",
+      "aliases": []
     },
     {
       "id": "iotcore",
@@ -2092,7 +2363,8 @@
       "description": "Internet of Things",
       "defaultConfig": {},
       "category": "iot",
-      "iconPath": "/aws-icons/AWS-IoT-Core.svg"
+      "iconPath": "/aws-icons/AWS-IoT-Core.svg",
+      "aliases": []
     },
     {
       "id": "iotdevicedefender",
@@ -2101,7 +2373,8 @@
       "description": "Internet of Things",
       "defaultConfig": {},
       "category": "iot",
-      "iconPath": "/aws-icons/AWS-IoT-Device-Defender.svg"
+      "iconPath": "/aws-icons/AWS-IoT-Device-Defender.svg",
+      "aliases": []
     },
     {
       "id": "iotdevicemanagement",
@@ -2110,7 +2383,8 @@
       "description": "Internet of Things",
       "defaultConfig": {},
       "category": "iot",
-      "iconPath": "/aws-icons/AWS-IoT-Device-Management.svg"
+      "iconPath": "/aws-icons/AWS-IoT-Device-Management.svg",
+      "aliases": []
     },
     {
       "id": "iotevents",
@@ -2119,7 +2393,8 @@
       "description": "Internet of Things",
       "defaultConfig": {},
       "category": "iot",
-      "iconPath": "/aws-icons/AWS-IoT-Events.svg"
+      "iconPath": "/aws-icons/AWS-IoT-Events.svg",
+      "aliases": []
     },
     {
       "id": "iotexpresslink",
@@ -2128,7 +2403,8 @@
       "description": "Internet of Things",
       "defaultConfig": {},
       "category": "iot",
-      "iconPath": "/aws-icons/AWS-IoT-ExpressLink.svg"
+      "iconPath": "/aws-icons/AWS-IoT-ExpressLink.svg",
+      "aliases": []
     },
     {
       "id": "iotfleetwise",
@@ -2137,7 +2413,8 @@
       "description": "Internet of Things",
       "defaultConfig": {},
       "category": "iot",
-      "iconPath": "/aws-icons/AWS-IoT-FleetWise.svg"
+      "iconPath": "/aws-icons/AWS-IoT-FleetWise.svg",
+      "aliases": []
     },
     {
       "id": "iotgreengrass",
@@ -2146,7 +2423,8 @@
       "description": "Internet of Things",
       "defaultConfig": {},
       "category": "iot",
-      "iconPath": "/aws-icons/AWS-IoT-Greengrass.svg"
+      "iconPath": "/aws-icons/AWS-IoT-Greengrass.svg",
+      "aliases": []
     },
     {
       "id": "iotsitewise",
@@ -2155,7 +2433,8 @@
       "description": "Internet of Things",
       "defaultConfig": {},
       "category": "iot",
-      "iconPath": "/aws-icons/AWS-IoT-SiteWise.svg"
+      "iconPath": "/aws-icons/AWS-IoT-SiteWise.svg",
+      "aliases": []
     },
     {
       "id": "iottwinmaker",
@@ -2164,7 +2443,8 @@
       "description": "Internet of Things",
       "defaultConfig": {},
       "category": "iot",
-      "iconPath": "/aws-icons/AWS-IoT-TwinMaker.svg"
+      "iconPath": "/aws-icons/AWS-IoT-TwinMaker.svg",
+      "aliases": []
     },
     {
       "id": "iq",
@@ -2173,7 +2453,8 @@
       "description": "Customer Enablement",
       "defaultConfig": {},
       "category": "customer-enablement",
-      "iconPath": "/aws-icons/AWS-IQ.svg"
+      "iconPath": "/aws-icons/AWS-IQ.svg",
+      "aliases": []
     },
     {
       "id": "kms",
@@ -2184,7 +2465,8 @@
       "defaultConfig": {
         "keySpec": "SYMMETRIC_DEFAULT"
       },
-      "iconPath": "/aws-icons/AWS-Key-Management-Service.svg"
+      "iconPath": "/aws-icons/AWS-Key-Management-Service.svg",
+      "aliases": []
     },
     {
       "id": "lakeformation",
@@ -2193,7 +2475,8 @@
       "description": "Analytics",
       "defaultConfig": {},
       "category": "analytics",
-      "iconPath": "/aws-icons/AWS-Lake-Formation.svg"
+      "iconPath": "/aws-icons/AWS-Lake-Formation.svg",
+      "aliases": []
     },
     {
       "id": "lambda",
@@ -2205,7 +2488,8 @@
         "runtime": "nodejs20.x",
         "memory": "128"
       },
-      "iconPath": "/aws-icons/AWS-Lambda.svg"
+      "iconPath": "/aws-icons/AWS-Lambda.svg",
+      "aliases": []
     },
     {
       "id": "launchwizard",
@@ -2214,7 +2498,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Launch-Wizard.svg"
+      "iconPath": "/aws-icons/AWS-Launch-Wizard.svg",
+      "aliases": []
     },
     {
       "id": "licensemanager",
@@ -2223,7 +2508,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-License-Manager.svg"
+      "iconPath": "/aws-icons/AWS-License-Manager.svg",
+      "aliases": []
     },
     {
       "id": "localzones",
@@ -2232,7 +2518,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-Local-Zones.svg"
+      "iconPath": "/aws-icons/AWS-Local-Zones.svg",
+      "aliases": []
     },
     {
       "id": "mainframemodernization",
@@ -2241,7 +2528,8 @@
       "description": "Migration Modernization",
       "defaultConfig": {},
       "category": "migration-modernization",
-      "iconPath": "/aws-icons/AWS-Mainframe-Modernization.svg"
+      "iconPath": "/aws-icons/AWS-Mainframe-Modernization.svg",
+      "aliases": []
     },
     {
       "id": "managedservices",
@@ -2250,7 +2538,8 @@
       "description": "Customer Enablement",
       "defaultConfig": {},
       "category": "customer-enablement",
-      "iconPath": "/aws-icons/AWS-Managed-Services.svg"
+      "iconPath": "/aws-icons/AWS-Managed-Services.svg",
+      "aliases": []
     },
     {
       "id": "managementconsole",
@@ -2259,7 +2548,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Management-Console.svg"
+      "iconPath": "/aws-icons/AWS-Management-Console.svg",
+      "aliases": []
     },
     {
       "id": "marketplacedark",
@@ -2268,7 +2558,8 @@
       "description": "General Icons",
       "defaultConfig": {},
       "category": "general-icons",
-      "iconPath": "/aws-icons/AWS-Marketplace_Dark.svg"
+      "iconPath": "/aws-icons/AWS-Marketplace_Dark.svg",
+      "aliases": []
     },
     {
       "id": "marketplacelight",
@@ -2277,7 +2568,8 @@
       "description": "General Icons",
       "defaultConfig": {},
       "category": "general-icons",
-      "iconPath": "/aws-icons/AWS-Marketplace_Light.svg"
+      "iconPath": "/aws-icons/AWS-Marketplace_Light.svg",
+      "aliases": []
     },
     {
       "id": "migrationevaluator",
@@ -2286,7 +2578,8 @@
       "description": "Migration Modernization",
       "defaultConfig": {},
       "category": "migration-modernization",
-      "iconPath": "/aws-icons/AWS-Migration-Evaluator.svg"
+      "iconPath": "/aws-icons/AWS-Migration-Evaluator.svg",
+      "aliases": []
     },
     {
       "id": "networkfirewall",
@@ -2295,7 +2588,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Network-Firewall.svg"
+      "iconPath": "/aws-icons/AWS-Network-Firewall.svg",
+      "aliases": []
     },
     {
       "id": "neuron",
@@ -2304,7 +2598,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-Neuron.svg"
+      "iconPath": "/aws-icons/AWS-Neuron.svg",
+      "aliases": []
     },
     {
       "id": "nitroenclaves",
@@ -2313,7 +2608,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-Nitro-Enclaves.svg"
+      "iconPath": "/aws-icons/AWS-Nitro-Enclaves.svg",
+      "aliases": []
     },
     {
       "id": "organizations",
@@ -2322,7 +2618,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Organizations.svg"
+      "iconPath": "/aws-icons/AWS-Organizations.svg",
+      "aliases": []
     },
     {
       "id": "outpostsfamily",
@@ -2331,7 +2628,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-Outposts-family.svg"
+      "iconPath": "/aws-icons/AWS-Outposts-family.svg",
+      "aliases": []
     },
     {
       "id": "outpostsrack",
@@ -2340,7 +2638,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-Outposts-rack.svg"
+      "iconPath": "/aws-icons/AWS-Outposts-rack.svg",
+      "aliases": []
     },
     {
       "id": "outpostsservers",
@@ -2349,7 +2648,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-Outposts-servers.svg"
+      "iconPath": "/aws-icons/AWS-Outposts-servers.svg",
+      "aliases": []
     },
     {
       "id": "panorama",
@@ -2358,7 +2658,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/AWS-Panorama.svg"
+      "iconPath": "/aws-icons/AWS-Panorama.svg",
+      "aliases": []
     },
     {
       "id": "parallelcluster",
@@ -2367,7 +2668,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-Parallel-Cluster.svg"
+      "iconPath": "/aws-icons/AWS-Parallel-Cluster.svg",
+      "aliases": []
     },
     {
       "id": "parallelcomputingservice",
@@ -2376,7 +2678,10 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-Parallel-Computing-Service.svg"
+      "iconPath": "/aws-icons/AWS-Parallel-Computing-Service.svg",
+      "aliases": [
+        "PCS"
+      ]
     },
     {
       "id": "partnercentral",
@@ -2385,7 +2690,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Partner-Central.svg"
+      "iconPath": "/aws-icons/AWS-Partner-Central.svg",
+      "aliases": []
     },
     {
       "id": "paymentcryptography",
@@ -2394,7 +2700,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Payment-Cryptography.svg"
+      "iconPath": "/aws-icons/AWS-Payment-Cryptography.svg",
+      "aliases": []
     },
     {
       "id": "privatecertificateauthority",
@@ -2403,7 +2710,11 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Private-Certificate-Authority.svg"
+      "iconPath": "/aws-icons/AWS-Private-Certificate-Authority.svg",
+      "aliases": [
+        "ACM PCA",
+        "PCA"
+      ]
     },
     {
       "id": "privatelink",
@@ -2412,7 +2723,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-PrivateLink.svg"
+      "iconPath": "/aws-icons/AWS-PrivateLink.svg",
+      "aliases": []
     },
     {
       "id": "professionalservices",
@@ -2421,7 +2733,8 @@
       "description": "Customer Enablement",
       "defaultConfig": {},
       "category": "customer-enablement",
-      "iconPath": "/aws-icons/AWS-Professional-Services.svg"
+      "iconPath": "/aws-icons/AWS-Professional-Services.svg",
+      "aliases": []
     },
     {
       "id": "proton",
@@ -2430,7 +2743,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Proton.svg"
+      "iconPath": "/aws-icons/AWS-Proton.svg",
+      "aliases": []
     },
     {
       "id": "repost",
@@ -2439,7 +2753,8 @@
       "description": "Customer Enablement",
       "defaultConfig": {},
       "category": "customer-enablement",
-      "iconPath": "/aws-icons/AWS-rePost.svg"
+      "iconPath": "/aws-icons/AWS-rePost.svg",
+      "aliases": []
     },
     {
       "id": "repostprivate",
@@ -2448,7 +2763,8 @@
       "description": "Customer Enablement",
       "defaultConfig": {},
       "category": "customer-enablement",
-      "iconPath": "/aws-icons/AWS-rePost-Private.svg"
+      "iconPath": "/aws-icons/AWS-rePost-Private.svg",
+      "aliases": []
     },
     {
       "id": "resiliencehub",
@@ -2457,7 +2773,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Resilience-Hub.svg"
+      "iconPath": "/aws-icons/AWS-Resilience-Hub.svg",
+      "aliases": []
     },
     {
       "id": "resourceaccessmanager",
@@ -2466,7 +2783,10 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Resource-Access-Manager.svg"
+      "iconPath": "/aws-icons/AWS-Resource-Access-Manager.svg",
+      "aliases": [
+        "RAM"
+      ]
     },
     {
       "id": "resourceexplorer",
@@ -2475,7 +2795,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Resource-Explorer.svg"
+      "iconPath": "/aws-icons/AWS-Resource-Explorer.svg",
+      "aliases": []
     },
     {
       "id": "rtbfabric",
@@ -2484,7 +2805,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-RTB-Fabric.svg"
+      "iconPath": "/aws-icons/AWS-RTB-Fabric.svg",
+      "aliases": []
     },
     {
       "id": "secretsmanager",
@@ -2493,7 +2815,8 @@
       "category": "security",
       "description": "Rotate, manage, and retrieve secrets",
       "defaultConfig": {},
-      "iconPath": "/aws-icons/AWS-Secrets-Manager.svg"
+      "iconPath": "/aws-icons/AWS-Secrets-Manager.svg",
+      "aliases": []
     },
     {
       "id": "securityagent",
@@ -2502,7 +2825,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Security-Agent.svg"
+      "iconPath": "/aws-icons/AWS-Security-Agent.svg",
+      "aliases": []
     },
     {
       "id": "securityhub",
@@ -2511,7 +2835,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Security-Hub.svg"
+      "iconPath": "/aws-icons/AWS-Security-Hub.svg",
+      "aliases": []
     },
     {
       "id": "securityincidentresponse",
@@ -2520,7 +2845,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Security-Incident-Response.svg"
+      "iconPath": "/aws-icons/AWS-Security-Incident-Response.svg",
+      "aliases": []
     },
     {
       "id": "serverlessapplicationrepository",
@@ -2529,7 +2855,10 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-Serverless-Application-Repository.svg"
+      "iconPath": "/aws-icons/AWS-Serverless-Application-Repository.svg",
+      "aliases": [
+        "SAR"
+      ]
     },
     {
       "id": "servicecatalog",
@@ -2538,7 +2867,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Service-Catalog.svg"
+      "iconPath": "/aws-icons/AWS-Service-Catalog.svg",
+      "aliases": []
     },
     {
       "id": "servicemanagementconnector",
@@ -2547,7 +2877,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Service-Management-Connector.svg"
+      "iconPath": "/aws-icons/AWS-Service-Management-Connector.svg",
+      "aliases": []
     },
     {
       "id": "shield",
@@ -2558,7 +2889,8 @@
       "defaultConfig": {
         "tier": "Standard"
       },
-      "iconPath": "/aws-icons/AWS-Shield.svg"
+      "iconPath": "/aws-icons/AWS-Shield.svg",
+      "aliases": []
     },
     {
       "id": "signer",
@@ -2567,7 +2899,8 @@
       "description": "Security Identity",
       "defaultConfig": {},
       "category": "security",
-      "iconPath": "/aws-icons/AWS-Signer.svg"
+      "iconPath": "/aws-icons/AWS-Signer.svg",
+      "aliases": []
     },
     {
       "id": "simspaceweaver",
@@ -2576,7 +2909,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-SimSpace-Weaver.svg"
+      "iconPath": "/aws-icons/AWS-SimSpace-Weaver.svg",
+      "aliases": []
     },
     {
       "id": "sitetositevpn",
@@ -2585,7 +2919,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-Site-to-Site-VPN.svg"
+      "iconPath": "/aws-icons/AWS-Site-to-Site-VPN.svg",
+      "aliases": []
     },
     {
       "id": "snowball",
@@ -2594,7 +2929,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/AWS-Snowball.svg"
+      "iconPath": "/aws-icons/AWS-Snowball.svg",
+      "aliases": []
     },
     {
       "id": "snowballedge",
@@ -2603,7 +2939,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/AWS-Snowball-Edge.svg"
+      "iconPath": "/aws-icons/AWS-Snowball-Edge.svg",
+      "aliases": []
     },
     {
       "id": "stepfunctions",
@@ -2614,7 +2951,10 @@
       "defaultConfig": {
         "type": "STANDARD"
       },
-      "iconPath": "/aws-icons/AWS-Step-Functions.svg"
+      "iconPath": "/aws-icons/AWS-Step-Functions.svg",
+      "aliases": [
+        "SFN"
+      ]
     },
     {
       "id": "storagegateway",
@@ -2623,7 +2963,8 @@
       "description": "Storage",
       "defaultConfig": {},
       "category": "storage",
-      "iconPath": "/aws-icons/AWS-Storage-Gateway.svg"
+      "iconPath": "/aws-icons/AWS-Storage-Gateway.svg",
+      "aliases": []
     },
     {
       "id": "supplychain",
@@ -2632,7 +2973,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/AWS-Supply-Chain.svg"
+      "iconPath": "/aws-icons/AWS-Supply-Chain.svg",
+      "aliases": []
     },
     {
       "id": "support",
@@ -2641,7 +2983,8 @@
       "description": "Customer Enablement",
       "defaultConfig": {},
       "category": "customer-enablement",
-      "iconPath": "/aws-icons/AWS-Support.svg"
+      "iconPath": "/aws-icons/AWS-Support.svg",
+      "aliases": []
     },
     {
       "id": "sustainability",
@@ -2650,7 +2993,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Sustainability.svg"
+      "iconPath": "/aws-icons/AWS-Sustainability.svg",
+      "aliases": []
     },
     {
       "id": "systemsmanager",
@@ -2659,7 +3003,10 @@
       "category": "management",
       "description": "Gain operational insights and take action",
       "defaultConfig": {},
-      "iconPath": "/aws-icons/AWS-Systems-Manager.svg"
+      "iconPath": "/aws-icons/AWS-Systems-Manager.svg",
+      "aliases": [
+        "SSM"
+      ]
     },
     {
       "id": "telconetworkbuilder",
@@ -2668,7 +3015,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Telco-Network-Builder.svg"
+      "iconPath": "/aws-icons/AWS-Telco-Network-Builder.svg",
+      "aliases": []
     },
     {
       "id": "thinkboxdeadline",
@@ -2677,7 +3025,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Thinkbox-Deadline.svg"
+      "iconPath": "/aws-icons/AWS-Thinkbox-Deadline.svg",
+      "aliases": []
     },
     {
       "id": "thinkboxfrost",
@@ -2686,7 +3035,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Thinkbox-Frost.svg"
+      "iconPath": "/aws-icons/AWS-Thinkbox-Frost.svg",
+      "aliases": []
     },
     {
       "id": "thinkboxkrakatoa",
@@ -2695,7 +3045,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Thinkbox-Krakatoa.svg"
+      "iconPath": "/aws-icons/AWS-Thinkbox-Krakatoa.svg",
+      "aliases": []
     },
     {
       "id": "thinkboxstoke",
@@ -2704,7 +3055,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Thinkbox-Stoke.svg"
+      "iconPath": "/aws-icons/AWS-Thinkbox-Stoke.svg",
+      "aliases": []
     },
     {
       "id": "thinkboxxmesh",
@@ -2713,7 +3065,8 @@
       "description": "Media Services",
       "defaultConfig": {},
       "category": "media-services",
-      "iconPath": "/aws-icons/AWS-Thinkbox-XMesh.svg"
+      "iconPath": "/aws-icons/AWS-Thinkbox-XMesh.svg",
+      "aliases": []
     },
     {
       "id": "toolsandsdks",
@@ -2722,7 +3075,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-Tools-and-SDKs.svg"
+      "iconPath": "/aws-icons/AWS-Tools-and-SDKs.svg",
+      "aliases": []
     },
     {
       "id": "trainingcertification",
@@ -2731,7 +3085,8 @@
       "description": "Customer Enablement",
       "defaultConfig": {},
       "category": "customer-enablement",
-      "iconPath": "/aws-icons/AWS-Training-Certification.svg"
+      "iconPath": "/aws-icons/AWS-Training-Certification.svg",
+      "aliases": []
     },
     {
       "id": "transferfamily",
@@ -2740,7 +3095,8 @@
       "description": "Migration Modernization",
       "defaultConfig": {},
       "category": "migration-modernization",
-      "iconPath": "/aws-icons/AWS-Transfer-Family.svg"
+      "iconPath": "/aws-icons/AWS-Transfer-Family.svg",
+      "aliases": []
     },
     {
       "id": "transform",
@@ -2749,7 +3105,8 @@
       "description": "Migration Modernization",
       "defaultConfig": {},
       "category": "migration-modernization",
-      "iconPath": "/aws-icons/AWS-Transform.svg"
+      "iconPath": "/aws-icons/AWS-Transform.svg",
+      "aliases": []
     },
     {
       "id": "transitgateway",
@@ -2758,7 +3115,10 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-Transit-Gateway.svg"
+      "iconPath": "/aws-icons/AWS-Transit-Gateway.svg",
+      "aliases": [
+        "TGW"
+      ]
     },
     {
       "id": "trustedadvisor",
@@ -2767,7 +3127,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Trusted-Advisor.svg"
+      "iconPath": "/aws-icons/AWS-Trusted-Advisor.svg",
+      "aliases": []
     },
     {
       "id": "usernotifications",
@@ -2776,7 +3137,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-User-Notifications.svg"
+      "iconPath": "/aws-icons/AWS-User-Notifications.svg",
+      "aliases": []
     },
     {
       "id": "verifiedaccess",
@@ -2785,7 +3147,8 @@
       "description": "Networking Content Delivery",
       "defaultConfig": {},
       "category": "networking",
-      "iconPath": "/aws-icons/AWS-Verified-Access.svg"
+      "iconPath": "/aws-icons/AWS-Verified-Access.svg",
+      "aliases": []
     },
     {
       "id": "waf",
@@ -2796,7 +3159,10 @@
       "defaultConfig": {
         "scope": "REGIONAL"
       },
-      "iconPath": "/aws-icons/AWS-WAF.svg"
+      "iconPath": "/aws-icons/AWS-WAF.svg",
+      "aliases": [
+        "web application firewall"
+      ]
     },
     {
       "id": "wavelength",
@@ -2805,7 +3171,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/AWS-Wavelength.svg"
+      "iconPath": "/aws-icons/AWS-Wavelength.svg",
+      "aliases": []
     },
     {
       "id": "wellarchitectedtool",
@@ -2814,7 +3181,8 @@
       "description": "Management Tools",
       "defaultConfig": {},
       "category": "management",
-      "iconPath": "/aws-icons/AWS-Well-Architected-Tool.svg"
+      "iconPath": "/aws-icons/AWS-Well-Architected-Tool.svg",
+      "aliases": []
     },
     {
       "id": "wickr",
@@ -2823,7 +3191,8 @@
       "description": "Business Applications",
       "defaultConfig": {},
       "category": "business-applications",
-      "iconPath": "/aws-icons/AWS-Wickr.svg"
+      "iconPath": "/aws-icons/AWS-Wickr.svg",
+      "aliases": []
     },
     {
       "id": "xray",
@@ -2832,7 +3201,8 @@
       "description": "Developer Tools",
       "defaultConfig": {},
       "category": "developer-tools",
-      "iconPath": "/aws-icons/AWS-X-Ray.svg"
+      "iconPath": "/aws-icons/AWS-X-Ray.svg",
+      "aliases": []
     },
     {
       "id": "bottlerocket",
@@ -2841,7 +3211,8 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/Bottlerocket.svg"
+      "iconPath": "/aws-icons/Bottlerocket.svg",
+      "aliases": []
     },
     {
       "id": "elasticfabricadapter",
@@ -2850,7 +3221,10 @@
       "description": "Compute",
       "defaultConfig": {},
       "category": "compute",
-      "iconPath": "/aws-icons/Elastic-Fabric-Adapter.svg"
+      "iconPath": "/aws-icons/Elastic-Fabric-Adapter.svg",
+      "aliases": [
+        "EFA"
+      ]
     },
     {
       "id": "elb",
@@ -2861,7 +3235,15 @@
       "defaultConfig": {
         "type": "application"
       },
-      "iconPath": "/aws-icons/Elastic-Load-Balancing.svg"
+      "iconPath": "/aws-icons/Elastic-Load-Balancing.svg",
+      "aliases": [
+        "ALB",
+        "NLB",
+        "CLB",
+        "application load balancer",
+        "network load balancer",
+        "classic load balancer"
+      ]
     },
     {
       "id": "freertos",
@@ -2870,7 +3252,8 @@
       "description": "Internet of Things",
       "defaultConfig": {},
       "category": "iot",
-      "iconPath": "/aws-icons/FreeRTOS.svg"
+      "iconPath": "/aws-icons/FreeRTOS.svg",
+      "aliases": []
     },
     {
       "id": "open3dengine",
@@ -2879,7 +3262,8 @@
       "description": "Games",
       "defaultConfig": {},
       "category": "games",
-      "iconPath": "/aws-icons/Open-3D-Engine.svg"
+      "iconPath": "/aws-icons/Open-3D-Engine.svg",
+      "aliases": []
     },
     {
       "id": "oracledatabaseataws",
@@ -2888,7 +3272,8 @@
       "description": "Databases",
       "defaultConfig": {},
       "category": "database",
-      "iconPath": "/aws-icons/Oracle-Database-at-AWS.svg"
+      "iconPath": "/aws-icons/Oracle-Database-at-AWS.svg",
+      "aliases": []
     },
     {
       "id": "pytorchonaws",
@@ -2897,7 +3282,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/PyTorch-on-AWS.svg"
+      "iconPath": "/aws-icons/PyTorch-on-AWS.svg",
+      "aliases": []
     },
     {
       "id": "redhatopenshiftserviceonaws",
@@ -2906,7 +3292,10 @@
       "description": "Containers",
       "defaultConfig": {},
       "category": "containers",
-      "iconPath": "/aws-icons/Red-Hat-OpenShift-Service-on-AWS.svg"
+      "iconPath": "/aws-icons/Red-Hat-OpenShift-Service-on-AWS.svg",
+      "aliases": [
+        "ROSA"
+      ]
     },
     {
       "id": "reservedinstancereporting",
@@ -2915,7 +3304,8 @@
       "description": "Cloud Financial Management",
       "defaultConfig": {},
       "category": "cloud-financial-management",
-      "iconPath": "/aws-icons/Reserved-Instance-Reporting.svg"
+      "iconPath": "/aws-icons/Reserved-Instance-Reporting.svg",
+      "aliases": []
     },
     {
       "id": "savingsplans",
@@ -2924,7 +3314,8 @@
       "description": "Cloud Financial Management",
       "defaultConfig": {},
       "category": "cloud-financial-management",
-      "iconPath": "/aws-icons/Savings-Plans.svg"
+      "iconPath": "/aws-icons/Savings-Plans.svg",
+      "aliases": []
     },
     {
       "id": "tensorflowonaws",
@@ -2933,7 +3324,8 @@
       "description": "Artificial Intelligence",
       "defaultConfig": {},
       "category": "ml",
-      "iconPath": "/aws-icons/TensorFlow-on-AWS.svg"
+      "iconPath": "/aws-icons/TensorFlow-on-AWS.svg",
+      "aliases": []
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeRedisSet, safeRedisDel } from "@/lib/redis/client";
-import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasClaimRequest, CanvasNodeType, EdgeType, HandlePosition, NodeStatus, AWSServiceMetadata, GroupMetadata, AnnotationMetadata } from "./types";
+import { EDGE_TYPES, CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasClaimRequest, CanvasNodeType, EdgeType, HandlePosition, NodeStatus, AWSServiceMetadata, GroupMetadata, AnnotationMetadata } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
 import { GeneratedWorkflow } from "@/lib/ai/gemini";
 export { applyAIWorkflowResult, applyAWSServiceNodes } from "./ai-reconcile";
@@ -365,6 +365,7 @@ export async function createCanvasEdge(
   edgeType?: EdgeType
 ): Promise<CanvasEdge | null> {
   if (sourceNodeId === targetNodeId) return null;
+  if (edgeType && !EDGE_TYPES.includes(edgeType)) throw new Error("Invalid connection type");
   const adminClient = createAdminClient();
 
   if (!isOwner && userId) {
@@ -418,7 +419,7 @@ export async function updateCanvasEdge(
   updates: { label: string; edge_type: EdgeType }
 ): Promise<{ success: boolean; error?: string; edge?: CanvasEdge }> {
   if (typeof updates?.label !== "string" || updates.label.length > 120 ||
-      !["dependency", "data_flow", "network", "event"].includes(updates?.edge_type)) {
+      !EDGE_TYPES.includes(updates?.edge_type)) {
     return { success: false, error: "Provide a label of at most 120 characters and a valid connection type" };
   }
   const client = createAdminClient();

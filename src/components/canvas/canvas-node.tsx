@@ -76,7 +76,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
   const isClaimedByOther = Boolean(node.claimed_by && !isClaimedByMe);
   const holderName = node.claim_holder?.fullName && node.claim_holder.fullName !== "You" ? node.claim_holder.fullName : "Collaborator";
   const statusLabel = isComplete ? "Complete" : node.status === "blocked" ? "Blocked" : completionPct > 0 || node.status === "in_progress" ? "In progress" : "Planned";
-  const previewCount = (node.height || 170) >= 220 ? 2 : 1;
+  const previewCount = 5;
   const canRename = Boolean(onUpdateTitle) && !isClaimedByOther;
 
   const handleClaimAction = () => {
@@ -136,7 +136,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
       }
     }}
     style={{ transform: `translate3d(${node.position_x}px, ${node.position_y}px, 0)`, width: `${dimensions.width}px`, height: `${dimensions.height}px` }}
-    className={`group absolute top-0 left-0 flex cursor-move flex-col rounded-xl border bg-white/95 p-3 shadow-sm backdrop-blur-md select-none dark:bg-[#161d27]/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+    className={`group z-20 absolute top-0 left-0 flex cursor-move flex-col rounded-xl border bg-white/95 p-3 shadow-sm backdrop-blur-md select-none dark:bg-[#161d27]/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
       isLinking ? "cursor-pointer ring-2 ring-emerald-500/30 hover:border-emerald-500" : isSelected || isMultiSelected ? "border-neutral-900 ring-2 ring-neutral-900/20 shadow-md dark:border-emerald-500 dark:ring-emerald-500/30" : isComplete ? "border-emerald-300/80 dark:border-emerald-700/60" : node.status === "blocked" ? "border-red-300 dark:border-red-800" : isClaimedByOther ? "border-amber-300/80 dark:border-amber-700/60" : "border-neutral-200/90 hover:border-neutral-400 dark:border-[#283548] dark:hover:border-[#384961]"
     }`}
   >
@@ -151,7 +151,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
           onStartLink(node, handle, Object.assign(event, { clientX: bounds.left + bounds.width / 2, clientY: bounds.top + bounds.height / 2, pointerId: 0, pointerType: "keyboard" }) as unknown as React.PointerEvent);
         }
       }}
-      className={`absolute z-20 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs dark:border-[#384961] dark:bg-[#1e2634] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${PORT_POSITION[handle]} ${isHovered || isLinking || isSelected || isMultiSelected ? "opacity-100 cursor-crosshair hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950" : "opacity-0 pointer-events-none focus-visible:pointer-events-auto"}`}
+      className={`absolute z-30 before:absolute before:-inset-2 before:content-[''] flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs dark:border-[#384961] dark:bg-[#1e2634] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${PORT_POSITION[handle]} ${isHovered || isLinking || isSelected || isMultiSelected ? "opacity-100 cursor-crosshair hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950" : "opacity-0 pointer-events-none focus-visible:pointer-events-auto"}`}
       title={`${isLinking ? "Connect to" : "Link from"} ${handle} port`}
     ><Plus className="h-3 w-3 text-neutral-500 dark:text-neutral-300" aria-hidden="true" /></button>)}
 
@@ -191,7 +191,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
           className="grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 hover:bg-neutral-100 dark:hover:bg-[#1e2634]"
         >{checkpoint.is_completed ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> : <Circle className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500" />}</button>
         <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(node); }} title={checkpoint.title} className={`min-w-0 flex-1 truncate text-left text-[11px] focus-visible:outline-none focus-visible:underline ${checkpoint.is_completed ? "text-neutral-400 line-through dark:text-neutral-500" : "text-neutral-700 dark:text-neutral-300"}`}>{checkpoint.title}</button>
-        {node.checkpoints.length > previewCount && index === previewCount - 1 && <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(node); }} aria-label={`View all ${node.checkpoints.length} checkpoints`} className="shrink-0 rounded px-1 py-1 text-[10px] font-semibold text-neutral-500 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:text-white">+{node.checkpoints.length - previewCount}</button>}
+        {node.checkpoints.length > previewCount && index === previewCount - 1 && <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(node); }} aria-label={`View all ${node.checkpoints.length} checkpoints`} className="shrink-0 rounded px-1 py-1 text-[10px] font-semibold text-neutral-500 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:text-white">+{node.checkpoints.length - previewCount} remaining</button>}
       </div>)}
       {node.checkpoints.length === 0 && <button type="button" data-no-drag="true" onClick={(event) => { event.stopPropagation(); onSelect(node); }} className="rounded text-[11px] font-semibold text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-neutral-300">Open details →</button>}
     </div>

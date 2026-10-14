@@ -5,6 +5,18 @@ const releases = [
   {
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
+    title: "Focused on Canvas Usability, Connections & UI Polish",
+    summary: "Smoother canvas interactions and a more consistent workspace for architecture and delivery planning.",
+    changes: [
+      "Connections: Easier label editing, expanded connection types, and comfortable multi-port linking.",
+      "Milestones: View up to five checkpoints directly on each card.",
+      "UI refinement: Accessible custom dropdowns and polished dark mode across palettes and drawers.",
+      "Canvas polish: Removed canvas focus outlines, moved notifications to top-center, and fixed the dock layout.",
+    ],
+  },
+  {
+    version: "Beta v1.1.0",
+    date: "September 29, 2026",
     title: "Canvas Experience, from Milestones to AWS",
     summary: "A more comfortable workspace for planning delivery, exploring cloud resources, and navigating complex diagrams on desktop and mobile.",
     changes: [

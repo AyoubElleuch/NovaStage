@@ -57,11 +57,11 @@ export default function CanvasNavigator({ nodes, isOpen, onToggle, onClose, onJu
     onKeyDown={event => { event.stopPropagation(); if (event.key === "Escape") { event.preventDefault(); closeAndRestoreFocus(); } }}>
     <button ref={triggerRef} type="button" aria-label="Find on canvas" aria-expanded={isOpen} aria-controls={isOpen ? resultsId : undefined} onClick={onToggle}
       title="Find milestones and resources (Ctrl K)"
-      className="flex h-10 shrink-0 items-center gap-2 self-start rounded-xl border border-neutral-200 bg-white/95 px-3 text-xs font-semibold text-neutral-700 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200">
-      <Search className="h-4 w-4" /> <span>Find</span><kbd className="hidden rounded border border-neutral-200 px-1 text-[10px] text-neutral-400 lg:inline dark:border-slate-700">⌘ / Ctrl K</kbd>
+      className="flex h-10 shrink-0 items-center gap-2 self-start rounded-xl border border-neutral-200 bg-white/95 px-3 text-xs font-semibold text-neutral-700 shadow-sm backdrop-blur dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-white">
+      <Search className="h-4 w-4" /> <span>Find</span><kbd className="hidden rounded-md border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 dark:bg-[#1e2634] text-[10px] text-neutral-400 lg:inline dark:border-[#283548]">⌘ / Ctrl K</kbd>
     </button>
-    {isOpen && <section aria-label="Canvas navigator" className="mt-2 flex min-h-0 w-[min(340px,calc(100vw-24px))] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
-      <div className="flex shrink-0 items-center gap-2 border-b border-neutral-100 p-3 dark:border-slate-800">
+    {isOpen && <section aria-label="Canvas navigator" className="mt-2 flex min-h-0 w-[min(340px,calc(100vw-24px))] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl dark:border-[#283548] dark:bg-[#161d27]">
+      <div className="flex shrink-0 items-center gap-2 border-b border-neutral-100 p-3 dark:border-[#283548]">
         <Search className="h-4 w-4 shrink-0 text-neutral-400" />
         <input autoFocus role="combobox" aria-label="Search canvas" aria-autocomplete="list" aria-expanded={true}
           aria-controls={resultsId} aria-activedescendant={results.length ? `${resultsId}-${highlightedIndex}` : undefined}
@@ -76,26 +76,26 @@ export default function CanvasNavigator({ nodes, isOpen, onToggle, onClose, onJu
             }
           }}
           className="min-w-0 flex-1 bg-transparent text-sm text-neutral-900 outline-none dark:text-white" />
-        <button type="button" onClick={closeAndRestoreFocus} aria-label="Close canvas search" className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-slate-800"><X className="h-4 w-4" /></button>
+        <button type="button" onClick={closeAndRestoreFocus} aria-label="Close canvas search" className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><X className="h-4 w-4" /></button>
       </div>
       <div className="flex shrink-0 flex-wrap gap-1 p-2" aria-label="Filter canvas items">
         {[["all", "All"], ["milestone", "Milestones"], ["aws_service", "AWS"], ["group", "Groups"], ["annotation", "Notes"]].map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => { setFilter(value); setActiveIndex(0); }}
-          className={`rounded-lg px-2 py-1.5 text-xs ${filter === value ? "bg-emerald-600 text-white" : "text-neutral-500 hover:bg-neutral-100 dark:text-slate-400 dark:hover:bg-slate-800"}`}>{label}</button>)}
+          className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${filter === value ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300" : "text-neutral-500 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-[#1e2634]"}`}>{label}</button>)}
       </div>
-      <p role="status" aria-live="polite" className="shrink-0 px-3 pb-2 text-[11px] text-neutral-500 dark:text-slate-400">{results.length} {results.length === 1 ? "item" : "items"}</p>
+      <p role="status" aria-live="polite" className="shrink-0 px-3 pb-2 text-[11px] text-neutral-500 dark:text-neutral-300">{results.length} {results.length === 1 ? "item" : "items"}</p>
       <div id={resultsId} role="listbox" aria-label="Canvas results" className="min-h-0 max-h-[min(420px,50dvh)] flex-1 overflow-y-auto overscroll-contain p-2 pt-0">
         {results.map((node, index) => {
           const type = node.node_type || "milestone";
           const Icon = type === "aws_service" ? Box : type === "group" ? Map : type === "annotation" ? StickyNote : Flag;
           return <button key={node.id} id={`${resultsId}-${index}`} type="button" role="option" aria-selected={highlightedIndex === index}
             onMouseEnter={() => setActiveIndex(index)} onFocus={() => setActiveIndex(index)} onClick={() => jumpToNode(node.id)}
-            className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left hover:bg-neutral-50 focus-visible:bg-emerald-50 dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800 ${highlightedIndex === index ? "bg-emerald-50 dark:bg-slate-800" : ""}`}>
-            <span className="rounded-lg bg-neutral-100 p-2 text-neutral-500 dark:bg-slate-800 dark:text-slate-400"><Icon className="h-4 w-4" /></span>
+            className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left hover:bg-neutral-50 focus-visible:bg-emerald-50 dark:hover:bg-[#1e2634] dark:focus-visible:bg-[#1e2634] ${highlightedIndex === index ? "bg-emerald-50 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:ring-emerald-500/30" : ""}`}>
+            <span className="rounded-lg bg-neutral-100 p-2 text-neutral-500 dark:bg-[#1e2634] dark:text-neutral-300"><Icon className="h-4 w-4" /></span>
             <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-neutral-900 dark:text-white">{node.title || "Untitled"}</span>
-              <span className="mt-0.5 block truncate text-[10px] text-neutral-500 dark:text-slate-400">{type === "aws_service" ? `AWS · ${node.aws_metadata?.region || "No region"}` : type === "group" ? "Container" : type === "annotation" ? "Note" : node.status.replaceAll("_", " ")}</span></span>
+              <span className="mt-0.5 block truncate text-[10px] text-neutral-500 dark:text-neutral-300">{type === "aws_service" ? `AWS · ${node.aws_metadata?.region || "No region"}` : type === "group" ? "Container" : type === "annotation" ? "Note" : node.status.replaceAll("_", " ")}</span></span>
           </button>;
         })}
-        {!results.length && <p className="px-3 py-8 text-center text-xs text-neutral-500 dark:text-slate-400">{nodes.length ? "No matches. Try another search or filter." : "Add your first milestone or AWS resource to get started."}</p>}
+        {!results.length && <p className="px-3 py-8 text-center text-xs text-neutral-500 dark:text-neutral-300">{nodes.length ? "No matches. Try another search or filter." : "Add your first milestone or AWS resource to get started."}</p>}
       </div>
     </section>}
   </div>;
