@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { routeArchitectureEdge } from "@/lib/canvas/architecture-routing";
 import { CanvasEdge, CanvasNode, HandlePosition } from "@/lib/canvas/types";
 import {
   calculateBezierPath,
@@ -45,6 +46,14 @@ export default function CanvasEdgeLayer({
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const padding = 200;
+  const architectureRoutes = useMemo(() => {
+    const byId = new Map(nodes.map(node => [node.id, node]));
+    return new Map(edges.map(edge => {
+      const source = byId.get(edge.source_node_id), target = byId.get(edge.target_node_id);
+      const architecture = source && target && [source.node_type, target.node_type].some(type => type === "aws_service" || type === "group");
+      return [edge.id, architecture ? routeArchitectureEdge(source!, target!, edge.source_handle, edge.target_handle, nodes) : null];
+    }));
+  }, [nodes, edges]);
 
   const nodeMap = new Map<string, CanvasNode>();
   for (const n of nodes) {
@@ -129,7 +138,8 @@ export default function CanvasEdgeLayer({
 
         const p1 = getNodeHandlePosition(sourceNode, edge.source_handle);
         const p2 = getNodeHandlePosition(targetNode, edge.target_handle);
-        const pathData = calculateBezierPath(
+        const routed = architectureRoutes.get(edge.id);
+        const pathData = routed?.path || calculateBezierPath(
           p1.x,
           p1.y,
           p2.x,
@@ -148,7 +158,7 @@ export default function CanvasEdgeLayer({
               targetNode.claimed_by === currentUserId));
         
         // Exact geometric midpoint located on the actual cubic bezier curve path
-        const center = getBezierPoint(
+        const center = routed?.center || getBezierPoint(
           0.5,
           p1.x,
           p1.y,

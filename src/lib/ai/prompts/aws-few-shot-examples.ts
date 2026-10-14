@@ -98,6 +98,7 @@ export const AWS_WEB_APP_FEW_SHOT_EXAMPLE: AIWorkflowResult = {
     }
   ],
   dataFlowEdges: [
+    { fromId: "ecs_service_1", toId: "kms", edgeType: "security_iam", label: "Encrypt application data" },
     {
       fromId: "cloudfront",
       toId: "alb_1",

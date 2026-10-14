@@ -1,5 +1,6 @@
 import type { AIWorkflowResult, PromptDecomposition } from "./types";
 import { getAWSServiceDefinition, normalizeAWSServiceId } from "@/lib/canvas/aws-catalog-lookup";
+import { architectureTopologyIssues, normalizeArchitectureTopology } from "./architecture-topology";
 
 export interface ArchitectureQualityResult {
   ok: boolean;
@@ -10,7 +11,7 @@ export function normalizeArchitectureResult(
   result: AIWorkflowResult | null
 ): AIWorkflowResult | null {
   if (!result) return null;
-  return {
+  return normalizeArchitectureTopology({
     ...result,
     serviceNodes: (result.serviceNodes || []).map((service) => {
       const entries = Array.isArray(service.configEntries)
@@ -29,7 +30,7 @@ export function normalizeArchitectureResult(
         configEntries: undefined,
       };
     }),
-  };
+  });
 }
 
 /** Rejects shallow/generic topology drafts before they can mutate the canvas. */
@@ -43,15 +44,15 @@ export function evaluateArchitectureQuality(
   const services = result.serviceNodes || [];
   const groups = result.groups || [];
   const edges = result.dataFlowEdges || [];
-  const explicitlySmall = /\b(minimal|tiny|simple demo|proof of concept|poc|prototype)\b/i.test(prompt);
+  const explicitlySmall = /\b(minimal|tiny|simple|static|proof of concept|poc|prototype)\b/i.test(prompt);
   const minimumServices = explicitlySmall
-    ? 3
+    ? 1
     : decomposition?.complexityTier === "enterprise"
       ? 9
       : decomposition?.complexityTier === "advanced"
         ? 7
         : 6;
-  const issues: string[] = [];
+  const issues: string[] = architectureTopologyIssues(result);
 
   if (services.length < minimumServices) {
     issues.push(`Only ${services.length} services were provided; at least ${minimumServices} purposeful services are required`);
@@ -60,7 +61,7 @@ export function evaluateArchitectureQuality(
   if (unknownServices.length > 0) {
     issues.push(`Unknown AWS service IDs: ${unknownServices.map((service) => service.serviceId).join(", ")}`);
   }
-  const minimumEdges = Math.max(services.length > 1 ? services.length - 1 : 0, 1);
+  const minimumEdges = Math.max(services.length - 1, 0);
   if (edges.length < minimumEdges) {
     issues.push(`Only ${edges.length} connections were provided; the service data paths are incomplete`);
   }
@@ -91,5 +92,7 @@ export function hasUsableArchitecture(result: AIWorkflowResult | null): result i
     resourceIds.has(edge.fromId) && resourceIds.has(edge.toId)
   );
 
-  return serviceIds.size >= 3 && validEdges.length >= Math.min(2, serviceIds.size - 1);
+  return serviceIds.size >= 1 && architectureTopologyIssues(result).length === 0 &&
+    result.serviceNodes.every(service => Boolean(getAWSServiceDefinition(service.serviceId))) &&
+    (serviceIds.size === 1 || validEdges.length >= Math.min(2, serviceIds.size - 1));
 }

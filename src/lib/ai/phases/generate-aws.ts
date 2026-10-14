@@ -172,7 +172,7 @@ export async function generateAWSArchitecture(
     systemInstruction,
     temperature: 0.2,
   });
-  result = normalizeArchitectureResult(result);
+  result = normalizeArchitectureResult(result && context?.operation === "update" ? { ...result, intent: "update_pipeline" } : result);
   let quality = evaluateArchitectureQuality(result, prompt, decomposition);
   if (!quality.ok) {
     result = await callGemini<AIWorkflowResult>(
@@ -180,7 +180,7 @@ export async function generateAWSArchitecture(
       AWS_WORKFLOW_SCHEMA,
       { systemInstruction, temperature: 0.15 }
     );
-    result = normalizeArchitectureResult(result);
+    result = normalizeArchitectureResult(result && context?.operation === "update" ? { ...result, intent: "update_pipeline" } : result);
     quality = evaluateArchitectureQuality(result, prompt, decomposition);
   }
 
