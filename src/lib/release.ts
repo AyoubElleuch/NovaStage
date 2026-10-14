@@ -1,3 +1,3 @@
-export const APP_VERSION = "1.1.0";
+export const APP_VERSION = "1.1.1";
 export const APP_RELEASE = `Beta v${APP_VERSION}`;
-export const APP_RELEASE_DATE = "September 29, 2026";
+export const APP_RELEASE_DATE = "October 14, 2026";
