@@ -117,14 +117,21 @@ export default function CanvasServiceNode({
         else if (e.key === "F2") { e.preventDefault(); e.stopPropagation(); startEditingTitle(); }
       }}
       style={{ transform: `translate3d(${node.position_x}px, ${node.position_y}px, 0)`, width: `${dimensions.width}px`, height: `${dimensions.height}px`, borderTopColor: categoryColor }}
-      className={`group absolute top-0 left-0 flex cursor-move select-none flex-col rounded-xl border border-t-[3px] bg-white/95 p-3 shadow-sm transition-shadow duration-150 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-500 dark:bg-[#161d27]/95 ${isLinking ? "cursor-pointer border-emerald-400 ring-2 ring-emerald-500/30 hover:ring-emerald-500" : active ? "border-neutral-900 shadow-md ring-2 ring-neutral-900/10 dark:border-emerald-500 dark:ring-emerald-500/20" : isClaimedByOther ? "border-amber-300 dark:border-amber-700" : "border-neutral-200 hover:shadow-md dark:border-[#283548]"}`}
+      className={`group z-20 absolute top-0 left-0 flex cursor-move select-none flex-col rounded-xl border border-t-[3px] bg-white/95 p-3 shadow-sm transition-shadow duration-150 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-500 dark:bg-[#161d27]/95 ${isLinking ? "cursor-pointer border-emerald-400 ring-2 ring-emerald-500/30 hover:ring-emerald-500" : active ? "border-neutral-900 shadow-md ring-2 ring-neutral-900/10 dark:border-emerald-500 dark:ring-emerald-500/20" : isClaimedByOther ? "border-amber-300 dark:border-amber-700" : "border-neutral-200 hover:shadow-md dark:border-[#283548]"}`}
     >
       {(Object.keys(HANDLE_STYLES) as HandlePosition[]).map((handle) => (
-        <div key={handle} data-no-drag="true" onPointerDown={(e) => { e.stopPropagation(); if (e.button === 0) onStartLink(node, handle, e); }}
-          className={`absolute z-20 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs transition-all before:absolute before:-inset-2 before:content-[''] dark:border-[#384961] dark:bg-[#1e2634] ${HANDLE_STYLES[handle]} ${showControls ? "cursor-pointer opacity-100 hover:scale-110 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white" : "pointer-events-none scale-75 opacity-0"}`}
+        <button type="button" key={handle} data-no-drag="true" aria-label={`Link from ${handle} port of ${node.title}`} onPointerDown={(e) => { e.stopPropagation(); if (e.button === 0) onStartLink(node, handle, e); }}
+          onClick={event => {
+            event.stopPropagation();
+            if (event.detail === 0) {
+              const bounds = event.currentTarget.getBoundingClientRect();
+              onStartLink(node, handle, Object.assign(event, { clientX: bounds.left + bounds.width / 2, clientY: bounds.top + bounds.height / 2, pointerId: 0, pointerType: "keyboard" }) as unknown as React.PointerEvent);
+            }
+          }}
+          className={`absolute z-30 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs transition-all before:absolute before:-inset-2 before:content-[''] focus-visible:opacity-100 focus-visible:pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-[#384961] dark:bg-[#1e2634] ${HANDLE_STYLES[handle]} ${showControls ? "cursor-pointer opacity-100 hover:scale-110 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white" : "pointer-events-none scale-75 opacity-0"}`}
           title={`${isLinking ? "Connect to" : "Link from"} ${node.title}: ${handle} port`}>
           <Plus className="h-3.5 w-3.5" />
-        </div>
+        </button>
       ))}
       <div className="flex items-start justify-between gap-2">
         <AwsIcon serviceId={serviceId} size={compact ? 32 : 40} className={compact ? "h-8 w-8 shrink-0" : "h-10 w-10 shrink-0"} />

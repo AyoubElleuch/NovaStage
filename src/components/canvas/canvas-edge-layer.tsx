@@ -67,7 +67,7 @@ export default function CanvasEdgeLayer({
       viewBox={`${minX} ${minY} ${width} ${height}`}
       style={{
         position: "absolute",
-        zIndex: editingEdgeId ? 40 : 10,
+        zIndex: 5,
         left: `${minX}px`,
         top: `${minY}px`,
         width: `${width}px`,
@@ -179,21 +179,21 @@ export default function CanvasEdgeLayer({
             animationClass = "animate-[dash-flow_1.5s_linear_infinite]";
             markerId = "url(#arrow-neon)";
           }
-        } else if (edgeType === "data_flow") {
+        } else if ((edgeType === "data_flow" || edgeType === "sync_http" || edgeType === "storage_mount")) {
           strokeColor = isDark ? "#60a5fa" : "#3B48CC"; // bright electric blue in dark mode
           strokeDasharray = "8 6";
           markerId = "url(#arrow-data-flow)";
           if (isNeonActive) {
             animationClass = "animate-[dash-flow_1.2s_linear_infinite]";
           }
-        } else if (edgeType === "network") {
+        } else if ((edgeType === "network" || edgeType === "security_iam")) {
           strokeColor = isDark ? "#34d399" : "#3F8624"; // bright emerald green in dark mode
           strokeDasharray = "4 4";
           markerId = "url(#arrow-network)";
           if (isNeonActive) {
             animationClass = "animate-[dash-flow_1s_linear_infinite]";
           }
-        } else if (edgeType === "event") {
+        } else if ((edgeType === "event" || edgeType === "async_queue")) {
           strokeColor = isDark ? "#fbbf24" : "#FF9900"; // luminous amber/yellow in dark mode
           strokeDasharray = "8 4 2 4";
           markerId = "url(#arrow-event)";
@@ -213,7 +213,9 @@ export default function CanvasEdgeLayer({
                 event.preventDefault(); event.stopPropagation(); setEditingEdgeId(edge.id);
               }
             }}
-            className="pointer-events-auto cursor-pointer group"
+            className="pointer-events-auto cursor-pointer group outline-none focus:outline-none focus-visible:outline-none"
+            onPointerDown={event => event.stopPropagation()}
+            onClick={event => { event.stopPropagation(); if (onUpdateEdge && canDelete) setEditingEdgeId(edge.id); }}
             onMouseEnter={() => setHoveredEdgeId(edge.id)}
             onMouseLeave={() => setHoveredEdgeId(null)}
           >
@@ -257,7 +259,7 @@ export default function CanvasEdgeLayer({
                 x={center.x - 110}
                 y={center.y - 32}
                 width="220"
-                height="24"
+                height="36"
                 className="overflow-visible pointer-events-auto"
               >
                 <div className="flex w-full items-center justify-center">
@@ -268,7 +270,7 @@ export default function CanvasEdgeLayer({
                     title={`${edge.label || "Add label"} — ${canDelete ? "Edit connection label and type" : "Claim a connected resource to edit"}`}
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={(event) => { event.stopPropagation(); setEditingEdgeId(edge.id); }}
-                    className={`max-w-full truncate rounded px-2 py-0.5 text-[10px] font-semibold shadow-xs border ${
+                    className={`min-h-8 max-w-full truncate rounded-lg px-3 py-1.5 text-[10px] font-semibold shadow-xs border ${
                       isInterlockingBridge
                         ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800"
                         : edgeType === "data_flow"
@@ -374,7 +376,7 @@ export default function CanvasEdgeLayer({
         const p1 = getNodeHandlePosition(source, edge.source_handle);
         const p2 = getNodeHandlePosition(target, edge.target_handle);
         const center = getBezierPoint(0.5, p1.x, p1.y, p2.x, p2.y, edge.source_handle, edge.target_handle);
-        return <foreignObject x={center.x - 140} y={center.y - 30} width="280" height="260" className="pointer-events-auto overflow-visible">
+        return <foreignObject x={center.x - 140} y={center.y - 30} width="280" height="260" className="pointer-events-auto overflow-visible" onClick={event => event.stopPropagation()}>
           <ConnectionEditor key={edge.id} edge={edge} onSave={onUpdateEdge} onClose={() => setEditingEdgeId(null)} />
         </foreignObject>;
       })()}

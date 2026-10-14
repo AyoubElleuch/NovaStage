@@ -6,7 +6,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasNodeType, EdgeType, HandlePosition } from "./types";
+import { EDGE_TYPES, CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasNodeType, EdgeType, HandlePosition } from "./types";
 import { autoLayoutNodes } from "./auto-layout";
 import { layoutAWSArchitecture } from "./aws-layout";
 import { AIWorkflowResult } from "@/lib/ai/types";
@@ -684,8 +684,8 @@ export async function applyAWSServiceNodes(
 }
 
 function normalizeEdgeType(edgeType?: string, protocol?: string): EdgeType {
-  if (edgeType === "dependency" || edgeType === "data_flow" || edgeType === "network" || edgeType === "event") {
-    return edgeType;
+  if (EDGE_TYPES.includes(edgeType as EdgeType)) {
+    return edgeType as EdgeType;
   }
 
   const normalizedType = edgeType?.toLowerCase().replace(/[\s-]+/g, "_");

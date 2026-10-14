@@ -73,10 +73,12 @@ export function getNodeDimensions(node: CanvasNode): { width: number; height: nu
     ? { width: 400, height: 300 }
     : node.node_type === "annotation"
     ? { width: 200, height: 150 }
-    : { width: 280, height: 170 };
+    : { width: 280, height: 180 };
+  const milestone = !node.node_type || node.node_type === "milestone";
+  const checklistHeight = node.checkpoints?.length ? 156 + Math.min(5, node.checkpoints.length) * 24 : 0;
   return {
     width: node.width > 0 ? node.width : fallback.width,
-    height: node.height > 0 ? node.height : fallback.height,
+    height: milestone ? Math.max(node.height || fallback.height, checklistHeight) : node.height > 0 ? node.height : fallback.height,
   };
 }
 
