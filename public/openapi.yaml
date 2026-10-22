@@ -1,0 +1,2038 @@
+openapi: 3.0.3
+info:
+  title: NovaStage API
+  version: 1.0.0
+  description: >-
+    NovaStage HTTP API. Protected operations use Supabase SSR session cookies. Setup and endpoint inventory:
+    docs/api-sdk.md.
+servers:
+  - url: http://localhost:3000
+    description: Local development. Override with your NovaStage deployment origin.
+tags:
+  - name: Health
+    description: Public reachability probes
+  - name: Account
+    description: Current signed-in account
+  - name: Projects
+    description: Projects and membership
+  - name: Project administration
+    description: Owner-only project administration
+  - name: Canvas
+    description: Project graph and checkpoints
+  - name: Claims
+    description: Editing leases and handoff requests
+  - name: AI
+    description: Quota-limited graph generation
+  - name: Authentication
+    description: Browser OAuth callback
+security:
+  - sessionCookieHeader: []
+paths:
+  /api/ping:
+    get:
+      operationId: ping
+      tags:
+        - Health
+      summary: Check reachability
+      security: []
+      responses:
+        '204':
+          description: Reachable. No response body; does not check database or upstream service health.
+    head:
+      operationId: headPing
+      tags:
+        - Health
+      summary: Check reachability without a body
+      security: []
+      responses:
+        '204':
+          description: Reachable. No response body; does not check database or upstream service health.
+  /api/dashboard/settings:
+    get:
+      operationId: getAccountSettings
+      tags:
+        - Account
+      summary: Read current account settings
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountSettings'
+        '401':
+          $ref: '#/components/responses/Error401'
+  /api/dashboard/projects:
+    get:
+      operationId: listProjects
+      tags:
+        - Projects
+      summary: List projects owned by or shared with the current user
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectList'
+        '401':
+          $ref: '#/components/responses/Error401'
+    post:
+      operationId: createProject
+      tags:
+        - Projects
+      summary: Create a project owned by the current user
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+      description: Name is trimmed before validation. Malformed JSON returns 500.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectInput'
+  /api/dashboard/projects/members:
+    get:
+      operationId: listProjectMembers
+      tags:
+        - Projects
+      summary: List collaborators of a project
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberList'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+      description: 'Project membership or ownership required; access failures return 400. Query alias: id.'
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+  /api/dashboard/projects/join:
+    post:
+      operationId: requestToJoinProject
+      tags:
+        - Projects
+      summary: Request to join a project by invite code
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinProjectResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+      description: >-
+        Requires owner approval. Existing pending requests return success; invalid codes, existing membership,
+        bans and full capacity return 400. Body alias: code. Malformed JSON returns 500.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinProjectInput'
+  /api/dashboard/projects/leave:
+    post:
+      operationId: leaveProject
+      tags:
+        - Projects
+      summary: Leave a project as a collaborator
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+      description: 'Collaborators only; owners and nonmembers receive 400. Body alias: id. Malformed JSON returns 500.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectIdInput'
+  /api/dashboard/projects/delete:
+    post:
+      operationId: deleteProject
+      tags:
+        - Project administration
+      summary: Delete a project and its associated data
+      description: 'Owner only. Body alias: id. Malformed JSON returns 500.'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectIdInput'
+  /api/dashboard/projects/kick:
+    post:
+      operationId: kickProjectMember
+      tags:
+        - Project administration
+      summary: Remove and ban a collaborator
+      description: 'Owner only; cannot remove yourself. Body alias for memberId: targetUserId. Malformed JSON returns 500.'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KickMemberInput'
+  /api/dashboard/projects/requests:
+    get:
+      operationId: listJoinRequests
+      tags:
+        - Project administration
+      summary: List pending project join requests
+      description: Owner only; access and database helper failures return 403.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinRequestList'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+    post:
+      operationId: resolveJoinRequest
+      tags:
+        - Project administration
+      summary: Approve or decline a join request
+      description: >-
+        Owner only. Invalid or resolved requests, capacity and permission failures return 400. Malformed JSON
+        returns 500.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveJoinRequestResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveJoinRequestInput'
+  /api/dashboard/projects/banned:
+    get:
+      operationId: listBannedMembers
+      tags:
+        - Project administration
+      summary: List removed project members
+      description: Owner only; access and database helper failures return 403.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BannedMemberList'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+    post:
+      operationId: unbanProjectMember
+      tags:
+        - Project administration
+      summary: Allow a removed member to request to join again
+      description: >-
+        Owner only. Removes the ban without restoring membership. Rule failures return 400; malformed JSON
+        returns 500.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '500':
+          $ref: '#/components/responses/Error500'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnbanMemberInput'
+  /api/dashboard/projects/{slug}/canvas:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Project slug from the projects response.
+    get:
+      operationId: getProjectCanvas
+      tags:
+        - Canvas
+      summary: Read the complete project graph and active claim requests
+      description: Project member required. A caught node-loading error returns an empty graph with 200.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CanvasData'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+    post:
+      operationId: mutateProjectCanvas
+      tags:
+        - Canvas
+      summary: Create, update, or delete a node or edge
+      description: >-
+        Project member required. Content edits require a current node claim; owners bypass some deletion and
+        edge rules. Most mutation failures return 200 with success false; create_node may return success true
+        with node null. update_edge failures return 400. Invalid actions return 400; malformed JSON or invalid
+        create_edge types return 500.
+      responses:
+        '200':
+          description: Operation result; inspect success even when HTTP status is 200.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CanvasMutationResult'
+        '400':
+          description: 'Invalid action, or update_edge validation/claim failure (may include success: false).'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  success:
+                    type: boolean
+                required:
+                  - error
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CanvasMutationInput'
+  /api/dashboard/projects/{slug}/canvas/checkpoints:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Project slug from the projects response.
+    post:
+      operationId: mutateCheckpoint
+      tags:
+        - Canvas
+      summary: Add, edit, toggle, or delete a checkpoint
+      description: >-
+        Project member and milestone claim required (423 otherwise). Existing checkpoints resolve the node
+        from checkpoint_id unless node_id is supplied. Toggle returns checkpoint and newStatus; add/edit
+        return checkpoint; delete returns success only. Malformed JSON returns 500.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckpointMutationResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '423':
+          $ref: '#/components/responses/Error423'
+        '500':
+          $ref: '#/components/responses/Error500'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckpointMutationInput'
+  /api/dashboard/projects/{slug}/canvas/claim:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Project slug from the projects response.
+    post:
+      operationId: manageCanvasClaim
+      tags:
+        - Claims
+      summary: Acquire, release, renew, request, transfer, or force-unlock an editing lease
+      description: >-
+        Project member required; leases last five minutes. Claim/release failures may return 200 with success
+        false. Heartbeat success does not guarantee a matching row was renewed. request_claim creates a
+        handoff request or claims an unheld node. resolve_claim requires holder or owner; force_unlock
+        requires owner. Malformed JSON returns 500.
+      responses:
+        '200':
+          description: Operation result; inspect success even when HTTP status is 200.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimInput'
+  /api/dashboard/projects/{slug}/canvas/ai-generate:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Project slug from the projects response.
+    post:
+      operationId: generateProjectCanvas
+      tags:
+        - AI
+      summary: Generate or update workflow and AWS architecture nodes
+      description: >-
+        Project member, server AI configuration and available subscription quota required. Concurrent
+        generation returns 409; quota exhaustion returns 403; upstream AI failure returns 502. Invalid modes
+        use workflow. Malformed JSON returns 400. Maximum duration: 120 seconds.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIGenerationResult'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          description: Project access denied or AI quota exceeded (QUOTA_EXCEEDED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIError'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '409':
+          description: Another collaborator is generating (COLLISION_LOCKED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIError'
+        '500':
+          $ref: '#/components/responses/Error500'
+        '502':
+          description: AI provider/pipeline failed (AI_GENERATION_FAILED).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIGenerationInput'
+  /auth/callback:
+    get:
+      operationId: completeAuthCallback
+      tags:
+        - Authentication
+      summary: Exchange an OAuth authorization code and redirect
+      security: []
+      description: >-
+        Browser OAuth/PKCE flow requiring the initiating browser verifier cookies when applicable. Exchanges
+        code for session cookies and redirects. Missing or invalid code redirects to
+        login?error=auth_callback_failed. Preserve Set-Cookie headers.
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+          description: OAuth authorization code. Missing/invalid codes redirect to login.
+        - name: mode
+          in: query
+          schema:
+            type: string
+          description: signup or waitlist invokes the signup/onboarding behavior; other values use normal sign-in.
+        - name: next
+          in: query
+          schema:
+            type: string
+          description: Safe relative destination beginning with / and not //; defaults to /dashboard.
+      responses:
+        '307':
+          description: Redirect after authentication or to login on failure.
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Redirect destination.
+            Set-Cookie:
+              schema:
+                type: string
+              description: May appear multiple times when updating session cookies.
+components:
+  securitySchemes:
+    sessionCookieHeader:
+      type: apiKey
+      in: header
+      name: Cookie
+      description: >-
+        Complete login Cookie header, including every Supabase auth-token chunk. This header scheme supports
+        server SDKs; it is not a permanent API key. Browser clients use same-origin cookies. Retain refreshed
+        Set-Cookie values. Bearer tokens are not supported.
+  responses:
+    Error400:
+      description: Invalid input or project/membership rule failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error401:
+      description: Missing, expired, or invalid login session
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error500:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error403:
+      description: Project access or owner permission denied.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error404:
+      description: Project not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error423:
+      description: Milestone must be claimed by the current user
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+    ProjectMember:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+            - owner
+            - collaborator
+        fullName:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        joinedAt:
+          type: string
+          description: Human-readable relative time, not an ISO timestamp.
+      required:
+        - userId
+        - role
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        inviteCode:
+          type: string
+        role:
+          type: string
+          enum:
+            - owner
+            - collaborator
+        updatedAt:
+          type: string
+          description: Human-readable text such as Updated just now, not an ISO timestamp.
+        createdAt:
+          type: string
+          format: date-time
+        members:
+          type: integer
+        maxMembers:
+          type: integer
+        memberList:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMember'
+        pendingRequestsCount:
+          type: integer
+      required:
+        - id
+        - slug
+        - name
+        - updatedAt
+        - members
+    ProjectList:
+      type: object
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+        userName:
+          type: string
+      required:
+        - projects
+        - userName
+    ProjectResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        project:
+          $ref: '#/components/schemas/Project'
+      required:
+        - success
+        - project
+    MemberList:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMember'
+      required:
+        - success
+        - members
+    CreateProjectInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          example: SDK Demo
+          description: Trimmed before the 1-80 character validation.
+        description:
+          type: string
+          nullable: true
+      required:
+        - name
+    JoinProjectInput:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+          description: Trimmed and uppercased; NS- followed by 4-8 hexadecimal characters.
+          example: NS-8A3F1
+      required:
+        - inviteCode
+    JoinProjectResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        pendingApproval:
+          type: boolean
+        project:
+          $ref: '#/components/schemas/Project'
+        message:
+          type: string
+      required:
+        - success
+        - pendingApproval
+        - project
+        - message
+    MessageResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        message:
+          type: string
+      required:
+        - success
+        - message
+    AccountSettings:
+      type: object
+      properties:
+        email:
+          type: string
+        profile:
+          $ref: '#/components/schemas/AccountProfile'
+      required:
+        - email
+        - profile
+    SuccessResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+      required:
+        - success
+    ProjectIdInput:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+      required:
+        - projectId
+    KickMemberInput:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+      required:
+        - projectId
+        - memberId
+    UnbanMemberInput:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        targetUserId:
+          type: string
+          format: uuid
+      required:
+        - projectId
+        - targetUserId
+    ResolveJoinRequestInput:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        requestId:
+          type: string
+          format: uuid
+        action:
+          type: string
+          enum:
+            - approve
+            - decline
+      required:
+        - projectId
+        - requestId
+        - action
+    ResolveJoinRequestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        status:
+          type: string
+          enum:
+            - approved
+            - declined
+        targetUserId:
+          type: string
+          format: uuid
+        projectSlug:
+          type: string
+      required:
+        - success
+        - status
+        - targetUserId
+    JoinRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - pending
+            - approved
+            - declined
+        fullName:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          description: Human-readable relative time, not an ISO timestamp.
+      required:
+        - id
+        - projectId
+        - userId
+        - status
+        - createdAt
+    BannedMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          nullable: true
+        fullName:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        bannedAt:
+          type: string
+          description: Human-readable relative time, not an ISO timestamp.
+      required:
+        - id
+        - projectId
+        - userId
+        - bannedAt
+    JoinRequestList:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/JoinRequest'
+      required:
+        - success
+        - requests
+    BannedMemberList:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        bannedMembers:
+          type: array
+          items:
+            $ref: '#/components/schemas/BannedMember'
+      required:
+        - success
+        - bannedMembers
+    NodeStatus:
+      type: string
+      enum:
+        - draft
+        - in_progress
+        - blocked
+        - completed
+    NodeType:
+      type: string
+      enum:
+        - milestone
+        - aws_service
+        - group
+        - annotation
+    HandlePosition:
+      type: string
+      enum:
+        - top
+        - right
+        - bottom
+        - left
+    EdgeType:
+      type: string
+      enum:
+        - dependency
+        - data_flow
+        - network
+        - event
+        - sync_http
+        - async_queue
+        - storage_mount
+        - security_iam
+    AWSServiceMetadata:
+      type: object
+      properties:
+        serviceId:
+          type: string
+        category:
+          type: string
+          enum:
+            - end-user-computing
+            - compute
+            - customer-enablement
+            - cloud-financial-management
+            - database
+            - business-applications
+            - blockchain
+            - quantum-technologies
+            - management
+            - iot
+            - developer-tools
+            - migration-modernization
+            - general-icons
+            - containers
+            - games
+            - media-services
+            - ml
+            - satellite
+            - storage
+            - front-end
+            - integration
+            - analytics
+            - networking
+            - security
+            - ai_ml
+            - serverless
+            - mobile
+        region:
+          type: string
+        config:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - serviceId
+        - category
+      nullable: true
+    GroupMetadata:
+      type: object
+      properties:
+        label:
+          type: string
+        style:
+          type: string
+          enum:
+            - vpc
+            - subnet
+            - region
+            - availability_zone
+            - custom
+        childNodeIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - label
+        - style
+        - childNodeIds
+      nullable: true
+    AnnotationMetadata:
+      type: object
+      properties:
+        content:
+          type: string
+        color:
+          type: string
+          enum:
+            - yellow
+            - blue
+            - green
+            - pink
+            - gray
+      required:
+        - content
+      nullable: true
+    Checkpoint:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        node_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        is_completed:
+          type: boolean
+        sort_order:
+          type: integer
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - node_id
+        - project_id
+        - title
+        - is_completed
+        - sort_order
+    ClaimHolder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          nullable: true
+        fullName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+      required:
+        - id
+      nullable: true
+    CanvasNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: '#/components/schemas/NodeStatus'
+        position_x:
+          type: number
+        position_y:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        color:
+          type: string
+        node_type:
+          $ref: '#/components/schemas/NodeType'
+        aws_metadata:
+          $ref: '#/components/schemas/AWSServiceMetadata'
+        group_metadata:
+          $ref: '#/components/schemas/GroupMetadata'
+        annotation_metadata:
+          $ref: '#/components/schemas/AnnotationMetadata'
+        parent_group_id:
+          type: string
+          format: uuid
+          nullable: true
+        sort_order:
+          type: integer
+        claimed_by:
+          type: string
+          format: uuid
+          nullable: true
+        claimed_at:
+          type: string
+          format: date-time
+          nullable: true
+        claim_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        claim_holder:
+          $ref: '#/components/schemas/ClaimHolder'
+        version:
+          type: integer
+        checkpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/Checkpoint'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - project_id
+        - title
+        - description
+        - status
+        - position_x
+        - position_y
+        - width
+        - height
+        - color
+        - sort_order
+        - claimed_by
+        - version
+        - checkpoints
+    CanvasEdge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        source_node_id:
+          type: string
+          format: uuid
+        target_node_id:
+          type: string
+          format: uuid
+        source_handle:
+          $ref: '#/components/schemas/HandlePosition'
+        target_handle:
+          $ref: '#/components/schemas/HandlePosition'
+        edge_type:
+          $ref: '#/components/schemas/EdgeType'
+        label:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - project_id
+        - source_node_id
+        - target_node_id
+        - source_handle
+        - target_handle
+    ClaimRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        node_id:
+          type: string
+          format: uuid
+        requester_id:
+          type: string
+          format: uuid
+        current_holder_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - pending
+            - granted
+            - declined
+            - expired
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - project_id
+        - node_id
+        - requester_id
+        - current_holder_id
+        - status
+        - created_at
+    CanvasData:
+      type: object
+      properties:
+        project:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            slug:
+              type: string
+            name:
+              type: string
+          required:
+            - id
+            - slug
+            - name
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CanvasNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/CanvasEdge'
+        claimRequests:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClaimRequest'
+      required:
+        - project
+        - nodes
+        - edges
+        - claimRequests
+    CreateNodeInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - create_node
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          default: New Milestone
+        description:
+          type: string
+          default: ''
+        position_x:
+          type: number
+          default: 100
+        position_y:
+          type: number
+          default: 100
+        width:
+          type: number
+        height:
+          type: number
+        checkpoints:
+          type: array
+          items:
+            type: string
+        node_type:
+          $ref: '#/components/schemas/NodeType'
+        aws_metadata:
+          $ref: '#/components/schemas/AWSServiceMetadata'
+        group_metadata:
+          $ref: '#/components/schemas/GroupMetadata'
+        annotation_metadata:
+          $ref: '#/components/schemas/AnnotationMetadata'
+        parent_group_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+        - action
+    UpdateNodeInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - update_node
+        node_id:
+          type: string
+          format: uuid
+        updates:
+          type: object
+          properties:
+            title:
+              type: string
+            description:
+              type: string
+            status:
+              $ref: '#/components/schemas/NodeStatus'
+            position_x:
+              type: number
+            position_y:
+              type: number
+            width:
+              type: number
+            height:
+              type: number
+            color:
+              type: string
+            node_type:
+              $ref: '#/components/schemas/NodeType'
+            aws_metadata:
+              $ref: '#/components/schemas/AWSServiceMetadata'
+            group_metadata:
+              $ref: '#/components/schemas/GroupMetadata'
+            annotation_metadata:
+              $ref: '#/components/schemas/AnnotationMetadata'
+            parent_group_id:
+              type: string
+              format: uuid
+              nullable: true
+      required:
+        - action
+        - node_id
+    DeleteNodeInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - delete_node
+        node_id:
+          type: string
+          format: uuid
+      required:
+        - action
+        - node_id
+    CreateEdgeInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - create_edge
+        source_node_id:
+          type: string
+          format: uuid
+        target_node_id:
+          type: string
+          format: uuid
+        source_handle:
+          type: string
+          enum:
+            - top
+            - right
+            - bottom
+            - left
+          default: right
+        target_handle:
+          type: string
+          enum:
+            - top
+            - right
+            - bottom
+            - left
+          default: left
+        edge_type:
+          $ref: '#/components/schemas/EdgeType'
+      required:
+        - action
+        - source_node_id
+        - target_node_id
+    UpdateEdgeInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - update_edge
+        edge_id:
+          type: string
+          format: uuid
+        updates:
+          type: object
+          properties:
+            label:
+              type: string
+              maxLength: 120
+            edge_type:
+              $ref: '#/components/schemas/EdgeType'
+          required:
+            - label
+            - edge_type
+      required:
+        - action
+        - edge_id
+        - updates
+    DeleteEdgeInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - delete_edge
+        edge_id:
+          type: string
+          format: uuid
+      required:
+        - action
+        - edge_id
+    CanvasMutationInput:
+      oneOf:
+        - $ref: '#/components/schemas/CreateNodeInput'
+        - $ref: '#/components/schemas/UpdateNodeInput'
+        - $ref: '#/components/schemas/DeleteNodeInput'
+        - $ref: '#/components/schemas/CreateEdgeInput'
+        - $ref: '#/components/schemas/UpdateEdgeInput'
+        - $ref: '#/components/schemas/DeleteEdgeInput'
+      discriminator:
+        propertyName: action
+        mapping:
+          create_node: '#/components/schemas/CreateNodeInput'
+          update_node: '#/components/schemas/UpdateNodeInput'
+          delete_node: '#/components/schemas/DeleteNodeInput'
+          create_edge: '#/components/schemas/CreateEdgeInput'
+          update_edge: '#/components/schemas/UpdateEdgeInput'
+          delete_edge: '#/components/schemas/DeleteEdgeInput'
+    CanvasMutationResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string
+        node:
+          $ref: '#/components/schemas/NullableCanvasNode'
+        edge:
+          $ref: '#/components/schemas/NullableCanvasEdge'
+      required:
+        - success
+    ToggleCheckpointInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - toggle
+        checkpoint_id:
+          type: string
+          format: uuid
+        node_id:
+          type: string
+          format: uuid
+        is_completed:
+          type: boolean
+      required:
+        - action
+        - checkpoint_id
+        - is_completed
+    AddCheckpointInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - add
+        node_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          default: New Checkpoint
+      required:
+        - action
+        - node_id
+    EditCheckpointInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - edit
+        checkpoint_id:
+          type: string
+          format: uuid
+        node_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+      required:
+        - action
+        - checkpoint_id
+        - title
+    DeleteCheckpointInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - delete
+        checkpoint_id:
+          type: string
+          format: uuid
+        node_id:
+          type: string
+          format: uuid
+      required:
+        - action
+        - checkpoint_id
+    CheckpointMutationInput:
+      oneOf:
+        - $ref: '#/components/schemas/ToggleCheckpointInput'
+        - $ref: '#/components/schemas/AddCheckpointInput'
+        - $ref: '#/components/schemas/EditCheckpointInput'
+        - $ref: '#/components/schemas/DeleteCheckpointInput'
+      discriminator:
+        propertyName: action
+        mapping:
+          toggle: '#/components/schemas/ToggleCheckpointInput'
+          add: '#/components/schemas/AddCheckpointInput'
+          edit: '#/components/schemas/EditCheckpointInput'
+          delete: '#/components/schemas/DeleteCheckpointInput'
+    CheckpointMutationResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        checkpoint:
+          $ref: '#/components/schemas/Checkpoint'
+        newStatus:
+          $ref: '#/components/schemas/NodeStatus'
+      required:
+        - success
+    ClaimNodeInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - claim
+        node_id:
+          type: string
+          format: uuid
+      required:
+        - action
+        - node_id
+    ReleaseNodeInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - release
+        node_id:
+          type: string
+          format: uuid
+      required:
+        - action
+        - node_id
+    HeartbeatInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - heartbeat
+        node_id:
+          type: string
+          format: uuid
+      required:
+        - action
+        - node_id
+    RequestClaimInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - request_claim
+        node_id:
+          type: string
+          format: uuid
+      required:
+        - action
+        - node_id
+    ForceUnlockInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - force_unlock
+        node_id:
+          type: string
+          format: uuid
+      required:
+        - action
+        - node_id
+    ResolveClaimInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - resolve_claim
+        request_id:
+          type: string
+          format: uuid
+        accept:
+          type: boolean
+      required:
+        - action
+        - request_id
+        - accept
+    ClaimInput:
+      oneOf:
+        - $ref: '#/components/schemas/ClaimNodeInput'
+        - $ref: '#/components/schemas/ReleaseNodeInput'
+        - $ref: '#/components/schemas/HeartbeatInput'
+        - $ref: '#/components/schemas/RequestClaimInput'
+        - $ref: '#/components/schemas/ResolveClaimInput'
+        - $ref: '#/components/schemas/ForceUnlockInput'
+      discriminator:
+        propertyName: action
+        mapping:
+          claim: '#/components/schemas/ClaimNodeInput'
+          release: '#/components/schemas/ReleaseNodeInput'
+          heartbeat: '#/components/schemas/HeartbeatInput'
+          request_claim: '#/components/schemas/RequestClaimInput'
+          resolve_claim: '#/components/schemas/ResolveClaimInput'
+          force_unlock: '#/components/schemas/ForceUnlockInput'
+    ClaimResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        autoClaimed:
+          type: boolean
+        message:
+          type: string
+        request:
+          $ref: '#/components/schemas/ClaimRequest'
+        current_holder_id:
+          type: string
+          format: uuid
+        node_title:
+          type: string
+        status:
+          type: string
+          enum:
+            - granted
+            - declined
+        new_holder_id:
+          type: string
+          format: uuid
+        unlocked:
+          type: boolean
+      required:
+        - success
+    AIGenerationInput:
+      type: object
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+        mode:
+          type: string
+          enum:
+            - workflow
+            - aws_architecture
+            - full_stack
+          default: workflow
+        operation:
+          type: string
+          enum:
+            - create
+            - update
+          description: Optional override; otherwise inferred from the prompt and existing graph.
+      required:
+        - prompt
+    AIGenerationResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum:
+            - true
+        intent:
+          type: string
+          enum:
+            - create_pipeline
+            - update_pipeline
+            - create_parallel
+        mode:
+          type: string
+          enum:
+            - workflow
+            - aws_architecture
+            - full_stack
+        operation:
+          type: string
+          enum:
+            - create
+            - update
+        summary:
+          type: string
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CanvasNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/CanvasEdge'
+        requests_used:
+          type: integer
+        requests_remaining:
+          type: integer
+      required:
+        - success
+        - intent
+        - mode
+        - operation
+        - summary
+        - nodes
+        - edges
+        - requests_used
+        - requests_remaining
+    AIError:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        generatingUser:
+          type: string
+        requests_used:
+          type: integer
+        requests_remaining:
+          type: integer
+        max_requests:
+          type: integer
+      required:
+        - error
+    AccountProfile:
+      type: object
+      properties:
+        full_name:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        plan:
+          type: string
+          enum:
+            - free
+            - plus
+            - pro
+            - enterprise
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - full_name
+        - username
+        - avatar_url
+        - role
+        - plan
+        - created_at
+      nullable: true
+    NullableCanvasNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: '#/components/schemas/NodeStatus'
+        position_x:
+          type: number
+        position_y:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        color:
+          type: string
+        node_type:
+          $ref: '#/components/schemas/NodeType'
+        aws_metadata:
+          $ref: '#/components/schemas/AWSServiceMetadata'
+        group_metadata:
+          $ref: '#/components/schemas/GroupMetadata'
+        annotation_metadata:
+          $ref: '#/components/schemas/AnnotationMetadata'
+        parent_group_id:
+          type: string
+          format: uuid
+          nullable: true
+        sort_order:
+          type: integer
+        claimed_by:
+          type: string
+          format: uuid
+          nullable: true
+        claimed_at:
+          type: string
+          format: date-time
+          nullable: true
+        claim_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        claim_holder:
+          $ref: '#/components/schemas/ClaimHolder'
+        version:
+          type: integer
+        checkpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/Checkpoint'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - project_id
+        - title
+        - description
+        - status
+        - position_x
+        - position_y
+        - width
+        - height
+        - color
+        - sort_order
+        - claimed_by
+        - version
+        - checkpoints
+      nullable: true
+    NullableCanvasEdge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        source_node_id:
+          type: string
+          format: uuid
+        target_node_id:
+          type: string
+          format: uuid
+        source_handle:
+          $ref: '#/components/schemas/HandlePosition'
+        target_handle:
+          $ref: '#/components/schemas/HandlePosition'
+        edge_type:
+          $ref: '#/components/schemas/EdgeType'
+        label:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - project_id
+        - source_node_id
+        - target_node_id
+        - source_handle
+        - target_handle
+      nullable: true
