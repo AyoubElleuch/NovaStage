@@ -7,23 +7,27 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)](https://supabase.com/)
 [![Redis](https://img.shields.io/badge/Upstash-Redis-FF4438?logo=redis)](https://upstash.com/)
-[![Vitest](https://img.shields.io/badge/Tests-38%20Passing-6E9F18?logo=vitest)](https://vitest.dev/)
+[![Tests](https://img.shields.io/badge/Tests-Vitest-6E9F18?logo=vitest)](https://vitest.dev/)
 
 ---
 
+## Authorship
+
+I directed the product, architecture, collaboration rules, and behavioral testing. AI wrote the application code as an experiment in AI-assisted development. This project demonstrates that experiment and its implemented behavior; it is not presented as independently handwritten application code.
+
 ## Overview
 
-NovaStage is a high-performance, real-time collaborative workspace designed for software architects and engineering teams to model roadmaps, milestones, and AWS cloud architectures on a shared infinite canvas.
+NovaStage is a real-time collaborative workspace designed for software architects and engineering teams to model roadmaps, milestones, and AWS cloud architectures on a shared infinite canvas.
 
-Unlike generic whiteboard tools that treat diagrams as unstructured vectors, NovaStage treats the canvas as a **typed, validated Directed Acyclic Graph (DAG)**. Milestone dependencies, AWS service connections, and resource topologies are validated both client-side and server-side, preventing circular deadlocks, enforcing permission boundaries at the database layer, and orchestrating complex cloud designs via Google Gemini AI.
+Unlike generic whiteboard tools that treat diagrams as unstructured vectors, NovaStage treats the canvas as a **typed, validated Directed Acyclic Graph (DAG)**. Milestone dependencies, AWS service connections, and resource topologies are validated both client-side and server-side, rejecting cyclic milestone dependencies, enforcing permission boundaries at the database layer, and orchestrating complex cloud designs via Google Gemini AI.
 
 ### Key Capabilities
 
-- **Real-Time Multiplayer Canvas**: Low-latency peer collaboration with sub-50ms Supabase Realtime broadcast channels, dead-reckoning cursor physics (35Hz transmission, exponential spring-lerp interpolation, 60fps smoothing), and network jitter resilience.
+- **Shared canvas**: Supabase Broadcast carries cursor and editing events. PostgreSQL stores canvas state; optimistic updates and snapshot refreshes handle interaction and recovery. Production latency has not been benchmarked.
 - **AWS Cloud Architecture Modeling**: Full catalog of 300+ official AWS services with category metadata, typed infrastructure connections (`data_flow`, `network`, `event`, `dependency`), container groups (VPCs, Subnets), and configuration drawers.
 - **Multi-Phase AI Generation**: 3-stage AI pipeline (Architectural Decomposition &rarr; Structured DAG Generation &rarr; Algorithmic Repair) using Google Gemini with OpenAI fallback chains.
 - **Release Pulse Topological Engine**: Graph-based project health analyzer utilizing Kahn's topological sorting to calculate critical paths, blocked milestones, completion percentages, and release readiness in real time.
-- **Enterprise RBAC & PBAC**: Fine-grained permission model (`admin:access`, `waitlist:manage`, `roles:manage`) backed by non-recursive PostgreSQL Row-Level Security (RLS) policies and session middleware.
+- **Roles and permissions**: Fine-grained permission model (`admin:access`, `waitlist:manage`, `roles:manage`) backed by non-recursive PostgreSQL Row-Level Security (RLS) policies and session middleware.
 
 ---
 
@@ -77,14 +81,14 @@ flowchart TD
 ## Key Engineering Highlights
 
 ### 1. Deterministic Graph Validation & Self-Healing Pipeline
-*Implementation: [`src/lib/ai/phases/validate.ts`](file:///c:/Users/elleu/Music/novastage/src/lib/ai/phases/validate.ts), [`src/lib/canvas/coordinate-math.ts`](file:///c:/Users/elleu/Music/novastage/src/lib/canvas/coordinate-math.ts)*
+*Implementation: [`src/lib/ai/phases/validate.ts`](src/lib/ai/phases/validate.ts), [`src/lib/canvas/coordinate-math.ts`](src/lib/canvas/coordinate-math.ts)*
 
 AI workflow outputs and manual user connections are treated as mathematical directed graphs that must adhere to DAG invariants. The validation engine performs an algorithmic three-phase sanitation sweep before persisting canvas state:
 
 - **Depth-First Search (DFS) Cycle Detection**: A three-color graph coloring algorithm ($O(V + E)$ complexity) maintains an active recursion stack (`recStack`) alongside visited sets. When a back-edge $(u, v)$ is discovered targeting an active ancestor in the recursion stack, the cycle is detected, recorded in a `ValidationReport`, and severed without crashing the pipeline.
 - **Interactive Connection Guard**: When a user drags a connection between nodes on the canvas, `detectCycle()` executes client-side DFS from the proposed target node back to the source node. If the target can reach the source, the connection is instantly rejected with user feedback, preventing circular deadlocks before any database mutation occurs.
 - **Orphan Auto-Stitching & Dangling Edge Pruning**: Unconnected nodes generated during generative decomposition are identified and sequentially connected into logical predecessor layers. Conversely, edges referencing nonexistent node IDs are automatically pruned.
-- **Topological Critical Path Analysis**: [`src/lib/canvas/release-pulse.ts`](file:///c:/Users/elleu/Music/novastage/src/lib/canvas/release-pulse.ts) uses Kahn's algorithm (in-degree tracking) to derive the longest incomplete execution path and actionable unblocked milestones.
+- **Topological Critical Path Analysis**: [`src/lib/canvas/release-pulse.ts`](src/lib/canvas/release-pulse.ts) uses Kahn's algorithm (in-degree tracking) to derive the longest incomplete execution path and actionable unblocked milestones.
 
 ```typescript
 // Excerpt from src/lib/ai/phases/validate.ts
@@ -121,7 +125,7 @@ function removeGraphCycles(nodeIds: Set<string>, edges: AIProcessedEdge[]) {
 ---
 
 ### 2. Two-Tier Distributed Concurrency & Redis Lease Locking
-*Implementation: [`src/lib/redis/client.ts`](file:///c:/Users/elleu/Music/novastage/src/lib/redis/client.ts), [`src/lib/canvas/server.ts`](file:///c:/Users/elleu/Music/novastage/src/lib/canvas/server.ts), [`supabase/migrations/009_canvas_collaboration.sql`](file:///c:/Users/elleu/Music/novastage/supabase/migrations/009_canvas_collaboration.sql)*
+*Implementation: [`src/lib/redis/client.ts`](src/lib/redis/client.ts), [`src/lib/canvas/server.ts`](src/lib/canvas/server.ts), [`supabase/migrations/009_canvas_collaboration.sql`](supabase/migrations/009_canvas_collaboration.sql)*
 
 To prevent "last-write-wins" race conditions during concurrent editing, NovaStage uses a dual-layer cooperative concurrency model combining PostgreSQL row locking with Upstash Redis distributed leases:
 
@@ -133,7 +137,7 @@ To prevent "last-write-wins" race conditions during concurrent editing, NovaStag
 ---
 
 ### 3. Database-Enforced RBAC & Non-Recursive Row-Level Security
-*Implementation: [`supabase/migrations/004_rbac_roles_permissions.sql`](file:///c:/Users/elleu/Music/novastage/supabase/migrations/004_rbac_roles_permissions.sql), [`supabase/migrations/008_projects_and_members.sql`](file:///c:/Users/elleu/Music/novastage/supabase/migrations/008_projects_and_members.sql)*
+*Implementation: [`supabase/migrations/004_rbac_roles_permissions.sql`](supabase/migrations/004_rbac_roles_permissions.sql), [`supabase/migrations/008_projects_and_members.sql`](supabase/migrations/008_projects_and_members.sql)*
 
 Security boundaries in NovaStage are enforced strictly at the database layer using PostgreSQL Row-Level Security:
 
@@ -175,7 +179,7 @@ Security boundaries in NovaStage are enforced strictly at the database layer usi
 
 ## Testing & CI/CD
 
-NovaStage maintains a lean, high-performance test suite of **38 tests across 9 test suites** validating canvas coordinate math, Kahn's topological sort, auto-layout algorithms, Redis distributed leases, AI orchestration, enterprise RBAC/PBAC, and API quota enforcement.
+The Vitest suite covers canvas geometry, graph layout and validation, collaboration behavior, permissions, and API quota handling. Run `npm test` for the current test total. Offline AWS fixtures check topology and layout; they do not measure live model quality, production throughput, or network latency.
 
 ### Running Tests Locally
 
@@ -200,7 +204,7 @@ Every pull request and push to `main` / `master` triggers `.github/workflows/ci.
 1. **`test-and-lint`**:
    - Performs a clean dependency install via `npm ci`.
    - Runs `npm run lint` for code style and static analysis.
-   - Executes `npm test` across all 38 unit and integration tests.
+   - Executes the current Vitest suite with `npm test`.
 2. **`build-verification`**:
    - Injects mock environment variables.
    - Executes `npm run build` to verify zero Next.js App Router bundle errors and type safety.
@@ -263,7 +267,7 @@ Use [`public/openapi.yaml`](public/openapi.yaml) for the complete NovaStage HTTP
    ```
 
 4. **Initialize Database Schema**:
-   Apply migrations to your Supabase project in numerical order from `supabase/migrations/` (001 through 020), or apply `supabase/schema.sql`.
+   Apply migrations to your Supabase project in numerical order from `supabase/migrations/` (001 through 021). The consolidated `supabase/schema.sql` is a reference; the migrations contain subsequent changes.
 
 5. **Start Development Server**:
    ```bash
@@ -298,7 +302,7 @@ novastage/
 │       ├── security/           # Rate limiting and password validation
 │       └── supabase/           # Server, client, and middleware Supabase wrappers
 ├── supabase/
-│   ├── migrations/             # 20 sequential SQL migrations (RLS, PLpgSQL procs)
+│   ├── migrations/             # SQL migrations for schema, policies, and procedures
 │   └── schema.sql              # Consolidated schema blueprint
 ├── middleware.ts               # Root edge session refresh & route protection
 ├── vitest.config.mts           # Vitest configuration (jsdom, React plugin, aliases)
