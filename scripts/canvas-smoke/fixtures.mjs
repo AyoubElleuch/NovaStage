@@ -1,4 +1,4 @@
-export const project = { id: "canvas-smoke", slug: "canvas-smoke", name: "Launch workspace", created_by: "smoke-user" };
+export const project = { id: "canvas-smoke", slug: "canvas-smoke", name: "Launch workspace", invite_code: "NS-TEST0", created_by: "smoke-user" };
 export const currentUser = { id: "smoke-user", email: "canvas-smoke@example.test", fullName: "Canvas Tester" };
 
 const base = {

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { Permission, hasPermission } from "./permissions";
@@ -27,7 +28,9 @@ export interface AuthSessionContext {
  * Unlike getSession(), getUser() cannot be spoofed because it contacts
  * Supabase to verify the JWT signature and freshness.
  */
-export async function getAuthenticatedUser(): Promise<User | null> {
+// React cache is scoped to one server render, never shared between users.
+export const getAuthenticatedUser = cache(loadAuthenticatedUser);
+async function loadAuthenticatedUser(): Promise<User | null> {
   const isPlaceholder =
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder-project");
@@ -73,7 +76,8 @@ export async function requireAuth(redirectTo?: string): Promise<User> {
 /**
  * Fetches the cryptographically verified user, their profile, assigned roles, and granular permissions.
  */
-export async function getAuthenticatedProfile(): Promise<AuthSessionContext | null> {
+export const getAuthenticatedProfile = cache(loadAuthenticatedProfile);
+async function loadAuthenticatedProfile(): Promise<AuthSessionContext | null> {
   const user = await getAuthenticatedUser();
 
   if (!user) {
@@ -82,18 +86,10 @@ export async function getAuthenticatedProfile(): Promise<AuthSessionContext | nu
 
   const supabase = await createClient();
 
-  // 1. Fetch Profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  // 2. Fetch User Roles from user_roles junction table
-  const { data: userRolesData } = await supabase
-    .from("user_roles")
-    .select("role_id")
-    .eq("user_id", user.id);
+  const [{ data: profile }, { data: userRolesData }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user.id).single(),
+    supabase.from("user_roles").select("role_id").eq("user_id", user.id),
+  ]);
 
   const assignedRoles: string[] = [];
   if (userRolesData && userRolesData.length > 0) {
@@ -247,4 +243,3 @@ export async function requireAdmin(redirectTo = "/admin"): Promise<AuthSessionCo
 
   return session;
 }
-

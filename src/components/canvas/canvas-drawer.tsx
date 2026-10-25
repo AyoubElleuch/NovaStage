@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Circle, Lock, Plus, Trash2, Unlock
 import { CanvasNode, CanvasEdge, NodeStatus } from "@/lib/canvas/types";
 import { AwsIcon, getAWSService } from "./aws-icons";
 import { calculateCompletionPercentage, isNodeFullyComplete } from "@/lib/canvas/coordinate-math";
+import { trapMobilePanelTab } from "@/lib/canvas/panel-focus";
 
 interface CanvasDrawerProps {
   node: CanvasNode | null;
@@ -155,10 +156,11 @@ function NodeDrawer({ node, allNodes, edges, currentUserId, isProjectOwner, onCl
     <aside ref={drawerRef} data-canvas-ui="true" aria-label={`${kind} details`}
       onPointerDown={(event) => event.stopPropagation()}
       onKeyDown={(event) => {
+        trapMobilePanelTab(event);
         event.stopPropagation();
         if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); close(); }
       }}
-      className="fixed inset-y-0 right-0 z-50 flex h-dvh w-full max-w-[420px] flex-col border-l border-neutral-200 bg-white shadow-2xl dark:border-[#283548] dark:bg-[#161d27]">
+      className="canvas-full-height-panel fixed inset-y-0 right-0 z-50 flex h-dvh w-full max-w-[420px] flex-col border-l border-neutral-200 bg-white shadow-2xl dark:border-[#283548] dark:bg-[#161d27]">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-100 px-5 py-4 dark:border-[#283548]">
         <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-500 dark:text-neutral-400">{kind} details</p><h2 className="mt-1 truncate text-sm font-semibold text-neutral-900 dark:text-white" title={node.title}>{node.title}</h2></div>
         <button ref={closeRef} type="button" onClick={close} aria-label="Close details" title="Close details (Esc)" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-[#1e2634]"><X className="h-4 w-4" /></button>
@@ -180,7 +182,7 @@ function NodeDrawer({ node, allNodes, edges, currentUserId, isProjectOwner, onCl
             onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); saveTitle(); } if (event.key === "Escape") { event.preventDefault(); setTitle(node.title); setTitleError(""); } }}
             aria-invalid={Boolean(titleError)} aria-describedby={titleError ? `${id}-title-error` : undefined} className={`${FIELD} font-semibold`} />
           {titleError && <p id={`${id}-title-error`} className="mt-1 text-xs text-red-600" role="alert">{titleError}</p>}
-          <p className="mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400">Changes save when you leave a field. Press Enter to save the title.</p>
+          <p className="mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400"><span className="md:hidden">Changes save when you leave a field.</span><span className="hidden md:inline">Changes save when you leave a field. Press Enter to save the title.</span></p>
         </div>
 
         {!isAnnotation && <div>
@@ -243,9 +245,11 @@ function NodeDrawer({ node, allNodes, edges, currentUserId, isProjectOwner, onCl
         <div><label htmlFor={`${id}-description`} className={LABEL}>Description & notes</label><textarea id={`${id}-description`} rows={4} disabled={!editable} value={description} onChange={(event) => setDescription(event.target.value)} onBlur={saveDescription} placeholder="Add context, requirements, links, or decisions…" className={`${FIELD} resize-y text-xs leading-relaxed`} /></div>
 
         {!isAnnotation && <section aria-label="Connected nodes" className="space-y-4 border-t border-neutral-100 pt-5 dark:border-[#283548]"><h3 className={LABEL}>{isMilestone ? "Dependency flow" : "Architecture connections"}</h3>{renderConnections(incoming, "incoming")}{renderConnections(outgoing, "outgoing")}</section>}
+        {(editable || isProjectOwner) && <div className="border-t border-neutral-100 pt-5 md:hidden dark:border-[#283548]"><button type="button" onClick={() => onDeleteNode(node.id)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400"><Trash2 className="h-3.5 w-3.5" />Delete {kind.toLowerCase()}</button></div>}
       </div>
 
-      {(editable || isProjectOwner) && <div className="shrink-0 border-t border-neutral-100 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-[#283548]"><button type="button" onClick={() => onDeleteNode(node.id)} className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30"><Trash2 className="h-3.5 w-3.5" />Delete {kind.toLowerCase()}</button></div>}
+      {(editable || isProjectOwner) && <div className="hidden shrink-0 border-t border-neutral-100 px-5 py-3 md:block dark:border-[#283548]"><button type="button" onClick={() => onDeleteNode(node.id)} className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30"><Trash2 className="h-3.5 w-3.5" />Delete {kind.toLowerCase()}</button></div>}
+      <div className="shrink-0 border-t border-neutral-100 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden dark:border-[#283548]"><button type="button" onClick={close} className="min-h-11 w-full rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700">Done</button></div>
     </aside>
   </>;
 }

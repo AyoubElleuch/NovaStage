@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useRef } from "react";
+import { trapMobilePanelTab, useMobilePanelFocus } from "@/lib/canvas/panel-focus";
 import { Activity, ArrowRight, CheckCircle2, GitBranch, ShieldAlert, X, Zap } from "lucide-react";
 import { createPortal } from "react-dom";
 import { analyzeReleasePulse } from "@/lib/canvas/release-pulse";
@@ -28,6 +29,8 @@ export default function CanvasReleasePulse({
   onClose,
   onJumpToNode,
 }: CanvasReleasePulseProps) {
+  const panelRef = useRef<HTMLElement>(null);
+  useMobilePanelFocus(panelRef, true);
   const pulse = useMemo(() => analyzeReleasePulse(nodes, edges), [nodes, edges]);
   const circumference = 2 * Math.PI * 42;
   const progressOffset = circumference * (1 - pulse.readiness / 100);
@@ -40,8 +43,11 @@ export default function CanvasReleasePulse({
         aria-hidden="true"
       />
       <aside
+        ref={panelRef}
+        data-canvas-ui="true"
+        onKeyDown={event => { trapMobilePanelTab(event); event.stopPropagation(); if (event.key === "Escape") { event.preventDefault(); onClose(); } }}
         aria-label="Release pulse"
-        className="fixed top-0 right-0 z-50 flex h-dvh w-full sm:max-w-105 flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-[#283548] dark:bg-[#161d27]/95"
+        className="canvas-full-height-panel fixed top-0 right-0 z-50 flex h-dvh w-full sm:max-w-105 flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-[#283548] dark:bg-[#161d27]/95"
       >
       <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#283548] px-5 py-4">
         <div className="flex items-center gap-2">

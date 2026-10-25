@@ -124,7 +124,7 @@ export default function CanvasGroupNode({ node, isSelected, isMultiSelected = fa
   };
 
   return (
-    <div data-node-type="group" data-node-id={node.id} role="group" tabIndex={0} aria-label={`${STYLE_LABELS[styleType]}: ${label}. Drag the header to move. ${effectiveWidth} by ${effectiveHeight} pixels.`}
+    <div data-node-type="group" data-node-id={node.id} role="group" tabIndex={0} aria-label={`${STYLE_LABELS[styleType]}: ${label}. ${readOnly ? "View only." : "Drag the header to move."} ${effectiveWidth} by ${effectiveHeight} pixels.`}
       onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}
       onFocus={() => setIsFocused(true)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsFocused(false); }}
       onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); onSelect(node, e.shiftKey); } }}

@@ -214,7 +214,7 @@ export default function CanvasEdgeLayer({
         return (
           <g
             key={edge.id}
-            data-canvas-ui
+            data-canvas-ui={readOnly ? undefined : true}
             role={readOnly ? "img" : "button"}
             tabIndex={readOnly ? undefined : 0}
             aria-label={`Connection from ${sourceNode.title} to ${targetNode.title}${edge.label ? `: ${edge.label}` : ""}`}
@@ -266,7 +266,7 @@ export default function CanvasEdgeLayer({
             />
 
             {/* Edge Label Badge */}
-            {(edge.label || isHovered) && (
+            {(edge.label || (!readOnly && isHovered)) && (
               <foreignObject
                 x={center.x - 110}
                 y={center.y - 32}

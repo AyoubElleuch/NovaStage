@@ -30,21 +30,14 @@ export default async function ProjectPage({
     redirect("/dashboard");
   }
 
-  const canvasData = await getProjectCanvasData(project.id);
-
-  const { data: memberRows } = await adminClient
-    .from("project_members")
-    .select("user_id, role")
-    .eq("project_id", project.id);
+  const [canvasData, { data: memberRows }, { data: profile }] = await Promise.all([
+    getProjectCanvasData(project.id),
+    adminClient.from("project_members").select("user_id, role").eq("project_id", project.id),
+    adminClient.from("profiles").select("ai_requests_count, full_name, avatar_url, plan").eq("id", user.id).maybeSingle(),
+  ]);
 
   const myMembership = (memberRows || []).find((m) => m.user_id === user.id);
   const isOwner = myMembership?.role === "owner" || project.created_by === user.id;
-
-  const { data: profile } = await adminClient
-    .from("profiles")
-    .select("ai_requests_count, full_name, avatar_url, plan")
-    .eq("id", user.id)
-    .maybeSingle();
 
   const userPlan =
     profile?.plan ||

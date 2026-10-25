@@ -92,7 +92,7 @@ export default function CanvasAnnotationNode({ node, isSelected, isMultiSelected
       {isEditing ? <textarea ref={textareaRef} data-no-drag="true" data-canvas-scroll="true" aria-label="Note content" value={editedContent} onChange={(e) => setEditedContent(e.target.value)}
         onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Escape") { e.preventDefault(); finishEditing(true); } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey || e.shiftKey)) { e.preventDefault(); finishEditing(); } }}
         className="min-h-0 w-full flex-1 resize-none rounded bg-transparent text-xs font-medium leading-relaxed outline-none focus:ring-1 focus:ring-current/20" placeholder="Type your note here..." /> :
-        <div data-canvas-scroll="true" onDoubleClick={(e) => { e.stopPropagation(); startEditing(); }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain whitespace-pre-wrap break-words text-xs font-medium leading-relaxed" title={!content ? "Double-click or press F2 to edit" : undefined}>{content || <span className="italic opacity-60">{readOnly ? "Empty note" : "Double-click to add a note..."}</span>}</div>}
+        <div data-canvas-scroll="true" onDoubleClick={(e) => { e.stopPropagation(); startEditing(); }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain whitespace-pre-wrap break-words text-xs font-medium leading-relaxed" title={!content && !readOnly ? "Double-click or press F2 to edit" : undefined}>{content || <span className="italic opacity-60">{readOnly ? "Empty note" : "Double-click to add a note..."}</span>}</div>}
     </div>
   );
 }

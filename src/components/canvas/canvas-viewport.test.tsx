@@ -148,4 +148,17 @@ describe("canvas navigation", () => {
     }
     expect(onViewportChange).not.toHaveBeenCalled();
   });
+  it("allows stationary hand-tool taps without turning a pan into a tap", () => {
+    const { canvas, onCanvasClick } = setup({ activeTool: "hand", allowHandToolClick: true });
+    fireEvent.pointerDown(canvas, { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
+    fireEvent.pointerUp(canvas, { pointerId: 1 });
+    fireEvent.click(canvas, { clientX: 100, clientY: 100 });
+    expect(onCanvasClick).toHaveBeenCalledExactlyOnceWith({ x: 100, y: 100 });
+    onCanvasClick.mockClear();
+    fireEvent.pointerDown(canvas, { pointerId: 2, button: 0, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(canvas, { pointerId: 2, clientX: 150, clientY: 130 });
+    fireEvent.pointerUp(canvas, { pointerId: 2 });
+    fireEvent.click(canvas, { clientX: 150, clientY: 130 });
+    expect(onCanvasClick).not.toHaveBeenCalled();
+  });
 });

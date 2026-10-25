@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Circle,
   Lock,
+  Scan,
   Unlock,
   X,
 } from "lucide-react";
@@ -21,6 +22,7 @@ interface CanvasMobileNodeBarProps {
   stepIndex: number;
   currentUserId: string;
   onOpenDrawer: () => void;
+  onFocusNode?: () => void;
   onDeselect: () => void;
   onClaimNode: (nodeId: string) => void;
   onReleaseNode: (nodeId: string) => void;
@@ -33,6 +35,7 @@ export default function CanvasMobileNodeBar({
   stepIndex,
   currentUserId,
   onOpenDrawer,
+  onFocusNode,
   onDeselect,
   onClaimNode,
   onReleaseNode,
@@ -59,7 +62,7 @@ export default function CanvasMobileNodeBar({
       data-canvas-ui="true"
       role="region"
       aria-label={`Selected ${kind}: ${node.title}`}
-      className="dash-pop pointer-events-auto fixed bottom-20 inset-x-3 z-30 mx-auto max-w-md rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-xl md:hidden dark:border-[#283548] dark:bg-[#161d27]/95"
+      className="dash-pop pointer-events-auto fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] inset-x-3 z-30 mx-auto max-w-md rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-xl md:hidden dark:border-[#283548] dark:bg-[#161d27]/95"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       onKeyDown={(event) => { event.stopPropagation(); if (event.key === "Escape") { event.preventDefault(); onDeselect(); } }}
@@ -133,6 +136,7 @@ export default function CanvasMobileNodeBar({
 
       {/* Action buttons row: Claim / Release / Request Lock & View Details */}
       <div className="mt-3 flex items-center gap-2 pt-1 border-t border-neutral-100 dark:border-[#283548]">
+        {onFocusNode && <button type="button" aria-label="Focus selected item" title="Zoom to this item" onClick={onFocusNode} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-100 dark:border-[#283548] dark:text-neutral-300 dark:hover:bg-[#1e2634]"><Scan className="h-4 w-4" /></button>}
         {isClaimedByMe ? (
           <button
             type="button"

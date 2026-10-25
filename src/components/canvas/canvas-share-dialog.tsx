@@ -36,7 +36,7 @@ export default function CanvasShareDialog({ slug, onClose }: { slug: string; onC
 
   return <dialog ref={ref} aria-labelledby="canvas-share-title" onCancel={onClose} onClose={onClose}
     onClick={event => { if (event.target === event.currentTarget) onClose(); }}
-    className="pointer-events-auto m-auto w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 text-neutral-900 shadow-2xl backdrop:bg-neutral-950/50 dark:border-[#283548] dark:bg-[#161d27] dark:text-white">
+    className="canvas-native-dialog pointer-events-auto m-auto w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 text-neutral-900 shadow-2xl backdrop:bg-neutral-950/50 dark:border-[#283548] dark:bg-[#161d27] dark:text-white">
     <div className="flex items-center justify-between gap-3"><h2 id="canvas-share-title" className="text-lg font-semibold">Share canvas</h2>
       <button type="button" autoFocus onClick={onClose} aria-label="Close sharing" className="grid h-11 w-11 place-items-center rounded-xl hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><X className="h-5 w-5" /></button></div>
     <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">Anyone with the link can explore the canvas and open details. They cannot edit it or see the project name or members. Canvas content, including notes and resource configuration, will be visible.</p>

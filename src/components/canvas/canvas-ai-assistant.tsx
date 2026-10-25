@@ -408,7 +408,7 @@ export default function CanvasAIAssistant({
             role="dialog"
             aria-modal="true"
             aria-labelledby="ai-assistant-title"
-            className="dash-pop fixed bottom-20 inset-x-3 sm:inset-x-auto z-50 max-h-[85vh] overflow-y-auto sm:bottom-24 sm:left-1/2 flex w-auto sm:w-[calc(100%-24px)] max-w-lg sm:-translate-x-1/2 flex-col rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-2xl transition-all sm:max-w-xl dark:border-[#283548] dark:bg-[#161d27]/95"
+            className="canvas-floating-panel dash-pop fixed bottom-20 inset-x-3 sm:inset-x-auto z-50 max-h-[85vh] overflow-y-auto sm:bottom-24 sm:left-1/2 flex w-auto sm:w-[calc(100%-24px)] max-w-lg sm:-translate-x-1/2 flex-col rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-2xl transition-all sm:max-w-xl dark:border-[#283548] dark:bg-[#161d27]/95"
           >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#283548] px-1 pb-2.5">
@@ -418,7 +418,7 @@ export default function CanvasAIAssistant({
                   id="ai-assistant-title"
                   className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white"
                 >
-                  Generate or Update Workflow with AI
+                  AI assistant
                 </h3>
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
@@ -427,20 +427,21 @@ export default function CanvasAIAssistant({
                       : "bg-neutral-100 text-neutral-600 border-neutral-200/80 dark:bg-[#1e2634] dark:text-neutral-300 dark:border-[#283548]"
                   }`}
                 >
-                  <span>
+                  <span className="whitespace-nowrap md:hidden">{maxRequests >= 999 ? "Unlimited" : `${requestsRemaining}/${maxRequests} left`}</span>
+                  <span className="hidden md:inline">
                     {maxRequests >= 999
                       ? "Unlimited AI requests"
                       : isQuotaDepleted
                       ? `0 / ${maxRequests} remaining`
                       : `${requestsRemaining} of ${maxRequests} requests left`}
                   </span>
-                  <span className="text-[9px] font-medium opacity-75 border-l border-neutral-300 dark:border-neutral-600 pl-1.5">
+                  <span className="hidden md:inline text-[9px] font-medium opacity-75 border-l border-neutral-300 dark:border-neutral-600 pl-1.5">
                     {userPlan === "pro" ? "Gemini Ultra" : userPlan === "plus" ? "Gemini Pro" : "Gemini Flash"}
                   </span>
                 </span>
               </div>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                Describe a pipeline to build, or ask to update the current one
+                Describe what to create or change.
               </p>
             </div>
 
@@ -457,11 +458,12 @@ export default function CanvasAIAssistant({
           {/* Form & Input Area */}
           <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
             {/* Mode Selector */}
-            <div className="flex p-1 bg-neutral-100 dark:bg-[#1e2634] rounded-lg border border-neutral-200/60 dark:border-[#283548] w-fit">
+            <div className="grid w-full grid-cols-3 p-1 bg-neutral-100 dark:bg-[#1e2634] rounded-lg border border-neutral-200/60 dark:border-[#283548] md:flex md:w-fit [&>button]:min-w-0 [&>button]:justify-center [&>button]:flex-wrap">
               <button
                 type="button"
                 onClick={() => setMode('workflow')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                aria-pressed={mode === 'workflow'}
+                className={`flex items-center gap-1.5 px-1.5 md:px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
                   mode === 'workflow' ? 'bg-white dark:bg-[#2a3649] text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
                 }`}
               >
@@ -471,21 +473,23 @@ export default function CanvasAIAssistant({
               <button
                 type="button"
                 onClick={() => setMode('aws_architecture')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                aria-pressed={mode === 'aws_architecture'}
+                className={`flex items-center gap-1.5 px-1.5 md:px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
                   mode === 'aws_architecture' ? 'bg-white dark:bg-[#2a3649] text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
                 }`}
               >
-                <span className="font-bold text-[#FF9900]">AWS</span>
-                AWS Architecture
+                <span aria-hidden="true" className="hidden md:inline font-bold text-[#FF9900]">AWS</span>
+                <span className="md:hidden">AWS</span><span className="hidden md:inline">AWS Architecture</span>
               </button>
               <button
                 type="button"
                 onClick={() => setMode('full_stack')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                aria-pressed={mode === 'full_stack'}
+                className={`flex items-center gap-1.5 px-1.5 md:px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
                   mode === 'full_stack' ? 'bg-white dark:bg-[#2a3649] text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
                 }`}
               >
-                <div className="flex items-center gap-0.5">
+                <div aria-hidden="true" className="hidden md:flex items-center gap-0.5">
                   <Waypoints className="h-3.5 w-3.5" />
                   <span className="font-bold text-[#FF9900] text-[10px]">AWS</span>
                 </div>
@@ -495,13 +499,14 @@ export default function CanvasAIAssistant({
 
             <div className="rounded-xl border border-neutral-200 bg-white shadow-2xs transition-all focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/5 dark:border-[#283548] dark:bg-[#121721] dark:focus-within:border-emerald-500 dark:focus-within:ring-emerald-500/10">
               <textarea
+                aria-label="AI prompt"
                 ref={textareaRef}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={
                   isQuotaDepleted
                     ? `You have reached your ${maxRequests} AI workflow limit.`
-                    : "Describe your project or ask to modify the pipeline (e.g., 'Add a QA testing step between step 2 and step 3', 'Add Redis cache checkpoints to step 2')..."
+                    : "Describe what to create or change…"
                 }
                 disabled={isThinking || isQuotaDepleted}
                 style={{ height: "68px", overflowY: "hidden" }}

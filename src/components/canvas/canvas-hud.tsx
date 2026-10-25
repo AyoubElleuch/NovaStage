@@ -22,6 +22,7 @@ import { CollaboratorPresence, CanvasNetworkStatus } from "@/lib/canvas/types";
 import { useTheme } from "@/lib/theme-context";
 import UserAvatar from "@/components/ui/user-avatar";
 import CanvasShareDialog from "./canvas-share-dialog";
+import CanvasMobileActions from "./canvas-mobile-actions";
 
 interface CanvasHudProps {
   projectSlug?: string;
@@ -98,21 +99,21 @@ export default function CanvasHud({
     <header data-canvas-ui="true" onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => {
       event.stopPropagation();
       if (event.key === "Escape" && isExportOpen) { event.preventDefault(); setIsExportOpen(false); exportTriggerRef.current?.focus(); }
-    }} className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2.5 sm:p-5 select-none gap-2 [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-emerald-500">
+    }} className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2.5 md:p-5 select-none gap-2 [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-emerald-500">
       {/* Top Left: Project Identity & Breadcrumb */}
-      <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-3 min-w-0">
+      <div className="pointer-events-auto flex flex-1 items-center gap-1.5 md:gap-3 min-w-0 md:flex-initial">
         <Link
           href="/dashboard"
           title="Back to Projects"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-neutral-200/80 bg-white/90 text-neutral-600 shadow-sm backdrop-blur-md transition-colors hover:bg-neutral-100 hover:text-neutral-900 cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"
+          className="flex h-11 w-11 md:h-9 md:w-9 shrink-0 items-center justify-center rounded-xl border border-neutral-200/80 bg-white/90 text-neutral-600 shadow-sm backdrop-blur-md transition-colors hover:bg-neutral-100 hover:text-neutral-900 cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
 
-        <div className="flex items-center gap-2 rounded-xl border border-neutral-200/80 bg-white/90 px-2.5 py-1 sm:px-3.5 sm:py-1.5 shadow-sm backdrop-blur-md min-w-0 dark:border-[#283548] dark:bg-[#161d27]/90">
+        <div className="flex min-h-11 flex-1 md:flex-initial items-center gap-2 rounded-xl border border-neutral-200/80 bg-white/90 px-2.5 py-1 md:px-3.5 md:py-1.5 shadow-sm backdrop-blur-md min-w-0 dark:border-[#283548] dark:bg-[#161d27]/90">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h1 className="text-xs font-bold text-neutral-900 capitalize truncate max-w-[100px] xs:max-w-[140px] sm:max-w-[260px] dark:text-white">
+              <h1 title={projectName} className="text-xs font-bold text-neutral-900 capitalize truncate md:max-w-[260px] dark:text-white">
                 {projectName}
               </h1>
               <span
@@ -129,10 +130,10 @@ export default function CanvasHud({
 
             {/* Total Project Roadmap Progress */}
             <div className="flex items-center gap-1.5 text-[10px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
-              <span className="hidden sm:inline">
+              <span className="hidden md:inline">
                 {completedNodes}/{totalNodes} milestones ({overallProgress}%)
               </span>
-              <span className="sm:hidden">
+              <span className="md:hidden">
                 {completedNodes}/{totalNodes} ({overallProgress}%)
               </span>
             </div>
@@ -158,8 +159,12 @@ export default function CanvasHud({
         )}
       </div>
 
+      <CanvasMobileActions canShare={Boolean(isOwner && projectSlug)} onShare={() => setIsShareOpen(true)}
+        inviteCode={inviteCode} onCopyInvite={() => { void handleCopy().catch(() => setCopied(false)); }} copied={copied} isCopying={isCopying}
+        onExportMermaid={onExportMermaid} onExportJSON={onExportJSON} networkStatus={networkStatus} latencyMs={latencyMs}
+        collaborators={collaborators} currentUserId={currentUserId} followingUserId={followingUserId} onToggleFollowUser={onToggleFollowUser} />
       {/* Top Right: Export, Theme Toggle, Network Status, Live Collaborators Stack & Invite Code */}
-      <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <div className="pointer-events-auto hidden md:flex items-center gap-1.5 md:gap-2 shrink-0">
         {/* Quick Theme Toggle Button */}
         <button
           type="button"
@@ -186,10 +191,10 @@ export default function CanvasHud({
               aria-expanded={isExportOpen}
               aria-controls={exportId}
               title="Export Roadmap"
-              className="flex h-9 w-9 sm:w-auto items-center justify-center sm:justify-start gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-0 sm:px-3 text-xs font-semibold text-neutral-700 shadow-sm backdrop-blur-md hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"
+              className="flex h-9 w-9 md:w-auto items-center justify-center md:justify-start gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-0 md:px-3 text-xs font-semibold text-neutral-700 shadow-sm backdrop-blur-md hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >
               <Download className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
-              <span className="hidden sm:inline">Export</span>
+              <span className="hidden md:inline">Export</span>
             </button>
 
             {isExportOpen && (
@@ -238,7 +243,7 @@ export default function CanvasHud({
               ? "Reconnecting to realtime channel..."
               : "Offline."
           }
-          className={`flex items-center gap-1.5 rounded-xl border px-2 sm:px-2.5 py-1.5 text-[11px] font-medium shadow-sm backdrop-blur-md transition-all ${
+          className={`flex items-center gap-1.5 rounded-xl border px-2 md:px-2.5 py-1.5 text-[11px] font-medium shadow-sm backdrop-blur-md transition-all ${
             networkStatus === "online"
               ? "border-neutral-200/80 bg-white/90 text-neutral-700 dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300"
               : networkStatus === "slow"
@@ -254,21 +259,21 @@ export default function CanvasHud({
                 <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              <span className="hidden sm:inline font-mono text-[10px] font-medium text-neutral-700 dark:text-neutral-400">
+              <span className="hidden md:inline font-mono text-[10px] font-medium text-neutral-700 dark:text-neutral-400">
                 {latencyMs !== null && latencyMs !== undefined ? `${latencyMs}ms` : "—"}
               </span>
             </>
           ) : networkStatus === "slow" ? (
             <>
               <Wifi className="h-3.5 w-3.5 text-amber-600 animate-pulse" />
-              <span className="hidden sm:inline font-mono text-[10px] font-medium text-amber-800">
+              <span className="hidden md:inline font-mono text-[10px] font-medium text-amber-800">
                 {latencyMs !== null && latencyMs !== undefined ? `${latencyMs}ms` : "Slow"}
               </span>
             </>
           ) : networkStatus === "reconnecting" ? (
             <>
               <span className="h-2 w-2 rounded-full bg-orange-500 animate-spin" />
-              <span className="hidden sm:inline font-semibold text-[10px]">Reconnecting…</span>
+              <span className="hidden md:inline font-semibold text-[10px]">Reconnecting…</span>
             </>
           ) : (
             <>
@@ -329,8 +334,8 @@ export default function CanvasHud({
         )}
 
         {isOwner && projectSlug && <button type="button" onClick={() => setIsShareOpen(true)} aria-label="Share canvas" title="Share view-only canvas"
-          className="flex h-9 w-9 sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-0 text-xs font-semibold text-emerald-800 shadow-sm sm:px-3 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300">
-          <Share2 className="h-4 w-4" /><span className="hidden sm:inline">Share</span>
+          className="flex h-9 w-9 md:w-auto items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-0 text-xs font-semibold text-emerald-800 shadow-sm md:px-3 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300">
+          <Share2 className="h-4 w-4" /><span className="hidden md:inline">Share</span>
         </button>}
         {/* Invite Code Quick Copy */}
         {inviteCode && (
@@ -340,17 +345,17 @@ export default function CanvasHud({
             disabled={isCopying}
             aria-label={copied ? "Invite code copied" : "Copy invite code"}
             title={copied ? "Copied!" : `Copy invite code: ${inviteCode}`}
-            className="flex h-9 w-9 sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-0 sm:px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm backdrop-blur-md hover:bg-neutral-100 transition-colors cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-200 dark:hover:bg-[#1e2634]"
+            className="flex h-9 w-9 md:w-auto items-center justify-center gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-0 md:px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow-sm backdrop-blur-md hover:bg-neutral-100 transition-colors cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-200 dark:hover:bg-[#1e2634]"
           >
             {copied ? (
               <>
                 <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span className="hidden sm:inline text-emerald-700 dark:text-emerald-400">Copied!</span>
+                <span className="hidden md:inline text-emerald-700 dark:text-emerald-400">Copied!</span>
               </>
             ) : (
               <>
                 <UserPlus className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
-                <span className="hidden sm:inline font-mono text-[11px] text-neutral-900 dark:text-white">{inviteCode}</span>
+                <span className="hidden md:inline font-mono text-[11px] text-neutral-900 dark:text-white">{inviteCode}</span>
               </>
             )}
           </button>

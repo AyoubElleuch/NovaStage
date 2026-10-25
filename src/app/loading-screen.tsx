@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const INTRO_DURATION = 1000;
@@ -25,7 +26,17 @@ function waitForVideo(video: HTMLVideoElement) {
   });
 }
 
-export default function LoadingScreen({ ready = true, onComplete }: { ready?: boolean; onComplete?: () => void } = {}) {
+type LoadingScreenProps = { ready?: boolean; onComplete?: () => void };
+
+export default function LoadingScreen(props: LoadingScreenProps = {}) {
+  const pathname = usePathname();
+  // Workspace routes have their own useful streaming skeletons. Do not hold
+  // an interactive canvas behind the homepage intro or unrelated media loads.
+  if (!props.onComplete && (pathname.startsWith("/dashboard") || pathname.startsWith("/share/"))) return null;
+  return <BrandedLoadingScreen {...props} />;
+}
+
+function BrandedLoadingScreen({ ready = true, onComplete }: LoadingScreenProps) {
   const [isVisible, setIsVisible] = useState(true);
   const [isExiting, setIsExiting] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);

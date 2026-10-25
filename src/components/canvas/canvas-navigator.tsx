@@ -54,7 +54,7 @@ export default function CanvasNavigator({ nodes, isOpen, onToggle, onClose, onJu
     if (isOpen) document.getElementById(`${resultsId}-${highlightedIndex}`)?.scrollIntoView?.({ block: "nearest" });
   }, [highlightedIndex, isOpen, resultsId, results]);
 
-  return <div ref={containerRef} data-canvas-ui className="absolute left-3 top-[76px] z-30 flex max-h-[calc(100%_-_176px)] flex-col sm:left-5 sm:top-[88px]"
+  return <div ref={containerRef} data-canvas-ui className="canvas-search-panel absolute left-3 top-[76px] z-30 flex max-h-[calc(100%_-_176px)] flex-col sm:left-5 sm:top-[88px]"
     onKeyDown={event => {
       event.stopPropagation();
       if (event.nativeEvent.isComposing) return;

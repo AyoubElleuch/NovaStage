@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Circle, Eye, Maximize2, Minus, Moon, Plus, Sun, X } from "lucide-react";
 import type { CanvasEdge, CanvasNode, CanvasViewport } from "@/lib/canvas/types";
-import { getNodeDimensions } from "@/lib/canvas/coordinate-math";
-import { fitCanvasNodes, zoomAroundCenter } from "@/lib/canvas/workspace";
+import { fitCanvasNodes, zoomAroundCenter, getCanvasNodeAtPoint } from "@/lib/canvas/workspace";
+import { useCanvasVisualViewport } from "@/lib/canvas/use-visual-viewport";
 import { useTheme } from "@/lib/theme-context";
 import CanvasViewportContainer from "./canvas-viewport";
 import CanvasEdgeLayer from "./canvas-edge-layer";
@@ -15,6 +15,7 @@ const BUTTON = "grid h-11 min-w-11 place-items-center rounded-xl border border-n
 
 /** Deliberately has no auth client, realtime subscriptions, or mutation callbacks. */
 export default function SharedCanvasViewer({ nodes, edges }: { nodes: CanvasNode[]; edges: CanvasEdge[] }) {
+  useCanvasVisualViewport();
   const root = useRef<HTMLElement>(null);
   const [viewport, setViewport] = useState<CanvasViewport>({ x: 0, y: 0, zoom: 1 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -39,6 +40,18 @@ export default function SharedCanvasViewer({ nodes, edges }: { nodes: CanvasNode
     return () => observer.disconnect();
   }, [fit]);
   useEffect(() => { if (selectedId) details.current?.showModal(); }, [selectedId]);
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing || details.current?.open) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault(); setSearchOpen(open => !open);
+      } else if (event.shiftKey && event.code === "Digit1" && !(event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable='true']"))) {
+        event.preventDefault(); fit();
+      }
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  }, [fit]);
   const openNode = (id: string) => { setSearchOpen(false); setSelectedId(id); };
 
   return <main ref={root} aria-label="Shared canvas" className="relative h-dvh w-full overflow-hidden bg-[#faf8f5] text-neutral-900 dark:bg-[#10151f] dark:text-white">
@@ -54,11 +67,7 @@ export default function SharedCanvasViewer({ nodes, edges }: { nodes: CanvasNode
       onCanvasClick={point => {
         // Panning captures the pointer on the viewport; resolve a stationary tap
         // in world coordinates instead of depending on the retargeted click.
-        const hit = [...nodes].sort((a, b) => Number(a.node_type === "group") - Number(b.node_type === "group")).find(node => {
-          const size = getNodeDimensions(node);
-          return point.x >= node.position_x && point.x <= node.position_x + size.width &&
-            point.y >= node.position_y - (node.node_type === "group" ? 24 : 0) && point.y <= node.position_y + size.height;
-        });
+        const hit = getCanvasNodeAtPoint(nodes, point);
         if (hit) openNode(hit.id);
       }}>
       <CanvasEdgeLayer edges={edges} nodes={nodes} draftEdge={null} onDeleteEdge={() => {}} readOnly />
@@ -76,7 +85,7 @@ export default function SharedCanvasViewer({ nodes, edges }: { nodes: CanvasNode
       <button type="button" aria-label="Zoom in" onClick={() => setViewport(vp => zoomAroundCenter(vp, vp.zoom * 1.2, area()))} className={BUTTON}><Plus className="h-4 w-4" /></button>
       <button type="button" aria-label="Fit canvas" onClick={fit} className={BUTTON}><Maximize2 className="h-4 w-4" /></button>
     </nav>
-    {selected && <dialog ref={details} aria-labelledby="shared-node-title" onCancel={() => setSelectedId(null)} onClose={() => setSelectedId(null)} onClick={event => { if (event.target === event.currentTarget) setSelectedId(null); }} className="m-auto max-h-[85dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white p-5 text-neutral-900 shadow-2xl backdrop:bg-neutral-950/50 dark:border-[#283548] dark:bg-[#161d27] dark:text-white">
+    {selected && <dialog ref={details} aria-labelledby="shared-node-title" onCancel={() => setSelectedId(null)} onClose={() => setSelectedId(null)} onClick={event => { if (event.target === event.currentTarget) setSelectedId(null); }} className="canvas-native-dialog m-auto max-h-[85dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white p-5 text-neutral-900 shadow-2xl backdrop:bg-neutral-950/50 dark:border-[#283548] dark:bg-[#161d27] dark:text-white">
       <div className="flex items-start justify-between gap-3"><h2 id="shared-node-title" className="break-words text-lg font-semibold">{selected.title}</h2><button autoFocus type="button" aria-label="Close details" onClick={() => setSelectedId(null)} className={`${BUTTON} shrink-0`}><X className="h-4 w-4" /></button></div>
       <p className="mt-3 text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-400">{selected.status.replaceAll("_", " ")}</p>
       <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6">{selected.description}</p>

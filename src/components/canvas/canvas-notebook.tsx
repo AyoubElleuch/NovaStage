@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { trapMobilePanelTab, useMobilePanelFocus } from "@/lib/canvas/panel-focus";
 import { createPortal } from "react-dom";
 import { BookOpen, HelpCircle, Plus, Trash2, X } from "lucide-react";
 
@@ -56,6 +57,8 @@ function formatUpdatedAt(value: string) {
 }
 
 export default function CanvasNotebook({ projectId, isOpen, onToggle, onClose }: CanvasNotebookProps) {
+  const panelRef = useRef<HTMLElement>(null);
+  useMobilePanelFocus(panelRef, isOpen);
   const [activeTab, setActiveTab] = useState<NotebookTab>("notes");
   const [entries, setEntries] = useState<NotebookEntries>(emptyEntries);
   const [selectedIds, setSelectedIds] = useState<Partial<Record<NotebookTab, string>>>({});
@@ -134,8 +137,11 @@ export default function CanvasNotebook({ projectId, isOpen, onToggle, onClose }:
               aria-hidden="true"
             />
             <aside
+              ref={panelRef}
+              data-canvas-ui="true"
+              onKeyDown={event => { trapMobilePanelTab(event); event.stopPropagation(); if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); onClose(); } }}
               aria-label="Project notebook"
-              className="canvas-panel-enter fixed top-0 right-0 z-50 flex h-dvh w-full sm:max-w-105 flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-[#283548] dark:bg-[#161d27]/95"
+              className="canvas-full-height-panel canvas-panel-enter fixed top-0 right-0 z-50 flex h-dvh w-full sm:max-w-105 flex-col border-l border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-xl pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-[#283548] dark:bg-[#161d27]/95"
             >
             <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#283548] px-5 py-4">
               <div className="flex items-center gap-2">
@@ -172,7 +178,7 @@ export default function CanvasNotebook({ projectId, isOpen, onToggle, onClose }:
                 </button>
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col">
+              <div className="canvas-notebook-body flex min-h-0 flex-1 flex-col">
                 <div aria-label={`${tabDetails[activeTab].label} history`} className="max-h-44 overflow-y-auto border-b border-neutral-100 dark:border-[#283548] p-3">
                   <div className="space-y-1">
                     {activeEntries.map((entry) => (
@@ -190,7 +196,7 @@ export default function CanvasNotebook({ projectId, isOpen, onToggle, onClose }:
                 </div>
 
                 {selectedEntry && (
-                  <div className="flex min-h-0 flex-1 flex-col px-5 py-4">
+                  <div className="canvas-notebook-editor flex min-h-0 flex-1 flex-col px-5 py-4">
                     <label htmlFor="notebook-entry-title" className="sr-only">Entry title</label>
                     <input id="notebook-entry-title" value={selectedEntry.title} onChange={(event) => updateEntry({ title: event.target.value })} placeholder={`${tabDetails[activeTab].singular} title`} className="border-0 bg-transparent text-sm font-semibold text-neutral-900 outline-none placeholder:text-neutral-300 dark:text-white dark:placeholder:text-neutral-600" />
                     <label htmlFor="notebook-entry-body" className="sr-only">Entry content</label>
