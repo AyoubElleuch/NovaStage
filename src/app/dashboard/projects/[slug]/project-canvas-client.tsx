@@ -2302,6 +2302,7 @@ export default function ProjectCanvasClient({
     <div ref={setCanvasRootElement} className="relative h-full w-full overflow-hidden select-none">
       {/* Top Floating HUD with Follow Mode and Export */}
       <CanvasHud
+        projectSlug={project.slug}
         projectName={project.name}
         inviteCode={project.invite_code}
         isOwner={isOwner}

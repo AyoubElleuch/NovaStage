@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { chromium, devices } from "playwright";
 import { createServer } from "vite";
 import react from "@vitejs/plugin-react";
-import { nodes, edges } from "./canvas-smoke/fixtures.mjs";
+import { nodes, edges, project } from "./canvas-smoke/fixtures.mjs";
 
 // This harness mounts the actual canvas client. All APIs and realtime are mocked;
 // it never logs in, connects to Supabase, or changes a real project.
@@ -33,10 +33,9 @@ async function check(label, action) {
   results.push(label);
   console.log(`PASS ${label}`);
 }
-
-async function fixturePage(context) {
+async function fixturePage(context, shared = false) {
   const page = await context.newPage();
-  const state = { nodes: structuredClone(nodes), edges: structuredClone(edges), mutations: [] };
+  const state = { nodes: structuredClone(nodes), edges: structuredClone(edges), mutations: [], shareToken: null };
   const errors = [];
   page.on("pageerror", error => { errors.push(error.message); console.error(error.message); });
   page.setDefaultTimeout(15_000);
@@ -45,6 +44,12 @@ async function fixturePage(context) {
     const url = new URL(request.url());
     if (url.origin !== origin) return route.abort();
     if (!url.pathname.startsWith("/api/")) return route.continue();
+    if (url.pathname.endsWith("/share")) {
+      if (request.method() === "POST") state.shareToken ||= "a".repeat(64);
+      if (request.method() === "DELETE") state.shareToken = null;
+      return route.fulfill({ json: { token: state.shareToken } });
+    }
+    assert.equal(shared, false, "public viewer must never request a private API");
     if (request.method() === "HEAD") return route.fulfill({ status: 204 });
     if (request.method() === "GET") return route.fulfill({ json: { nodes: state.nodes, edges: state.edges } });
     const body = request.postDataJSON();
@@ -66,7 +71,7 @@ async function fixturePage(context) {
     else throw new Error(`Smoke fixture does not implement ${body.action}`);
     return route.fulfill({ json: { success: true } });
   });
-  await page.goto(`${origin}/scripts/canvas-smoke/index.html`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${origin}/scripts/canvas-smoke/index.html${shared ? "?shared" : ""}`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Find on canvas" }).waitFor();
   await page.getByRole("group", { name: /^Milestone 1: Plan the release/ }).waitFor();
   return { page, state, errors };
@@ -74,7 +79,7 @@ async function fixturePage(context) {
 
 try {
   browser = await chromium.launch({ headless: true });
-  const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, permissions: ["clipboard-read", "clipboard-write"] });
   const { page, state, errors } = await fixturePage(desktop);
   const canvas = page.locator("[data-canvas-viewport]");
   await check("desktop canvas renders fitted milestones, AWS resources and wires", async () => {
@@ -95,6 +100,20 @@ try {
     await page.getByRole("combobox", { name: "Search canvas" }).press("Enter");
     await page.getByRole("complementary", { name: "Milestone details" }).waitFor();
     await page.getByRole("button", { name: "Close details", exact: true }).click();
+  });
+  await check("owners can enable, copy and revoke a view-only link independently of invites", async () => {
+    await page.getByRole("button", { name: "Share canvas", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Share canvas", exact: true });
+    await dialog.getByRole("button", { name: "Enable view-only link", exact: true }).click();
+    await page.getByRole("textbox", { name: "View-only link", exact: true }).waitFor();
+    assert.equal(await page.getByRole("textbox", { name: "View-only link", exact: true }).inputValue(), `${origin}/share/${"a".repeat(64)}`);
+    await dialog.getByRole("button", { name: "Copy link", exact: true }).click();
+    await dialog.getByRole("button", { name: "Link copied", exact: true }).waitFor();
+    await page.screenshot({ path: resolve(output, "sharing.png") });
+    await dialog.getByRole("button", { name: "Disable link", exact: true }).click();
+    await dialog.getByRole("button", { name: "Enable view-only link", exact: true }).waitFor();
+    assert.equal(state.shareToken, null);
+    await dialog.getByRole("button", { name: "Close sharing", exact: true }).click();
   });
   await check("node drag saves its final world position", async () => {
     await canvas.focus();
@@ -219,6 +238,33 @@ try {
   });
   assert.deepEqual(mobileErrors, [], "mobile browser errors");
   await mobile.close();
+  for (const [name, options] of [["desktop", { viewport: { width: 1440, height: 1000 } }], ["mobile", { ...devices["iPhone 13"] }]]) {
+    const context = await browser.newContext(options);
+    const { page: viewer, state: sharedState, errors: sharedErrors } = await fixturePage(context, true);
+    await check(`${name} public canvas supports navigation and details without private APIs or edits`, async () => {
+      assert.equal(await viewer.getByText(project.name, { exact: true }).count(), 0);
+      assert.equal(await viewer.getByRole("button", { name: /Claim|Rename|Link from|Delete|Share canvas|Export canvas/ }).count(), 0);
+      const world = viewer.locator("[data-canvas-viewport] [data-canvas-bg='true']").last();
+      const before = await world.getAttribute("style");
+      await viewer.getByRole("button", { name: "Zoom in", exact: true }).click();
+      assert.notEqual(await world.getAttribute("style"), before);
+      await viewer.getByRole("button", { name: "Fit canvas", exact: true }).click();
+      await viewer.getByRole("heading", { name: "Plan the release", exact: true }).click();
+      await viewer.getByRole("dialog", { name: "Plan the release", exact: true }).waitFor();
+      await viewer.getByRole("button", { name: "Close details", exact: true }).click();
+      await viewer.getByRole("button", { name: "Find on canvas", exact: true }).click();
+      await viewer.getByRole("combobox", { name: "Search canvas", exact: true }).fill("Application servers");
+      await viewer.getByRole("option").click();
+      await viewer.getByRole("dialog", { name: "Application servers", exact: true }).waitFor();
+      await viewer.screenshot({ path: resolve(output, `${name}-shared-details.png`) });
+      await viewer.getByRole("button", { name: "Close details", exact: true }).click();
+      await viewer.getByRole("button", { name: "Fit canvas", exact: true }).click();
+      await viewer.screenshot({ path: resolve(output, `${name}-shared.png`) });
+      assert.equal(sharedState.mutations.length, 0);
+      assert.deepEqual(sharedErrors, []);
+    });
+    await context.close();
+  }
   await writeFile(resolve(output, "results.json"), JSON.stringify({ checks: results, errors: [] }, null, 2));
   console.log(`Canvas browser smoke passed (${results.length} checks). Screenshots: ${output}`);
 } finally {

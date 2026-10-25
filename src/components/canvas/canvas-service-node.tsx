@@ -7,6 +7,7 @@ import { getNodeDimensions, getUserColor } from "@/lib/canvas/coordinate-math";
 import { AwsIcon, getAWSService, AWS_CATEGORIES } from "./aws-icons";
 
 export interface CanvasServiceNodeProps {
+  readOnly?: boolean;
   node: CanvasNode;
   isSelected: boolean;
   isMultiSelected?: boolean;
@@ -31,7 +32,7 @@ const STATUS_LABELS = { draft: "Planned", in_progress: "In progress", blocked: "
 const STATUS_COLORS = { draft: "bg-neutral-400", in_progress: "bg-blue-500", blocked: "bg-amber-500", completed: "bg-emerald-500" };
 
 export default function CanvasServiceNode({
-  node, isSelected, isMultiSelected = false, isLinking, currentUserId,
+  node, isSelected, isMultiSelected = false, isLinking, currentUserId, readOnly = false,
   onSelect, onDragStart, onDragEnd, onStartLink, onRequestClaim, onClaimNode, onUpdateTitle,
 }: CanvasServiceNodeProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -64,7 +65,7 @@ export default function CanvasServiceNode({
   const showControls = isHovered || isFocused || active || isLinking;
 
   const startEditingTitle = () => {
-    if (!onUpdateTitle) return;
+    if (readOnly || !onUpdateTitle) return;
     if (isClaimedByOther) { onRequestClaim(node); return; }
     if (!node.claimed_by) onClaimNode?.(node.id);
     onSelect(node);
@@ -83,6 +84,7 @@ export default function CanvasServiceNode({
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (readOnly) return;
     if ((e.target as HTMLElement).closest("[data-no-drag]") || e.button !== 0) return;
     e.stopPropagation();
     if (isLinking) { onStartLink(node, "left", e); return; }
@@ -105,6 +107,7 @@ export default function CanvasServiceNode({
       tabIndex={0}
       aria-label={`${node.title}, ${service?.name || "AWS service"}, ${STATUS_LABELS[node.status]}${node.aws_metadata?.region ? `, ${node.aws_metadata.region}` : ""}${isClaimedByOther ? `, claimed by ${otherClaimName}` : ""}`}
       onPointerDown={handlePointerDown}
+      onClick={readOnly ? () => onSelect(node) : undefined}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       onMouseEnter={() => setIsHovered(true)}
@@ -119,7 +122,7 @@ export default function CanvasServiceNode({
       style={{ transform: `translate3d(${node.position_x}px, ${node.position_y}px, 0)`, width: `${dimensions.width}px`, height: `${dimensions.height}px`, borderTopColor: categoryColor }}
       className={`group z-20 absolute top-0 left-0 flex cursor-move select-none flex-col rounded-xl border border-t-[3px] bg-white/95 p-3 shadow-sm transition-shadow duration-150 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-500 dark:bg-[#161d27]/95 ${isLinking ? "cursor-pointer border-emerald-400 ring-2 ring-emerald-500/30 hover:ring-emerald-500" : active ? "border-neutral-900 shadow-md ring-2 ring-neutral-900/10 dark:border-emerald-500 dark:ring-emerald-500/20" : isClaimedByOther ? "border-amber-300 dark:border-amber-700" : "border-neutral-200 hover:shadow-md dark:border-[#283548]"}`}
     >
-      {(Object.keys(HANDLE_STYLES) as HandlePosition[]).map((handle) => (
+      {!readOnly && (Object.keys(HANDLE_STYLES) as HandlePosition[]).map((handle) => (
         <button type="button" key={handle} data-no-drag="true" aria-label={`Link from ${handle} port of ${node.title}`} onPointerDown={(e) => { e.stopPropagation(); if (e.button === 0) onStartLink(node, handle, e); }}
           onClick={event => {
             event.stopPropagation();
@@ -136,12 +139,12 @@ export default function CanvasServiceNode({
       <div className="flex items-start justify-between gap-2">
         <AwsIcon serviceId={serviceId} size={compact ? 32 : 40} className={compact ? "h-8 w-8 shrink-0" : "h-10 w-10 shrink-0"} />
         <span className="mt-1 inline-flex min-w-0 items-center gap-1 text-[9px] font-medium text-neutral-500 dark:text-neutral-400" title={`Architecture status: ${STATUS_LABELS[node.status]}`}><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_COLORS[node.status]}`} /><span className="truncate">{STATUS_LABELS[node.status]}</span></span>
-        <button type="button" data-no-drag="true" aria-label={isClaimedByMe ? `You are editing ${node.title}` : isClaimedByOther ? `Request edit access to ${node.title} from ${otherClaimName}` : `Claim ${node.title} to edit`}
+        {!readOnly && <button type="button" data-no-drag="true" aria-label={isClaimedByMe ? `You are editing ${node.title}` : isClaimedByOther ? `Request edit access to ${node.title} from ${otherClaimName}` : `Claim ${node.title} to edit`}
           onClick={(e) => { e.stopPropagation(); if (isClaimedByOther) onRequestClaim(node); else if (!node.claimed_by && onClaimNode) onClaimNode(node.id); else onSelect(node); }}
           className={`inline-flex max-w-[100px] items-center gap-1 rounded-full border px-1.5 py-1 text-[9px] font-medium focus-visible:outline-2 focus-visible:outline-emerald-500 ${isClaimedByMe ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400" : isClaimedByOther ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400" : "border-neutral-200 bg-neutral-50 text-neutral-500 hover:bg-neutral-100 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-400"}`}
           title={isClaimedByMe ? "You have the edit lock" : isClaimedByOther ? `Claimed by ${otherClaimName}. Request edit access.` : "Claim edit access"}>
           {isClaimedByMe ? <><span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: claimColor }} /><span>You</span></> : isClaimedByOther ? <><Lock className="h-2.5 w-2.5 shrink-0" /><span className="truncate">{otherClaimName.split(" ")[0]}</span></> : <><Unlock className="h-2.5 w-2.5" /><span>Edit</span></>}
-        </button>
+        </button>}
       </div>
       <div className="mt-2 min-w-0">
         <p className="truncate text-[10px] font-medium text-neutral-500 dark:text-neutral-400" title={service?.name}>{service?.name || serviceId || "AWS service"}</p>
@@ -150,7 +153,7 @@ export default function CanvasServiceNode({
           className="mt-1 w-full rounded border border-emerald-500 bg-white px-1.5 py-0.5 text-sm font-bold text-neutral-900 outline-none dark:bg-[#121721] dark:text-white" /> :
           <div className="mt-1 flex items-start gap-1">
             <h3 onDoubleClick={(e) => { e.stopPropagation(); startEditingTitle(); }} className="min-w-0 flex-1 line-clamp-2 break-words text-sm font-bold leading-snug text-neutral-900 dark:text-white" title={node.title}>{node.title}</h3>
-            {onUpdateTitle && showControls && <button type="button" data-no-drag="true" aria-label={`Rename ${node.title}`} title="Rename resource (F2)" onClick={(e) => { e.stopPropagation(); startEditingTitle(); }} className="shrink-0 rounded p-0.5 text-neutral-400 hover:bg-neutral-100 hover:text-emerald-600 dark:hover:bg-[#283548]"><Pencil className="h-3 w-3" /></button>}
+            {!readOnly && onUpdateTitle && showControls && <button type="button" data-no-drag="true" aria-label={`Rename ${node.title}`} title="Rename resource (F2)" onClick={(e) => { e.stopPropagation(); startEditingTitle(); }} className="shrink-0 rounded p-0.5 text-neutral-400 hover:bg-neutral-100 hover:text-emerald-600 dark:hover:bg-[#283548]"><Pencil className="h-3 w-3" /></button>}
           </div>}
       </div>
       <div className="mt-auto min-w-0 pt-2">

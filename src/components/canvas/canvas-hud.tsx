@@ -13,6 +13,7 @@ import {
   Moon,
   Share2,
   Sun,
+  UserPlus,
   Wifi,
   WifiOff,
   X,
@@ -20,8 +21,10 @@ import {
 import { CollaboratorPresence, CanvasNetworkStatus } from "@/lib/canvas/types";
 import { useTheme } from "@/lib/theme-context";
 import UserAvatar from "@/components/ui/user-avatar";
+import CanvasShareDialog from "./canvas-share-dialog";
 
 interface CanvasHudProps {
+  projectSlug?: string;
   projectName: string;
   inviteCode?: string;
   isOwner: boolean;
@@ -39,6 +42,7 @@ interface CanvasHudProps {
 }
 
 export default function CanvasHud({
+  projectSlug,
   projectName,
   inviteCode,
   isOwner,
@@ -55,6 +59,7 @@ export default function CanvasHud({
   onExportJSON,
 }: CanvasHudProps) {
   const [copied, setCopied] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -323,6 +328,10 @@ export default function CanvasHud({
           </div>
         )}
 
+        {isOwner && projectSlug && <button type="button" onClick={() => setIsShareOpen(true)} aria-label="Share canvas" title="Share view-only canvas"
+          className="flex h-9 w-9 sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-0 text-xs font-semibold text-emerald-800 shadow-sm sm:px-3 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300">
+          <Share2 className="h-4 w-4" /><span className="hidden sm:inline">Share</span>
+        </button>}
         {/* Invite Code Quick Copy */}
         {inviteCode && (
           <button
@@ -340,13 +349,14 @@ export default function CanvasHud({
               </>
             ) : (
               <>
-                <Share2 className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
+                <UserPlus className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
                 <span className="hidden sm:inline font-mono text-[11px] text-neutral-900 dark:text-white">{inviteCode}</span>
               </>
             )}
           </button>
         )}
       </div>
+      {isShareOpen && projectSlug && <CanvasShareDialog slug={projectSlug} onClose={() => setIsShareOpen(false)} />}
     </header>
   );
 }

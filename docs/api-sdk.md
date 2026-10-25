@@ -1,6 +1,6 @@
 # NovaStage API
 
-Import [openapi.yaml](../public/openapi.yaml) into the SDK generator. It uses OpenAPI 3.0.3 and covers all 15 HTTP route paths: 19 API operations plus the OAuth callback. The application serves the specification at `/openapi.yaml` after deployment.
+Import [openapi.yaml](../public/openapi.yaml) into the SDK generator. It uses OpenAPI 3.0.3 and covers all 16 HTTP route paths: 22 API operations plus the OAuth callback. The application serves the specification at `/openapi.yaml` after deployment.
 
 Set the SDK base URL to the NovaStage origin, without `/api`. The specification defaults to `http://localhost:3000`. Start testing with `ping`, `getAccountSettings`, `listProjects`, and `createProject`; these require no AI-provider credentials.
 
@@ -19,12 +19,15 @@ Set the SDK base URL to the NovaStage origin, without `/api`. The specification 
 | GET / POST | `/api/dashboard/projects/requests` | `listJoinRequests` / `resolveJoinRequest` | Owner |
 | GET / POST | `/api/dashboard/projects/banned` | `listBannedMembers` / `unbanProjectMember` | Owner |
 | GET / POST | `/api/dashboard/projects/{slug}/canvas` | `getProjectCanvas` / `mutateProjectCanvas` | Project member |
+| GET / POST / DELETE | `/api/dashboard/projects/{slug}/canvas/share` | `getCanvasShare` / `enableCanvasShare` / `disableCanvasShare` | Owner only |
 | POST | `/api/dashboard/projects/{slug}/canvas/checkpoints` | `mutateCheckpoint` | Project member; milestone claim required |
 | POST | `/api/dashboard/projects/{slug}/canvas/claim` | `manageCanvasClaim` | Project member; some actions require holder or owner |
 | POST | `/api/dashboard/projects/{slug}/canvas/ai-generate` | `generateProjectCanvas` | Project member; AI quota and server configuration required |
 | GET | `/auth/callback` | `completeAuthCallback` | Browser OAuth/PKCE flow; redirects with 307 |
 
 Request fields, response schemas, action variants, and permission failures are defined in the YAML. Next.js server actions, Supabase Realtime messages, and external provider APIs are outside this HTTP contract.
+
+Canvas sharing is separate from project invites. POST enables a reusable 256-bit random link; GET reads its token without enabling it; DELETE revokes it. Each returns `{ token: string | null }`. The public HTML page at `/share/{token}` loads only allowlisted canvas content, without project names, membership, claim holders, or author identities. It does not establish membership or expose mutation endpoints. Apply database migration 022 before use.
 
 ## Authentication
 

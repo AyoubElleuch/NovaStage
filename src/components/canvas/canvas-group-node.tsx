@@ -6,6 +6,7 @@ import { CanvasNode, HandlePosition } from "@/lib/canvas/types";
 import { getNodeDimensions } from "@/lib/canvas/coordinate-math";
 
 export interface CanvasGroupNodeProps {
+  readOnly?: boolean;
   node: CanvasNode;
   isSelected: boolean;
   isMultiSelected?: boolean;
@@ -39,7 +40,7 @@ const HANDLE_STYLES: Record<HandlePosition, string> = {
 type ResizeHandle = "se" | "e" | "s";
 type ResizeState = { handle: ResizeHandle; startX: number; startY: number; startW: number; startH: number };
 
-export default function CanvasGroupNode({ node, isSelected, isMultiSelected = false, isLinking, currentUserId, zoom = 1, onSelect, onDragStart, onDragEnd, onStartLink, onRequestClaim, onClaimNode, onResize }: CanvasGroupNodeProps) {
+export default function CanvasGroupNode({ node, isSelected, isMultiSelected = false, isLinking, currentUserId, readOnly = false, zoom = 1, onSelect, onDragStart, onDragEnd, onStartLink, onRequestClaim, onClaimNode, onResize }: CanvasGroupNodeProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [resizing, setResizing] = useState(false);
@@ -56,6 +57,7 @@ export default function CanvasGroupNode({ node, isSelected, isMultiSelected = fa
   const showControls = isSelected || isMultiSelected || isHovered || isFocused || resizing;
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (readOnly) return;
     if ((e.target as HTMLElement).closest("[data-no-drag]") || e.button !== 0) return;
     e.stopPropagation();
     if (isLinking) { onStartLink(node, "left", e); return; }
@@ -69,6 +71,7 @@ export default function CanvasGroupNode({ node, isSelected, isMultiSelected = fa
     onDragEnd();
   };
   const prepareResize = () => {
+    if (readOnly) return false;
     if (locked) { onRequestClaim(node); return false; }
     if (!onResize || isLinking) return false;
     if (!node.claimed_by) onClaimNode?.(node.id);
@@ -127,16 +130,16 @@ export default function CanvasGroupNode({ node, isSelected, isMultiSelected = fa
       onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); onSelect(node, e.shiftKey); } }}
       style={{ transform: `translate3d(${node.position_x}px, ${node.position_y}px, 0)`, width: `${effectiveWidth}px`, height: `${effectiveHeight}px`, zIndex: isSelected || isMultiSelected ? 10 : node.parent_group_id ? 9 : styleType === "region" ? 6 : styleType === "vpc" ? 7 : 8 }}
       className={`pointer-events-none absolute top-0 left-0 select-none rounded-xl border-2 transition-shadow duration-150 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-500 ${styleType === "vpc" || styleType === "region" ? "border-solid" : "border-dashed"} ${colors.border} ${colors.bg} ${isLinking ? "ring-2 ring-emerald-500/40" : isSelected || isMultiSelected ? "shadow-md ring-2 ring-neutral-900/20 dark:ring-emerald-500/30" : ""}`}>
-      {(Object.keys(HANDLE_STYLES) as HandlePosition[]).map((handle) => <div key={handle} data-no-drag="true" onPointerDown={(e) => { e.stopPropagation(); if (e.button === 0) onStartLink(node, handle, e); }}
+      {!readOnly && (Object.keys(HANDLE_STYLES) as HandlePosition[]).map((handle) => <div key={handle} data-no-drag="true" onPointerDown={(e) => { e.stopPropagation(); if (e.button === 0) onStartLink(node, handle, e); }}
         className={`absolute z-20 flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300 bg-white shadow-xs transition-all before:absolute before:-inset-2 before:content-[''] dark:border-[#384961] dark:bg-[#1e2634] ${HANDLE_STYLES[handle]} ${showControls || isLinking ? "pointer-events-auto cursor-pointer opacity-100 hover:scale-110 hover:border-emerald-600 hover:bg-emerald-600 hover:text-white" : "pointer-events-none scale-75 opacity-0"}`}
         title={`${isLinking ? "Connect to" : "Link from"} ${label}: ${handle} port`}><Plus className="h-3.5 w-3.5" /></div>)}
-      <div onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} className={`pointer-events-auto absolute ${node.parent_group_id ? "left-10" : "left-4"} top-0 flex max-w-[calc(100%-32px)] -translate-y-1/2 cursor-move items-center gap-2 rounded-lg border border-inherit px-3 py-2 shadow-xs ${colors.labelBg}`} title="Drag this header to move the group and its resources">
+      <div onClick={readOnly ? () => onSelect(node) : undefined} onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} className={`pointer-events-auto absolute ${node.parent_group_id ? "left-10" : "left-4"} top-0 flex max-w-[calc(100%-32px)] -translate-y-1/2 cursor-move items-center gap-2 rounded-lg border border-inherit px-3 py-2 shadow-xs ${colors.labelBg}`} title={readOnly ? "Open group details" : "Drag this header to move the group and its resources"}>
         <GripVertical className={`h-3.5 w-3.5 shrink-0 ${colors.text}`} aria-hidden="true" />
         <span className={`shrink-0 text-[9px] font-bold uppercase tracking-wider ${colors.text}`}>{STYLE_LABELS[styleType]}</span>
         <span title={label} className={`min-w-0 truncate text-xs font-semibold ${colors.text}`}>{label}</span>
-        {locked && <button type="button" data-no-drag="true" aria-label={`Request edit access to ${label}`} onClick={(e) => { e.stopPropagation(); onRequestClaim(node); }} className="shrink-0 rounded p-0.5 text-amber-600 hover:bg-amber-200/50"><Lock className="h-3 w-3" /></button>}
+        {!readOnly && locked && <button type="button" data-no-drag="true" aria-label={`Request edit access to ${label}`} onClick={(e) => { e.stopPropagation(); onRequestClaim(node); }} className="shrink-0 rounded p-0.5 text-amber-600 hover:bg-amber-200/50"><Lock className="h-3 w-3" /></button>}
       </div>
-      {showControls && onResize && !locked && !isLinking && <>
+      {!readOnly && showControls && onResize && !locked && !isLinking && <>
         {([
           ["se", "Resize group", "-bottom-2 -right-2 h-5 w-5 cursor-se-resize rounded-md"],
           ["e", "Resize group width", "bottom-8 -right-1.5 h-8 w-3 cursor-e-resize rounded-full"],

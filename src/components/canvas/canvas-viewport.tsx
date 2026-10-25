@@ -9,6 +9,7 @@ const CTRL_WHEEL_ZOOM_SENSITIVITY = 0.0025;
 const INTERACTIVE_SELECTOR = "button, input, textarea, select, a, [contenteditable]:not([contenteditable='false']), [data-canvas-ui]";
 
 interface CanvasViewportProps {
+  allowHandToolClick?: boolean;
   viewport: CanvasViewport;
   onViewportChange: (newViewport: CanvasViewport) => void;
   activeTool: CanvasTool;
@@ -23,6 +24,7 @@ interface CanvasViewportProps {
 }
 
 export default function CanvasViewportContainer({
+  allowHandToolClick = false,
   viewport,
   onViewportChange,
   activeTool,
@@ -338,7 +340,7 @@ export default function CanvasViewportContainer({
 
   const handleClick = (e: React.MouseEvent) => {
     if (e.target instanceof Element && e.target.closest(INTERACTIVE_SELECTOR)) return;
-    if (activeTool === "hand" || isSpacePressed || e.altKey || dragDistanceRef.current > 4) {
+    if ((activeTool === "hand" && !allowHandToolClick) || isSpacePressed || e.altKey || dragDistanceRef.current > 4) {
       e.preventDefault();
       e.stopPropagation();
       return;
