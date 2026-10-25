@@ -9,6 +9,7 @@ import CanvasGroupNode from "./canvas-group-node";
 import CanvasAnnotationNode from "./canvas-annotation-node";
 
 export interface CanvasNodeComponentProps {
+  readOnly?: boolean;
   node: CanvasNode;
   stepIndex: number;
   isSelected: boolean;
@@ -44,7 +45,7 @@ const PORT_POSITION: Record<HandlePosition, string> = {
   left: "top-1/2 left-0 -translate-x-1/2 -translate-y-1/2",
 };
 
-function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = false, isLinking, currentUserId,
+function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = false, isLinking, currentUserId, readOnly = false,
   onSelect, onDragStart, onDragEnd, onStartLink, onToggleCheckpoint, onRequestClaim, onClaimNode, onUpdateTitle,
 }: CanvasNodeComponentProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -77,7 +78,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
   const holderName = node.claim_holder?.fullName && node.claim_holder.fullName !== "You" ? node.claim_holder.fullName : "Collaborator";
   const statusLabel = isComplete ? "Complete" : node.status === "blocked" ? "Blocked" : completionPct > 0 || node.status === "in_progress" ? "In progress" : "Planned";
   const previewCount = 5;
-  const canRename = Boolean(onUpdateTitle) && !isClaimedByOther;
+  const canRename = !readOnly && Boolean(onUpdateTitle) && !isClaimedByOther;
 
   const handleClaimAction = () => {
     if (isClaimedByOther) onRequestClaim(node);
@@ -116,6 +117,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
     tabIndex={0}
     aria-label={`Milestone ${stepIndex + 1}: ${node.title}. ${statusLabel}. ${completedCount} of ${node.checkpoints.length} checkpoints complete.`}
     onPointerDown={(event) => {
+      if (readOnly) return;
       event.stopPropagation();
       if (event.button !== 0 || (event.target as HTMLElement).closest("[data-no-drag]")) return;
       if (isLinking) { onStartLink(node, "left", event); return; }
@@ -125,6 +127,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
     }}
     onPointerUp={endDrag}
     onPointerCancel={endDrag}
+    onClick={readOnly ? () => onSelect(node) : undefined}
     onMouseEnter={() => setIsHovered(true)}
     onMouseLeave={() => setIsHovered(false)}
     onKeyDown={(event) => {
@@ -140,7 +143,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
       isLinking ? "cursor-pointer ring-2 ring-emerald-500/30 hover:border-emerald-500" : isSelected || isMultiSelected ? "border-neutral-900 ring-2 ring-neutral-900/20 shadow-md dark:border-emerald-500 dark:ring-emerald-500/30" : isComplete ? "border-emerald-300/80 dark:border-emerald-700/60" : node.status === "blocked" ? "border-red-300 dark:border-red-800" : isClaimedByOther ? "border-amber-300/80 dark:border-amber-700/60" : "border-neutral-200/90 hover:border-neutral-400 dark:border-[#283548] dark:hover:border-[#384961]"
     }`}
   >
-    {(Object.keys(PORT_POSITION) as HandlePosition[]).map((handle) => <button
+    {!readOnly && (Object.keys(PORT_POSITION) as HandlePosition[]).map((handle) => <button
       key={handle} type="button" data-no-drag="true"
       aria-label={`${isLinking ? "Connect to" : "Link from"} ${handle} port of ${node.title}`}
       onPointerDown={(event) => { event.stopPropagation(); if (event.button === 0) onStartLink(node, handle, event); }}
@@ -160,10 +163,10 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
         <span className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wider ${isComplete ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400" : "border-neutral-200 bg-neutral-100 text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300"}`}>{isComplete ? "DONE" : `STEP ${String(stepIndex + 1).padStart(2, "0")}`}</span>
         {!isComplete && <span className={`truncate text-[10px] font-medium ${node.status === "blocked" ? "text-red-600 dark:text-red-400" : "text-neutral-500 dark:text-neutral-400"}`}>{statusLabel}</span>}
       </div>
-      <button type="button" data-no-drag="true" onClick={(event) => { event.stopPropagation(); handleClaimAction(); }}
+      {!readOnly && <button type="button" data-no-drag="true" onClick={(event) => { event.stopPropagation(); handleClaimAction(); }}
         aria-label={isClaimedByMe ? `You are editing ${node.title}` : isClaimedByOther ? `Request edit access from ${holderName}` : `Claim ${node.title} to edit`}
         className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${isClaimedByMe ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400" : isClaimedByOther ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100 dark:border-[#283548] dark:text-neutral-400 dark:hover:bg-[#1e2634]"}`}
-      >{isClaimedByMe ? <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: getUserColor(currentUserId) }} /> : isClaimedByOther ? <Lock className="h-2.5 w-2.5" /> : <Unlock className="h-2.5 w-2.5" />}<span className="max-w-[70px] truncate">{isClaimedByMe ? "You" : isClaimedByOther ? holderName.split(" ")[0] : "Free"}</span></button>
+      >{isClaimedByMe ? <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: getUserColor(currentUserId) }} /> : isClaimedByOther ? <Lock className="h-2.5 w-2.5" /> : <Unlock className="h-2.5 w-2.5" />}<span className="max-w-[70px] truncate">{isClaimedByMe ? "You" : isClaimedByOther ? holderName.split(" ")[0] : "Free"}</span></button>}
     </div>
 
     <div className="mt-2 flex min-h-0 shrink-0 items-start gap-1">
@@ -181,13 +184,13 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
     {node.checkpoints.length > 0 ? <div className="mt-2 shrink-0">
       <div className="mb-1 flex items-center justify-between text-[10px] font-medium text-neutral-500 dark:text-neutral-400"><span>{completedCount} of {node.checkpoints.length} done</span><span className={isComplete ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-300"}>{completionPct}%</span></div>
       <div role="progressbar" aria-label="Milestone completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionPct} className="h-1 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-[#1e2634]"><div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${isComplete ? "bg-emerald-500" : "bg-neutral-800 dark:bg-emerald-500"}`} style={{ width: `${completionPct}%` }} /></div>
-    </div> : <p className="mt-2 text-[11px] text-neutral-500 dark:text-neutral-400">No checkpoints yet · Add steps in Details</p>}
+    </div> : <p className="mt-2 text-[11px] text-neutral-500 dark:text-neutral-400">{readOnly ? "No checkpoints yet" : "No checkpoints yet · Add steps in Details"}</p>}
 
     <div className="mt-2 min-h-0 flex-1 overflow-hidden border-t border-neutral-100 pt-1.5 dark:border-[#283548]">
       {node.checkpoints.slice(0, previewCount).map((checkpoint, index) => <div key={checkpoint.id} data-no-drag="true" className="flex min-w-0 items-center gap-1.5">
-        <button type="button" onClick={(event) => { event.stopPropagation(); if (isClaimedByMe) onToggleCheckpoint(checkpoint.id, node.id, !checkpoint.is_completed); else handleClaimAction(); }}
-          aria-label={isClaimedByMe ? `Mark "${checkpoint.title}" as ${checkpoint.is_completed ? "incomplete" : "complete"}` : isClaimedByOther ? `Request access to edit "${checkpoint.title}"` : `Claim to edit "${checkpoint.title}"`}
-          aria-pressed={checkpoint.is_completed} title={isClaimedByMe ? "Toggle checkpoint" : "Claim to edit checkpoints"}
+        <button type="button" onClick={(event) => { event.stopPropagation(); if (readOnly) onSelect(node); else if (isClaimedByMe) onToggleCheckpoint(checkpoint.id, node.id, !checkpoint.is_completed); else handleClaimAction(); }}
+          aria-label={readOnly ? `View checkpoint: ${checkpoint.title}` : isClaimedByMe ? `Mark "${checkpoint.title}" as ${checkpoint.is_completed ? "incomplete" : "complete"}` : isClaimedByOther ? `Request access to edit "${checkpoint.title}"` : `Claim to edit "${checkpoint.title}"`}
+          aria-pressed={readOnly ? undefined : checkpoint.is_completed} title={readOnly ? "View checkpoint" : isClaimedByMe ? "Toggle checkpoint" : "Claim to edit checkpoints"}
           className="grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 hover:bg-neutral-100 dark:hover:bg-[#1e2634]"
         >{checkpoint.is_completed ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> : <Circle className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500" />}</button>
         <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(node); }} title={checkpoint.title} className={`min-w-0 flex-1 truncate text-left text-[11px] focus-visible:outline-none focus-visible:underline ${checkpoint.is_completed ? "text-neutral-400 line-through dark:text-neutral-500" : "text-neutral-700 dark:text-neutral-300"}`}>{checkpoint.title}</button>

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import React from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import CanvasServicePalette from "./canvas-service-palette";
 
+beforeEach(() => { window.matchMedia = vi.fn().mockImplementation(query => ({ matches: query.includes("min-width"), addEventListener: vi.fn(), removeEventListener: vi.fn() })); });
 afterEach(cleanup);
 it.each([["SES", "simpleemailservice"], ["ALB", "elb"], ["Amazon Simple Queue Service", "sqs"]])("adds the intended first result for %s", (query, expected) => {
   const add = vi.fn();

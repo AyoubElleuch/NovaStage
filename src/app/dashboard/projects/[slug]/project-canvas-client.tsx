@@ -27,7 +27,8 @@ import {
   getNodeDimensions,
 } from "@/lib/canvas/coordinate-math";
 import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
-import { fitCanvasNodes, getDragNodeIds, getOpenNodePosition, zoomAroundCenter } from "@/lib/canvas/workspace";
+import { fitCanvasNodes, getDragNodeIds, getOpenNodePosition, zoomAroundCenter, getCanvasNodeAtPoint } from "@/lib/canvas/workspace";
+import { useCanvasVisualViewport } from "@/lib/canvas/use-visual-viewport";
 import { readAIGenerationResponse } from "@/lib/ai/response";
 import { assertCanvasSaved } from "@/lib/canvas/mutation";
 import CanvasViewportContainer from "@/components/canvas/canvas-viewport";
@@ -107,6 +108,7 @@ export default function ProjectCanvasClient({
   maxAiRequests = 10,
   userPlan = "free",
 }: ProjectCanvasClientProps) {
+  useCanvasVisualViewport();
   const { notify } = useNotifications();
   const supabase = useMemo(() => createClient(), []);
   const canvasChannelRef = useRef<RealtimeChannel | null>(null);
@@ -152,11 +154,12 @@ export default function ProjectCanvasClient({
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
+    const mq = window.matchMedia("(max-width: 767px)");
     const update = () => {
       setIsMobile(mq.matches);
       if (mq.matches) {
         setIsMinimapOpen(false);
+        setActiveTool("hand");
       }
     };
     update();
@@ -246,7 +249,8 @@ export default function ProjectCanvasClient({
   const getCanvasArea = useCallback(() => {
     const element = canvasRootElement?.querySelector<HTMLElement>("[data-canvas-viewport]") || canvasRootElement;
     return { width: element?.clientWidth || window.innerWidth, height: element?.clientHeight || window.innerHeight,
-      rightInset: selectedNodeId && !isMobile ? 420 : 0 };
+      rightInset: selectedNodeId && !isMobile ? 420 : 0,
+      bottomInset: selectedNodeId && isMobile ? 280 : 0 };
   }, [canvasRootElement, selectedNodeId, isMobile]);
 
   const handleFitView = useCallback((selectionOnly = false) => {
@@ -357,6 +361,12 @@ export default function ProjectCanvasClient({
       // 0ms instant local insertion
       setNodes((prev) => [...prev, optimisticNode]);
       setSelectedNodeId(clientNodeId);
+      setIsMobileDrawerOpen(isMobile);
+      setIsAIAssistantOpen(false);
+      setIsNotebookOpen(false);
+      setIsReleasePulseOpen(false);
+      setIsServicePaletteOpen(false);
+      setIsNavigatorOpen(false);
       setSelectedNodeIds(new Set([clientNodeId]));
       pushHistorySnapshot([...nodes, optimisticNode], edges);
       canvasSounds.addNode();
@@ -448,6 +458,12 @@ export default function ProjectCanvasClient({
       setIsServicePaletteOpen(false);
       setNodes((prev) => [...prev, optimisticNode]);
       setSelectedNodeId(clientNodeId);
+      setIsMobileDrawerOpen(isMobile);
+      setIsAIAssistantOpen(false);
+      setIsNotebookOpen(false);
+      setIsReleasePulseOpen(false);
+      setIsServicePaletteOpen(false);
+      setIsNavigatorOpen(false);
       setSelectedNodeIds(new Set([clientNodeId]));
       pushHistorySnapshot([...nodes, optimisticNode], edges);
       canvasSounds.addNode();
@@ -547,6 +563,12 @@ export default function ProjectCanvasClient({
       // 0ms instant local insertion
       setNodes((prev) => [...prev, optimisticNode]);
       setSelectedNodeId(clientNodeId);
+      setIsMobileDrawerOpen(isMobile);
+      setIsAIAssistantOpen(false);
+      setIsNotebookOpen(false);
+      setIsReleasePulseOpen(false);
+      setIsServicePaletteOpen(false);
+      setIsNavigatorOpen(false);
       setSelectedNodeIds(new Set([clientNodeId]));
       pushHistorySnapshot([...nodes, optimisticNode], edges);
       canvasSounds.addNode();
@@ -1203,15 +1225,6 @@ export default function ProjectCanvasClient({
               summary: data.summary,
             });
 
-            if (data.nodes.length > 0) {
-              const firstNode = data.nodes[0];
-              setViewport((prev) => ({
-                ...prev,
-                x: Math.round(-firstNode.position_x * prev.zoom + 200),
-                y: Math.round(-firstNode.position_y * prev.zoom + 150),
-              }));
-            }
-
             notify({
               title: "Workflow Generated",
               message: data.summary || "New AI workflow pipeline added to canvas.",
@@ -1222,6 +1235,7 @@ export default function ProjectCanvasClient({
             setAiRequestsRemaining(data.requests_remaining);
           }
 
+          if (data.nodes.length) setViewport(fitCanvasNodes(data.nodes, getCanvasArea()));
           setIsAIAssistantOpen(false);
         }
       } catch (error) {
@@ -1234,7 +1248,7 @@ export default function ProjectCanvasClient({
         setIsAuraExiting(true);
       }
     },
-    [broadcastEvent, currentUser.email, currentUser.fullName, currentUser.id, edges, notify, project.slug, pushHistorySnapshot, secureFetch]
+    [broadcastEvent, currentUser.email, currentUser.fullName, currentUser.id, edges, getCanvasArea, notify, project.slug, pushHistorySnapshot, secureFetch]
   );
 
   // ---------------------------------------------------------------------------
@@ -2299,9 +2313,10 @@ export default function ProjectCanvasClient({
   }
 
   return (
-    <div ref={setCanvasRootElement} className="relative h-full w-full overflow-hidden select-none">
+    <div ref={setCanvasRootElement} className="canvas-workspace relative h-full w-full overflow-hidden select-none">
       {/* Top Floating HUD with Follow Mode and Export */}
       <CanvasHud
+        projectSlug={project.slug}
         projectName={project.name}
         inviteCode={project.invite_code}
         isOwner={isOwner}
@@ -2317,9 +2332,9 @@ export default function ProjectCanvasClient({
         }
         onExportMermaid={handleExportMermaid}
         onExportJSON={handleExportJSON}
-        onCopyInvite={() => {
+        onCopyInvite={async () => {
           if (project.invite_code) {
-            navigator.clipboard.writeText(project.invite_code);
+            await navigator.clipboard.writeText(project.invite_code);
             notify({ title: "Invite Code Copied", message: project.invite_code });
           }
         }}
@@ -2330,17 +2345,17 @@ export default function ProjectCanvasClient({
         onClose={() => setIsNavigatorOpen(false)} onJumpToNode={handleJumpToNode} />
 
       {!nodes.length && !isAIGenerating && (
-        <section data-canvas-ui aria-label="Start your canvas" className="absolute inset-0 z-10 flex items-center justify-center px-5 pb-32 pt-28 pointer-events-none">
-          <div className="pointer-events-auto w-full max-w-lg rounded-3xl border border-neutral-200/80 bg-linear-to-br from-white via-white/95 to-emerald-50/80 p-6 text-center shadow-xl shadow-emerald-950/5 backdrop-blur-xl sm:p-8 dark:border-[#283548] dark:from-[#161d27] dark:via-[#161d27]/95 dark:to-[#1e2634]">
-            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-emerald-200/60 bg-emerald-50 shadow-sm dark:border-emerald-500/20 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"><Sparkles className="h-5 w-5" /></span>
-            <h2 className="mt-5 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">Make room for your next idea</h2>
+        <section data-canvas-ui aria-label="Start your canvas" className="canvas-empty-state absolute inset-0 z-10 flex items-center justify-center px-5 pb-32 pt-28 pointer-events-none">
+          <div className="canvas-empty-card pointer-events-auto w-full max-w-lg rounded-3xl border border-neutral-200/80 bg-linear-to-br from-white via-white/95 to-emerald-50/80 p-6 text-center shadow-xl shadow-emerald-950/5 backdrop-blur-xl sm:p-8 dark:border-[#283548] dark:from-[#161d27] dark:via-[#161d27]/95 dark:to-[#1e2634]">
+            <span className="mx-auto hidden md:grid h-14 w-14 place-items-center rounded-2xl border border-emerald-200/60 bg-emerald-50 shadow-sm dark:border-emerald-500/20 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"><Sparkles className="h-5 w-5" /></span>
+            <h2 className="mt-5 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white"><span className="md:hidden">Start your canvas</span><span className="hidden md:inline">Make room for your next idea</span></h2>
             <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-300">Plan a milestone, map your cloud architecture, or let AI help you start.</p>
             <div className="mt-5 grid grid-cols-3 gap-2">
               <button type="button" onClick={() => handleAddNode()} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-emerald-400 hover:bg-emerald-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100/70 dark:bg-emerald-500/10"><Flag className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /></span>Add Milestone</button>
               <button type="button" onClick={() => setIsServicePaletteOpen(true)} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-orange-400 hover:bg-orange-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-100/70 dark:bg-orange-500/10"><Box className="h-5 w-5 text-orange-500" /></span>AWS Services</button>
               <button type="button" onClick={() => setIsAIAssistantOpen(true)} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-violet-400 hover:bg-violet-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-100/70 dark:bg-violet-500/10"><Sparkles className="h-5 w-5 text-violet-500 dark:text-violet-400" /></span>Ask AI</button>
             </div>
-            <p className="mt-6 border-t border-neutral-200/70 pt-4 text-[11px] leading-5 text-neutral-500 dark:border-[#283548] dark:text-neutral-300">Drag to select · Space to pan · Ctrl K to find</p>
+            <p className="mt-6 border-t border-neutral-200/70 pt-4 text-[11px] leading-5 text-neutral-500 dark:border-[#283548] dark:text-neutral-300"><span className="md:hidden">Drag to pan · Pinch to zoom · Tap a card for details</span><span className="hidden md:inline">Drag to select · Space to pan · Ctrl K to find</span></p>
           </div>
         </section>
       )}
@@ -2362,10 +2377,21 @@ export default function ProjectCanvasClient({
           setViewport(vp);
         }}
         activeTool={activeTool}
+        allowHandToolClick={isMobile}
         isDraggingNode={Boolean(draggingNode)}
         selectionMarquee={selectionMarquee}
         onCanvasClick={(worldPos) => {
           if (isAIGenerating) return;
+          if (isMobile && activeTool === "hand") {
+            const hit = getCanvasNodeAtPoint(nodes, worldPos);
+            setSelectedNodeId(hit?.id ?? null);
+            setSelectedNodeIds(new Set(hit ? [hit.id] : []));
+            setIsMobileDrawerOpen(false);
+            setIsAIAssistantOpen(false);
+            setIsNotebookOpen(false);
+            setIsReleasePulseOpen(false);
+            return;
+          }
           if (activeTool === "add_node") {
             handleAddNode(worldPos);
             setActiveTool("select");
@@ -2418,6 +2444,9 @@ export default function ProjectCanvasClient({
             currentUserId={currentUser.id}
             onSelect={(n, isShift) => {
               if (isAIGenerating) return;
+              setIsAIAssistantOpen(false);
+              setIsReleasePulseOpen(false);
+              setIsServicePaletteOpen(false);
               const activeField = document.activeElement;
               if (activeField instanceof HTMLElement && activeField.matches("input, textarea, select") && activeField.closest("[data-canvas-ui]")) {
                 activeField.blur();
@@ -2533,6 +2562,7 @@ export default function ProjectCanvasClient({
           stepIndex={milestoneIndex.get(selectedNodeId!) ?? 0}
           currentUserId={currentUser.id}
           onOpenDrawer={() => setIsMobileDrawerOpen(true)}
+          onFocusNode={() => setViewport(fitCanvasNodes([selectedNode], getCanvasArea()))}
           onDeselect={() => setSelectedNodeId(null)}
           onClaimNode={handleClaimNode}
           onReleaseNode={handleReleaseNode}
@@ -2573,13 +2603,17 @@ export default function ProjectCanvasClient({
       )}
 
       {/* Bottom Floating Control Bar (Canvas Tools Dock + AI Assistant) */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-3 sm:bottom-6 z-20 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-2.5 px-3">
+      <div className="pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-6 z-20 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-2.5 px-3">
         {/* On mobile: AI Assistant & Notebook stack above toolbar (order-1). On desktop: sit alongside dock (sm:order-2) */}
-          <div className="order-1 sm:order-2 pointer-events-auto flex items-center justify-end sm:justify-start gap-2 w-full max-w-[340px] sm:w-auto sm:max-w-none">
+          <div className={`order-1 md:order-2 pointer-events-auto ${selectedNode && isMobile ? "hidden" : "flex"} items-center justify-end md:justify-start gap-2 w-full max-w-[340px] md:w-auto md:max-w-none`}>
             <CanvasAIAssistant
               isOpen={isAIAssistantOpen}
               portalContainer={canvasRootElement}
               onToggle={() => {
+                setSelectedNodeId(null);
+                setIsMobileDrawerOpen(false);
+                setIsServicePaletteOpen(false);
+                setIsNavigatorOpen(false);
                 setIsNotebookOpen(false);
                 setIsReleasePulseOpen(false);
                 setIsAIAssistantOpen((prev) => !prev);
@@ -2605,7 +2639,7 @@ export default function ProjectCanvasClient({
           </div>
 
         {/* Primary Canvas Dock: order-2 on mobile (at bottom), sm:order-1 on desktop (on left) */}
-        <div className="order-2 sm:order-1 pointer-events-auto flex items-center justify-center max-w-full">
+        <div className="order-2 md:order-1 pointer-events-auto flex items-center justify-center max-w-full">
           <CanvasDock
             isBusy={isAIGenerating}
             activeTool={activeTool}

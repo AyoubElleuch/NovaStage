@@ -1,4 +1,5 @@
 "use client";
+import { trapMobilePanelTab, useMobilePanelFocus } from "@/lib/canvas/panel-focus";
 
 import Dropdown from "@/components/ui/dropdown";
 import { getAWSServiceAliases, normalizeAWSServiceId } from "@/lib/canvas/aws-catalog-lookup";
@@ -41,11 +42,13 @@ export default function CanvasServicePalette({ isOpen, onClose, onAddService }: 
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["compute", "database", "networking"]));
   const [lastAdded, setLastAdded] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useMobilePanelFocus(panelRef, isOpen);
   const listRef = useRef<HTMLDivElement>(null);
   const paletteId = useId();
 
   useEffect(() => {
-    if (isOpen) searchInputRef.current?.focus();
+    if (isOpen && window.matchMedia("(min-width: 768px)").matches) searchInputRef.current?.focus();
   }, [isOpen]);
 
   const handleClose = () => {
@@ -86,12 +89,15 @@ export default function CanvasServicePalette({ isOpen, onClose, onAddService }: 
 
   return (
     <div
+      ref={panelRef}
+      data-canvas-ui="true"
       role="dialog"
       aria-labelledby={`${paletteId}-title`}
-      className="absolute left-4 bottom-20 z-40 flex max-h-[min(560px,70vh)] w-[min(360px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-neutral-200/90 bg-white/95 shadow-2xl backdrop-blur-xl dark:border-[#283548] dark:bg-[#161d27]/95"
+      className="canvas-floating-panel absolute left-4 bottom-20 z-40 flex max-h-[min(560px,70vh)] w-[min(360px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-neutral-200/90 bg-white/95 shadow-2xl backdrop-blur-xl dark:border-[#283548] dark:bg-[#161d27]/95"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
+        trapMobilePanelTab(e);
         e.stopPropagation();
         if (e.key === "Escape") {
           e.preventDefault();
@@ -175,7 +181,7 @@ export default function CanvasServicePalette({ isOpen, onClose, onAddService }: 
         )}
       </div>
       <div className="border-t border-neutral-200 px-4 py-2 text-[10px] text-neutral-500 dark:border-[#283548] dark:text-neutral-400">
-        <span role="status" aria-live="polite">{lastAdded || "Enter adds the first search result · Esc closes"}</span>
+        <span role="status" aria-live="polite">{lastAdded || <><span className="md:hidden">Tap a service to add it to the canvas</span><span className="hidden md:inline">Enter adds the first search result · Esc closes</span></>}</span>
       </div>
     </div>
   );
@@ -188,10 +194,10 @@ function ServiceCard({ service, onAdd }: { service: AWSServiceDef; onAdd: () => 
     <button type="button" data-service-card="true" onClick={onAdd} aria-label={`Add ${service.name} to canvas`} className="group flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-neutral-100 focus-visible:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-emerald-500 active:bg-neutral-200 dark:hover:bg-[#1e2634] dark:focus-visible:bg-[#1e2634] dark:active:bg-[#283548]" title={`${service.name} — ${service.description}`}>
       <Icon size={32} className="h-8 w-8 shrink-0" />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-xs font-semibold text-neutral-900 dark:text-white">{service.shortName}</div>
-        <div className="mt-0.5 line-clamp-2 text-[10px] leading-relaxed text-neutral-500 dark:text-neutral-400">{service.description}</div>
+        <div className="line-clamp-2 break-words text-xs font-semibold text-neutral-900 md:line-clamp-1 dark:text-white">{service.shortName}</div>
+        <div className="mt-0.5 line-clamp-2 text-xs md:text-[10px] leading-relaxed text-neutral-500 dark:text-neutral-400">{service.description}</div>
       </div>
-      <span className="max-w-20 shrink-0 truncate rounded px-1.5 py-0.5 text-[9px] font-medium text-neutral-700 dark:text-neutral-200" style={{ backgroundColor: `${category.color}20` }} title={category.label}>{category.label}</span>
+      <span className="hidden md:inline max-w-20 shrink-0 truncate rounded px-1.5 py-0.5 text-[9px] font-medium text-neutral-700 dark:text-neutral-200" style={{ backgroundColor: `${category.color}20` }} title={category.label}>{category.label}</span>
       <Plus aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-neutral-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400" />
     </button>
   );

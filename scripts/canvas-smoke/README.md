@@ -20,5 +20,23 @@ shortcut isolation, shortcut-dialog focus and mobile keyboard scrolling, and
 touch pinch starting across the background and a node. Screenshots and a JSON
 summary are written to the ignored `.tmp/canvas-smoke/` directory.
 
+It also exercises owner share-link creation/copy/revocation, anonymous read-only
+viewing, safe swipes over cards, and layouts at 320, 390, 430, 700 and 844 pixels.
+An empty-phone flow creates and edits a milestone, adds a checkpoint and an AWS
+resource, checks the AI form at a simulated keyboard height, and verifies that
+generated content fits on screen. The shared viewer fails the test if it requests
+a private API. AI responses in this harness are fixtures and consume no quota.
+
+For interactive visual review, run `node scripts/canvas-smoke/serve.mjs`, then open
+`http://127.0.0.1:4173/scripts/canvas-smoke/index.html`. Add `?empty` for a blank
+canvas or `?shared` for the public viewer. Its API state is disposable and local.
+
+`sharing-db.sql` validates migration 022 against a **fresh, isolated PostgreSQL
+test cluster**. It creates fixture roles and a minimal projects table, then checks
+token constraints, server access, denied anonymous/member reads and writes, RLS,
+and cascading deletion. Run it with `psql -v ON_ERROR_STOP=1 -f
+scripts/canvas-smoke/sharing-db.sql` against that isolated cluster. Do not run
+this fixture bootstrap against an application or production database.
+
 Vite does not compile Next's `style jsx` marker in the edge layer, so React may log
 a harmless non-boolean `jsx` attribute warning in this isolated harness.

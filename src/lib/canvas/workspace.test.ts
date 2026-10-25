@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fitCanvasNodes, zoomAroundCenter } from "./workspace";
+import { fitCanvasNodes, zoomAroundCenter, getCanvasNodeAtPoint } from "./workspace";
 import { getNodeDimensions } from "./coordinate-math";
 import type { CanvasNode } from "./types";
 
@@ -9,6 +9,15 @@ const base: CanvasNode = { id: "group", project_id: "project", title: "Network",
 const nodes = [base, { ...base, id: "milestone", node_type: "milestone" as const, position_x: 800, position_y: 450, width: 280, height: 170 }];
 
 describe("canvas fit and zoom", () => {
+  it("resolves mobile taps to resources inside nested groups, including raised headers", () => {
+    const outer = { ...base, position_x: 0, position_y: 0 };
+    const inner = { ...outer, id: "subnet", position_x: 50, position_y: 50, width: 400, height: 300 };
+    const service = { ...inner, id: "resource", node_type: "aws_service" as const, position_x: 100, position_y: 100, width: 200, height: 140 };
+    expect(getCanvasNodeAtPoint([outer, service, inner], { x: 150, y: 150 })?.id).toBe("resource");
+    expect(getCanvasNodeAtPoint([outer, service, inner], { x: 60, y: 60 })?.id).toBe("subnet");
+    expect(getCanvasNodeAtPoint([outer], { x: 20, y: -12 })?.id).toBe("group");
+    expect(getCanvasNodeAtPoint([outer], { x: -10, y: -10 })).toBeUndefined();
+  });
   it.each([
     { width: 1440, height: 1000 },
     { width: 390, height: 844 },

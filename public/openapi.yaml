@@ -420,6 +420,48 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CanvasMutationInput'
+  /api/dashboard/projects/{slug}/canvas/share:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getCanvasShare
+      tags: [Canvas]
+      summary: Read the owner's canvas sharing settings without enabling a link
+      responses: &canvasShareResponses
+        '200':
+          description: Sharing settings. Token is null when disabled; otherwise the view-only URL is /share/{token}.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token]
+                properties:
+                  token:
+                    type: string
+                    nullable: true
+                    pattern: '^[a-f0-9]{64}$'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '503':
+          description: Sharing unavailable; retry later.
+    post:
+      operationId: enableCanvasShare
+      tags: [Canvas]
+      summary: Enable a view-only canvas link (owner only)
+      description: Idempotent. Preserves any existing token. New links use 256 random bits and never grant membership or editing access.
+      responses: *canvasShareResponses
+    delete:
+      operationId: disableCanvasShare
+      tags: [Canvas]
+      summary: Revoke the public canvas link (owner only)
+      description: Stops new visits. Previously downloaded content cannot be recalled. Enabling again creates a different token.
+      responses: *canvasShareResponses
   /api/dashboard/projects/{slug}/canvas/checkpoints:
     parameters:
       - name: slug

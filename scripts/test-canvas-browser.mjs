@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { chromium, devices } from "playwright";
 import { createServer } from "vite";
 import react from "@vitejs/plugin-react";
-import { nodes, edges } from "./canvas-smoke/fixtures.mjs";
+import { nodes, edges, project } from "./canvas-smoke/fixtures.mjs";
 
 // This harness mounts the actual canvas client. All APIs and realtime are mocked;
 // it never logs in, connects to Supabase, or changes a real project.
@@ -33,10 +33,9 @@ async function check(label, action) {
   results.push(label);
   console.log(`PASS ${label}`);
 }
-
-async function fixturePage(context) {
+async function fixturePage(context, shared = false, empty = false) {
   const page = await context.newPage();
-  const state = { nodes: structuredClone(nodes), edges: structuredClone(edges), mutations: [] };
+  const state = { nodes: empty ? [] : structuredClone(nodes), edges: empty ? [] : structuredClone(edges), mutations: [], shareToken: null };
   const errors = [];
   page.on("pageerror", error => { errors.push(error.message); console.error(error.message); });
   page.setDefaultTimeout(15_000);
@@ -45,10 +44,38 @@ async function fixturePage(context) {
     const url = new URL(request.url());
     if (url.origin !== origin) return route.abort();
     if (!url.pathname.startsWith("/api/")) return route.continue();
+    if (url.pathname.endsWith("/share")) {
+      if (request.method() === "POST") state.shareToken ||= "a".repeat(64);
+      if (request.method() === "DELETE") state.shareToken = null;
+      return route.fulfill({ json: { token: state.shareToken } });
+    }
+    assert.equal(shared, false, "public viewer must never request a private API");
     if (request.method() === "HEAD") return route.fulfill({ status: 204 });
     if (request.method() === "GET") return route.fulfill({ json: { nodes: state.nodes, edges: state.edges } });
     const body = request.postDataJSON();
     state.mutations.push(body);
+    if (url.pathname.endsWith("/ai-generate")) {
+      const generated = [0, 1].map(index => ({ ...structuredClone(nodes[0]), id: `ai-${index}`, title: `AI milestone ${index + 1}`, checkpoints: [], claimed_by: null, position_x: 2000 + index * 400, position_y: 1000 }));
+      state.nodes.push(...generated);
+      return route.fulfill({ json: { success: true, intent: "create_pipeline", nodes: generated, edges: [], requests_remaining: 9 } });
+    }
+    if (url.pathname.endsWith("/checkpoints")) {
+      const node = state.nodes.find(node => node.id === body.node_id);
+      assert.ok(node);
+      if (body.action === "add") {
+        const checkpoint = { id: `cp-${state.mutations.length}`, project_id: project.id, node_id: node.id, title: body.title, is_completed: false, sort_order: node.checkpoints.length };
+        node.checkpoints.push(checkpoint);
+        return route.fulfill({ json: { success: true, checkpoint } });
+      }
+      if (body.action === "toggle") node.checkpoints = node.checkpoints.map(cp => cp.id === body.checkpoint_id ? { ...cp, is_completed: body.is_completed } : cp);
+      if (body.action === "delete") node.checkpoints = node.checkpoints.filter(cp => cp.id !== body.checkpoint_id);
+      return route.fulfill({ json: { success: true } });
+    }
+    if (url.pathname.endsWith("/claim")) {
+      const node = state.nodes.find(node => node.id === body.node_id);
+      if (node) node.claimed_by = body.action === "release" ? null : "smoke-user";
+      return route.fulfill({ json: { success: true } });
+    }
     if (body.action === "update_node") state.nodes = state.nodes.map(node => node.id === body.node_id ? { ...node, ...body.updates } : node);
     else if (body.action === "create_node") state.nodes.push({ ...body, project_id: "canvas-smoke", status: "draft", sort_order: state.nodes.length, claimed_by: "smoke-user", version: 1, checkpoints: body.checkpoints || [] });
     else if (body.action === "delete_node") {
@@ -66,15 +93,16 @@ async function fixturePage(context) {
     else throw new Error(`Smoke fixture does not implement ${body.action}`);
     return route.fulfill({ json: { success: true } });
   });
-  await page.goto(`${origin}/scripts/canvas-smoke/index.html`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${origin}/scripts/canvas-smoke/index.html${shared ? "?shared" : empty ? "?empty" : ""}`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Find on canvas" }).waitFor();
-  await page.getByRole("group", { name: /^Milestone 1: Plan the release/ }).waitFor();
+  if (empty) await page.getByRole("region", { name: "Start your canvas" }).waitFor();
+  else await page.getByRole("group", { name: /^Milestone 1: Plan the release/ }).waitFor();
   return { page, state, errors };
 }
 
 try {
   browser = await chromium.launch({ headless: true });
-  const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, permissions: ["clipboard-read", "clipboard-write"] });
   const { page, state, errors } = await fixturePage(desktop);
   const canvas = page.locator("[data-canvas-viewport]");
   await check("desktop canvas renders fitted milestones, AWS resources and wires", async () => {
@@ -95,6 +123,20 @@ try {
     await page.getByRole("combobox", { name: "Search canvas" }).press("Enter");
     await page.getByRole("complementary", { name: "Milestone details" }).waitFor();
     await page.getByRole("button", { name: "Close details", exact: true }).click();
+  });
+  await check("owners can enable, copy and revoke a view-only link independently of invites", async () => {
+    await page.getByRole("button", { name: "Share canvas", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Share canvas", exact: true });
+    await dialog.getByRole("button", { name: "Enable view-only link", exact: true }).click();
+    await page.getByRole("textbox", { name: "View-only link", exact: true }).waitFor();
+    assert.equal(await page.getByRole("textbox", { name: "View-only link", exact: true }).inputValue(), `${origin}/share/${"a".repeat(64)}`);
+    await dialog.getByRole("button", { name: "Copy link", exact: true }).click();
+    await dialog.getByRole("button", { name: "Link copied", exact: true }).waitFor();
+    await page.screenshot({ path: resolve(output, "sharing.png") });
+    await dialog.getByRole("button", { name: "Disable link", exact: true }).click();
+    await dialog.getByRole("button", { name: "Enable view-only link", exact: true }).waitFor();
+    assert.equal(state.shareToken, null);
+    await dialog.getByRole("button", { name: "Close sharing", exact: true }).click();
   });
   await check("node drag saves its final world position", async () => {
     await canvas.focus();
@@ -218,7 +260,152 @@ try {
     await cdp.detach();
   });
   assert.deepEqual(mobileErrors, [], "mobile browser errors");
+  await check("one-finger swipes over mobile cards pan without moving or selecting a node", async () => {
+    const world = phone.locator("[data-canvas-viewport] [data-canvas-bg='true']").last();
+    const before = await world.getAttribute("style");
+    const box = await phone.getByRole("heading", { name: "Plan the release", exact: true }).boundingBox();
+    const cdp = await mobile.newCDPSession(phone);
+    const touch = { id: 1, x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [touch] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ ...touch, x: touch.x + 50, y: touch.y + 30 }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    assert.notEqual(await world.getAttribute("style"), before);
+    assert.equal(phoneState.mutations.length, 0);
+    assert.equal(await phone.getByRole("button", { name: "Deselect milestone" }).count(), 0);
+    await cdp.detach();
+  });
   await mobile.close();
+  for (const [name, options] of [["desktop", { viewport: { width: 1440, height: 1000 } }], ["mobile", { ...devices["iPhone 13"] }]]) {
+    const context = await browser.newContext(options);
+    const { page: viewer, state: sharedState, errors: sharedErrors } = await fixturePage(context, true);
+    await check(`${name} public canvas supports navigation and details without private APIs or edits`, async () => {
+      assert.equal(await viewer.getByText(project.name, { exact: true }).count(), 0);
+      assert.equal(await viewer.getByRole("button", { name: /Claim|Rename|Link from|Delete|Share canvas|Export canvas/ }).count(), 0);
+      const world = viewer.locator("[data-canvas-viewport] [data-canvas-bg='true']").last();
+      const before = await world.getAttribute("style");
+      await viewer.getByRole("button", { name: "Zoom in", exact: true }).click();
+      assert.notEqual(await world.getAttribute("style"), before);
+      await viewer.getByRole("button", { name: "Fit canvas", exact: true }).click();
+      await viewer.getByRole("heading", { name: "Plan the release", exact: true }).click();
+      await viewer.getByRole("dialog", { name: "Plan the release", exact: true }).waitFor();
+      await viewer.getByRole("button", { name: "Close details", exact: true }).click();
+      await viewer.getByRole("button", { name: "Find on canvas", exact: true }).click();
+      await viewer.getByRole("combobox", { name: "Search canvas", exact: true }).fill("Application servers");
+      await viewer.getByRole("option").click();
+      await viewer.getByRole("dialog", { name: "Application servers", exact: true }).waitFor();
+      await viewer.screenshot({ path: resolve(output, `${name}-shared-details.png`) });
+      await viewer.getByRole("button", { name: "Close details", exact: true }).click();
+      await viewer.getByRole("button", { name: "Fit canvas", exact: true }).click();
+      await viewer.screenshot({ path: resolve(output, `${name}-shared.png`) });
+      assert.equal(sharedState.mutations.length, 0);
+      assert.deepEqual(sharedErrors, []);
+    });
+    await context.close();
+  }
+  for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 700, height: 900 }, { width: 844, height: 390 }]) {
+    const context = await browser.newContext({ ...devices["iPhone 13"], viewport, permissions: ["clipboard-read", "clipboard-write"] });
+    const { page: phone, state, errors } = await fixturePage(context);
+    const size = `${viewport.width}x${viewport.height}`;
+    await check(`${size} navigation, tools, search and AWS palette stay reachable`, async () => {
+      assert.ok(await phone.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+      const dock = phone.getByRole("navigation", { name: "Canvas control dock", exact: true });
+      if (viewport.width < 768) {
+        for (const button of await dock.getByRole("button").all()) {
+          const bounds = await button.boundingBox();
+          assert.ok(bounds.x >= -1 && bounds.x + bounds.width <= viewport.width + 1, `dock control fits ${size}`);
+          assert.ok(bounds.width >= 43 && bounds.height >= 43, `dock control has a touch target at ${size}`);
+        }
+        await phone.getByRole("button", { name: "Canvas options", exact: true }).click();
+        const menu = phone.getByRole("region", { name: "Canvas options", exact: true });
+        await menu.getByRole("button", { name: "Copy project invite NS-TEST0", exact: true }).click();
+        await menu.getByRole("button", { name: "Invite code copied NS-TEST0", exact: true }).waitFor();
+        await menu.getByRole("button", { name: "Switch to dark mode", exact: true }).click();
+        await menu.getByRole("button", { name: "Switch to light mode", exact: true }).waitFor();
+        await menu.getByRole("button", { name: "Close canvas options", exact: true }).click();
+        await phone.getByRole("button", { name: "Canvas tools", exact: true }).click();
+        const tools = phone.getByRole("region", { name: "Canvas tools", exact: true });
+        await tools.getByRole("button", { name: "Zoom In", exact: true }).click();
+        await tools.getByRole("button", { name: "Zoom Out", exact: true }).click();
+        await tools.getByRole("button", { name: "Grid: ON", exact: true }).click();
+        await tools.getByRole("button", { name: "Grid: OFF", exact: true }).waitFor();
+        await tools.getByRole("button", { name: "Release Pulse", exact: true }).click();
+        await phone.getByRole("button", { name: "Close release pulse", exact: true }).click();
+      }
+      await phone.getByRole("button", { name: "Find on canvas", exact: true }).click();
+      await phone.getByRole("combobox", { name: "Search canvas", exact: true }).fill("Plan the release");
+      await phone.getByRole("option").click();
+      if (viewport.width < 768) {
+        await phone.getByRole("button", { name: "Focus selected item", exact: true }).click();
+        await phone.getByRole("button", { name: "Details", exact: true }).click();
+      }
+      await phone.getByRole("textbox", { name: "Milestone title", exact: true }).waitFor();
+      await phone.screenshot({ path: resolve(output, `mobile-${size}-details.png`) });
+      await phone.getByRole("button", { name: "Close details", exact: true }).click();
+      if (viewport.width < 768) await phone.getByRole("button", { name: "Deselect milestone", exact: true }).click();
+      await phone.getByRole("button", { name: "AWS", exact: true }).click();
+      const palette = phone.getByRole("dialog", { name: "AWS services", exact: true });
+      await palette.getByRole("textbox", { name: "Search AWS services", exact: true }).fill("SES");
+      await palette.getByRole("button", { name: "Add Amazon Simple Email Service to canvas", exact: true }).waitFor();
+      const box = await palette.boundingBox();
+      assert.ok(box.y >= -1 && box.y + box.height <= viewport.height + 1, `palette fits visible height ${size}`);
+      await phone.screenshot({ path: resolve(output, `mobile-${size}-palette.png`) });
+      await phone.getByRole("button", { name: "Close service palette", exact: true }).click();
+      assert.equal(state.mutations.length, 0, "navigation must not change the graph");
+      assert.deepEqual(errors, []);
+    });
+    await context.close();
+  }
+  const creationContext = await browser.newContext({ ...devices["iPhone 13"], viewport: { width: 320, height: 568 } });
+  const { page: creator, state: created, errors: createErrors } = await fixturePage(creationContext, false, true);
+  await check("small phone can start an empty canvas and save a milestone, checkpoint and AWS resource", async () => {
+    await creator.screenshot({ path: resolve(output, "mobile-empty.png") });
+    await creator.getByRole("region", { name: "Start your canvas" }).getByRole("button", { name: "Add Milestone", exact: true }).click();
+    const title = creator.getByRole("textbox", { name: "Milestone title", exact: true });
+    await title.fill("Verify phone release");
+    await title.press("Enter");
+    await creator.getByRole("textbox", { name: "New checkpoint", exact: true }).fill("Check loading and navigation");
+    await creator.getByRole("button", { name: "Add checkpoint", exact: true }).click();
+    await creator.getByText("Check loading and navigation", { exact: true }).last().waitFor();
+    await creator.getByRole("button", { name: "Close details", exact: true }).click();
+    await creator.getByRole("button", { name: "Focus selected item", exact: true }).click();
+    await creator.getByRole("button", { name: "Deselect milestone", exact: true }).click();
+    await creator.getByRole("button", { name: "AWS", exact: true }).click();
+    await creator.getByRole("textbox", { name: "Search AWS services", exact: true }).fill("SES");
+    await creator.getByRole("button", { name: "Add Amazon Simple Email Service to canvas", exact: true }).click();
+    await creator.getByRole("textbox", { name: "Resource label", exact: true }).waitFor();
+    assert.equal(created.nodes.length, 2);
+    assert.equal(created.nodes[0].title, "Verify phone release");
+    assert.equal(created.nodes[0].checkpoints.length, 1);
+    assert.equal(created.nodes[1].aws_metadata.serviceId, "simpleemailservice");
+    await creator.screenshot({ path: resolve(output, "mobile-created-resource.png") });
+    assert.deepEqual(createErrors, []);
+  });
+  await check("small phone AI form fits above the keyboard and generated content fits on screen", async () => {
+    await creator.getByRole("button", { name: "Done", exact: true }).click();
+    await creator.getByRole("button", { name: "Deselect AWS resource", exact: true }).click();
+    await creator.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
+    const assistant = creator.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByRole("button", { name: "Workflow", exact: true }).click();
+    await assistant.getByRole("button", { name: "AWS", exact: true }).click();
+    await assistant.getByRole("button", { name: /Full Stack/ }).click();
+    await assistant.getByRole("button", { name: "Workflow", exact: true }).click();
+    assert.equal(await assistant.evaluate(element => element.scrollWidth <= element.clientWidth + 1), true);
+    await creator.setViewportSize({ width: 320, height: 330 });
+    await creator.waitForFunction(() => document.documentElement.style.getPropertyValue("--canvas-visible-height") === "330px");
+    const keyboardBounds = await assistant.boundingBox();
+    await creator.screenshot({ path: resolve(output, "mobile-ai-keyboard.png") });
+    assert.ok(keyboardBounds.y >= -1 && keyboardBounds.y + keyboardBounds.height <= 331, JSON.stringify(keyboardBounds));
+    await creator.setViewportSize({ width: 320, height: 568 });
+    await creator.getByRole("textbox", { name: "AI prompt", exact: true }).fill("Create two milestones for a phone release");
+    await creator.getByRole("button", { name: "Generate", exact: true }).click();
+    await assistant.waitFor({ state: "hidden" });
+    for (const name of ["AI milestone 1", "AI milestone 2"]) {
+      const box = await creator.getByRole("heading", { name, exact: true }).boundingBox();
+      assert.ok(box.x >= 0 && box.x + box.width <= 320 && box.y >= 110 && box.y + box.height < 480, "generated cards fit the phone");
+    }
+    assert.deepEqual(createErrors, []);
+  });
+  await creationContext.close();
   await writeFile(resolve(output, "results.json"), JSON.stringify({ checks: results, errors: [] }, null, 2));
   console.log(`Canvas browser smoke passed (${results.length} checks). Screenshots: ${output}`);
 } finally {

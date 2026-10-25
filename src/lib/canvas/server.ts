@@ -12,8 +12,9 @@ export async function getProjectCanvasData(projectId: string): Promise<{
 }> {
   const adminClient = createAdminClient();
 
-  // Fetch nodes
-  const { data: rawNodes, error: nodesErr } = await adminClient
+  // Independent graph tables load together instead of four network round trips.
+  const [{ data: rawNodes, error: nodesErr }, { data: rawCheckpoints }, { data: rawEdges }, { data: rawClaims }] = await Promise.all([
+    adminClient
     .from("canvas_nodes")
     .select(`
       id, project_id, title, description, status,
@@ -23,33 +24,28 @@ export async function getProjectCanvasData(projectId: string): Promise<{
     `)
     .eq("project_id", projectId)
     .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true }),
+    adminClient
+    .from("canvas_checkpoints")
+    .select("id, node_id, project_id, title, is_completed, sort_order, completed_at, completed_by, created_at")
+    .eq("project_id", projectId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true }),
+    adminClient
+    .from("canvas_edges")
+    .select("id, project_id, source_node_id, target_node_id, source_handle, target_handle, edge_type, label, created_at")
+    .eq("project_id", projectId),
+    adminClient
+    .from("canvas_claim_requests")
+    .select("id, project_id, node_id, requester_id, current_holder_id, status, created_at, resolved_at")
+    .eq("project_id", projectId)
+    .eq("status", "pending"),
+  ]);
 
   if (nodesErr) {
     console.error("Error loading canvas nodes:", nodesErr);
     return { nodes: [], edges: [], claimRequests: [] };
   }
-
-  // Fetch checkpoints
-  const { data: rawCheckpoints } = await adminClient
-    .from("canvas_checkpoints")
-    .select("id, node_id, project_id, title, is_completed, sort_order, completed_at, completed_by, created_at")
-    .eq("project_id", projectId)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  // Fetch edges
-  const { data: rawEdges } = await adminClient
-    .from("canvas_edges")
-    .select("id, project_id, source_node_id, target_node_id, source_handle, target_handle, edge_type, label, created_at")
-    .eq("project_id", projectId);
-
-  // Fetch active claim requests
-  const { data: rawClaims } = await adminClient
-    .from("canvas_claim_requests")
-    .select("id, project_id, node_id, requester_id, current_holder_id, status, created_at, resolved_at")
-    .eq("project_id", projectId)
-    .eq("status", "pending");
 
   // Fetch profiles for claimed users
   const claimedUserIds = Array.from(

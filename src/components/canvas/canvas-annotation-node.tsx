@@ -6,6 +6,7 @@ import { CanvasNode } from "@/lib/canvas/types";
 import { getNodeDimensions } from "@/lib/canvas/coordinate-math";
 
 export interface CanvasAnnotationNodeProps {
+  readOnly?: boolean;
   node: CanvasNode;
   isSelected: boolean;
   isMultiSelected?: boolean;
@@ -26,7 +27,7 @@ const ANNOTATION_COLORS: Record<string, string> = {
   gray: "bg-neutral-100/95 dark:bg-neutral-800/70 border-neutral-200 dark:border-neutral-700/50 text-neutral-900 dark:text-neutral-100",
 };
 
-export default function CanvasAnnotationNode({ node, isSelected, isMultiSelected = false, currentUserId, onSelect, onDragStart, onDragEnd, onRequestClaim, onClaimNode, onUpdateAnnotation }: CanvasAnnotationNodeProps) {
+export default function CanvasAnnotationNode({ node, isSelected, isMultiSelected = false, currentUserId, readOnly = false, onSelect, onDragStart, onDragEnd, onRequestClaim, onClaimNode, onUpdateAnnotation }: CanvasAnnotationNodeProps) {
   const [isEditing, setIsEditing] = useState(false);
   const content = node.annotation_metadata?.content || "";
   const [editedContent, setEditedContent] = useState(content);
@@ -45,7 +46,7 @@ export default function CanvasAnnotationNode({ node, isSelected, isMultiSelected
   }, [isEditing]);
 
   const startEditing = () => {
-    if (!onUpdateAnnotation) return;
+    if (readOnly || !onUpdateAnnotation) return;
     if (locked) { onRequestClaim?.(node); return; }
     if (!node.claimed_by) onClaimNode?.(node.id);
     onSelect(node);
@@ -61,6 +62,7 @@ export default function CanvasAnnotationNode({ node, isSelected, isMultiSelected
     else setEditedContent(content);
   };
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (readOnly) return;
     if ((e.target as HTMLElement).closest("[data-no-drag]") || e.button !== 0) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -75,7 +77,7 @@ export default function CanvasAnnotationNode({ node, isSelected, isMultiSelected
 
   return (
     <div data-node-type="annotation" data-node-id={node.id} role="group" tabIndex={0} aria-label={`Note: ${node.title}. ${content || "Empty note"}`}
-      onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}
+      onClick={readOnly ? () => onSelect(node) : undefined} onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) finishEditing(); }}
       onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSelect(node, e.shiftKey); } else if (e.key === "F2") { e.preventDefault(); e.stopPropagation(); startEditing(); } }}
       style={{ transform: `translate3d(${node.position_x}px, ${node.position_y}px, 0)`, width: `${dimensions.width}px`, height: `${dimensions.height}px` }}
@@ -85,12 +87,12 @@ export default function CanvasAnnotationNode({ node, isSelected, isMultiSelected
         {isEditing ? <div data-no-drag="true" className="flex items-center gap-1">
           <button type="button" aria-label="Save note" onPointerDown={(e) => e.preventDefault()} onClick={() => finishEditing()} className="rounded p-0.5 hover:bg-black/10"><Check className="h-3.5 w-3.5" /></button>
           <button type="button" aria-label="Cancel note editing" onPointerDown={(e) => e.preventDefault()} onClick={() => finishEditing(true)} className="rounded p-0.5 hover:bg-black/10"><X className="h-3.5 w-3.5" /></button>
-        </div> : onUpdateAnnotation && <button type="button" data-no-drag="true" aria-label={locked ? "Request edit access to note" : "Edit note"} title="Edit note (F2)" onClick={(e) => { e.stopPropagation(); startEditing(); }} className="shrink-0 rounded p-0.5 opacity-60 hover:bg-black/10 hover:opacity-100">{locked ? <Lock className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}</button>}
+        </div> : !readOnly && onUpdateAnnotation && <button type="button" data-no-drag="true" aria-label={locked ? "Request edit access to note" : "Edit note"} title="Edit note (F2)" onClick={(e) => { e.stopPropagation(); startEditing(); }} className="shrink-0 rounded p-0.5 opacity-60 hover:bg-black/10 hover:opacity-100">{locked ? <Lock className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}</button>}
       </div>
       {isEditing ? <textarea ref={textareaRef} data-no-drag="true" data-canvas-scroll="true" aria-label="Note content" value={editedContent} onChange={(e) => setEditedContent(e.target.value)}
         onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Escape") { e.preventDefault(); finishEditing(true); } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey || e.shiftKey)) { e.preventDefault(); finishEditing(); } }}
         className="min-h-0 w-full flex-1 resize-none rounded bg-transparent text-xs font-medium leading-relaxed outline-none focus:ring-1 focus:ring-current/20" placeholder="Type your note here..." /> :
-        <div data-canvas-scroll="true" onDoubleClick={(e) => { e.stopPropagation(); startEditing(); }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain whitespace-pre-wrap break-words text-xs font-medium leading-relaxed" title={!content ? "Double-click or press F2 to edit" : undefined}>{content || <span className="italic opacity-60">Double-click to add a note...</span>}</div>}
+        <div data-canvas-scroll="true" onDoubleClick={(e) => { e.stopPropagation(); startEditing(); }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain whitespace-pre-wrap break-words text-xs font-medium leading-relaxed" title={!content && !readOnly ? "Double-click or press F2 to edit" : undefined}>{content || <span className="italic opacity-60">{readOnly ? "Empty note" : "Double-click to add a note..."}</span>}</div>}
     </div>
   );
 }

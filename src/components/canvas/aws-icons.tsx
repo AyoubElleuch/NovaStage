@@ -15,7 +15,7 @@ export interface AWSServiceDef {
 function OfficialIcon({ src, name, size = 32, className = "" }: AWSIconProps & { src: string; name: string }) {
   // Local, unmodified SVGs from the official AWS architecture package.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={name} width={size} height={size} className={className} draggable={false} />;
+  return <img src={src} alt={name} width={size} height={size} className={className} draggable={false} loading="lazy" decoding="async" />;
 }
 export const AWSLogoIcon = (props: AWSIconProps) => <OfficialIcon {...props} src="/aws-icons/aws-cloud.svg" name="AWS Cloud" />;
 export const AWS_CATEGORIES = catalog.categories;

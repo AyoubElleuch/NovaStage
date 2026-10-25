@@ -1,7 +1,19 @@
 import type { CanvasNode, CanvasViewport } from "./types";
 import { getNodeDimensions, screenToWorld, snapToGrid } from "./coordinate-math";
 
-export interface CanvasArea { width: number; height: number; rightInset?: number }
+export interface CanvasArea { width: number; height: number; rightInset?: number; bottomInset?: number }
+
+/** Resolve taps after viewport pointer capture, preferring resources to groups. */
+export function getCanvasNodeAtPoint(nodes: CanvasNode[], point: { x: number; y: number }) {
+  return [...nodes].sort((a, b) => {
+    const groups = Number(a.node_type === "group") - Number(b.node_type === "group");
+    return groups || getNodeDimensions(a).width * getNodeDimensions(a).height - getNodeDimensions(b).width * getNodeDimensions(b).height;
+  }).find(node => {
+    const size = getNodeDimensions(node);
+    return point.x >= node.position_x && point.x <= node.position_x + size.width &&
+      point.y >= node.position_y - (node.node_type === "group" ? 24 : 0) && point.y <= node.position_y + size.height;
+  });
+}
 
 export function zoomAroundCenter(viewport: CanvasViewport, zoom: number, area: CanvasArea): CanvasViewport {
   const nextZoom = Math.min(2.5, Math.max(0.15, zoom));
@@ -19,8 +31,8 @@ export function fitCanvasNodes(nodes: CanvasNode[], area: CanvasArea): CanvasVie
   const maxY = Math.max(...nodes.map(n => n.position_y + getNodeDimensions(n).height));
   const width = Math.max(1, area.width - (area.rightInset || 0));
   // Keep cards and raised group headers below Find and above the mobile dock.
-  const topPadding = 160;
-  const bottomPadding = 144;
+  const topPadding = area.height < 600 ? 124 : 160;
+  const bottomPadding = Math.max(area.height < 600 ? 88 : 144, area.bottomInset || 0);
   const availableW = Math.max(1, width - 80);
   const availableH = Math.max(1, area.height - topPadding - bottomPadding);
   const zoom = Math.max(0.15, Math.min(1.2, availableW / Math.max(1, maxX - minX), availableH / Math.max(1, maxY - minY)));

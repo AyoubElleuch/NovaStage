@@ -2,6 +2,14 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
+  // Public share visits never need an auth lookup or a refreshed session.
+  if (request.nextUrl.pathname.startsWith("/share/")) {
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    return response;
+  }
   const requestHeaders = new Headers(request.headers);
   let supabaseResponse: NextResponse = NextResponse.next({
     request: {

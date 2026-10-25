@@ -28,6 +28,7 @@ Unlike generic whiteboard tools that treat diagrams as unstructured vectors, Nov
 - **Multi-Phase AI Generation**: 3-stage AI pipeline (Architectural Decomposition &rarr; Structured DAG Generation &rarr; Algorithmic Repair) using Google Gemini with OpenAI fallback chains.
 - **Release Pulse Topological Engine**: Graph-based project health analyzer utilizing Kahn's topological sorting to calculate critical paths, blocked milestones, completion percentages, and release readiness in real time.
 - **Roles and permissions**: Fine-grained permission model (`admin:access`, `waitlist:manage`, `roles:manage`) backed by non-recursive PostgreSQL Row-Level Security (RLS) policies and session middleware.
+- **View-only canvas links**: Owners can enable or revoke an unguessable public link. Visitors can pan, zoom, search, and inspect the canvas without signing in; project identity, members, editing claims, and mutation access remain private. Canvas text, notes, and resource configuration are visible to anyone holding the link.
 
 ---
 
@@ -272,7 +273,7 @@ Use [`public/openapi.yaml`](public/openapi.yaml) for the complete NovaStage HTTP
    ```
 
 4. **Initialize Database Schema**:
-   Apply migrations to your Supabase project in numerical order from `supabase/migrations/` (001 through 021). The consolidated `supabase/schema.sql` is a reference; the migrations contain subsequent changes.
+   Apply migrations to your Supabase project in numerical order from `supabase/migrations/` (001 through 022). Migration 022 adds the server-only canvas sharing table and must be applied before enabling share links. The consolidated `supabase/schema.sql` is a reference; the migrations contain subsequent changes.
 
 5. **Start Development Server**:
    ```bash

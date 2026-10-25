@@ -15,6 +15,7 @@ import { X } from "lucide-react";
 import { useTheme } from "@/lib/theme-context";
 
 interface CanvasEdgeLayerProps {
+  readOnly?: boolean;
   edges: CanvasEdge[];
   nodes: CanvasNode[];
   draftEdge: {
@@ -31,6 +32,7 @@ interface CanvasEdgeLayerProps {
 }
 
 export default function CanvasEdgeLayer({
+  readOnly = false,
   edges,
   nodes,
   draftEdge,
@@ -151,11 +153,11 @@ export default function CanvasEdgeLayer({
         const isArchitecture = sourceNode.node_type === "aws_service" || sourceNode.node_type === "group" || targetNode.node_type === "aws_service" || targetNode.node_type === "group";
         const isNeonActive = !isArchitecture && isNodeFullyComplete(sourceNode);
         const isHovered = hoveredEdgeId === edge.id;
-        const canDelete =
+        const canDelete = !readOnly && (
           Boolean(isOwner) ||
           (Boolean(currentUserId) &&
             (sourceNode.claimed_by === currentUserId ||
-              targetNode.claimed_by === currentUserId));
+              targetNode.claimed_by === currentUserId)));
         
         // Exact geometric midpoint located on the actual cubic bezier curve path
         const center = routed?.center || getBezierPoint(
@@ -212,9 +214,9 @@ export default function CanvasEdgeLayer({
         return (
           <g
             key={edge.id}
-            data-canvas-ui
-            role="button"
-            tabIndex={0}
+            data-canvas-ui={readOnly ? undefined : true}
+            role={readOnly ? "img" : "button"}
+            tabIndex={readOnly ? undefined : 0}
             aria-label={`Connection from ${sourceNode.title} to ${targetNode.title}${edge.label ? `: ${edge.label}` : ""}`}
             onFocus={() => setHoveredEdgeId(edge.id)}
             onBlur={() => setHoveredEdgeId(null)}
@@ -264,7 +266,7 @@ export default function CanvasEdgeLayer({
             />
 
             {/* Edge Label Badge */}
-            {(edge.label || isHovered) && (
+            {(edge.label || (!readOnly && isHovered)) && (
               <foreignObject
                 x={center.x - 110}
                 y={center.y - 32}
@@ -276,8 +278,9 @@ export default function CanvasEdgeLayer({
                   <button
                     type="button"
                     disabled={!onUpdateEdge || !canDelete}
-                    aria-label={`Edit connection: ${edge.label || "Add label"}`}
-                    title={`${edge.label || "Add label"} — ${canDelete ? "Edit connection label and type" : "Claim a connected resource to edit"}`}
+                    role={readOnly ? "note" : undefined}
+                    aria-label={readOnly ? `Connection label: ${edge.label}` : `Edit connection: ${edge.label || "Add label"}`}
+                    title={readOnly ? edge.label || edgeType : `${edge.label || "Add label"} — ${canDelete ? "Edit connection label and type" : "Claim a connected resource to edit"}`}
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={(event) => { event.stopPropagation(); setEditingEdgeId(edge.id); }}
                     className={`min-h-8 max-w-full truncate rounded-lg px-3 py-1.5 text-[10px] font-semibold shadow-xs border ${
