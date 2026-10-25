@@ -5,6 +5,18 @@ const releases = [
   {
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
+    title: "View-Only Sharing & a Better Mobile Canvas",
+    summary: "Share your canvas without inviting collaborators, with faster loading and more comfortable controls on phones.",
+    changes: [
+      "Canvas sharing: Send a revocable, view-only link. Visitors can navigate and open canvas details without seeing the project name or members.",
+      "Faster mobile loading: Load canvas data in parallel and enter the workspace without the homepage loading intro.",
+      "Phone layout: Clearer project header, larger touch controls, a compact tools menu, and panels that stay usable above the keyboard.",
+      "Touch navigation: Pan over cards without moving them, pinch to zoom, focus a selected item, and open details immediately when adding content.",
+    ],
+  },
+  {
+    version: "Beta v1.1.2",
+    date: "October 25, 2026",
     title: "Smoother Canvas Navigation & Keyboard Controls",
     summary: "More predictable navigation, easier search, and a new shortcut guide for working comfortably across desktop and mobile.",
     changes: [
