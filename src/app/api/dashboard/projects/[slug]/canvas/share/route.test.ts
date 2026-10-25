@@ -63,6 +63,15 @@ describe("canvas share management", () => {
     expect((await POST(request("POST", "https://other.example"), context())).status).toBe(403);
     expect(mocks.from).not.toHaveBeenCalled();
   });
+  it.each(["POST", "DELETE"])("allows real local-host %s requests through Next's internal URL", async method => {
+    if (method === "DELETE") mocks.eq.mockResolvedValueOnce({ error: null });
+    const req = new NextRequest("http://localhost:3000/api/dashboard/projects/private-name/canvas/share", {
+      method, headers: { origin: "http://127.0.0.1:3000", host: "127.0.0.1:3000" },
+    });
+    const result = await (method === "POST" ? POST : DELETE)(req, context());
+    expect(result.status).toBe(200);
+    expect(mocks.from).toHaveBeenCalledWith("canvas_shares");
+  });
   it("returns a generic error without leaking database details", async () => {
     mocks.upsert.mockResolvedValue({ error: { message: "private database detail" } });
     const result = await POST(request("POST"), context());

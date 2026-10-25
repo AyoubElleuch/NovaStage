@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth/session";
 import { getProjectBySlug, isProjectOwner } from "@/lib/projects";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isSameOriginRequest } from "@/lib/security/request-origin";
 
 type Context = { params: Promise<{ slug: string }> };
 const response = (body: unknown, status = 200) => NextResponse.json(body, {
@@ -11,8 +12,9 @@ const response = (body: unknown, status = 200) => NextResponse.json(body, {
 
 async function manage(request: NextRequest, context: Context) {
   try {
-    const origin = request.headers.get("origin");
-    if (request.method !== "GET" && origin && origin !== request.nextUrl.origin) return response({ error: "Forbidden" }, 403);
+    if (request.method !== "GET" && !isSameOriginRequest(request, process.env.NEXT_PUBLIC_APP_URL)) {
+      return response({ error: "Please reload this page and try again." }, 403);
+    }
     const user = await getAuthenticatedUser();
     if (!user) return response({ error: "Unauthorized" }, 401);
     const { slug } = await context.params;

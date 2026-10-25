@@ -28,7 +28,13 @@ export default function CanvasShareDialog({ slug, onClose }: { slug: string; onC
     try {
       const res = await fetch(endpoint, { method });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        setError(res.status === 401 ? "Your session has expired. Sign in again to manage sharing." :
+          res.status === 403 ? "Sharing was not allowed. Reload the page and check that you are the project owner." :
+          "Could not update sharing. Please try again.");
+        return;
+      }
+      setOrigin(window.location.origin);
       setToken(data.token);
     } catch { setError("Could not update sharing. Please try again."); }
     finally { setLoading(false); }
