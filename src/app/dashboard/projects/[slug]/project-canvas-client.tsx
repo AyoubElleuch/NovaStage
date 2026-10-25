@@ -46,6 +46,7 @@ import CanvasNotebook from "@/components/canvas/canvas-notebook";
 import CanvasReleasePulse from "@/components/canvas/canvas-release-pulse";
 import CanvasServicePalette from "@/components/canvas/canvas-service-palette";
 import CanvasNavigator from "@/components/canvas/canvas-navigator";
+import CanvasShortcuts from "@/components/canvas/canvas-shortcuts";
 import { createAWSServiceNodeData, AWS_SERVICE_NODE_SIZE } from "@/lib/canvas/aws-service-node";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
@@ -146,6 +147,7 @@ export default function ProjectCanvasClient({
   const [isMinimapOpen, setIsMinimapOpen] = useState(true);
   const [isServicePaletteOpen, setIsServicePaletteOpen] = useState(false);
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
@@ -1891,11 +1893,24 @@ export default function ProjectCanvasClient({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
-        e.defaultPrevented || e.repeat ||
+        e.defaultPrevented || e.isComposing ||
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
-        (e.target instanceof HTMLElement && (e.target.isContentEditable || e.target.closest("select, button, [role='dialog'], [data-canvas-ui]")))
+        (e.target instanceof HTMLElement && (e.target.isContentEditable || e.target.closest("select, button, [role='dialog']") ||
+          (e.target.closest("[data-canvas-ui]") && !e.target.closest("[data-canvas-navigation]"))))
       ) {
+        return;
+      }
+
+      // Radar focus supports canvas navigation shortcuts without deleting graph items.
+      if (e.target instanceof Element && e.target.closest("[data-canvas-navigation]") &&
+        (e.key === "Delete" || e.key === "Backspace")) return;
+
+      // Holding a shortcut must not fall through to browser zoom or navigation.
+      if (e.repeat) {
+        const modifierShortcut = (e.ctrlKey || e.metaKey) && ["k", "z", "y", "a", "+", "=", "-", "0"].includes(e.key.toLowerCase());
+        const selectionShortcut = (e.key === "Delete" || e.key === "Backspace") && (selectedNodeIds.size > 0 || selectedNodeId);
+        if (modifierShortcut || selectionShortcut || (e.shiftKey && ["Digit1", "Digit2"].includes(e.code))) e.preventDefault();
         return;
       }
 
@@ -1912,6 +1927,8 @@ export default function ProjectCanvasClient({
         setFollowingUserId(null);
       } else if (isAIGenerating) {
         return;
+      } else if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault(); setIsShortcutsOpen(true);
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault(); setIsNavigatorOpen(open => !open);
       } else if (e.shiftKey && e.code === "Digit1") {
@@ -2606,6 +2623,7 @@ export default function ProjectCanvasClient({
             canRedo={canRedo}
             onUndo={handleUndo}
             onRedo={handleRedo}
+            onOpenShortcuts={() => setIsShortcutsOpen(true)}
             isMinimapOpen={isMinimapOpen}
             onToggleMinimap={() => setIsMinimapOpen((v) => !v)}
             isReleasePulseOpen={isReleasePulseOpen}
@@ -2647,6 +2665,7 @@ export default function ProjectCanvasClient({
       )}
 
       {/* Realtime Claim Handoff Modal Prompt */}
+      {isShortcutsOpen && <CanvasShortcuts onClose={() => setIsShortcutsOpen(false)} />}
       <CanvasClaimModal
         pendingRequest={incomingClaimModal}
         onResolve={handleResolveClaimRequest}

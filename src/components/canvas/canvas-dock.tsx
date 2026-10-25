@@ -5,6 +5,7 @@ import {
   Activity,
   Grid,
   Hand,
+  Keyboard,
   MapPin,
   Maximize2,
   Minus,
@@ -43,6 +44,7 @@ interface CanvasDockProps {
   isReleasePulseOpen?: boolean;
   onToggleReleasePulse?: () => void;
   onToggleServicePalette?: () => void;
+  onOpenShortcuts?: () => void;
 }
 
 export default function CanvasDock({
@@ -69,6 +71,7 @@ export default function CanvasDock({
   isReleasePulseOpen,
   onToggleReleasePulse,
   onToggleServicePalette,
+  onOpenShortcuts,
 }: CanvasDockProps) {
   const [isQuickToolsOpen, setIsQuickToolsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -154,6 +157,10 @@ export default function CanvasDock({
 
           {/* Mobile Quick Action Buttons */}
           <div className="grid grid-cols-2 gap-1.5 pt-1 text-xs">
+            {onOpenShortcuts && <button type="button" onClick={() => { quickToolsRef.current?.focus(); setIsQuickToolsOpen(false); onOpenShortcuts(); }}
+              className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 hover:bg-neutral-50 dark:border-[#283548] dark:text-neutral-300 dark:hover:bg-[#1e2634]">
+              <Keyboard className="h-3.5 w-3.5" />Keyboard shortcuts
+            </button>}
             <button
               type="button"
               onClick={() => {
@@ -417,6 +424,9 @@ export default function CanvasDock({
             <Maximize2 className="h-3.5 w-3.5" />
           </button>
         </div>
+
+        {onOpenShortcuts && <button type="button" onClick={onOpenShortcuts} aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"
+          className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 sm:flex dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"><Keyboard className="h-4 w-4" /></button>}
 
         {/* Undo / Redo (Both Desktop & Mobile) */}
         {(onUndo || onRedo) && (

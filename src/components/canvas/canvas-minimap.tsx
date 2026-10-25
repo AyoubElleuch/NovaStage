@@ -30,6 +30,7 @@ export default function CanvasMinimap({
   const mapId = useId();
   const [dragBounds, setDragBounds] = useState<ReturnType<typeof getCanvasBoundingBox> | null>(null);
   const activePointerRef = useRef<number | null>(null);
+  const grabOffsetRef = useRef({ x: 0, y: 0 });
   const [canvasSize, setCanvasSize] = useState({ width: 1280, height: 800 });
 
   useEffect(() => {
@@ -48,10 +49,20 @@ export default function CanvasMinimap({
   }, []);
 
   useEffect(() => {
-    const cancelDrag = () => { activePointerRef.current = null; setDragBounds(null); };
+    const cancelDrag = () => {
+      const pointerId = activePointerRef.current;
+      activePointerRef.current = null;
+      setDragBounds(null);
+      if (pointerId !== null) {
+        try { mapRef.current?.releasePointerCapture?.(pointerId); } catch {}
+      }
+    };
     window.addEventListener("blur", cancelDrag);
-    return () => window.removeEventListener("blur", cancelDrag);
-  }, []);
+    return () => {
+      window.removeEventListener("blur", cancelDrag);
+      cancelDrag();
+    };
+  }, [isOpen]);
 
   // Include the visible world so the view indicator remains visible even far from the graph.
   const visibleCanvasWidth = Math.max(1, canvasSize.width - rightInset);
@@ -96,17 +107,22 @@ export default function CanvasMinimap({
   const viewMapW = viewWorldW * mapScale;
   const viewMapH = viewWorldH * mapScale;
 
-  const handlePointerAction = (e: React.PointerEvent) => {
+  const pointerToWorld = (e: React.PointerEvent) => {
     if (!mapRef.current) return;
     const rect = mapRef.current.getBoundingClientRect();
     const mapX = Math.max(0, Math.min(MINIMAP_WIDTH, (e.clientX - rect.left) * MINIMAP_WIDTH / (rect.width || MINIMAP_WIDTH)));
     const mapY = Math.max(0, Math.min(MINIMAP_HEIGHT, (e.clientY - rect.top) * MINIMAP_HEIGHT / (rect.height || MINIMAP_HEIGHT)));
 
-    const worldTarget = mapToWorld(mapX, mapY);
+    return mapToWorld(mapX, mapY);
+  };
+
+  const handlePointerAction = (e: React.PointerEvent) => {
+    const worldTarget = pointerToWorld(e);
+    if (!worldTarget) return;
 
     // Center screen on clicked world point
-    const newViewportX = visibleCanvasWidth / 2 - worldTarget.x * viewport.zoom;
-    const newViewportY = canvasSize.height / 2 - worldTarget.y * viewport.zoom;
+    const newViewportX = visibleCanvasWidth / 2 - (worldTarget.x - grabOffsetRef.current.x) * viewport.zoom;
+    const newViewportY = canvasSize.height / 2 - (worldTarget.y - grabOffsetRef.current.y) * viewport.zoom;
 
     onViewportChange({
       ...viewport,
@@ -120,6 +136,15 @@ export default function CanvasMinimap({
     if (activePointerRef.current !== null) return;
     e.preventDefault();
     e.stopPropagation();
+    mapRef.current?.focus({ preventScroll: true });
+    const worldTarget = pointerToWorld(e);
+    if (!worldTarget) return;
+    // Grabbing the viewport window should keep the point under the pointer fixed.
+    const isInsideViewport = worldTarget.x >= viewWorldX && worldTarget.x <= viewWorldX + viewWorldW &&
+      worldTarget.y >= viewWorldY && worldTarget.y <= viewWorldY + viewWorldH;
+    grabOffsetRef.current = isInsideViewport
+      ? { x: worldTarget.x - (viewWorldX + viewWorldW / 2), y: worldTarget.y - (viewWorldY + viewWorldH / 2) }
+      : { x: 0, y: 0 };
     activePointerRef.current = e.pointerId;
     setDragBounds(bounds);
     try {
@@ -146,6 +171,7 @@ export default function CanvasMinimap({
 
   return (
     <aside
+      data-canvas-ui
       style={rightInset ? { right: rightInset + 16, bottom: 96 } : undefined}
       ref={asideRef}
       aria-label="Canvas Minimap Radar"
@@ -177,9 +203,10 @@ export default function CanvasMinimap({
       {isOpen && (
         <div
           ref={mapRef}
+          data-canvas-navigation
           id={mapId}
           role="region"
-          aria-label="Canvas overview. Click or drag to navigate."
+          aria-label="Canvas overview. Click to navigate or drag the viewport to pan."
           aria-describedby={`${mapId}-help`}
           tabIndex={0}
           onPointerDown={handlePointerDown}
@@ -202,7 +229,7 @@ export default function CanvasMinimap({
           className="relative overflow-hidden rounded-2xl border border-neutral-200/90 bg-white/95 shadow-xl backdrop-blur-xl select-none touch-none cursor-crosshair focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-[#283548] dark:bg-[#161d27]/95"
         >
           <span id={`${mapId}-help`} className="sr-only pointer-events-none">
-            Use arrow keys to pan the canvas. Hold Shift to pan further.
+            Click to center the canvas, or drag the viewport window to pan. Use arrow keys to pan the canvas. Hold Shift to pan further.
           </span>
           {/* Subtle grid background */}
           <div

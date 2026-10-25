@@ -6,7 +6,7 @@ import { screenToWorld } from "@/lib/canvas/coordinate-math";
 import { useTheme } from "@/lib/theme-context";
 
 const CTRL_WHEEL_ZOOM_SENSITIVITY = 0.0025;
-const INTERACTIVE_SELECTOR = "button, input, textarea, select, a, [contenteditable='true'], [data-canvas-ui]";
+const INTERACTIVE_SELECTOR = "button, input, textarea, select, a, [contenteditable]:not([contenteditable='false']), [data-canvas-ui]";
 
 interface CanvasViewportProps {
   viewport: CanvasViewport;
@@ -53,7 +53,7 @@ export default function CanvasViewportContainer({
   const [isSpacePressed, setIsSpacePressed] = useState(false);
 
   // Multi-touch tracking for pinch-to-zoom & smooth touch pan
-  const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const activePointersRef = useRef<Map<number, { x: number; y: number; pointerType: string }>>(new Map());
   const pinchStateRef = useRef<{
     initialDistance: number;
     initialZoom: number;
@@ -77,7 +77,6 @@ export default function CanvasViewportContainer({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         e.code === "Space" &&
-        !isSpacePressed &&
         containerRef.current?.contains(e.target as Node) &&
         !(e.target instanceof Element && e.target.closest(INTERACTIVE_SELECTOR))
       ) {
@@ -169,14 +168,18 @@ export default function CanvasViewportContainer({
       marqueeDistanceRef.current = 0;
       justFinishedMarqueeRef.current = false;
     }
+    const continuingTouchGesture = isTouch && activePointersRef.current.size > 0 &&
+      Array.from(activePointersRef.current.values()).every((pointer) => pointer.pointerType === "touch");
     const shouldPan = activeTool === "hand" || isSpacePressed || e.button === 1 ||
-      (e.button === 0 && e.altKey) || (isTouch && isBackground);
+      (e.button === 0 && e.altKey) || (isTouch && (isBackground || continuingTouchGesture));
     if (!isBackground && !shouldPan) return;
     // Keep controls inside cards usable, including when the hand tool is active.
     if (!isBackground && e.target instanceof Element &&
       e.target.closest(INTERACTIVE_SELECTOR)) return;
     if (!isTouch && e.button !== 0 && e.button !== 1) return;
     if (activePointersRef.current.size >= 2) return;
+    // A pen or mouse drag is a single-pointer gesture, never one half of a pinch.
+    if (activePointersRef.current.size > 0 && !continuingTouchGesture) return;
     if (shouldPan) {
       e.stopPropagation();
       if (!isTouch) e.preventDefault();
@@ -184,7 +187,7 @@ export default function CanvasViewportContainer({
 
     const screenPoint = getScreenPoint(e.clientX, e.clientY);
     if (isBackground) containerRef.current?.focus({ preventScroll: true });
-    activePointersRef.current.set(e.pointerId, screenPoint);
+    activePointersRef.current.set(e.pointerId, { ...screenPoint, pointerType: e.pointerType });
     const currentViewport = viewportRef.current;
 
     // Multi-touch pinch-to-zoom start
@@ -239,8 +242,9 @@ export default function CanvasViewportContainer({
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (activePointersRef.current.has(e.pointerId)) {
-      activePointersRef.current.set(e.pointerId, getScreenPoint(e.clientX, e.clientY));
+    const activePointer = activePointersRef.current.get(e.pointerId);
+    if (activePointer) {
+      activePointersRef.current.set(e.pointerId, { ...getScreenPoint(e.clientX, e.clientY), pointerType: activePointer.pointerType });
     }
 
     // 2-Finger Pinch Zoom & Pan
