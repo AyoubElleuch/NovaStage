@@ -1,0 +1,227 @@
+import assert from "node:assert/strict";
+import { mkdir, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
+import { chromium, devices } from "playwright";
+import { createServer } from "vite";
+import react from "@vitejs/plugin-react";
+import { nodes, edges } from "./canvas-smoke/fixtures.mjs";
+
+// This harness mounts the actual canvas client. All APIs and realtime are mocked;
+// it never logs in, connects to Supabase, or changes a real project.
+const root = fileURLToPath(new URL("../", import.meta.url));
+const output = resolve(root, ".tmp/canvas-smoke");
+const mocks = resolve(root, "scripts/canvas-smoke/mocks.jsx");
+const server = await createServer({
+  root, configFile: false, plugins: [react()],
+  resolve: { alias: [
+    ...["@/lib/supabase/client", "@/components/notifications/notification-provider", "@/lib/canvas/sound-effects", "next/link"].map(find => ({ find, replacement: mocks })),
+    { find: "@", replacement: resolve(root, "src") },
+  ] },
+  optimizeDeps: { entries: ["scripts/canvas-smoke/main.jsx"] },
+  server: { host: "127.0.0.1", port: 0, watch: { ignored: ["**/.next/**", "**/.tmp/**"] } },
+});
+await mkdir(output, { recursive: true });
+await server.listen();
+const origin = server.resolvedUrls.local[0].replace(/\/$/, "");
+console.log(`Isolated canvas fixture: ${origin}`);
+let browser;
+const results = [];
+
+async function check(label, action) {
+  await action();
+  results.push(label);
+  console.log(`PASS ${label}`);
+}
+
+async function fixturePage(context) {
+  const page = await context.newPage();
+  const state = { nodes: structuredClone(nodes), edges: structuredClone(edges), mutations: [] };
+  const errors = [];
+  page.on("pageerror", error => { errors.push(error.message); console.error(error.message); });
+  page.setDefaultTimeout(15_000);
+  await page.route("**/*", async route => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.origin !== origin) return route.abort();
+    if (!url.pathname.startsWith("/api/")) return route.continue();
+    if (request.method() === "HEAD") return route.fulfill({ status: 204 });
+    if (request.method() === "GET") return route.fulfill({ json: { nodes: state.nodes, edges: state.edges } });
+    const body = request.postDataJSON();
+    state.mutations.push(body);
+    if (body.action === "update_node") state.nodes = state.nodes.map(node => node.id === body.node_id ? { ...node, ...body.updates } : node);
+    else if (body.action === "create_node") state.nodes.push({ ...body, project_id: "canvas-smoke", status: "draft", sort_order: state.nodes.length, claimed_by: "smoke-user", version: 1, checkpoints: body.checkpoints || [] });
+    else if (body.action === "delete_node") {
+      state.nodes = state.nodes.filter(node => node.id !== body.node_id);
+      state.edges = state.edges.filter(edge => edge.source_node_id !== body.node_id && edge.target_node_id !== body.node_id);
+    } else if (body.action === "create_edge") {
+      const edge = { ...body, id: `smoke-edge-${state.edges.length}`, project_id: "canvas-smoke" };
+      state.edges.push(edge);
+      return route.fulfill({ json: { success: true, edge } });
+    } else if (body.action === "update_edge") {
+      const edge = state.edges.find(edge => edge.id === body.edge_id);
+      Object.assign(edge, body.updates);
+      return route.fulfill({ json: { success: true, edge } });
+    } else if (body.action === "delete_edge") state.edges = state.edges.filter(edge => edge.id !== body.edge_id);
+    else throw new Error(`Smoke fixture does not implement ${body.action}`);
+    return route.fulfill({ json: { success: true } });
+  });
+  await page.goto(`${origin}/scripts/canvas-smoke/index.html`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Find on canvas" }).waitFor();
+  await page.getByRole("group", { name: /^Milestone 1: Plan the release/ }).waitFor();
+  return { page, state, errors };
+}
+
+try {
+  browser = await chromium.launch({ headless: true });
+  const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const { page, state, errors } = await fixturePage(desktop);
+  const canvas = page.locator("[data-canvas-viewport]");
+  await check("desktop canvas renders fitted milestones, AWS resources and wires", async () => {
+    assert.equal(await page.getByRole("group", { name: /^Milestone / }).count(), 3);
+    assert.equal(await page.getByRole("button", { name: /^Connection from / }).count(), 3);
+    const find = await page.getByRole("button", { name: "Find on canvas" }).boundingBox();
+    for (const item of [page.getByRole("group", { name: /^Milestone 1:/ }), page.getByText("Production network", { exact: true })]) {
+      assert.ok((await item.boundingBox()).y > find.y + find.height, "fitted nodes clear the Find control");
+    }
+    await page.screenshot({ path: resolve(output, "desktop.png") });
+  });
+  await check("search finds a checkpoint and jumps to its milestone", async () => {
+    await page.getByRole("button", { name: "Find on canvas" }).click();
+    await page.getByRole("combobox", { name: "Search canvas" }).fill("message queue");
+    const result = page.getByRole("option", { name: /Build the platform/ });
+    await result.waitFor();
+    assert.equal(await page.getByRole("option").count(), 1);
+    await page.getByRole("combobox", { name: "Search canvas" }).press("Enter");
+    await page.getByRole("complementary", { name: "Milestone details" }).waitFor();
+    await page.getByRole("button", { name: "Close details", exact: true }).click();
+  });
+  await check("node drag saves its final world position", async () => {
+    await canvas.focus();
+    await page.keyboard.press("Shift+Digit1");
+    const title = page.getByRole("heading", { name: "Plan the release", exact: true });
+    const box = await title.boundingBox();
+    const before = state.nodes.find(node => node.id === "plan");
+    const original = { x: before.position_x, y: before.position_y };
+    const saved = page.waitForResponse(response => response.url().includes("/api/") && response.request().postDataJSON()?.action === "update_node");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 64, box.y + box.height / 2 + 32, { steps: 5 });
+    await page.mouse.up();
+    await saved;
+    assert.ok(state.mutations.some(item => item.action === "update_node" && item.node_id === "plan" && (item.updates.position_x !== original.x || item.updates.position_y !== original.y)));
+    await page.getByRole("button", { name: "Close details", exact: true }).click();
+  });
+  await check("inline rename saves once and keeps the canvas usable", async () => {
+    await page.getByRole("button", { name: "Rename Build the platform", exact: true }).click();
+    const input = page.getByRole("textbox", { name: "Milestone title", exact: true });
+    await input.fill("Build and verify the platform");
+    const saved = page.waitForResponse(response => response.url().includes("/api/") && response.request().postDataJSON()?.updates?.title === "Build and verify the platform");
+    await input.press("Enter");
+    await saved;
+    await page.getByRole("heading", { name: "Build and verify the platform", exact: true }).waitFor();
+    assert.equal(state.mutations.filter(item => item.action === "update_node" && item.updates?.title === "Build and verify the platform").length, 1);
+  });
+  await check("zoom controls and fit shortcuts update the actual world transform", async () => {
+    const world = canvas.locator("[data-canvas-bg='true']").last();
+    const before = await world.getAttribute("style");
+    await page.getByTitle("Zoom In (Ctrl +)", { exact: true }).click();
+    assert.notEqual(await world.getAttribute("style"), before);
+    await canvas.focus();
+    await page.keyboard.press("Shift+Digit1");
+  });
+  await check("grabbing the radar viewport does not jump and drag pans smoothly", async () => {
+    const world = canvas.locator("[data-canvas-bg='true']").last();
+    const before = await world.getAttribute("style");
+    const radar = await page.getByTestId("minimap-viewport").boundingBox();
+    await page.mouse.move(radar.x + radar.width / 2 - 10, radar.y + radar.height / 2);
+    await page.mouse.down();
+    const held = await world.getAttribute("style");
+    const viewportPosition = style => style.match(/translate3d\(([-\d.]+)px, ([-\d.]+)px/).slice(1).map(Number);
+    const beforePos = viewportPosition(before);
+    const heldPos = viewportPosition(held);
+    assert.ok(Math.abs(beforePos[0] - heldPos[0]) <= 1 && Math.abs(beforePos[1] - heldPos[1]) <= 1);
+    await page.mouse.move(radar.x + radar.width / 2 + 8, radar.y + radar.height / 2, { steps: 4 });
+    await page.mouse.up();
+    assert.notEqual(await world.getAttribute("style"), held);
+    const mutationsBeforeDelete = state.mutations.length;
+    const overview = page.getByRole("region", { name: /^Canvas overview\./ });
+    await overview.press("Delete");
+    await overview.press("Backspace");
+    assert.equal(state.mutations.length, mutationsBeforeDelete, "radar navigation must not delete selected nodes");
+    await overview.press("Control+k");
+    await page.getByRole("combobox", { name: "Search canvas" }).waitFor();
+    await page.getByRole("button", { name: "Close canvas search" }).click();
+    await canvas.focus();
+    await page.keyboard.press("Shift+Digit1");
+  });
+  await check("keyboard shortcut help traps focus and closes with Escape", async () => {
+    await canvas.focus();
+    await page.keyboard.press("?");
+    await page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true }).waitFor();
+    await page.screenshot({ path: resolve(output, "desktop-shortcuts.png") });
+    await page.keyboard.press("Tab");
+    assert.equal(await page.getByRole("region", { name: "Canvas shortcut reference" }).evaluate(element => element === document.activeElement), true);
+    await page.keyboard.press("Tab");
+    assert.equal(await page.getByRole("button", { name: "Close keyboard shortcuts" }).evaluate(element => element === document.activeElement), true);
+    await page.keyboard.press("Escape");
+    assert.equal(await page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true }).count(), 0);
+  });
+  await page.screenshot({ path: resolve(output, "desktop-after.png") });
+  assert.deepEqual(errors, [], "desktop browser errors");
+  await desktop.close();
+
+  const mobile = await browser.newContext({ ...devices["iPhone 13"] });
+  const { page: phone, state: phoneState, errors: mobileErrors } = await fixturePage(mobile);
+  await check("mobile controls fit the viewport and open the tools panel", async () => {
+    assert.ok(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await phone.getByRole("button", { name: "Canvas tools", exact: true }).click();
+    await phone.getByRole("region", { name: "Canvas tools", exact: true }).waitFor();
+    await phone.getByTitle("Fit to Screen", { exact: true }).click();
+    await phone.screenshot({ path: resolve(output, "mobile.png") });
+  });
+  await check("mobile search is usable without horizontal overflow", async () => {
+    await phone.getByRole("button", { name: "Find on canvas" }).click();
+    await phone.getByRole("combobox", { name: "Search canvas" }).fill("eu-west-1");
+    assert.equal(await phone.getByRole("option").count(), 2);
+    await phone.screenshot({ path: resolve(output, "mobile-search.png") });
+    assert.ok(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await phone.getByRole("button", { name: "Close canvas search" }).click();
+  });
+  await check("mobile shortcut reference scrolls by keyboard and restores Tools focus", async () => {
+    await phone.getByRole("button", { name: "Canvas tools", exact: true }).click();
+    await phone.getByRole("button", { name: "Keyboard shortcuts", exact: true }).click();
+    await phone.getByRole("dialog", { name: "Keyboard shortcuts", exact: true }).waitFor();
+    await phone.keyboard.press("Tab");
+    const content = phone.getByRole("region", { name: "Canvas shortcut reference" });
+    assert.equal(await content.evaluate(element => element === document.activeElement), true);
+    await content.press("End");
+    await phone.waitForFunction(() => document.querySelector('[aria-label="Canvas shortcut reference"]').scrollTop > 0);
+    await phone.screenshot({ path: resolve(output, "mobile-shortcuts.png") });
+    await phone.keyboard.press("Escape");
+    assert.equal(await phone.getByRole("button", { name: "Canvas tools", exact: true }).evaluate(element => element === document.activeElement), true);
+  });
+  await check("touch pinch can start on background and place a second finger on a node", async () => {
+    const phoneWorld = phone.locator("[data-canvas-viewport] [data-canvas-bg='true']").last();
+    const before = await phoneWorld.getAttribute("style");
+    const box = await phone.getByRole("group", { name: /^Milestone 1: Plan the release/ }).boundingBox();
+    const cdp = await mobile.newCDPSession(phone);
+    const first = { id: 1, x: 28, y: 500 };
+    const second = { id: 2, x: box.x + 20, y: box.y + 20 };
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [first] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [first, second] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ ...first, y: 520 }, { ...second, y: second.y - 25 }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    assert.notEqual(await phoneWorld.getAttribute("style"), before);
+    assert.equal(await phone.getByRole("button", { name: "Deselect milestone", exact: true }).count(), 0);
+    assert.equal(phoneState.mutations.length, 0, "pinch navigation must not change a node");
+    await cdp.detach();
+  });
+  assert.deepEqual(mobileErrors, [], "mobile browser errors");
+  await mobile.close();
+  await writeFile(resolve(output, "results.json"), JSON.stringify({ checks: results, errors: [] }, null, 2));
+  console.log(`Canvas browser smoke passed (${results.length} checks). Screenshots: ${output}`);
+} finally {
+  await browser?.close();
+  await server.close();
+}

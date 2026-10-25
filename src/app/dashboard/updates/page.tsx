@@ -5,6 +5,18 @@ const releases = [
   {
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
+    title: "Smoother Canvas Navigation & Keyboard Controls",
+    summary: "More predictable navigation, easier search, and a new shortcut guide for working comfortably across desktop and mobile.",
+    changes: [
+      "Touch and pan: Pinch to zoom even when your second finger lands on a card, and hold Space to pan without scrolling the page.",
+      "Radar and fit: Drag the minimap viewport without a sudden jump, recover cleanly from interrupted gestures, and fit diagrams clear of canvas controls.",
+      "Search: Clear queries quickly, keep typing after switching filters, and navigate results with more reliable keyboard controls.",
+      "Keyboard guide: Open the new shortcut reference from the canvas tools or by pressing ?, with accessible focus and scrolling on desktop and mobile.",
+    ],
+  },
+  {
+    version: "Beta v1.1.1",
+    date: "October 14, 2026",
     title: "Focused on Canvas Usability, Connections & UI Polish",
     summary: "Smoother canvas interactions and a more consistent workspace for architecture and delivery planning.",
     changes: [

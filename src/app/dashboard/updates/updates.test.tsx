@@ -9,9 +9,14 @@ it("shows the current release first with four concise changes and preserves rele
   const { container } = render(<UpdatesPage />);
   const articles = container.querySelectorAll("article");
   const latest = within(articles[0]);
-  expect(latest.getByText("Beta v1.1.1")).toBeTruthy();
-  expect(latest.getByText("October 14, 2026")).toBeTruthy();
-  expect(latest.getByRole("heading").textContent).toBe("Focused on Canvas Usability, Connections & UI Polish");
+  expect(latest.getByText("Beta v1.1.2")).toBeTruthy();
+  expect(latest.getByText("October 25, 2026")).toBeTruthy();
+  expect(latest.getByText("Latest")).toBeTruthy();
+  expect(latest.getByRole("heading").textContent).toBe("Smoother Canvas Navigation & Keyboard Controls");
   expect(latest.getAllByRole("listitem")).toHaveLength(4);
-  expect(within(articles[1]).getByText("Beta v1.1.0")).toBeTruthy();
+  const previous = within(articles[1]);
+  expect(previous.getByText("Beta v1.1.1")).toBeTruthy();
+  expect(previous.getByText("October 14, 2026")).toBeTruthy();
+  expect(previous.getByRole("heading").textContent).toBe("Focused on Canvas Usability, Connections & UI Polish");
+  expect(within(articles[2]).getByText("Beta v1.1.0")).toBeTruthy();
 });

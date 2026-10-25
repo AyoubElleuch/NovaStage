@@ -195,7 +195,12 @@ npm run lint
 
 # Verify production build compilation
 npm run build
+
+# Exercise the real canvas UI in desktop and mobile Chromium
+npm run test:canvas-browser
 ```
+
+The canvas browser smoke test uses local fixtures and mocked API/realtime responses; it does not connect to Supabase or modify a project. It checks navigation, editing, viewport gestures, and keyboard access, and writes screenshots and results to `.tmp/canvas-smoke/`. Install the Playwright Chromium browser with `npx playwright install chromium` if it is not already available.
 
 ### GitHub Actions CI Pipeline
 

@@ -18,12 +18,14 @@ export function fitCanvasNodes(nodes: CanvasNode[], area: CanvasArea): CanvasVie
   const maxX = Math.max(...nodes.map(n => n.position_x + getNodeDimensions(n).width));
   const maxY = Math.max(...nodes.map(n => n.position_y + getNodeDimensions(n).height));
   const width = Math.max(1, area.width - (area.rightInset || 0));
-  // Reserve space for the header and bottom dock, including mobile controls.
+  // Keep cards and raised group headers below Find and above the mobile dock.
+  const topPadding = 160;
+  const bottomPadding = 144;
   const availableW = Math.max(1, width - 80);
-  const availableH = Math.max(1, area.height - 220);
+  const availableH = Math.max(1, area.height - topPadding - bottomPadding);
   const zoom = Math.max(0.15, Math.min(1.2, availableW / Math.max(1, maxX - minX), availableH / Math.max(1, maxY - minY)));
   return { x: width / 2 - (minX + maxX) / 2 * zoom,
-    y: 80 + availableH / 2 - (minY + maxY) / 2 * zoom, zoom };
+    y: topPadding + availableH / 2 - (minY + maxY) / 2 * zoom, zoom };
 }
 
 /** Places a new card near the visible center without covering existing milestones or resources. */

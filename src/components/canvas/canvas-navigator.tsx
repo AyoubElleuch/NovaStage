@@ -19,11 +19,12 @@ export default function CanvasNavigator({ nodes, isOpen, onToggle, onClose, onJu
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const resultsId = useId();
   const results = useMemo(() => nodes.filter(node => {
     const type = node.node_type || "milestone";
     const service = node.aws_metadata && getAWSService(node.aws_metadata.serviceId);
-    const haystack = [node.title, node.description, node.status.replaceAll("_", " "), type,
+    const haystack = [node.title, node.description, node.status.replaceAll("_", " "), type.replaceAll("_", " "),
       service?.name, service?.shortName, service?.category, node.aws_metadata?.serviceId, node.aws_metadata?.region,
       ...Object.values(node.aws_metadata?.config || {}), node.group_metadata?.label,
       node.group_metadata?.style.replaceAll("_", " "), node.annotation_metadata?.content,
@@ -51,10 +52,21 @@ export default function CanvasNavigator({ nodes, isOpen, onToggle, onClose, onJu
 
   useEffect(() => {
     if (isOpen) document.getElementById(`${resultsId}-${highlightedIndex}`)?.scrollIntoView?.({ block: "nearest" });
-  }, [highlightedIndex, isOpen, resultsId]);
+  }, [highlightedIndex, isOpen, resultsId, results]);
 
   return <div ref={containerRef} data-canvas-ui className="absolute left-3 top-[76px] z-30 flex max-h-[calc(100%_-_176px)] flex-col sm:left-5 sm:top-[88px]"
-    onKeyDown={event => { event.stopPropagation(); if (event.key === "Escape") { event.preventDefault(); closeAndRestoreFocus(); } }}>
+    onKeyDown={event => {
+      event.stopPropagation();
+      if (event.nativeEvent.isComposing) return;
+      if (event.key === "Escape" && isOpen) {
+        event.preventDefault();
+        closeAndRestoreFocus();
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        if (isOpen) closeAndRestoreFocus();
+        else onToggle();
+      }
+    }}>
     <button ref={triggerRef} type="button" aria-label="Find on canvas" aria-expanded={isOpen} aria-controls={isOpen ? resultsId : undefined} onClick={onToggle}
       title="Find milestones and resources (Ctrl K)"
       className="flex h-10 shrink-0 items-center gap-2 self-start rounded-xl border border-neutral-200 bg-white/95 px-3 text-xs font-semibold text-neutral-700 shadow-sm backdrop-blur dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-white">
@@ -63,23 +75,28 @@ export default function CanvasNavigator({ nodes, isOpen, onToggle, onClose, onJu
     {isOpen && <section aria-label="Canvas navigator" className="mt-2 flex min-h-0 w-[min(340px,calc(100vw-24px))] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl dark:border-[#283548] dark:bg-[#161d27]">
       <div className="flex shrink-0 items-center gap-2 border-b border-neutral-100 p-3 dark:border-[#283548]">
         <Search className="h-4 w-4 shrink-0 text-neutral-400" />
-        <input autoFocus role="combobox" aria-label="Search canvas" aria-autocomplete="list" aria-expanded={true}
+        <input ref={inputRef} autoFocus role="combobox" aria-label="Search canvas" aria-autocomplete="list" aria-expanded={true}
           aria-controls={resultsId} aria-activedescendant={results.length ? `${resultsId}-${highlightedIndex}` : undefined}
           placeholder="Title, service, region or task…" value={query} onChange={event => { setQuery(event.target.value); setActiveIndex(0); }}
           onKeyDown={event => {
+            if (event.nativeEvent.isComposing) return;
             if ((event.key === "ArrowDown" || event.key === "ArrowUp") && results.length) {
               event.preventDefault();
               setActiveIndex((highlightedIndex + (event.key === "ArrowDown" ? 1 : results.length - 1)) % results.length);
+            } else if ((event.key === "Home" || event.key === "End") && results.length && (event.ctrlKey || event.metaKey)) {
+              event.preventDefault();
+              setActiveIndex(event.key === "Home" ? 0 : results.length - 1);
             } else if (event.key === "Enter" && results[highlightedIndex]) {
               event.preventDefault();
               jumpToNode(results[highlightedIndex].id);
             }
           }}
           className="min-w-0 flex-1 bg-transparent text-sm text-neutral-900 outline-none dark:text-white" />
+        {query && <button type="button" aria-label="Clear canvas search" onClick={() => { setQuery(""); setActiveIndex(0); inputRef.current?.focus(); }} className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><X className="h-3.5 w-3.5" /></button>}
         <button type="button" onClick={closeAndRestoreFocus} aria-label="Close canvas search" className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><X className="h-4 w-4" /></button>
       </div>
       <div className="flex shrink-0 flex-wrap gap-1 p-2" aria-label="Filter canvas items">
-        {[["all", "All"], ["milestone", "Milestones"], ["aws_service", "AWS"], ["group", "Groups"], ["annotation", "Notes"]].map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => { setFilter(value); setActiveIndex(0); }}
+        {[["all", "All"], ["milestone", "Milestones"], ["aws_service", "AWS"], ["group", "Groups"], ["annotation", "Notes"]].map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => { setFilter(value); setActiveIndex(0); inputRef.current?.focus(); }}
           className={`rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${filter === value ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300" : "text-neutral-500 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-[#1e2634]"}`}>{label}</button>)}
       </div>
       <p role="status" aria-live="polite" className="shrink-0 px-3 pb-2 text-[11px] text-neutral-500 dark:text-neutral-300">{results.length} {results.length === 1 ? "item" : "items"}</p>
