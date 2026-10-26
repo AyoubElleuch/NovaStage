@@ -72,12 +72,14 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}{active ? "Replace connection & get setup" : "Create canvas connection"}
       </button>}
       {setup && <div className="space-y-2 rounded-xl border border-neutral-200 p-3 dark:border-[#384961]">
+        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">Codex setup requires Node.js and npm. It runs the official Codex CLI through npx, which downloads it if needed. Claude setup requires Claude Code installed in your terminal.</p>
         <label className="flex items-center justify-between gap-2 text-xs">Your terminal<select aria-label="Setup terminal" value={shell} onChange={event => setShell(event.target.value as typeof shell)} className="rounded border border-neutral-200 bg-white p-1 dark:border-[#384961] dark:bg-[#161d27]"><option value="powershell">PowerShell</option><option value="bash">macOS / Linux (Bash)</option></select></label>
         {(["codex", "claude"] as const).map(client => <div key={client} className="space-y-1">
           <button type="button" onClick={() => copy(setup[client], client === "codex" ? "Codex setup" : "Claude Code setup")} className={`${BUTTON} w-full`}><Copy className="h-3.5 w-3.5" />Copy {client === "codex" ? "Codex" : "Claude Code"} setup</button>
           <details><summary className="cursor-pointer text-[11px] text-neutral-500 dark:text-neutral-400">View command</summary><pre className="mt-1 max-h-28 overflow-auto rounded bg-neutral-100 p-2 text-[10px] dark:bg-[#10151f]">{setup[client]}</pre></details>
         </div>)}
-        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">Run one command in your terminal. For Codex, launch it from that same terminal so it inherits the token. Restart your assistant if needed. The credential is shown only now, expires after 30 days, and grants read and draft access to this canvas. Keep copied commands private. Replacing it revokes the previous credential.</p>
+        <button type="button" onClick={() => copy(setup.codexLaunch, "Codex launch command")} className={`${BUTTON} w-full`}><Copy className="h-3.5 w-3.5" />Copy Codex launch command</button>
+        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">First run the setup command. Then run the launch command in that same terminal so Codex inherits the token, and sign in if prompted. The credential is shown only now, expires after 30 days, and grants read and draft access to this canvas. Keep copied commands private. Replacing it revokes the previous credential.</p>
         <button type="button" className={BUTTON} onClick={() => setToken(null)}>Hide setup credential</button>
       </div>}
       {active && <>

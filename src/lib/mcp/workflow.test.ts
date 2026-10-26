@@ -64,6 +64,8 @@ describe("external assistant generation", () => {
   it("generates per-canvas setup commands for PowerShell and Bash without credentials in URLs", () => {
     const ps = mcpSetup("aaaa-bbbb", "https://novastage.dev", "ns_mcp_test", "powershell");
     expect(ps.codex).toContain("$env:NOVASTAGE_AAAABBBB_TOKEN");
+    expect(ps.codex).toContain("npx --yes @openai/codex mcp add");
+    expect(ps.codexLaunch).toBe("npx --yes @openai/codex");
     expect(ps.codex).toContain("--bearer-token-env-var NOVASTAGE_AAAABBBB_TOKEN");
     expect(ps.claude).toContain("--transport http --scope user");
     expect(ps.claude).toContain("--header 'Authorization: Bearer ns_mcp_test'");

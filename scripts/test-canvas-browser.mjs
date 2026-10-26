@@ -137,6 +137,9 @@ try {
     await assistant.getByRole("button", { name: "Create canvas connection", exact: true }).click();
     await assistant.getByRole("button", { name: "Copy Codex setup", exact: true }).click();
     assert.match(await page.evaluate(() => navigator.clipboard.readText()), /codex mcp add .* --url .*\/api\/mcp/);
+    assert.match(await page.evaluate(() => navigator.clipboard.readText()), /npx --yes @openai\/codex mcp add/);
+    await assistant.getByRole("button", { name: "Copy Codex launch command", exact: true }).click();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), "npx --yes @openai/codex");
     await assistant.getByRole("button", { name: "Copy Claude Code setup", exact: true }).click();
     assert.match(await page.evaluate(() => navigator.clipboard.readText()), /claude mcp add --transport http/);
     await page.screenshot({ path: resolve(output, "desktop-mcp-setup.png") });

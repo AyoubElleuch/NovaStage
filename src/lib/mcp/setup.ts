@@ -7,7 +7,8 @@ export function mcpSetup(projectId: string, origin: string, token: string, shell
   const quote = (value: string) => shell === "powershell" ? `'${value.replaceAll("'", "''")}'` : `'${value.replaceAll("'", "'\\''")}'`;
   return {
     name,
-    codex: `${shell === "powershell" ? `$env:${env} = ${quote(token)}` : `export ${env}=${quote(token)}`}\ncodex mcp add ${name} --url ${quote(endpoint)} --bearer-token-env-var ${env}`,
+    codex: `${shell === "powershell" ? `$env:${env} = ${quote(token)}` : `export ${env}=${quote(token)}`}\nnpx --yes @openai/codex mcp add ${name} --url ${quote(endpoint)} --bearer-token-env-var ${env}`,
+    codexLaunch: "npx --yes @openai/codex",
     claude: `claude mcp add --transport http --scope user ${name} ${quote(endpoint)} --header ${quote(`Authorization: Bearer ${token}`)}`,
   };
 }
