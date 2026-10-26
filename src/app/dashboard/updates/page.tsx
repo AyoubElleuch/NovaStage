@@ -9,7 +9,7 @@ const releases = [
     summary: "Create workflows or AWS architecture with built-in AI or your own Codex and Claude models, with clearer controls in both themes.",
     changes: [
       "Open your AI: Choose the Codex or Claude button to open its desktop app with your request prepared and temporary canvas access. No terminal setup is needed.",
-      "Focused generation: Built-in AI opens first. Both assistants offer Workflow and AWS Architecture, with a consistent custom dropdown and no combined generation mode.",
+      "Focused generation: Built-in AI opens first. Both assistants use a custom mode picker. Workflow creates task milestones; AWS Architecture creates only AWS services and groups, with the selected mode enforced when drafts are proposed and accepted.",
       "Clearer controls: Readable Codex and Claude buttons in dark mode, hover feedback only after entering a prompt, and an orange AWS logo in the canvas dock.",
       "More reliable diagrams: Validate AWS catalog IDs and graph references, repair circular dependencies, and save accepted diagrams together so a failed save leaves no partial changes.",
     ],
