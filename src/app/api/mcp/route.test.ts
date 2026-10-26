@@ -4,7 +4,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { POST, GET } from "./route";
 import { sampleWorkflow, sampleArchitecture } from "@/lib/mcp/test-fixtures";
 
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), limit: vi.fn(), writes: [] as { table: string; body: Record<string, unknown> }[], filters: [] as [string, string, unknown][] }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), limit: vi.fn(), requestMode: "workflow", writes: [] as { table: string; body: Record<string, unknown> }[], filters: [] as [string, string, unknown][] }));
 vi.mock("@/lib/mcp/auth", () => ({ authenticateMcp: mocks.auth }));
 vi.mock("@/lib/security/rate-limit", () => ({ checkRateLimitAsync: mocks.limit, getClientIp: async () => "test-client" }));
 vi.mock("@/lib/canvas/server", () => ({ getProjectCanvasData: async () => ({ nodes: [], edges: [] }) }));
@@ -14,11 +14,11 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: (tabl
     select: () => query, eq: (key: string, value: unknown) => { mocks.filters.push([table, key, value]); return query; }, in: () => query, order: () => query, limit: () => query,
     insert: (body: Record<string, unknown>) => { write = true; mocks.writes.push({ table, body }); return query; },
     update: (body: Record<string, unknown>) => { write = true; mocks.writes.push({ table, body }); return query; },
-    maybeSingle: async () => ({ data: { id: "draft-id" }, error: null }),
+    maybeSingle: async () => ({ data: { id: "draft-id", mode: mocks.requestMode }, error: null }),
     then: (resolve: (value: unknown) => void) => Promise.resolve({ data: write ? { id: "draft-id" } : [], error: null }).then(resolve),
   }; return query;
 } }) }));
-beforeEach(() => { vi.clearAllMocks(); mocks.auth.mockResolvedValue({ projectId: "project", userId: "user" }); mocks.limit.mockResolvedValue({ allowed: true }); mocks.writes.length = 0; mocks.filters.length = 0; });
+beforeEach(() => { vi.clearAllMocks(); mocks.requestMode = "workflow"; mocks.auth.mockResolvedValue({ projectId: "project", userId: "user" }); mocks.limit.mockResolvedValue({ allowed: true }); mocks.writes.length = 0; mocks.filters.length = 0; });
 
 it("supports real SDK initialization, discovery, canvas reads, catalog searches and draft proposals over HTTP", async () => {
   const client = new Client({ name: "codex-claude-compatibility-test", version: "1" });
@@ -82,4 +82,16 @@ it("supports direct HTTP calls from desktop assistants and restricts temporary a
   const accepted = await call("propose_workflow", { requestId, prompt: "Design an API", workflow: sampleWorkflow() });
   expect(accepted.result.isError).toBeUndefined();
   expect(mocks.writes).toHaveLength(1);
+  mocks.writes.length = 0;
+  mocks.requestMode = "aws_architecture";
+  const wrongMode = await call("propose_workflow", { requestId, prompt: "Design an API", workflow: sampleWorkflow() });
+  expect(wrongMode.result.isError).toBe(true);
+  expect(JSON.stringify(wrongMode)).toContain("mode cannot be changed");
+  expect(mocks.writes).toHaveLength(0);
+  const mixed = await call("propose_workflow", { requestId, prompt: "Design an API", workflow: { ...sampleArchitecture(), milestones: sampleWorkflow().milestones } });
+  expect(mixed.result.isError).toBe(true);
+  expect(mocks.writes).toHaveLength(0);
+  const awsOnly = await call("propose_workflow", { requestId, prompt: "Design an API", workflow: sampleArchitecture() });
+  expect(awsOnly.result.isError).toBeUndefined();
+  expect(mocks.writes[0].body).toMatchObject({ workflow: { mode: "aws_architecture", milestones: [], edges: [] } });
 });

@@ -62,7 +62,7 @@ async function handle(request: Request, context: Context) {
         if (error || !draft) throw error || new Error("Could not prepare desktop request.");
         const { token, expiresAt } = createHandoffToken(draft.id);
         const origin = request.headers.get("origin") || new URL(request.url).origin;
-        const handoffPrompt = desktopHandoffPrompt(new URL("/api/mcp", origin).href, token, draft.id, expiresAt);
+        const handoffPrompt = desktopHandoffPrompt(new URL("/api/mcp", origin).href, token, draft.id, expiresAt, body.mode);
         return reply({ requestId: draft.id, expiresAt, provider: body.provider, prompt: handoffPrompt,
           url: desktopAssistantLink(body.provider, handoffPrompt) });
       }
@@ -81,11 +81,18 @@ async function handle(request: Request, context: Context) {
       return reply({ success: true });
     }
 
-    const { data: draft, error } = await admin.from("canvas_mcp_drafts").select("workflow")
+    const { data: draft, error } = await admin.from("canvas_mcp_drafts").select("workflow,mode")
       .eq("id", body.id).eq("project_id", project.id).eq("user_id", user.id).eq("status", "ready").maybeSingle();
     if (error) throw error;
     if (!draft) return reply({ error: "This draft is no longer available." }, 409);
-    const { workflow } = prepareWorkflow(draft.workflow);
+    if (!isAIGenerationMode(draft.mode)) return reply({ error: "Choose Workflow or AWS Architecture and generate a new draft." }, 409);
+    let prepared;
+    try {
+      prepared = prepareWorkflow(draft.workflow, draft.mode);
+    } catch {
+      return reply({ error: `This draft does not match the selected ${draft.mode === "aws_architecture" ? "AWS Architecture" : "Workflow"} mode. Nothing was saved. Dismiss it and generate a new draft.` }, 409);
+    }
+    const { workflow } = prepared;
     const current = await getProjectCanvasData(project.id);
     const graph = buildMcpGraph(workflow, current.nodes);
     // The RPC locks the draft and project rows, checks membership and generation,

@@ -15,9 +15,19 @@ it("uses documented desktop composer URLs and round-trips encoded prompts", () =
   expect(codex.searchParams.has("autoSend")).toBe(false);
 });
 it("provides a complete HTTP MCP bootstrap without requiring installed tools or saving credentials", () => {
-  const prompt = desktopHandoffPrompt("http://127.0.0.1:3000/api/mcp", "temporary-token", "request-id", "2026-10-26T10:00:00Z");
+  const prompt = desktopHandoffPrompt("http://127.0.0.1:3000/api/mcp", "temporary-token", "request-id", "2026-10-26T10:00:00Z", "workflow");
   for (const value of ["initialize", "notifications/initialized", "tools/list", "get_canvas", "list_requests", "search_aws_services", "propose_workflow", "request-id", "Authorization: Bearer temporary-token"]) expect(prompt).toContain(value);
   expect(prompt).toContain("do not save it");
   expect(prompt).toContain("You do not need a preinstalled NovaStage tool");
   expect(prompt.length).toBeLessThan(14000);
+});
+
+it("states the selected mode and excludes the other node type in desktop prompts", () => {
+  const aws = desktopHandoffPrompt("http://localhost/api/mcp", "token", "request", "tomorrow", "aws_architecture");
+  expect(aws).toContain('mode="aws_architecture", milestones=[], and edges=[]');
+  expect(aws).toContain("Do not generate task nodes");
+  expect(aws).toContain("do not copy its nodes");
+  const workflow = desktopHandoffPrompt("http://localhost/api/mcp", "token", "request", "tomorrow", "workflow");
+  expect(workflow).toContain('mode="workflow", serviceNodes=[], groups=[], and dataFlowEdges=[]');
+  expect(workflow).toContain("Do not generate AWS service nodes");
 });

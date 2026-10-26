@@ -24,6 +24,7 @@ beforeAll(async () => {
   await db.exec(readFileSync("supabase/migrations/021_expanded_canvas_edge_types.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/023_canvas_mcp.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/024_retire_combined_generation.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/025_enforce_mcp_diagram_modes.sql", "utf8"));
 }, 30000);
 beforeEach(async () => {
   await db.exec(`truncate public.projects, auth.users, public.project_members, public.project_banned_members cascade;
@@ -47,14 +48,28 @@ it("saves nested AWS content and acceptance atomically and prevents duplicate ac
   expect(await count("canvas_nodes")).toBe(5);
 });
 it("rolls back every node and task if an edge write fails; the draft can be retried safely", async () => {
+  await db.query("update public.canvas_mcp_drafts set mode='workflow' where id=$1", [draft]);
   const invalid = buildMcpGraph(prepareWorkflow(sampleWorkflow()).workflow, []);
   invalid.edges[0].target_node_id = randomUUID();
   await expect(apply(invalid)).rejects.toThrow();
   expect(await count("canvas_nodes")).toBe(0);
   expect(await count("canvas_checkpoints")).toBe(0);
   expect((await db.query<{ status: string }>("select status from public.canvas_mcp_drafts")).rows[0].status).toBe("ready");
-  await apply(graph());
-  expect(await count("canvas_nodes")).toBe(5);
+  await apply(buildMcpGraph(prepareWorkflow(sampleWorkflow()).workflow, []));
+  expect(await count("canvas_nodes")).toBe(2);
+});
+it("enforces the selected mode at the final database write, even if application checks are bypassed", async () => {
+  const workflow = buildMcpGraph(prepareWorkflow(sampleWorkflow()).workflow, []);
+  await expect(apply(workflow)).rejects.toThrow("mode does not match");
+  await expect(apply({ ...workflow, mode: "aws_architecture" })).rejects.toThrow("without tasks");
+  const architecture = graph();
+  architecture.nodes[0].checkpoints = workflow.nodes[0].checkpoints;
+  await expect(apply(architecture)).rejects.toThrow("without tasks");
+  await db.query("update public.canvas_mcp_drafts set mode='workflow' where id=$1", [draft]);
+  await expect(apply({ ...graph(), mode: "workflow" })).rejects.toThrow("milestones and dependency edges only");
+  expect(await count("canvas_nodes")).toBe(0);
+  expect(await count("canvas_checkpoints")).toBe(0);
+  expect((await db.query<{ status: string }>("select status from public.canvas_mcp_drafts")).rows[0].status).toBe("ready");
 });
 it("rejects a foreign user, removed membership, banned membership, and an active AI generation", async () => {
   await expect(apply(graph(), draft, randomUUID())).rejects.toThrow("no longer ready");

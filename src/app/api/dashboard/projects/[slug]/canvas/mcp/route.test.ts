@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { GET, POST, DELETE } from "./route";
-import { sampleWorkflow } from "@/lib/mcp/test-fixtures";
+import { sampleWorkflow, sampleArchitecture } from "@/lib/mcp/test-fixtures";
 
 const mock = vi.hoisted(() => ({
   user: true, member: true, rpc: vi.fn(), draft: null as unknown,
@@ -60,7 +60,7 @@ it("queues a prompt without invoking an AI model or quota RPC", async () => {
   expect((await POST(request({ action: "request", prompt: "x".repeat(8001), mode: "workflow" }), context)).status).toBe(400);
 });
 it("accepts only an owned ready draft using the atomic RPC and propagates transaction failure", async () => {
-  mock.draft = { workflow: sampleWorkflow() };
+  mock.draft = { mode: "workflow", workflow: sampleWorkflow() };
   expect((await POST(request({ action: "apply", id: "draft" }), context)).status).toBe(200);
   expect(mock.writes[0].filters).toEqual([["id", "draft"], ["project_id", "project"], ["user_id", "user"], ["status", "ready"]]);
   expect(mock.rpc).toHaveBeenCalledWith("apply_canvas_mcp_draft", expect.objectContaining({ p_draft_id: "draft", p_user_id: "user", p_graph: expect.objectContaining({ nodes: expect.any(Array) }) }));
@@ -68,6 +68,18 @@ it("accepts only an owned ready draft using the atomic RPC and propagates transa
   const rejected = await POST(request({ action: "apply", id: "draft" }), context);
   expect(rejected.status).toBe(409);
   expect((await rejected.json()).error).toContain("Nothing was saved");
+});
+it("refuses an older mismatched AWS draft and never writes task nodes for an AWS request", async () => {
+  mock.draft = { mode: "aws_architecture", workflow: sampleWorkflow() };
+  const rejected = await POST(request({ action: "apply", id: "draft" }), context);
+  expect(rejected.status).toBe(409);
+  expect((await rejected.json()).error).toContain("AWS Architecture");
+  expect(mock.rpc).not.toHaveBeenCalled();
+  mock.draft = { mode: "aws_architecture", workflow: sampleArchitecture() };
+  expect((await POST(request({ action: "apply", id: "draft" }), context)).status).toBe(200);
+  const saved = mock.rpc.mock.calls[0][1].p_graph;
+  expect(saved.mode).toBe("aws_architecture");
+  expect(saved.nodes.every((node: { node_type: string; checkpoints: unknown[] }) => ["aws_service", "group"].includes(node.node_type) && node.checkpoints.length === 0)).toBe(true);
 });
 it("rejects unavailable drafts before building or saving a diagram", async () => {
   expect((await POST(request({ action: "apply", id: "foreign-draft" }), context)).status).toBe(409);

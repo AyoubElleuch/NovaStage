@@ -72,6 +72,19 @@ describe("external assistant generation", () => {
     expect(edges).toHaveLength(1);
     expect(nodes.every(node => node.node_type === "milestone")).toBe(true);
   });
+  it("rejects changing the queued mode and bypassing validation with a mixed graph", () => {
+    expect(() => prepareWorkflow(sampleWorkflow(), "aws_architecture")).toThrow("mode cannot be changed");
+    expect(() => prepareWorkflow(sampleArchitecture(), "workflow")).toThrow("mode cannot be changed");
+    const mixed = { ...prepareWorkflow(sampleArchitecture()).workflow, milestones: prepareWorkflow(sampleWorkflow()).workflow.milestones };
+    expect(() => buildMcpGraph(mixed, [])).toThrow("no task nodes");
+    const existing = buildMcpGraph(prepareWorkflow(sampleWorkflow()).workflow, []).nodes;
+    const before = structuredClone(existing);
+    const addition = buildMcpGraph(prepareWorkflow(sampleArchitecture(), "aws_architecture").workflow, existing);
+    expect(addition.mode).toBe("aws_architecture");
+    expect(addition.nodes.every(node => node.node_type === "aws_service" || node.node_type === "group")).toBe(true);
+    expect(addition.nodes.flatMap(node => node.checkpoints)).toEqual([]);
+    expect(existing).toEqual(before);
+  });
   it("generates per-canvas setup commands for PowerShell and Bash without credentials in URLs", () => {
     const ps = mcpSetup("aaaa-bbbb", "https://novastage.dev", "ns_mcp_test", "powershell");
     expect(ps.codex).toContain("$env:NOVASTAGE_AAAABBBB_TOKEN");

@@ -70,7 +70,15 @@ async function fixturePage(context, shared = false, empty = false) {
         return route.fulfill({ json: { token: `ns_mcp_${"a".repeat(64)}` } });
       }
       if (body.action === "request") state.mcpDrafts.push({ id: "mcp-draft", prompt: body.prompt, mode: body.mode, status: "pending", workflow: null });
-      if (body.action === "apply") { state.nodes.push({ ...structuredClone(nodes[0]), id: "mcp-generated", title: "MCP release milestone", claimed_by: null }); state.mcpDrafts = []; }
+      if (body.action === "apply") {
+        const draft = state.mcpDrafts.find(draft => draft.id === body.id);
+        assert.ok(draft?.workflow);
+        assert.equal(draft.workflow.mode, draft.mode, "the accepted draft must retain the queued mode");
+        state.nodes.push(draft.mode === "aws_architecture"
+          ? { ...structuredClone(nodes.find(node => node.node_type === "aws_service")), id: "mcp-generated", title: "MCP request handler", parent_group_id: null, checkpoints: [], claimed_by: null }
+          : { ...structuredClone(nodes[0]), id: "mcp-generated", title: "MCP release milestone", claimed_by: null });
+        state.mcpDrafts = [];
+      }
       if (body.action === "dismiss") state.mcpDrafts = [];
       return route.fulfill({ json: { success: true } });
     }
@@ -183,6 +191,40 @@ try {
     await page.getByRole("button", { name: "Close AI Assistant", exact: true }).click();
     state.nodes = state.nodes.filter(node => node.id !== "mcp-generated"); state.mutations = [];
     await page.reload(); await page.getByRole("button", { name: "Find on canvas" }).waitFor();
+  });
+  await check("AWS mode survives both desktop launch buttons and draft acceptance without adding task nodes", async () => {
+    const isolated = await fixturePage(desktop);
+    const awsPage = isolated.page, awsState = isolated.state;
+    const originalTasks = structuredClone(awsState.nodes.filter(node => !node.node_type || node.node_type === "milestone"));
+    await awsPage.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
+    const assistant = awsPage.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByRole("button", { name: "Your AI", exact: true }).click();
+    await assistant.getByRole("textbox", { name: "Describe your diagram", exact: true }).fill("Design an API with Lambda and DynamoDB, including the deployment tasks");
+    await assistant.getByRole("combobox", { name: "Generation mode", exact: true }).click();
+    await awsPage.getByRole("option", { name: "AWS Architecture", exact: true }).click();
+    for (const provider of ["Codex", "Claude"]) {
+      await assistant.getByRole("button", { name: `Open ${provider}`, exact: true }).click();
+      await assistant.getByRole("link", { name: `Open ${provider} again`, exact: true }).waitFor();
+      assert.equal(awsState.mutations.at(-1).mode, "aws_architecture");
+      assert.equal(awsState.mcpDrafts.at(-1).mode, "aws_architecture");
+      if (provider === "Codex") {
+        await assistant.getByRole("button", { name: "Dismiss", exact: true }).click();
+        await assistant.getByRole("link", { name: "Open Codex again", exact: true }).waitFor({ state: "hidden" });
+      }
+    }
+    awsState.mcpDrafts[0] = { ...awsState.mcpDrafts[0], status: "ready", workflow: {
+      mode: "aws_architecture", summary: "AWS-only API", milestones: [], edges: [], groups: [], dataFlowEdges: [],
+      serviceNodes: [{ tempId: "handler", serviceId: "lambda", name: "MCP request handler" }],
+    } };
+    await assistant.getByText("Draft ready · Review before adding", { exact: true }).waitFor();
+    await assistant.getByRole("button", { name: "Add to canvas", exact: true }).click();
+    await assistant.getByText("Diagram added to your canvas.", { exact: true }).waitFor();
+    assert.deepEqual(awsState.nodes.filter(node => !node.node_type || node.node_type === "milestone"), originalTasks);
+    const addition = awsState.nodes.find(node => node.id === "mcp-generated");
+    assert.equal(addition.node_type, "aws_service");
+    assert.deepEqual(addition.checkpoints, []);
+    assert.deepEqual(isolated.errors, []);
+    await awsPage.close();
   });
   await check("AI controls keep dark-theme contrast, disable empty-prompt hover, and use the custom mode picker", async () => {
     await page.getByRole("button", { name: "Toggle dark mode", exact: true }).click();

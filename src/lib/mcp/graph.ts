@@ -5,9 +5,13 @@ import { normalizeArchitectureTopology } from "@/lib/ai/architecture-topology";
 import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
 import { createAWSServiceNodeData } from "@/lib/canvas/aws-service-node";
 import { architectureHandles } from "@/lib/canvas/architecture-routing";
+import { assertWorkflowMode } from "./workflow";
+import { isAIGenerationMode } from "@/lib/ai/types";
 
 /** Build the complete graph in memory before one transactional database write. */
 export function buildMcpGraph(input: AIWorkflowResult, existing: CanvasNode[]) {
+  if (!isAIGenerationMode(input.mode)) throw new Error("Choose Workflow or AWS Architecture.");
+  assertWorkflowMode(input, input.mode);
   const workflow = normalizeArchitectureTopology(input);
   const ids = new Map<string, string>();
   const resolve = (id: string) => {
@@ -62,5 +66,5 @@ export function buildMcpGraph(input: AIWorkflowResult, existing: CanvasNode[]) {
     edge.source_handle = handles.source;
     edge.target_handle = handles.target;
   }
-  return { nodes: arranged, edges };
+  return { mode: input.mode, nodes: arranged, edges };
 }
