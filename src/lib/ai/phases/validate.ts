@@ -355,11 +355,16 @@ export function validateAndRepairWorkflow(
     }
   }
 
+  // Reconnecting an orphan between existing nodes can introduce a new cycle
+  // (for example C → A plus an isolated B becomes C → A → B → C).
+  const repairedDag = removeGraphCycles(validNodeIds, finalEdges);
+  report.cyclesRemoved += repairedDag.cyclesBroken;
+
   const repairedWorkflow: AIWorkflowResult = {
     ...workflow,
     mode: workflow.mode || "workflow",
     milestones,
-    edges: finalEdges,
+    edges: repairedDag.cleanEdges,
     serviceNodes: workflow.serviceNodes || [],
     groups: workflow.groups || [],
     dataFlowEdges: workflow.dataFlowEdges || [],
