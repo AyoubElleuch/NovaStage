@@ -307,7 +307,10 @@ try {
     } };
     await assistant.getByText("Draft ready · Review before adding", { exact: true }).waitFor();
     await assistant.getByText(/Review diagram content/).click();
-    await assistant.getByText("Verify access boundaries", { exact: true }).waitFor();
+    await assistant.getByRole("listitem").filter({ hasText: /^Verify access boundaries$/ }).waitFor();
+    await assistant.getByRole("figure", { name: "Generated diagram preview" }).waitFor();
+    await assistant.getByText(/Layout and containment checked/).waitFor();
+    await assistant.getByRole("figure", { name: "Generated diagram preview" }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: resolve(output, "desktop-mcp-draft.png") });
     const previousCount = state.nodes.length;
     await assistant.getByRole("button", { name: "Add to canvas", exact: true }).click();

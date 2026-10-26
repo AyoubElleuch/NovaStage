@@ -28,5 +28,16 @@ describe("built-in in-memory reconciliation", () => {
     expect(Math.min(...architecture.nodes.map(n => n.position_x))).toBeGreaterThan(Math.max(...tasks.map(n => n.position_x + n.width)));
     expect(() => buildAIGraph({ ...sampleArchitecture(), intent: "update_pipeline", deletedMilestoneIds: [tasks[0].id] }, tasks, "aws_architecture")).toThrow();
     expect(() => buildAIGraph({ ...sampleArchitecture(), intent: "update_pipeline", serviceNodes: [{ ...sampleArchitecture().serviceNodes[0], id: tasks[0].id }] }, tasks, "aws_architecture")).toThrow(/other-mode/);
+    expect(() => buildAIGraph({ ...sampleArchitecture(), intent: "update_pipeline", serviceNodes: [{ ...sampleArchitecture().serviceNodes[0], tempId: tasks[0].id }] }, tasks, "aws_architecture")).toThrow(/other-mode/);
+  });
+  it("does not collapse repeated checkpoint titles into one persisted ID", () => {
+    const input = sampleWorkflow();
+    input.milestones[0].checkpoints = Array.from({ length: 4 }, () => ({ title: "Verify a separate deployment" }));
+    const existing = buildAIGraph({ ...input, intent: "create_pipeline" }, [], "workflow").nodes;
+    const update = { ...input, intent: "update_pipeline" as const, edges: [] };
+    update.milestones = input.milestones.map(node => ({ ...node, id: existing.find(old => old.title === node.title)!.id }));
+    const graph = buildAIGraph(update, existing, "workflow");
+    const cps = graph.nodes.find(node => node.title === input.milestones[0].title)!.checkpoints;
+    expect(new Set(cps.map(cp => cp.id)).size).toBe(4);
   });
 });

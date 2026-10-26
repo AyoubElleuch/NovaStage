@@ -10,6 +10,7 @@ import { mcpSetup } from "@/lib/mcp/setup";
 import type { DesktopAssistant } from "@/lib/mcp/desktop";
 import { CodexIcon, ClaudeIcon } from "@/components/assistant-logos";
 import CanvasAIModeSelect from "./canvas-ai-mode-select";
+import GeneratedDiagramPreview from "./generated-diagram-preview";
 
 type Workflow = z.infer<typeof workflowSchema>;
 type Draft = { id: string; prompt: string; mode: string; status: string; workflow: Workflow | null; validation: Record<string, number | boolean> | null };
@@ -142,9 +143,11 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
         <h4 className="text-xs font-semibold">Your requests & drafts</h4>
         {data.drafts.map(draft => <article key={draft.id} className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-[#384961]">
           <p className="break-words text-xs font-semibold">{draft.workflow?.summary || draft.prompt}</p>
+          <p className="text-[11px] font-semibold">{draft.mode === "aws_architecture" ? "AWS Architecture" : "Workflow"}</p>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{draft.status === "pending" ? "Queued · Waiting for your assistant" : draft.status === "ready" ? "Draft ready · Review before adding" : draft.status}</p>
           {draft.workflow && <details><summary className="cursor-pointer text-xs font-medium">Review diagram content · {draft.workflow.milestones.length} milestones · {draft.workflow.serviceNodes.length} services</summary>
             <div className="mt-2 max-h-64 space-y-2 overflow-auto text-xs leading-5">
+              <GeneratedDiagramPreview workflow={{ ...draft.workflow, intent: "create_parallel" }} />
               {draft.workflow.milestones.map(node => <div key={node.tempId}><p className="font-semibold">{node.title}</p><p className="whitespace-pre-wrap break-words">{node.description}</p><ul className="list-inside list-disc">{node.checkpoints.map((cp, index) => <li key={index}>{cp.title}</li>)}</ul></div>)}
               {draft.workflow.serviceNodes.map(node => <div key={node.tempId}><p className="font-semibold">{node.name} · {node.serviceId}</p><p className="break-words">{node.description}</p><p>{node.region}</p>{Object.entries(node.config || {}).map(([key, value]) => <p className="break-words" key={key}>{key}: {value}</p>)}</div>)}
               {draft.workflow.groups.map(group => <p key={group.tempId}>{group.label} ({group.style}) · {group.childTempIds.join(", ")}</p>)}

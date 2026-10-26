@@ -4,6 +4,7 @@ import { APP_VERSION } from "@/lib/release";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProjectCanvasData } from "@/lib/canvas/server";
 import { publicCanvasData } from "@/lib/canvas/shared-data";
+import { buildGeneratedGraph } from "@/lib/canvas/generated-graph";
 import catalog from "@/lib/canvas/aws-catalog.json";
 import { workflowSchema, prepareWorkflow } from "./workflow";
 import type { McpScope } from "./auth";
@@ -58,7 +59,9 @@ export function createCanvasMcpServer(scope: McpScope) {
       if (error || !request || !isAIGenerationMode(request.mode)) throw new Error("This pending generation request is no longer available.");
       expectedMode = request.mode;
     }
-    const { report } = prepareWorkflow(workflow, expectedMode);
+    const { report, workflow: normalized } = prepareWorkflow(workflow, expectedMode);
+    const graph = buildGeneratedGraph(normalized, []);
+    Object.assign(report, { nodes: graph.nodes.length, connections: graph.edges.length, geometryValid: true });
     const payload = { workflow, validation: report, status: "ready" };
     const query = requestId
       ? admin.from("canvas_mcp_drafts").update(payload).eq("id", requestId).eq("project_id", scope.projectId)

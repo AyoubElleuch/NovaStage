@@ -6,7 +6,7 @@
  * 2. Phase 2: Deep Branching DAG Workflow Generation (Gemini Call #2)
  *    - Mode A: Milestone workflow DAG
  *    - Mode B: AWS infrastructure architecture topology
- * 3. Phase 3: Local Deterministic Graph Validation & Auto-Repair (Algorithmic)
+ * 3. Phase 3: Shared semantic validation and safe deterministic normalization
  */
 
 import { CanvasAIContext, AIWorkflowResult, AIGenerationMode, AIGenerationOperation, isAIGenerationMode } from "./types";
@@ -60,7 +60,7 @@ export async function executeAIPipeline(
       break;
   }
 
-  // Phase 3: Validate, sanitize, and auto-repair graph DAG
+  // Phase 3: Validate the selected mode, then normalize without changing meaning.
   assertSemanticGraph(rawWorkflow, mode);
   const { workflow: validatedWorkflow, report } = validateAndRepairWorkflow(rawWorkflow);
 

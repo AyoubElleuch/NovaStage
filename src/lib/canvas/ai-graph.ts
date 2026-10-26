@@ -16,6 +16,7 @@ export function buildAIGraph(result: AIWorkflowResult, existing: CanvasNode[], m
     if (!key) throw new Error("Every generated resource requires an ID.");
     if (resource.id && (!update || !byId.has(resource.id) || !types.includes(byId.get(resource.id)!.node_type || "milestone"))) throw new Error(`Cannot update unknown or other-mode resource ${resource.id}.`);
     const resolved = update && byId.has(resource.id || key) ? resource.id || key : key;
+    if (update && byId.has(resolved) && !types.includes(byId.get(resolved)!.node_type || "milestone")) throw new Error(`Cannot update other-mode resource ${resolved}.`);
     aliases.set(key, resolved); if (resource.id) aliases.set(resource.id, resolved);
   }
   const resolve = (id: string) => aliases.get(id) || id;
@@ -46,14 +47,16 @@ export function buildAIGraph(result: AIWorkflowResult, existing: CanvasNode[], m
   const nodes = graph.nodes.map(node => {
     const saved = retained.find(saved => saved.id === node.id);
     const cps = checkpoints.get(node.id) || [];
+    const matchedCheckpoints = new Set<string>();
     return { ...node, id: ids.get(node.id)!, version: saved?.version || 1,
       status: saved?.status || node.status, claimed_by: saved?.claimed_by || null,
       parent_group_id: node.parent_group_id ? ids.get(node.parent_group_id)! : null,
       group_metadata: node.group_metadata ? { ...node.group_metadata, childNodeIds: node.group_metadata.childNodeIds.map(id => ids.get(id)!) } : null,
       checkpoints: node.checkpoints.map((cp, index) => {
         const requested = cps[index];
-        const old = saved?.checkpoints.find(old => old.id === requested?.id) || saved?.checkpoints.find(old => old.title.trim() === cp.title.trim());
+        const old = requested?.id ? saved?.checkpoints.find(old => old.id === requested.id) : saved?.checkpoints.find(old => !matchedCheckpoints.has(old.id) && old.title.trim() === cp.title.trim());
         if (requested?.id && !old) throw new Error("Checkpoint does not belong to the updated milestone.");
+        if (old) matchedCheckpoints.add(old.id);
         return { ...cp, id: old?.id || randomUUID(), node_id: ids.get(node.id)!, is_completed: old?.is_completed || requested?.isCompleted || false };
       }),
     };

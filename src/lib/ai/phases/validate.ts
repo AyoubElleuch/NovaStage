@@ -1,7 +1,6 @@
 /**
- * Phase 3: Local Workflow Graph Validation & Auto-Repair Engine
- * Ensures acyclic DAG integrity, eliminates orphan nodes, repairs broken edges,
- * enforces checkpoint depth standards, and applies canonical color mapping.
+ * Phase 3: Shared semantic validation and safe normalization.
+ * The exported name/report fields remain compatible with saved MCP diagnostics.
  */
 
 import { AIWorkflowResult, MilestonePhase } from "../types";

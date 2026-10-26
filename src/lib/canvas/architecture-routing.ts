@@ -4,10 +4,11 @@ import type { CanvasNode, HandlePosition } from "./types";
 type Point = { x: number; y: number };
 
 export function architectureHandles(source: Pick<CanvasNode, "position_x" | "position_y" | "width" | "height">, target: Pick<CanvasNode, "position_x" | "position_y" | "width" | "height">): { source: HandlePosition; target: HandlePosition } {
-  const dx = target.position_x + target.width / 2 - source.position_x - source.width / 2;
-  const dy = target.position_y + target.height / 2 - source.position_y - source.height / 2;
-  const horizontalGap = Math.abs(dx) - (source.width + target.width) / 2;
-  const verticalGap = Math.abs(dy) - (source.height + target.height) / 2;
+  const sourceSize = getNodeDimensions(source), targetSize = getNodeDimensions(target);
+  const dx = target.position_x + targetSize.width / 2 - source.position_x - sourceSize.width / 2;
+  const dy = target.position_y + targetSize.height / 2 - source.position_y - sourceSize.height / 2;
+  const horizontalGap = Math.abs(dx) - (sourceSize.width + targetSize.width) / 2;
+  const verticalGap = Math.abs(dy) - (sourceSize.height + targetSize.height) / 2;
   return horizontalGap >= verticalGap
     ? { source: dx >= 0 ? "right" : "left", target: dx >= 0 ? "left" : "right" }
     : { source: dy >= 0 ? "bottom" : "top", target: dy >= 0 ? "top" : "bottom" };

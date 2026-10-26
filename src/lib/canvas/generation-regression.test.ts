@@ -8,8 +8,25 @@ import { buildGeneratedGraph } from "./generated-graph";
 import { WORKFLOW_FIXTURES } from "./__fixtures__/workflows";
 import { AWS_ARCHITECTURE_FIXTURES } from "./__fixtures__/aws-architectures";
 import { assertCanvasGeometry } from "./geometry-validation";
+import { assertSemanticGraph } from "../ai/semantic-graph";
+import type { CanvasNode } from "./types";
 
 describe("generation contract regressions", () => {
+  it.each(["milestones", "edges", "groups"] as const)("rejects a malformed %s array with an actionable diagnostic", field => {
+    const input = { ...WORKFLOW_FIXTURES[0].result, [field]: {} };
+    expect(() => assertSemanticGraph(input as never)).toThrow(`${field} must be an array`);
+  });
+  it("rejects reused checkpoint IDs instead of overwriting a different task", () => {
+    const input = structuredClone(WORKFLOW_FIXTURES[0].result);
+    input.milestones[0].checkpoints[0].id = "same-checkpoint";
+    input.milestones[1].checkpoints[0].id = "same-checkpoint";
+    expect(() => assertSemanticGraph(input)).toThrow("checkpoint IDs");
+  });
+  it("uses identical geometry in the preview and accepted MCP graph", () => {
+    const workflow = prepareWorkflow(sampleArchitecture()).workflow;
+    const rectangles = (nodes: CanvasNode[]) => nodes.map(node => [node.title, node.node_type, node.position_x, node.position_y, node.width, node.height]).sort();
+    expect(rectangles(buildMcpGraph(workflow, []).nodes)).toEqual(rectangles(buildGeneratedGraph(workflow, []).nodes));
+  });
   it.each([...WORKFLOW_FIXTURES, ...AWS_ARCHITECTURE_FIXTURES])("$name has stable geometry, dependency order and safe append", ({ result }) => {
     const before = structuredClone(result);
     const graph = buildGeneratedGraph(result, []);
