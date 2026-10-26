@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: NovaStage API
-  version: 1.0.0
+  version: 1.1.5
   description: >-
     NovaStage HTTP API. Protected operations use Supabase SSR session cookies. Setup and endpoint inventory:
     docs/api-sdk.md.

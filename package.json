@@ -1,6 +1,6 @@
 {
   "name": "novastage",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:canvas-browser": "node scripts/test-canvas-browser.mjs",
+    "test:generation-browser": "node scripts/test-generation-browser.mjs",
     "test:aws-layout": "vitest run src/lib/canvas/aws-layout.test.ts src/lib/ai/aws-generation.test.ts",
     "preview:aws-layout": "node scripts/preview-aws-layout.mjs",
     "db:scrub": "node scripts/scrub-database.mjs",

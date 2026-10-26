@@ -5,6 +5,18 @@ const releases = [
   {
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
+    title: "Clearer Generated Diagrams",
+    summary: "More readable workflows and AWS architectures, with consistent layouts across built-in AI, Codex and Claude.",
+    changes: [
+      "Better reading order: Milestones follow their dependencies, parallel branches stay clear, and equivalent requests keep the same layout even when returned in a different order.",
+      "Readable cards and boundaries: Long titles and task previews wrap, groups grow around their contents, and connections route around cards and group headers.",
+      "Safer generation: Workflow and AWS Architecture stay separate. Invalid diagrams are rejected without inventing tasks, changing dependencies, or saving partial updates.",
+      "Review and navigation: Preview external drafts before adding them, fit large diagrams on phones, and preserve completed checkpoints and editing claims when updating a diagram.",
+    ],
+  },
+  {
+    version: "Beta v1.1.4",
+    date: "October 26, 2026",
     title: "Bring Your Own AI to the Canvas",
     summary: "Create workflows or AWS architecture with built-in AI or your own Codex and Claude models, with clearer controls in both themes.",
     changes: [
