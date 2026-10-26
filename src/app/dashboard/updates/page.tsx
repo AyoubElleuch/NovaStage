@@ -6,11 +6,11 @@ const releases = [
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
     title: "Bring Your Own AI to the Canvas",
-    summary: "Create workflows, AWS architecture, and full-stack diagrams with your own Codex or Claude Code models, then review and add them to your canvas.",
+    summary: "Create workflows or AWS architecture with built-in AI or your own Codex and Claude models, with clearer controls in both themes.",
     changes: [
       "Open your AI: Choose the Codex or Claude button to open its desktop app with your request prepared and temporary canvas access. No terminal setup is needed.",
-      "Use your own models: Describe a workflow, AWS architecture, or full-stack diagram, then review and send the prepared message in your AI app without spending NovaStage AI credits.",
-      "Review before adding: Inspect generated milestones, tasks, services, configuration, and connections, then add the diagram alongside existing work or dismiss it.",
+      "Focused generation: Built-in AI opens first. Both assistants offer Workflow and AWS Architecture, with a consistent custom dropdown and no combined generation mode.",
+      "Clearer controls: Readable Codex and Claude buttons in dark mode, hover feedback only after entering a prompt, and an orange AWS logo in the canvas dock.",
       "More reliable diagrams: Validate AWS catalog IDs and graph references, repair circular dependencies, and save accepted diagrams together so a failed save leaves no partial changes.",
     ],
   },
@@ -162,7 +162,7 @@ const releases = [
       "Interactive cloud infrastructure modeling (Alpha), synchronized multi-selection and dragging, container resizing, and 0ms optimistic node placement.",
     changes: [
       "AWS Cloud Modeling (Alpha Preview): Introduced official AWS cloud services across Compute, Storage, Database, Networking, Security, and Management with category badges and configuration tags. (Note: AWS integration is currently in Alpha and intended for testing purposes as topology features continue to evolve).",
-      "AI Architecture & Full-Stack Modes: Enhanced the AI pipeline to generate cohesive cloud topologies with VPCs, public/private subnets, and interlocking data flow bridges connecting infrastructure to delivery milestones.",
+      "AI Architecture: Enhanced the AI pipeline to generate cohesive cloud topologies with VPCs, public/private subnets, and connected infrastructure services.",
       "Interactive Container Resizing: Added real-time drag-and-drop corner and edge resizing for VPCs, Subnets, and Custom groups with live dimension tooltips and zoom-compensated tracking.",
       "Roomier Cloud Topology Layout: Expanded subnet and VPC layout spacing with generous padding to cleanly encapsulate contained service cards without border clipping.",
       "Marquee Selection & Synchronized Dragging: Resolved canvas marquee drag selection and enabled synchronized multi-node moving and parallel database updates.",

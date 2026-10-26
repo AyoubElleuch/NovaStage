@@ -1,6 +1,6 @@
 # AWS architecture generation and layout
 
-The provider describes topology: catalog service IDs, configuration entries, semantic boundaries, and directed connections. It does not choose coordinates or sizes. Both AWS and full-stack generation use the same containment normalization and structural acceptance checks before canvas mutation.
+The provider describes topology: catalog service IDs, configuration entries, semantic boundaries, and directed connections. It does not choose coordinates or sizes. AWS generation uses the same containment normalization and structural acceptance checks before canvas mutation.
 
 Normalization chooses explicit parent membership over a group's child list, rebuilds direct membership, breaks containment cycles, and removes empty boundaries. Update operations also remove saved boundaries that become empty. Invalid resource IDs, duplicate IDs, unknown services, and dangling connections trigger one regeneration attempt and then fail without applying the result. Small requests may contain one or two services. Quality checks still request production detail for larger designs; after the retry, a structurally usable draft may be accepted with a server-side quality warning.
 
