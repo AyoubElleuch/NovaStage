@@ -2,6 +2,7 @@ import type { CanvasNode, CanvasViewport } from "./types";
 import { getNodeDimensions, screenToWorld, snapToGrid } from "./coordinate-math";
 
 export interface CanvasArea { width: number; height: number; rightInset?: number; bottomInset?: number }
+export const MIN_CANVAS_ZOOM = 0.001;
 
 /** Resolve taps after viewport pointer capture, preferring resources to groups. */
 export function getCanvasNodeAtPoint(nodes: CanvasNode[], point: { x: number; y: number }) {
@@ -16,7 +17,7 @@ export function getCanvasNodeAtPoint(nodes: CanvasNode[], point: { x: number; y:
 }
 
 export function zoomAroundCenter(viewport: CanvasViewport, zoom: number, area: CanvasArea): CanvasViewport {
-  const nextZoom = Math.min(2.5, Math.max(0.15, zoom));
+  const nextZoom = Math.min(2.5, Math.max(MIN_CANVAS_ZOOM, zoom));
   const x = Math.max(1, area.width - (area.rightInset || 0)) / 2;
   const y = area.height / 2;
   return { x: x - ((x - viewport.x) / viewport.zoom) * nextZoom,
@@ -35,7 +36,7 @@ export function fitCanvasNodes(nodes: CanvasNode[], area: CanvasArea): CanvasVie
   const bottomPadding = Math.max(area.height < 600 ? 88 : 144, area.bottomInset || 0);
   const availableW = Math.max(1, width - 80);
   const availableH = Math.max(1, area.height - topPadding - bottomPadding);
-  const zoom = Math.max(0.15, Math.min(1.2, availableW / Math.max(1, maxX - minX), availableH / Math.max(1, maxY - minY)));
+  const zoom = Math.max(MIN_CANVAS_ZOOM, Math.min(1.2, availableW / Math.max(1, maxX - minX), availableH / Math.max(1, maxY - minY)));
   return { x: width / 2 - (minX + maxX) / 2 * zoom,
     y: topPadding + availableH / 2 - (minY + maxY) / 2 * zoom, zoom };
 }

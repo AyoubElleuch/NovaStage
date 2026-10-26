@@ -152,7 +152,7 @@ export default function CanvasServiceNode({
           onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); finishEditingTitle(e.key === "Escape"); } }}
           className="mt-1 w-full rounded border border-emerald-500 bg-white px-1.5 py-0.5 text-sm font-bold text-neutral-900 outline-none dark:bg-[#121721] dark:text-white" /> :
           <div className="mt-1 flex items-start gap-1">
-            <h3 onDoubleClick={(e) => { e.stopPropagation(); startEditingTitle(); }} className="min-w-0 flex-1 line-clamp-2 break-words text-sm font-bold leading-snug text-neutral-900 dark:text-white" title={node.title}>{node.title}</h3>
+            <h3 onDoubleClick={(e) => { e.stopPropagation(); startEditingTitle(); }} className="min-w-0 flex-1 line-clamp-3 break-words text-sm font-bold leading-5 text-neutral-900 dark:text-white" title={node.title}>{node.title}</h3>
             {!readOnly && onUpdateTitle && showControls && <button type="button" data-no-drag="true" aria-label={`Rename ${node.title}`} title="Rename resource (F2)" onClick={(e) => { e.stopPropagation(); startEditingTitle(); }} className="shrink-0 rounded p-0.5 text-neutral-400 hover:bg-neutral-100 hover:text-emerald-600 dark:hover:bg-[#283548]"><Pencil className="h-3 w-3" /></button>}
           </div>}
       </div>

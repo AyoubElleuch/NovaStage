@@ -115,6 +115,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
     ref={cardRef}
     role="group"
     tabIndex={0}
+    data-node-id={node.id} data-node-type="milestone"
     aria-label={`Milestone ${stepIndex + 1}: ${node.title}. ${statusLabel}. ${completedCount} of ${node.checkpoints.length} checkpoints complete.`}
     onPointerDown={(event) => {
       if (readOnly) return;
@@ -177,7 +178,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
           if (event.key === "Enter") { event.preventDefault(); commitTitle(); cardRef.current?.focus(); }
           if (event.key === "Escape") { event.preventDefault(); titleCancelled.current = true; setIsEditingTitle(false); setEditedTitle(node.title); cardRef.current?.focus(); }
         }} className="min-w-0 flex-1 rounded border border-emerald-500 bg-white px-1.5 py-1 text-[13px] font-semibold outline-none dark:bg-[#121721] dark:text-white"
-      /> : <h3 onDoubleClick={(event) => { event.stopPropagation(); beginRename(); }} title={node.title} className="min-w-0 flex-1 line-clamp-2 break-words text-[14px] font-semibold leading-[18px] text-neutral-900 dark:text-white">{node.title}</h3>}
+      /> : <h3 onDoubleClick={(event) => { event.stopPropagation(); beginRename(); }} title={node.title} className="min-w-0 flex-1 line-clamp-3 break-words text-[14px] font-semibold leading-[18px] text-neutral-900 dark:text-white">{node.title}</h3>}
       {canRename && !isEditingTitle && <button type="button" data-no-drag="true" onClick={(event) => { event.stopPropagation(); beginRename(); }} aria-label={`Rename ${node.title}`} title="Rename milestone (F2)" className="grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-[#1e2634] dark:hover:text-white"><Pencil className="h-3 w-3" /></button>}
     </div>
 
@@ -193,7 +194,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
           aria-pressed={readOnly ? undefined : checkpoint.is_completed} title={readOnly ? "View checkpoint" : isClaimedByMe ? "Toggle checkpoint" : "Claim to edit checkpoints"}
           className="grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 hover:bg-neutral-100 dark:hover:bg-[#1e2634]"
         >{checkpoint.is_completed ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> : <Circle className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500" />}</button>
-        <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(node); }} title={checkpoint.title} className={`min-w-0 flex-1 truncate text-left text-[11px] focus-visible:outline-none focus-visible:underline ${checkpoint.is_completed ? "text-neutral-400 line-through dark:text-neutral-500" : "text-neutral-700 dark:text-neutral-300"}`}>{checkpoint.title}</button>
+        <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(node); }} title={checkpoint.title} className={`my-0.5 min-w-0 flex-1 line-clamp-2 break-words text-left text-[11px] leading-4 focus-visible:outline-none focus-visible:underline ${checkpoint.is_completed ? "text-neutral-400 line-through dark:text-neutral-500" : "text-neutral-700 dark:text-neutral-300"}`}>{checkpoint.title}</button>
         {node.checkpoints.length > previewCount && index === previewCount - 1 && <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(node); }} aria-label={`View all ${node.checkpoints.length} checkpoints`} className="shrink-0 rounded px-1 py-1 text-[10px] font-semibold text-neutral-500 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:text-white">+{node.checkpoints.length - previewCount} remaining</button>}
       </div>)}
       {node.checkpoints.length === 0 && <button type="button" data-no-drag="true" onClick={(event) => { event.stopPropagation(); onSelect(node); }} className="rounded text-[11px] font-semibold text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-neutral-300">Open details →</button>}

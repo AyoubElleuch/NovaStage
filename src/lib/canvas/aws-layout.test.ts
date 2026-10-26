@@ -43,7 +43,7 @@ describe("AWS topology → validation → layout → rendered routes", () => {
     const canvasNodes: CanvasNode[] = placed.map(node => ({
       ...node, project_id: "fixture", title: node.id, description: "", status: "draft", color: "default", sort_order: 0,
       claimed_by: null, version: 1, checkpoints: [],
-      aws_metadata: node.node_type === "aws_service" ? { serviceId: node.aws_metadata.serviceId, category: "compute", config: {} } : null,
+      aws_metadata: node.node_type === "aws_service" ? { serviceId: node.aws_metadata!.serviceId, category: "compute", config: {} } : null,
     }));
     const paths: string[] = [];
     for (const edge of workflow.dataFlowEdges || []) {

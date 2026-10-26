@@ -56,10 +56,10 @@ describe("Canvas Coordinate Math & DAG Engine", () => {
       sort_order: 0, claimed_by: null, version: 1, created_at: "", updated_at: "", checkpoints: [],
     };
 
-    expect(getNodeHandlePosition(node, "right")).toEqual({ x: 400, y: 275 });
-    expect(getNodeHandlePosition(node, "left")).toEqual({ x: 100, y: 275 });
+    expect(getNodeHandlePosition(node, "right")).toEqual({ x: 400, y: 281 });
+    expect(getNodeHandlePosition(node, "left")).toEqual({ x: 100, y: 281 });
     expect(getNodeHandlePosition(node, "top")).toEqual({ x: 250, y: 200 });
-    expect(getNodeHandlePosition(node, "bottom")).toEqual({ x: 250, y: 350 });
+    expect(getNodeHandlePosition(node, "bottom")).toEqual({ x: 250, y: 362 });
 
     const path = calculateBezierPath(100, 100, 400, 300, "right", "left");
     expect(path).toMatch(/^M 100 100 C \d+(\.\d+)? \d+(\.\d+)?, \d+(\.\d+)? \d+(\.\d+)?, 400 300$/);
@@ -107,7 +107,7 @@ describe("Canvas Coordinate Math & DAG Engine", () => {
     ];
 
     const box = getCanvasBoundingBox(mockNodes, 50);
-    expect(box).toMatchObject({ minX: 50, maxX: 650, minY: 50, maxY: 450, width: 600, height: 400 });
+    expect(box).toMatchObject({ minX: 50, maxX: 650, minY: 50, maxY: 512, width: 600, height: 462 });
 
     const edges = [{ id: "e1", project_id: "p1", source_node_id: "n1", target_node_id: "n2", source_handle: "right" as const, target_handle: "left" as const }];
     const mermaid = exportToMermaid(mockNodes, edges);
