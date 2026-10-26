@@ -6,23 +6,22 @@
  * 2. Phase 2: Deep Branching DAG Workflow Generation (Gemini Call #2)
  *    - Mode A: Milestone workflow DAG
  *    - Mode B: AWS infrastructure architecture topology
- *    - Mode C: Full stack (both milestones + AWS architecture)
- * 3. Phase 3: Local Deterministic Graph Validation & Auto-Repair (Algorithmic)
+ * 3. Phase 3: Shared semantic validation and safe deterministic normalization
  */
 
-import { CanvasAIContext, AIWorkflowResult, AIGenerationMode, AIGenerationOperation } from "./types";
+import { CanvasAIContext, AIWorkflowResult, AIGenerationMode, AIGenerationOperation, isAIGenerationMode } from "./types";
 import { decomposePrompt } from "./phases/decompose";
 import { generateDeepWorkflow } from "./phases/generate";
 import { generateAWSArchitecture } from "./phases/generate-aws";
-import { generateFullStack } from "./phases/generate-fullstack";
 import { validateAndRepairWorkflow } from "./phases/validate";
+import { assertSemanticGraph } from "./semantic-graph";
 
 export * from "./types";
 
 /**
  * Executes the complete 3-phase AI workflow generation pipeline
  * @param prompt - User's natural language description
- * @param mode - Generation mode: "workflow", "aws_architecture", or "full_stack"
+ * @param mode - Generation mode: "workflow" or "aws_architecture"
  * @param context - Current canvas state for in-place updates
  */
 export async function executeAIPipeline(
@@ -31,6 +30,7 @@ export async function executeAIPipeline(
   context?: CanvasAIContext,
   options?: { plan?: string; operation?: AIGenerationOperation }
 ): Promise<AIWorkflowResult> {
+  if (!isAIGenerationMode(mode)) throw new Error("Choose Workflow or AWS Architecture.");
   const cleanPrompt = prompt.trim();
   if (!cleanPrompt) {
     throw new Error("Prompt cannot be empty");
@@ -43,7 +43,7 @@ export async function executeAIPipeline(
   // Phase 1: Decompose prompt into structured architectural specification
   let decomposition;
   try {
-    decomposition = await decomposePrompt(cleanPrompt);
+    decomposition = await decomposePrompt(cleanPrompt, mode);
   } catch (decompErr) {
     console.warn("[AI Pipeline] Phase 1 decomposition encountered error, continuing with fallback:", decompErr);
   }
@@ -54,16 +54,14 @@ export async function executeAIPipeline(
     case "aws_architecture":
       rawWorkflow = await generateAWSArchitecture(cleanPrompt, decomposition, pipelineContext);
       break;
-    case "full_stack":
-      rawWorkflow = await generateFullStack(cleanPrompt, decomposition, pipelineContext);
-      break;
     case "workflow":
     default:
       rawWorkflow = await generateDeepWorkflow(cleanPrompt, decomposition, pipelineContext);
       break;
   }
 
-  // Phase 3: Validate, sanitize, and auto-repair graph DAG
+  // Phase 3: Validate the selected mode, then normalize without changing meaning.
+  assertSemanticGraph(rawWorkflow, mode);
   const { workflow: validatedWorkflow, report } = validateAndRepairWorkflow(rawWorkflow);
 
   if (process.env.NODE_ENV !== "production") {

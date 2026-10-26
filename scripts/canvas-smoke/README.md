@@ -40,3 +40,7 @@ this fixture bootstrap against an application or production database.
 
 Vite does not compile Next's `style jsx` marker in the edge layer, so React may log
 a harmless non-boolean `jsx` attribute warning in this isolated harness.
+
+## Generated diagram matrix
+
+Run `npm run test:generation-browser` for real cards, groups and edges built by the production graph pipeline. It covers workflow, serverless, nested, feedback and appended graphs on desktop and phone in light/dark themes, checks fit, card content height, zoom, pan and long-content details, and writes screenshots to `.tmp/generation-after/`. The main smoke suite also checks MCP draft preview and acceptance. See `docs/canvas-generation-rebuild.md` for before/after evidence and `docs/releases/v1.1.5-pr.md` for deployment requirements.

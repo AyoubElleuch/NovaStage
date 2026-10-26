@@ -58,6 +58,14 @@ describe("POST /api/dashboard/projects/[slug]/canvas/ai-generate", () => {
     vi.clearAllMocks();
   });
 
+  it("rejects unsupported generation modes before consuming quota or acquiring a lock", async () => {
+    const response = await POST(new NextRequest("http://localhost:3000/api/test", {
+      method: "POST", body: JSON.stringify({ prompt: "Build a roadmap", mode: "unsupported" }),
+    }), { params: Promise.resolve({ slug: "test-proj" }) });
+    expect(response.status).toBe(400);
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
   it("successfully executes pipeline and invokes RPC functions with new signatures (no p_user_id)", async () => {
     mockRpc.mockImplementation(async (fnName: string) => {
       if (fnName === "acquire_project_ai_lock") {

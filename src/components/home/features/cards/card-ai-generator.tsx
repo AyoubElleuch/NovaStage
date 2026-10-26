@@ -38,16 +38,6 @@ const presets = [
     ] satisfies PreviewNode[],
     edges: [{ source: 0, target: 1, type: "data_flow" }, { source: 1, target: 2, type: "data_flow" }, { source: 2, target: 3, type: "network" }, { source: 2, target: 4, type: "event" }] satisfies PreviewEdge[],
   },
-  {
-    name: "Full-stack system", detail: "Execution milestones interlocked with services", icon: <Box size={15} />,
-    nodes: [
-      { label: "Build API", kind: "milestone", phase: "Implementation" },
-      { label: "API Gateway", kind: "service", serviceId: "apigateway" },
-      { label: "Lambda", kind: "service", serviceId: "lambda" },
-      { label: "DynamoDB", kind: "service", serviceId: "dynamodb" },
-    ] satisfies PreviewNode[],
-    edges: [{ source: 0, target: 1, type: "dependency" }, { source: 1, target: 2, type: "data_flow" }, { source: 2, target: 3, type: "network" }] satisfies PreviewEdge[],
-  },
 ];
 
 const presetOptions: HomeDropdownOption<number>[] = presets.map((preset, index) => ({ value: index, label: preset.name, detail: preset.detail, icon: preset.icon }));
@@ -62,7 +52,7 @@ export default function CardAiGenerator() {
   const positions = preset.nodes.map((_, index) => graph.node(String(index)));
   return <article className="home-feature home-reveal">
     <div className="home-feature-title"><Sparkles size={19} /><h3>Generate a buildable first draft.</h3></div>
-    <p className="home-feature-subtitle">One prompt becomes a workflow, AWS architecture, or full-stack system.</p>
+    <p className="home-feature-subtitle">One prompt becomes a workflow or AWS architecture.</p>
     <span className="home-preset-label">Generation mode</span>
     <HomeDropdown value={selected} options={presetOptions} onChange={setSelected} label="Choose a generation mode" />
     <svg className="home-preset-graph" viewBox={`0 0 ${graph.graph().width} ${Math.max(210, graph.graph().height || 0)}`} role="img" aria-label={`${preset.name} architecture`}>

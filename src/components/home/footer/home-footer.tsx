@@ -9,7 +9,7 @@ import AuthTransitionLink from "../navigation/auth-transition-link";
 
 const buildSteps = [
   { title: "Write the brief", description: "Describe the product, service, or infrastructure you need to build." },
-  { title: "Shape the system", description: "Generate a workflow, AWS architecture, or full-stack plan, then edit the graph." },
+  { title: "Shape the system", description: "Generate a workflow or AWS architecture, then edit the graph." },
   { title: "Run the work", description: "Invite collaborators, claim nodes, and move checkpoints from planned to done." },
 ];
 

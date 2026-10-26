@@ -4,16 +4,17 @@ import type { CanvasNode, HandlePosition } from "./types";
 type Point = { x: number; y: number };
 
 export function architectureHandles(source: Pick<CanvasNode, "position_x" | "position_y" | "width" | "height">, target: Pick<CanvasNode, "position_x" | "position_y" | "width" | "height">): { source: HandlePosition; target: HandlePosition } {
-  const dx = target.position_x + target.width / 2 - source.position_x - source.width / 2;
-  const dy = target.position_y + target.height / 2 - source.position_y - source.height / 2;
-  const horizontalGap = Math.abs(dx) - (source.width + target.width) / 2;
-  const verticalGap = Math.abs(dy) - (source.height + target.height) / 2;
+  const sourceSize = getNodeDimensions(source), targetSize = getNodeDimensions(target);
+  const dx = target.position_x + targetSize.width / 2 - source.position_x - sourceSize.width / 2;
+  const dy = target.position_y + targetSize.height / 2 - source.position_y - sourceSize.height / 2;
+  const horizontalGap = Math.abs(dx) - (sourceSize.width + targetSize.width) / 2;
+  const verticalGap = Math.abs(dy) - (sourceSize.height + targetSize.height) / 2;
   return horizontalGap >= verticalGap
     ? { source: dx >= 0 ? "right" : "left", target: dx >= 0 ? "left" : "right" }
     : { source: dy >= 0 ? "bottom" : "top", target: dy >= 0 ? "top" : "bottom" };
 }
 
-/** Rectilinear visibility graph. Group boundaries are traversable; cards are obstacles. */
+/** Rectilinear visibility graph. Boundaries are traversable below their headers. */
 export function routeArchitectureEdge(source: CanvasNode, target: CanvasNode, sourceHandle: HandlePosition, targetHandle: HandlePosition, nodes: CanvasNode[]) {
   const start = getNodeHandlePosition(source, sourceHandle), end = getNodeHandlePosition(target, targetHandle);
   const offset = (point: Point, handle: HandlePosition): Point => ({
@@ -21,9 +22,11 @@ export function routeArchitectureEdge(source: CanvasNode, target: CanvasNode, so
     y: point.y + (handle === "bottom" ? 24 : handle === "top" ? -24 : 0),
   });
   const a = offset(start, sourceHandle), b = offset(end, targetHandle);
-  const obstacles = nodes.filter(node => node.node_type !== "group").map(node => {
+  const obstacles = nodes.filter(node => node.node_type !== "group" || (node.id !== source.id && node.id !== target.id)).map(node => {
     const size = getNodeDimensions(node);
-    return { left: node.position_x - 12, right: node.position_x + size.width + 12, top: node.position_y - 12, bottom: node.position_y + size.height + 12 };
+    return { left: node.position_x - 12, right: node.position_x + size.width + 12,
+      top: node.position_y - (node.node_type === "group" ? 36 : 12),
+      bottom: node.position_y + (node.node_type === "group" ? 36 : size.height + 12) };
   });
   const clear = (p: Point, q: Point) => !obstacles.some(rect => p.x === q.x
     ? p.x > rect.left && p.x < rect.right && Math.max(p.y, q.y) > rect.top && Math.min(p.y, q.y) < rect.bottom
@@ -33,12 +36,9 @@ export function routeArchitectureEdge(source: CanvasNode, target: CanvasNode, so
     const route = raw.filter((point, i) => i === 0 || i === raw.length - 1 ||
       !(raw[i - 1].x === point.x && point.x === raw[i + 1].x || raw[i - 1].y === point.y && point.y === raw[i + 1].y));
     const lengths = route.slice(1).map((point, i) => Math.abs(point.x - route[i].x) + Math.abs(point.y - route[i].y));
-    let remaining = lengths.reduce((sum, length) => sum + length, 0) / 2;
-    let center = start;
-    for (let i = 0; i < lengths.length; i++) {
-      if (remaining <= lengths[i]) { const ratio = lengths[i] ? remaining / lengths[i] : 0; center = { x: route[i].x + (route[i + 1].x - route[i].x) * ratio, y: route[i].y + (route[i + 1].y - route[i].y) * ratio }; break; }
-      remaining -= lengths[i];
-    }
+    // A label needs a straight channel, not a midpoint that may land on a bend.
+    const segment = lengths.reduce((best, length, i) => length > lengths[best] ? i : best, 0);
+    const center = { x: (route[segment].x + route[segment + 1].x) / 2, y: (route[segment].y + route[segment + 1].y) / 2 };
     return { points: route, center, path: route.map((point, i) => `${i ? "L" : "M"} ${point.x} ${point.y}`).join(" ") };
   };
   // Most generated edges have an unobstructed channel; avoid building a grid during drags.
@@ -48,7 +48,8 @@ export function routeArchitectureEdge(source: CanvasNode, target: CanvasNode, so
     [a, { x: a.x, y: (a.y + b.y) / 2 }, { x: b.x, y: (a.y + b.y) / 2 }, b],
     [a, { x: b.x, y: a.y }, b], [a, { x: a.x, y: b.y }, b],
   ];
-  const direct = candidates.find(candidate => candidate.slice(1).every((point, i) => clear(candidate[i], point)));
+  const cost = (candidate: Point[]) => candidate.slice(1).reduce((sum, point, i) => sum + Math.abs(point.x - candidate[i].x) + Math.abs(point.y - candidate[i].y), 0) + candidate.length * 24;
+  const direct = candidates.filter(candidate => candidate.slice(1).every((point, i) => clear(candidate[i], point))).sort((a, b) => cost(a) - cost(b))[0];
   if (direct) return finish(direct);
   const xs = [...new Set([a.x, b.x, ...obstacles.flatMap(rect => [rect.left, rect.right])])].sort((x, y) => x - y);
   const ys = [...new Set([a.y, b.y, ...obstacles.flatMap(rect => [rect.top, rect.bottom])])].sort((x, y) => x - y);

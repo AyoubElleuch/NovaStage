@@ -1,9 +1,9 @@
 import { graphlib, layout } from "@dagrejs/dagre";
 import type { CanvasNode, CanvasEdge } from "./types";
-import { AWS_SERVICE_NODE_SIZE } from "./aws-service-node";
+import { getNodeDimensions } from "./coordinate-math";
 
 type LayoutNode = Pick<CanvasNode, "id" | "position_x" | "position_y" | "width" | "height"> &
-  Partial<Pick<CanvasNode, "node_type" | "parent_group_id" | "group_metadata">> & { aws_metadata?: { serviceId: string } | null };
+  Partial<Pick<CanvasNode, "node_type" | "parent_group_id" | "group_metadata" | "title" | "checkpoints" | "sort_order">> & { aws_metadata?: { serviceId: string; config?: Record<string, string> } | null };
 
 export function autoLayoutNodes<Node extends LayoutNode>(
   nodes: Node[],
@@ -46,7 +46,7 @@ export function autoLayoutNodes<Node extends LayoutNode>(
   // Security and telemetry relations are real edges, but should not reverse the request path.
   const flowEdges = edges.filter(edge => !auxiliary.has(edge.source_node_id) && !auxiliary.has(edge.target_node_id) && edge.edge_type !== "security_iam");
   const global = new graphlib.Graph().setGraph({ rankdir: "LR" }).setDefaultEdgeLabel(() => ({}));
-  for (const node of nodes.filter(node => node.node_type !== "group" && !auxiliary.has(node.id)).sort((a, b) => a.id.localeCompare(b.id))) global.setNode(node.id, { width: 1, height: 1 });
+  for (const node of nodes.filter(node => node.node_type !== "group" && !auxiliary.has(node.id)).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id.localeCompare(b.id))) global.setNode(node.id, { width: 1, height: 1 });
   for (const edge of [...flowEdges].sort((a, b) => `${a.source_node_id}:${a.target_node_id}`.localeCompare(`${b.source_node_id}:${b.target_node_id}`))) if (global.hasNode(edge.source_node_id) && global.hasNode(edge.target_node_id)) global.setEdge(edge.source_node_id, edge.target_node_id);
   if (global.nodeCount()) layout(global);
   const orderedEdges = [...flowEdges].sort((a, b) => (global.node(a.source_node_id)?.x ?? 0) - (global.node(b.source_node_id)?.x ?? 0) ||
@@ -70,11 +70,10 @@ export function autoLayoutNodes<Node extends LayoutNode>(
         const content = arrange(node.id);
         // Keep a visible safety buffer between a boundary and its direct children.
         // The larger top inset protects the floating group label from child cards.
-        node.width = Math.max(320, content.width + 144);
+        node.width = Math.max(320, Math.min(600, (node.group_metadata?.label.length || 0) * 7 + 160), content.width + 144);
         node.height = Math.max(240, content.height + 184);
       } else {
-        node.width = Math.max(node.width || 0, node.node_type === "aws_service" ? AWS_SERVICE_NODE_SIZE.width : 320);
-        node.height = Math.max(node.height || 0, node.node_type === "aws_service" ? AWS_SERVICE_NODE_SIZE.height : 300);
+        Object.assign(node, getNodeDimensions(node as Parameters<typeof getNodeDimensions>[0]));
       }
       graph.setNode(node.id, { width: node.width, height: node.height });
     }

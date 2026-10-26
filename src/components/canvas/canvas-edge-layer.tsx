@@ -52,8 +52,7 @@ export default function CanvasEdgeLayer({
     const byId = new Map(nodes.map(node => [node.id, node]));
     return new Map(edges.map(edge => {
       const source = byId.get(edge.source_node_id), target = byId.get(edge.target_node_id);
-      const architecture = source && target && [source.node_type, target.node_type].some(type => type === "aws_service" || type === "group");
-      return [edge.id, architecture ? routeArchitectureEdge(source!, target!, edge.source_handle, edge.target_handle, nodes) : null];
+      return [edge.id, source && target ? routeArchitectureEdge(source, target, edge.source_handle, edge.target_handle, nodes) : null];
     }));
   }, [nodes, edges]);
 

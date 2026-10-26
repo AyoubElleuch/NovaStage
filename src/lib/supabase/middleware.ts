@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
+  // MCP authenticates its scoped bearer token itself; never refresh web sessions here.
+  if (request.nextUrl.pathname === "/api/mcp") return NextResponse.next();
   // Public share visits never need an auth lookup or a refreshed session.
   if (request.nextUrl.pathname.startsWith("/share/")) {
     const response = NextResponse.next();

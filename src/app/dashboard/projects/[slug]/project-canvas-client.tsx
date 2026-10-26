@@ -2607,6 +2607,9 @@ export default function ProjectCanvasClient({
         {/* On mobile: AI Assistant & Notebook stack above toolbar (order-1). On desktop: sit alongside dock (sm:order-2) */}
           <div className={`order-1 md:order-2 pointer-events-auto ${selectedNode && isMobile ? "hidden" : "flex"} items-center justify-end md:justify-start gap-2 w-full max-w-[340px] md:w-auto md:max-w-none`}>
             <CanvasAIAssistant
+              projectId={project.id}
+              projectSlug={project.slug}
+              onExternalApplied={resyncCanvasState}
               isOpen={isAIAssistantOpen}
               portalContainer={canvasRootElement}
               onToggle={() => {

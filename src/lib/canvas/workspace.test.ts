@@ -9,6 +9,15 @@ const base: CanvasNode = { id: "group", project_id: "project", title: "Network",
 const nodes = [base, { ...base, id: "milestone", node_type: "milestone" as const, position_x: 800, position_y: 450, width: 280, height: 170 }];
 
 describe("canvas fit and zoom", () => {
+  it("fits a large generated graph on a phone below the former 15% zoom floor", () => {
+    const large = [base, { ...base, id: "far", position_x: 30000, position_y: 1000 }];
+    const viewport = fitCanvasNodes(large, { width: 390, height: 844 });
+    expect(viewport.zoom).toBeLessThan(0.15);
+    for (const node of large) {
+      expect(viewport.x + node.position_x * viewport.zoom).toBeGreaterThanOrEqual(24);
+      expect(viewport.x + (node.position_x + node.width) * viewport.zoom).toBeLessThanOrEqual(366);
+    }
+  });
   it("resolves mobile taps to resources inside nested groups, including raised headers", () => {
     const outer = { ...base, position_x: 0, position_y: 0 };
     const inner = { ...outer, id: "subnet", position_x: 50, position_y: 50, width: 400, height: 300 };

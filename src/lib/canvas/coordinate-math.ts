@@ -65,8 +65,21 @@ export function isNodeFullyComplete(node: CanvasNode): boolean {
   );
 }
 
-/** Shared fallback sizes keep handles, fitting and the radar aligned with rendered nodes. */
-export function getNodeDimensions(node: CanvasNode): { width: number; height: number } {
+/** Conservative, deterministic text wrapping for the clamped previews used by cards. */
+export function previewLines(text: string, width: number, fontSize: number, maximum: number) {
+  const columns = Math.max(1, Math.floor(width / (fontSize * 0.62)));
+  let lines = 1, used = 0;
+  for (const word of text.split(/\s+/)) {
+    if (used && used + word.length + 1 > columns) { lines++; used = 0; }
+    lines += Math.floor(Math.max(0, word.length - 1) / columns);
+    used += (used ? 1 : 0) + (word.length % columns || columns);
+  }
+  return Math.min(maximum, lines);
+}
+
+type DimensionNode = Pick<CanvasNode, "width" | "height"> & Partial<Pick<CanvasNode, "title" | "node_type" | "checkpoints" | "aws_metadata">>;
+/** Shared sizes keep layout, handles, fitting and the radar aligned with rendered cards. */
+export function getNodeDimensions(node: DimensionNode): { width: number; height: number } {
   const fallback = node.node_type === "aws_service"
     ? { width: 200, height: 220 }
     : node.node_type === "group"
@@ -75,10 +88,15 @@ export function getNodeDimensions(node: CanvasNode): { width: number; height: nu
     ? { width: 200, height: 150 }
     : { width: 280, height: 180 };
   const milestone = !node.node_type || node.node_type === "milestone";
-  const checklistHeight = node.checkpoints?.length ? 156 + Math.min(5, node.checkpoints.length) * 24 : 0;
+  const width = node.width > 0 ? node.width : fallback.width;
+  const titleHeight = previewLines(node.title || "", width - 64, 14, 3) * 18;
+  const checklistHeight = node.checkpoints?.length
+    ? 112 + titleHeight + node.checkpoints.slice(0, 5).reduce((sum, cp) => sum + Math.max(24, previewLines(cp.title, width - 100, 11, 2) * 16 + 4), 0)
+    : 144 + titleHeight;
+  const serviceHeight = 148 + previewLines(node.title || "", width - 52, 14, 3) * 20 + (Object.keys(node.aws_metadata?.config || {}).length ? 48 : 0);
   return {
-    width: node.width > 0 ? node.width : fallback.width,
-    height: milestone ? Math.max(node.height || fallback.height, checklistHeight) : node.height > 0 ? node.height : fallback.height,
+    width,
+    height: Math.max(node.height || fallback.height, milestone ? checklistHeight : node.node_type === "aws_service" ? serviceHeight : 0),
   };
 }
 

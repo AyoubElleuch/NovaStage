@@ -1,7 +1,7 @@
 /**
  * AI Canvas Workflow Types & Data Contracts
  * Defines context payloads, intent classifications, prompt decompositions, and structured graph results.
- * Supports multi-mode generation: workflow, AWS architecture, and full stack.
+ * Supports workflow and AWS architecture generation.
  */
 
 import type { AWSServiceCategory, EdgeType } from "@/lib/canvas/types";
@@ -10,7 +10,10 @@ export type { AWSServiceCategory, EdgeType };
 export type AIWorkflowIntent = "create_pipeline" | "update_pipeline" | "create_parallel";
 
 /** Generation mode selector for the AI pipeline */
-export type AIGenerationMode = "workflow" | "aws_architecture" | "full_stack";
+export const AI_GENERATION_MODES = ["workflow", "aws_architecture"] as const;
+export type AIGenerationMode = typeof AI_GENERATION_MODES[number];
+export const isAIGenerationMode = (value: unknown): value is AIGenerationMode =>
+  typeof value === "string" && (AI_GENERATION_MODES as readonly string[]).includes(value);
 export type AIGenerationOperation = "create" | "update";
 
 export type MilestonePhase = "planning" | "architecture" | "implementation" | "testing" | "deployment" | "operations";
@@ -184,7 +187,7 @@ export interface AIWorkflowResult {
   /** Dependency edges connecting milestones */
   edges: AIProcessedEdge[];
 
-  /** AWS architecture mode output — present in aws_architecture and full_stack modes */
+  /** AWS architecture mode output */
   serviceNodes?: AIProcessedServiceNode[];
   /** VPC/subnet/region groupings */
   groups?: AIProcessedGroup[];

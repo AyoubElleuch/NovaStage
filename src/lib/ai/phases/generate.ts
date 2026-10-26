@@ -9,7 +9,9 @@ import {
   PromptDecomposition,
 } from "../types";
 import { buildGenerationSystemInstruction } from "../prompts/system-generate";
-import { callGemini, generateFallbackWorkflow } from "../gemini";
+import { callGemini } from "../gemini";
+
+import { assertSemanticGraph } from "../semantic-graph";
 
 const WORKFLOW_SCHEMA = {
   type: "OBJECT",
@@ -139,31 +141,21 @@ export async function generateDeepWorkflow(
     )}`;
   }
 
-  const userPromptText = `${contextDescription}${decompositionContext}\n\nUser Request: "${prompt}"`;
+  const userPromptText = `Selected mode: Workflow. Operation: ${context?.operation || "create"}. ${context?.operation === "update" ? "Return the complete desired workflow, retaining existing milestone and checkpoint IDs." : "Create a distinct new workflow using new tempIds only. Existing work is context; do not modify or delete it."}\n${contextDescription}${decompositionContext}\n\nUser Request: "${prompt}"`;
 
-  const result = await callGemini<AIWorkflowResult>(userPromptText, WORKFLOW_SCHEMA, {
-    systemInstruction,
-    temperature: 0.2,
-  });
-
-  if (
-    result &&
-    Array.isArray(result.milestones) &&
-    result.milestones.length > 0 &&
-    Array.isArray(result.edges)
-  ) {
-    return {
-      ...result,
-      mode: "workflow" as const,
-      decomposition,
-    };
+  let feedback = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = await callGemini<AIWorkflowResult>(userPromptText + feedback, WORKFLOW_SCHEMA, {
+      systemInstruction, temperature: 0.2,
+    });
+    try {
+      if (!result) throw new Error("No structured workflow was returned.");
+      const workflow = { ...result, intent: context?.operation === "update" ? "update_pipeline" as const : "create_pipeline" as const, mode: "workflow" as const, decomposition };
+      assertSemanticGraph(workflow, "workflow");
+      return workflow;
+    } catch (error) {
+      feedback = "\nPrevious draft rejected: " + (error instanceof Error ? error.message : "Invalid workflow") + ". Return the complete corrected graph. Do not invent missing tasks or dependencies.";
+    }
   }
-
-  // Safe fallback if Gemini is offline or fails
-  const fallback = generateFallbackWorkflow(prompt, context);
-  return {
-    ...fallback,
-    mode: "workflow" as const,
-    decomposition,
-  };
+  throw new Error("The AI provider did not return a valid workflow. No canvas changes were applied; please retry." + feedback);
 }

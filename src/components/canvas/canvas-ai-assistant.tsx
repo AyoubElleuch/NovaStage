@@ -12,12 +12,16 @@ import {
   Sparkles,
   Volume2,
   X,
-  Waypoints,
 } from "lucide-react";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
 import { AIGenerationMode } from "@/lib/ai/types";
+import CanvasMcpAssistant from "./canvas-mcp-assistant";
+import CanvasAIModeSelect from "./canvas-ai-mode-select";
 
 interface CanvasAIAssistantProps {
+  projectId?: string;
+  projectSlug?: string;
+  onExternalApplied?: () => Promise<void> | void;
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
@@ -57,34 +61,7 @@ const getThinkingStages = (mode: AIGenerationMode) => {
       },
     ];
   }
-  if (mode === "full_stack") {
-    return [
-      {
-        buttonLabel: "Decomposing…",
-        title: "Phase 1: Decomposing project...",
-        detail: "Analyzing domain requirements, tech stack constraints, risk factors, and parallel tracks...",
-        pct: "25%",
-      },
-      {
-        buttonLabel: "Generating…",
-        title: "Phase 2: Generating workflow & architecture...",
-        detail: "Synthesizing domain-specific engineering milestones and parallel branches...",
-        pct: "55%",
-      },
-      {
-        buttonLabel: "Validating…",
-        title: "Phase 3: Validating DAG & topology...",
-        detail: "Running cycle detection DFS, eliminating orphan nodes, verifying edge integrity...",
-        pct: "80%",
-      },
-      {
-        buttonLabel: "Synchronizing…",
-        title: "Phase 4: Synchronizing canvas...",
-        detail: "Calculating non-overlapping coordinates, persisting database changes...",
-        pct: "95%",
-      },
-    ];
-  }
+
   return [
     {
       buttonLabel: "Decomposing…",
@@ -152,6 +129,9 @@ declare global {
 const emptySubscribe = () => () => {};
 
 export default function CanvasAIAssistant({
+  projectId,
+  projectSlug,
+  onExternalApplied,
   isOpen,
   onToggle,
   onClose,
@@ -161,6 +141,7 @@ export default function CanvasAIAssistant({
   userPlan = "free",
   onSubmitPrompt,
 }: CanvasAIAssistantProps) {
+  const [provider, setProvider] = useState<"external" | "builtin">("builtin");
   const [prompt, setPrompt] = useState("");
   const [mode, setMode] = useState<AIGenerationMode>("workflow");
   const [isListening, setIsListening] = useState(false);
@@ -172,6 +153,7 @@ export default function CanvasAIAssistant({
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const speechSupported = useSyncExternalStore(
@@ -208,6 +190,26 @@ export default function CanvasAIAssistant({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, isListening, onClose, stopListening]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const trigger = triggerRef.current;
+    dialogRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), summary, a[href]"
+      ) || []).filter(element => element.getClientRects().length > 0);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault(); first?.focus();
+      }
+    };
+    document.addEventListener("keydown", trapFocus);
+    return () => { document.removeEventListener("keydown", trapFocus); trigger?.focus(); };
+  }, [isOpen]);
+
   // Adjust textarea height smoothly based on content
   const adjustHeight = useCallback(() => {
     const el = textareaRef.current;
@@ -220,13 +222,11 @@ export default function CanvasAIAssistant({
 
   // Focus and adjust height when prompt or open state changes
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        textareaRef.current?.focus();
-        adjustHeight();
-      }, 50);
+    if (isOpen && provider === "builtin") {
+      textareaRef.current?.focus({ preventScroll: true });
+      adjustHeight();
     }
-  }, [isOpen, adjustHeight]);
+  }, [isOpen, adjustHeight, provider]);
 
   useEffect(() => {
     adjustHeight();
@@ -366,8 +366,9 @@ export default function CanvasAIAssistant({
     <>
       {/* Floating AI Trigger Button (Separated from bottom dock) */}
       <button
+        ref={triggerRef}
         type="button"
-        onClick={onToggle}
+        onClick={() => { setProvider("builtin"); onToggle(); }}
         title={isOpen ? "Close AI Assistant" : "Open AI Assistant"}
         aria-label="Toggle AI Assistant"
         className={`group relative flex h-9 sm:h-12 items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl border px-2.5 sm:px-3.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all cursor-pointer select-none ${
@@ -420,7 +421,7 @@ export default function CanvasAIAssistant({
                 >
                   AI assistant
                 </h3>
-                <span
+                {provider === "builtin" && <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
                     isQuotaDepleted
                       ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/50"
@@ -438,10 +439,10 @@ export default function CanvasAIAssistant({
                   <span className="hidden md:inline text-[9px] font-medium opacity-75 border-l border-neutral-300 dark:border-neutral-600 pl-1.5">
                     {userPlan === "pro" ? "Gemini Ultra" : userPlan === "plus" ? "Gemini Pro" : "Gemini Flash"}
                   </span>
-                </span>
+                </span>}
               </div>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                Describe what to create or change.
+                {provider === "external" ? "Open your AI with a prepared request." : "Describe what to create or change."}
               </p>
             </div>
 
@@ -455,47 +456,17 @@ export default function CanvasAIAssistant({
             </button>
           </div>
 
+          {projectId && projectSlug && <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-[#10151f]" aria-label="AI provider">
+            {(["builtin", "external"] as const).map(value => <button key={value} type="button" aria-pressed={provider === value}
+              onClick={() => { if (!isThinking) { stopListening(); setProvider(value); } }} disabled={isThinking}
+              className={`min-h-10 rounded-md px-2 text-xs font-semibold ${provider === value ? "bg-white text-neutral-900 shadow-sm dark:bg-[#283548] dark:text-white" : "text-neutral-500 dark:text-neutral-400"}`}>
+              {value === "external" ? "Your AI" : "Built-in AI"}
+            </button>)}
+          </div>}
+          {provider === "external" && projectId && projectSlug && <CanvasMcpAssistant projectId={projectId} projectSlug={projectSlug} onApplied={onExternalApplied} />}
           {/* Form & Input Area */}
-          <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
-            {/* Mode Selector */}
-            <div className="grid w-full grid-cols-3 p-1 bg-neutral-100 dark:bg-[#1e2634] rounded-lg border border-neutral-200/60 dark:border-[#283548] md:flex md:w-fit [&>button]:min-w-0 [&>button]:justify-center [&>button]:flex-wrap">
-              <button
-                type="button"
-                onClick={() => setMode('workflow')}
-                aria-pressed={mode === 'workflow'}
-                className={`flex items-center gap-1.5 px-1.5 md:px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
-                  mode === 'workflow' ? 'bg-white dark:bg-[#2a3649] text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
-                }`}
-              >
-                <Waypoints className="h-3.5 w-3.5" />
-                Workflow
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('aws_architecture')}
-                aria-pressed={mode === 'aws_architecture'}
-                className={`flex items-center gap-1.5 px-1.5 md:px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
-                  mode === 'aws_architecture' ? 'bg-white dark:bg-[#2a3649] text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
-                }`}
-              >
-                <span aria-hidden="true" className="hidden md:inline font-bold text-[#FF9900]">AWS</span>
-                <span className="md:hidden">AWS</span><span className="hidden md:inline">AWS Architecture</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('full_stack')}
-                aria-pressed={mode === 'full_stack'}
-                className={`flex items-center gap-1.5 px-1.5 md:px-3 py-1.5 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
-                  mode === 'full_stack' ? 'bg-white dark:bg-[#2a3649] text-neutral-900 dark:text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
-                }`}
-              >
-                <div aria-hidden="true" className="hidden md:flex items-center gap-0.5">
-                  <Waypoints className="h-3.5 w-3.5" />
-                  <span className="font-bold text-[#FF9900] text-[10px]">AWS</span>
-                </div>
-                Full Stack
-              </button>
-            </div>
+          {provider === "builtin" && <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
+            <CanvasAIModeSelect id="builtin-ai-mode" value={mode} onChange={setMode} disabled={isThinking || isQuotaDepleted} />
 
             <div className="rounded-xl border border-neutral-200 bg-white shadow-2xs transition-all focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/5 dark:border-[#283548] dark:bg-[#121721] dark:focus-within:border-emerald-500 dark:focus-within:ring-emerald-500/10">
               <textarea
@@ -657,7 +628,7 @@ export default function CanvasAIAssistant({
                 </div>
               </div>
             )}
-          </form>
+          </form>}
         </div>
         </>,
         portalContainer ?? document.body

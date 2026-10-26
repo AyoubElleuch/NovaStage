@@ -3,7 +3,6 @@ import { generateFallbackWorkflow } from "./gemini";
 import { executeAIPipeline } from "./pipeline";
 import { validateAndRepairWorkflow, resolveMilestoneColor } from "./phases/validate";
 import { evaluateArchitectureQuality, normalizeArchitectureResult } from "./architecture-quality";
-import type { AIWorkflowResult } from "./types";
 
 describe("AI Workflow Pipeline, Graph Validation & Quality Engine", () => {
   const originalEnv = process.env.GEMINI_API_KEY;
@@ -38,81 +37,24 @@ describe("AI Workflow Pipeline, Graph Validation & Quality Engine", () => {
     }
   });
 
-  it("detects and breaks circular dependency cycles and reconnects orphan nodes in validation phase", () => {
-    const cyclicWorkflow: AIWorkflowResult = {
-      intent: "create_pipeline",
-      summary: "Cyclic workflow",
-      milestones: [
-        { tempId: "m1", title: "Step 1", checkpoints: [{ title: "T1" }, { title: "T2" }, { title: "T3" }, { title: "T4" }] },
-        { tempId: "m2", title: "Step 2", checkpoints: [{ title: "T1" }, { title: "T2" }, { title: "T3" }, { title: "T4" }] },
-        { tempId: "m3", title: "Step 3", checkpoints: [{ title: "T1" }, { title: "T2" }, { title: "T3" }, { title: "T4" }] },
-      ],
-      edges: [
-        { fromId: "m1", toId: "m2" },
-        { fromId: "m2", toId: "m3" },
-        { fromId: "m3", toId: "m1" }, // Circular back-edge!
-      ],
-    };
-
-    const { workflow, report } = validateAndRepairWorkflow(cyclicWorkflow);
-    expect(report.cyclesRemoved).toBeGreaterThanOrEqual(1);
-    expect(workflow.edges.some((e) => e.fromId === "m3" && e.toId === "m1")).toBe(false);
-
-    // Orphan reconnection test
-    const orphanWorkflow: AIWorkflowResult = {
-      intent: "create_pipeline",
-      summary: "Orphan workflow",
-      milestones: [
-        { tempId: "m1", title: "Step 1", sortOrder: 0, checkpoints: [{ title: "T1" }, { title: "T2" }, { title: "T3" }, { title: "T4" }] },
-        { tempId: "m2", title: "Step 2", sortOrder: 1, checkpoints: [{ title: "T1" }, { title: "T2" }, { title: "T3" }, { title: "T4" }] },
-        { tempId: "m3", title: "Step 3", sortOrder: 2, checkpoints: [{ title: "T1" }, { title: "T2" }, { title: "T3" }, { title: "T4" }] },
-      ],
-      edges: [{ fromId: "m1", toId: "m3" }],
-    };
-
-    const repairedOrphan = validateAndRepairWorkflow(orphanWorkflow);
-    expect(repairedOrphan.report.orphansConnected).toBeGreaterThanOrEqual(1);
-    expect(repairedOrphan.workflow.edges.some((e) => e.fromId === "m2" || e.toId === "m2")).toBe(true);
-  });
-
-  it("pads checkpoints, repairs duplicate titles, and prunes broken edges", () => {
+  it("rejects cycles and malformed references without inventing tasks", () => {
+    const input = generateFallbackWorkflow("Build API");
+    const fromId = input.milestones[0].tempId!, toId = input.milestones[1].tempId!;
+    input.edges = [{ fromId, toId }, { fromId: toId, toId: fromId }];
+    expect(() => validateAndRepairWorkflow(input)).toThrow(/cycle/i);
+    input.edges = [{ fromId, toId: "missing" }];
+    expect(() => validateAndRepairWorkflow(input)).toThrow(/declared/);
+    input.edges = [];
+    const { workflow, report } = validateAndRepairWorkflow(input);
+    expect(workflow.edges).toEqual([]);
+    expect(workflow.milestones.map(m => m.checkpoints)).toEqual(input.milestones.map(m => m.checkpoints));
+    expect(report.checkpointsPadded).toBe(0);
     expect(resolveMilestoneColor("planning", "Requirements")).toBe("default");
-    expect(resolveMilestoneColor("implementation", "Stripe API")).toBe("purple");
-
-    const messyWorkflow: AIWorkflowResult = {
-      intent: "create_pipeline",
-      summary: "Messy workflow",
-      milestones: [
-        { tempId: "m1", title: "API", checkpoints: [{ title: "Single task" }] },
-        { tempId: "m2", title: "API", checkpoints: [{ title: "T1" }, { title: "T2" }, { title: "T3" }, { title: "T4" }] },
-      ],
-      edges: [
-        { fromId: "m1", toId: "m1" }, // Self loop
-        { fromId: "m1", toId: "nonexistent" }, // Dangling edge
-        { fromId: "m1", toId: "m2" }, // Valid edge
-      ],
-    };
-
-    const { workflow, report } = validateAndRepairWorkflow(messyWorkflow);
-    expect(report.checkpointsPadded).toBe(3);
-    expect(workflow.milestones[0].checkpoints.length).toBe(4);
-    expect(report.duplicateTitlesFixed).toBe(1);
-    expect(workflow.milestones[1].title).toContain("(Part 2)");
-    expect(report.brokenEdgesRemoved).toBe(2);
-    expect(workflow.edges.length).toBe(1);
   });
 
-  it("executes multi-phase AI pipeline with offline fallback and error handling", async () => {
-    delete process.env.GEMINI_API_KEY;
-    const workflow = await executeAIPipeline("Realtime collaboration workspace");
-
-    expect(workflow.milestones.length).toBeGreaterThanOrEqual(5);
-    expect(workflow.edges.length).toBeGreaterThanOrEqual(4);
-
-    await expect(executeAIPipeline(
-      "Deploy scalable SaaS with Next.js and Aurora",
-      "full_stack"
-    )).rejects.toThrow("No canvas changes were applied");
+  it("fails offline generation without reporting a fabricated success", async () => {
+    await expect(executeAIPipeline("Realtime collaboration workspace")).rejects.toThrow("No canvas changes were applied");
+    await expect(executeAIPipeline("Deploy SaaS", "aws_architecture")).rejects.toThrow("No canvas changes were applied");
   });
 
   it("evaluates AWS architecture quality and normalizes service configurations", () => {

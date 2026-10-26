@@ -37,7 +37,11 @@ export const AWS_ARCHITECTURE_FIXTURES = [
   { name: "Simple: single S3 bucket", result: chain(["s3"]) },
   { name: "Simple: static CDN website", result: chain(["cloudfront", "s3"]) },
   { name: "Medium: three-tier VPC", result: structuredClone(AWS_WEB_APP_FEW_SHOT_EXAMPLE) },
-  { name: "Medium: serverless events", result: chain(["route53", "apigateway", "lambda", "sqs", "lambda", "dynamodb"]) },
+  { name: "Medium: serverless events with feedback", result: (() => {
+    const result = chain(["route53", "apigateway", "lambda", "sqs", "lambda", "dynamodb"]);
+    result.dataFlowEdges!.push({ fromId: "s4", toId: "s3", edgeType: "async_queue", label: "Retry / DLQ redrive" });
+    return result;
+  })() },
   { name: "Complex: multi-AZ application", result: distributed(1, 3) },
   { name: "Complex: multi-region platform", result: distributed(2, 3) },
 ];

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Check, Sparkles } from "lucide-react";
 import { APP_RELEASE, APP_RELEASE_DATE } from "@/lib/release";
 
@@ -5,6 +8,30 @@ const releases = [
   {
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
+    title: "Clearer Generated Diagrams",
+    summary: "More readable workflows and AWS architectures, with consistent layouts across built-in AI, Codex and Claude.",
+    changes: [
+      "Better reading order: Milestones follow their dependencies, parallel branches stay clear, and equivalent requests keep the same layout even when returned in a different order.",
+      "Readable cards and boundaries: Long titles and task previews wrap, groups grow around their contents, and connections route around cards and group headers.",
+      "Safer generation: Workflow and AWS Architecture stay separate. Invalid diagrams are rejected without inventing tasks, changing dependencies, or saving partial updates.",
+      "Review and navigation: Preview external drafts before adding them, fit large diagrams on phones, and preserve completed checkpoints and editing claims when updating a diagram.",
+    ],
+  },
+  {
+    version: "Beta v1.1.4",
+    date: "October 26, 2026",
+    title: "Bring Your Own AI to the Canvas",
+    summary: "Create workflows or AWS architecture with built-in AI or your own Codex and Claude models, with clearer controls in both themes.",
+    changes: [
+      "Open your AI: Choose the Codex or Claude button to open its desktop app with your request prepared and temporary canvas access. No terminal setup is needed.",
+      "Focused generation: Built-in AI opens first. Both assistants use a custom mode picker. Workflow creates task milestones; AWS Architecture creates only AWS services and groups, with the selected mode enforced when drafts are proposed and accepted.",
+      "Clearer controls: Readable Codex and Claude buttons in dark mode, hover feedback only after entering a prompt, and an orange AWS logo in the canvas dock.",
+      "More reliable diagrams: Validate AWS catalog IDs and graph references, repair circular dependencies, and save accepted diagrams together so a failed save leaves no partial changes.",
+    ],
+  },
+  {
+    version: "Beta v1.1.3",
+    date: "October 25, 2026",
     title: "View-Only Sharing & a Better Mobile Canvas",
     summary: "Share your canvas without inviting collaborators, with faster loading and more comfortable controls on phones.",
     changes: [
@@ -150,7 +177,7 @@ const releases = [
       "Interactive cloud infrastructure modeling (Alpha), synchronized multi-selection and dragging, container resizing, and 0ms optimistic node placement.",
     changes: [
       "AWS Cloud Modeling (Alpha Preview): Introduced official AWS cloud services across Compute, Storage, Database, Networking, Security, and Management with category badges and configuration tags. (Note: AWS integration is currently in Alpha and intended for testing purposes as topology features continue to evolve).",
-      "AI Architecture & Full-Stack Modes: Enhanced the AI pipeline to generate cohesive cloud topologies with VPCs, public/private subnets, and interlocking data flow bridges connecting infrastructure to delivery milestones.",
+      "AI Architecture: Enhanced the AI pipeline to generate cohesive cloud topologies with VPCs, public/private subnets, and connected infrastructure services.",
       "Interactive Container Resizing: Added real-time drag-and-drop corner and edge resizing for VPCs, Subnets, and Custom groups with live dimension tooltips and zoom-compensated tracking.",
       "Roomier Cloud Topology Layout: Expanded subnet and VPC layout spacing with generous padding to cleanly encapsulate contained service cards without border clipping.",
       "Marquee Selection & Synchronized Dragging: Resolved canvas marquee drag selection and enabled synchronized multi-node moving and parallel database updates.",
@@ -262,6 +289,7 @@ const releases = [
 ] as const;
 
 export default function UpdatesPage() {
+  const [visibleCount, setVisibleCount] = useState(3);
   return (
     <div className="mx-auto max-w-3xl">
       <header className="dash-enter border-b border-neutral-200 dark:border-[#283548] pb-8">
@@ -275,12 +303,12 @@ export default function UpdatesPage() {
         </p>
       </header>
 
-      <div className="relative py-3 before:absolute before:bottom-8 before:left-1.75 before:top-8 before:w-px before:bg-neutral-200 dark:before:bg-[#283548]">
-        {releases.map((release, index) => (
+      <div id="release-history" className="relative py-3 before:absolute before:bottom-8 before:left-1.75 before:top-8 before:w-px before:bg-neutral-200 dark:before:bg-[#283548]">
+        {releases.slice(0, visibleCount).map((release, index) => (
           <article
             key={release.version}
             className="dash-enter relative grid grid-cols-[16px_1fr] gap-5 py-7"
-            style={{ "--dash-delay": `${70 + index * 55}ms` } as React.CSSProperties}
+            style={{ "--dash-delay": `${70 + (index % 3) * 55}ms` } as React.CSSProperties}
           >
             <span
               className={`relative z-10 mt-1 h-3.75 w-3.75 rounded-full border-4 border-white dark:border-[#0f141c] ${
@@ -314,6 +342,18 @@ export default function UpdatesPage() {
           </article>
         ))}
       </div>
+      {visibleCount < releases.length && (
+        <div className="pb-8 pl-9">
+          <button
+            type="button"
+            aria-controls="release-history"
+            onClick={() => setVisibleCount(count => count + 3)}
+            className="cursor-pointer text-sm text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500 dark:text-blue-400"
+          >
+            Load more
+          </button>
+        </div>
+      )}
     </div>
   );
 }

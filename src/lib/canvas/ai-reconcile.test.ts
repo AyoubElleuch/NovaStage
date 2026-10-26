@@ -1,74 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { applyAWSServiceNodes } from "./ai-reconcile";
-import type { CanvasNode } from "./types";
-import type { AIWorkflowResult } from "../ai/types";
-
-const { writes, from } = vi.hoisted(() => {
-  const writes: { table: string; operation: string; payload: Record<string, unknown> }[] = [];
-  const from = vi.fn((table: string) => {
-    const result = { data: { id: "created-service" }, error: null };
-    const query = {
-      insert: (payload: Record<string, unknown>) => {
-        writes.push({ table, operation: "insert", payload });
-        return query;
-      },
-      update: (payload: Record<string, unknown>) => {
-        writes.push({ table, operation: "update", payload });
-        return query;
-      },
-      delete: () => query,
-      eq: () => query,
-      or: () => query,
-      select: () => query,
-      single: async () => result,
-      then: (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve),
-    };
-    return query;
-  });
-  return { writes, from };
-});
-
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from }) }));
+import { applyAWSServiceNodes, applyAIWorkflowResult } from "./ai-reconcile";
+import { sampleArchitecture, sampleWorkflow } from "../mcp/test-fixtures";
+const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc }) }));
 vi.mock("./server", () => ({ getProjectCanvasData: async () => ({ nodes: [], edges: [] }) }));
-
-const legacy: CanvasNode = {
-  id: "legacy-dns", project_id: "project", title: "Global DNS & Latency Routing",
-  description: "Existing DNS", status: "draft", position_x: 100, position_y: 100,
-  width: 260, height: 220, color: "default", sort_order: 0, claimed_by: null,
-  version: 1, checkpoints: [], node_type: "aws_service",
-  aws_metadata: { serviceId: "route53", category: "networking", config: { routing: "latency" } },
-};
-
-describe("AI AWS catalog node persistence", () => {
-  beforeEach(() => { writes.length = 0; vi.clearAllMocks(); });
-
-  it.each(["aws_architecture", "full_stack"] as const)("creates current catalog cards for %s without rewriting saved legacy nodes", async (mode) => {
-    const result: AIWorkflowResult = {
-      mode, intent: "create_pipeline", summary: "Create architecture", milestones: [], edges: [],
-      serviceNodes: [{ tempId: "dns", serviceId: "route53", name: "Global DNS & Latency Routing", description: "Routes traffic", config: { routing: "latency" } }],
-    };
-    const before = structuredClone(legacy);
-    await applyAWSServiceNodes("project", result, { nodes: [legacy], edges: [] });
-    expect(writes).toHaveLength(1);
-    expect(writes[0]).toEqual({
-      table: "canvas_nodes", operation: "insert", payload: expect.objectContaining({
-        node_type: "aws_service", title: "Amazon Route 53", width: 200, height: 220,
-        description: "Global DNS & Latency Routing\n\nRoutes traffic",
-        aws_metadata: { serviceId: "route53", category: "networking", region: "us-east-1", config: { type: "A", routing: "latency" } },
-      }),
-    });
-    expect(legacy).toEqual(before);
+describe("atomic built-in graph persistence", () => {
+  beforeEach(() => rpc.mockReset().mockResolvedValue({ error: null }));
+  it.each(["workflow", "aws_architecture"] as const)("builds and validates %s before one write", async mode => {
+    const input = mode === "workflow" ? sampleWorkflow() : sampleArchitecture();
+    const apply = mode === "workflow" ? applyAIWorkflowResult : applyAWSServiceNodes;
+    await apply("project", { ...input, intent: "create_pipeline" }, { nodes: [], edges: [] }, "user");
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("apply_canvas_ai_graph", expect.objectContaining({ p_project_id: "project", p_user_id: "user", p_mode: mode }));
+    const graph = rpc.mock.calls[0][1].p_graph;
+    expect(graph.nodes.every((node: { node_type: string }) => mode === "workflow" ? node.node_type === "milestone" : ["group", "aws_service"].includes(node.node_type))).toBe(true);
   });
-
-  it("preserves legacy identity, label and sizing when AI updates an existing service", async () => {
-    await applyAWSServiceNodes("project", {
-      intent: "update_pipeline", summary: "Update DNS", milestones: [], edges: [],
-      serviceNodes: [{ id: legacy.id, tempId: legacy.id, serviceId: "route53", name: legacy.title, config: { type: "AAAA" } }],
-    }, { nodes: [legacy], edges: [] });
-    expect(writes).toHaveLength(1);
-    expect(writes[0]).toEqual({ table: "canvas_nodes", operation: "update", payload: expect.objectContaining({
-      title: legacy.title, width: legacy.width, height: legacy.height,
-      aws_metadata: expect.objectContaining({ config: { type: "AAAA" } }),
-    }) });
+  it("rejects mixed content before any write and never reports success after a failed transaction", async () => {
+    await expect(applyAWSServiceNodes("project", { ...sampleArchitecture(), intent: "create_pipeline", milestones: sampleWorkflow().milestones }, { nodes: [], edges: [] }, "user")).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled();
+    rpc.mockResolvedValue({ error: { message: "constraint" } });
+    await expect(applyAIWorkflowResult("project", { ...sampleWorkflow(), intent: "create_pipeline" }, { nodes: [], edges: [] }, "user")).rejects.toThrow("Nothing was saved");
   });
 });

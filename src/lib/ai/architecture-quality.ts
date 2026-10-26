@@ -1,6 +1,7 @@
 import type { AIWorkflowResult, PromptDecomposition } from "./types";
 import { getAWSServiceDefinition, normalizeAWSServiceId } from "@/lib/canvas/aws-catalog-lookup";
 import { architectureTopologyIssues, normalizeArchitectureTopology } from "./architecture-topology";
+import { assertSemanticGraph } from "./semantic-graph";
 
 export interface ArchitectureQualityResult {
   ok: boolean;
@@ -11,7 +12,7 @@ export function normalizeArchitectureResult(
   result: AIWorkflowResult | null
 ): AIWorkflowResult | null {
   if (!result) return null;
-  return normalizeArchitectureTopology({
+  const normalized: AIWorkflowResult = {
     ...result,
     serviceNodes: (result.serviceNodes || []).map((service) => {
       const entries = Array.isArray(service.configEntries)
@@ -30,7 +31,9 @@ export function normalizeArchitectureResult(
         configEntries: undefined,
       };
     }),
-  });
+  };
+  // Preserve invalid topology for the bounded correction attempt; never erase evidence.
+  return architectureTopologyIssues(normalized).length ? normalized : normalizeArchitectureTopology(normalized);
 }
 
 /** Rejects shallow/generic topology drafts before they can mutate the canvas. */
@@ -53,6 +56,8 @@ export function evaluateArchitectureQuality(
         ? 7
         : 6;
   const issues: string[] = architectureTopologyIssues(result);
+  try { assertSemanticGraph({ ...result, mode: result.mode || "aws_architecture" }, "aws_architecture"); }
+  catch (error) { issues.push(error instanceof Error ? error.message : "Invalid architecture"); }
 
   if (services.length < minimumServices) {
     issues.push(`Only ${services.length} services were provided; at least ${minimumServices} purposeful services are required`);
@@ -84,6 +89,7 @@ export function hasUsableArchitecture(result: AIWorkflowResult | null): result i
   if (!result || !Array.isArray(result.serviceNodes) || !Array.isArray(result.groups) || !Array.isArray(result.dataFlowEdges)) {
     return false;
   }
+  try { assertSemanticGraph({ ...result, mode: "aws_architecture" }); } catch { return false; }
   const serviceIds = new Set(result.serviceNodes.map((service) => service.tempId).filter(Boolean));
   const groupIds = new Set(result.groups.map((group) => group.tempId).filter(Boolean));
   const resourceIds = new Set([...serviceIds, ...groupIds]);

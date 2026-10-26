@@ -1,5 +1,6 @@
 "use client";
 
+import { MIN_CANVAS_ZOOM } from "@/lib/canvas/workspace";
 import React, { useRef, useState, useCallback, useEffect, useId } from "react";
 import { CanvasViewport, CanvasTool } from "@/lib/canvas/types";
 import { screenToWorld } from "@/lib/canvas/coordinate-math";
@@ -131,7 +132,7 @@ export default function CanvasViewportContainer({
         const zoomFactor = Math.exp(
           -Math.max(-100, Math.min(100, deltaY)) * CTRL_WHEEL_ZOOM_SENSITIVITY
         );
-        const newZoom = Math.min(Math.max(viewport.zoom * zoomFactor, 0.15), 2.5);
+        const newZoom = Math.min(Math.max(viewport.zoom * zoomFactor, MIN_CANVAS_ZOOM), 2.5);
 
         const newX = mouseScreenX - (mouseScreenX - viewport.x) * (newZoom / viewport.zoom);
         const newY = mouseScreenY - (mouseScreenY - viewport.y) * (newZoom / viewport.zoom);
@@ -265,7 +266,7 @@ export default function CanvasViewportContainer({
       };
 
       const scale = currentDistance / (pinchStateRef.current.initialDistance || 1);
-      const newZoom = Math.min(Math.max(pinchStateRef.current.initialZoom * scale, 0.15), 2.5);
+      const newZoom = Math.min(Math.max(pinchStateRef.current.initialZoom * scale, MIN_CANVAS_ZOOM), 2.5);
 
       const worldMidX =
         (initialMidScreen.x - pinchStateRef.current.initialViewport.x) /
@@ -426,7 +427,7 @@ export default function CanvasViewportContainer({
         } else if (["+", "=", "-", "_"].includes(e.key)) {
           e.preventDefault();
           e.stopPropagation();
-          const zoom = Math.max(0.15, Math.min(2.5, current.zoom * (e.key === "-" || e.key === "_" ? 1 / 1.2 : 1.2)));
+          const zoom = Math.max(MIN_CANVAS_ZOOM, Math.min(2.5, current.zoom * (e.key === "-" || e.key === "_" ? 1 / 1.2 : 1.2)));
           const x = e.currentTarget.clientWidth / 2;
           const y = e.currentTarget.clientHeight / 2;
           updateViewport({ x: x - (x - current.x) * zoom / current.zoom, y: y - (y - current.y) * zoom / current.zoom, zoom });

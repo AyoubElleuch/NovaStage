@@ -4,7 +4,7 @@ import { getAuthenticatedProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { executeAIPipeline } from "@/lib/ai/pipeline";
-import { CanvasAIContext } from "@/lib/ai/types";
+import { CanvasAIContext, isAIGenerationMode } from "@/lib/ai/types";
 import { resolveGenerationOperation } from "@/lib/ai/orchestration";
 import { getProjectCanvasData, applyAIWorkflowResult, applyAWSServiceNodes } from "@/lib/canvas/server";
 
@@ -36,9 +36,10 @@ export async function POST(
 
     const body = await request.json().catch(() => ({}));
     const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
-    const mode = body?.mode === "aws_architecture" || body?.mode === "full_stack"
-      ? body.mode
-      : "workflow";
+    const mode = body?.mode ?? "workflow";
+    if (!isAIGenerationMode(mode)) {
+      return NextResponse.json({ error: "Choose Workflow or AWS Architecture." }, { status: 400 });
+    }
 
     if (!prompt) {
       return NextResponse.json(
@@ -300,16 +301,15 @@ export async function POST(
     let finalEdges = currentCanvasData.edges;
 
     // Apply milestone changes if present
-    let milestoneTempIdMap: Record<string, string> = {};
-    if (workflowResult.milestones && workflowResult.milestones.length > 0) {
+    if (mode === "workflow" && workflowResult.milestones.length > 0) {
       const reconciled = await applyAIWorkflowResult(
         project.id,
         workflowResult,
-        currentCanvasData
+        currentCanvasData,
+        session.user.id
       );
       finalNodes = reconciled.nodes;
       finalEdges = reconciled.edges;
-      milestoneTempIdMap = reconciled.tempIdToUuid || {};
     }
 
     // Apply AWS architecture nodes if present
@@ -317,12 +317,12 @@ export async function POST(
       (workflowResult.serviceNodes && workflowResult.serviceNodes.length > 0) ||
       (workflowResult.groups && workflowResult.groups.length > 0);
 
-    if (hasAWSContent) {
+    if (mode === "aws_architecture" && hasAWSContent) {
       const awsReconciled = await applyAWSServiceNodes(
         project.id,
         workflowResult,
         { nodes: finalNodes, edges: finalEdges },
-        milestoneTempIdMap
+        session.user.id
       );
       finalNodes = awsReconciled.nodes;
       finalEdges = awsReconciled.edges;

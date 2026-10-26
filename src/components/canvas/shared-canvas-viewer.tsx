@@ -22,7 +22,7 @@ export default function SharedCanvasViewer({ nodes, edges }: { nodes: CanvasNode
   const [searchOpen, setSearchOpen] = useState(false);
   const details = useRef<HTMLDialogElement>(null);
   const selected = nodes.find(node => node.id === selectedId);
-  const milestoneIndex = useMemo(() => new Map(nodes.filter(node => !node.node_type || node.node_type === "milestone").map((node, index) => [node.id, index])), [nodes]);
+  const milestoneIndex = useMemo(() => new Map(nodes.filter(node => !node.node_type || node.node_type === "milestone").sort((a, b) => a.sort_order - b.sort_order).map((node, index) => [node.id, index])), [nodes]);
   const { theme, toggleTheme } = useTheme();
   const area = () => ({ width: root.current?.clientWidth || window.innerWidth, height: root.current?.clientHeight || window.innerHeight });
   const fit = useCallback(() => { if (root.current) setViewport(fitCanvasNodes(nodes, { width: root.current.clientWidth, height: root.current.clientHeight })); }, [nodes]);

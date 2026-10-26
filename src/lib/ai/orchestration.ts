@@ -20,8 +20,7 @@ export function resolveGenerationOperation(
   const hasRelevantContent = nodes.some((node) => {
     const type = node.node_type || "milestone";
     if (mode === "workflow") return type === "milestone";
-    if (mode === "aws_architecture") return type === "aws_service" || type === "group";
-    return type === "milestone" || type === "aws_service" || type === "group";
+    return type === "aws_service" || type === "group";
   });
 
   if (!hasRelevantContent) return "create";

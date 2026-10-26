@@ -1,0 +1,165 @@
+"use client";
+
+import { useState } from "react";
+import useSWR from "swr";
+import { Check, Copy, Link2, Loader2, ShieldCheck } from "lucide-react";
+import type { AIGenerationMode } from "@/lib/ai/types";
+import type { z } from "zod";
+import type { workflowSchema } from "@/lib/mcp/workflow";
+import { mcpSetup } from "@/lib/mcp/setup";
+import type { DesktopAssistant } from "@/lib/mcp/desktop";
+import { CodexIcon, ClaudeIcon } from "@/components/assistant-logos";
+import CanvasAIModeSelect from "./canvas-ai-mode-select";
+import GeneratedDiagramPreview from "./generated-diagram-preview";
+
+type Workflow = z.infer<typeof workflowSchema>;
+type Draft = { id: string; prompt: string; mode: string; status: string; workflow: Workflow | null; validation: Record<string, number | boolean> | null };
+type State = { connection: { expires_at: string; last_used_at: string | null } | null; drafts: Draft[] };
+type Handoff = { url: string; prompt: string; provider: DesktopAssistant; requestId: string; expiresAt: string };
+const BUTTON = "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold transition hover:bg-neutral-100 disabled:opacity-50 dark:border-[#384961] dark:hover:bg-[#283548]";
+const FIELD = "w-full rounded-lg border border-neutral-200 bg-transparent p-2.5 text-xs dark:border-[#384961]";
+const LAUNCH_BUTTON = "flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed";
+const INACTIVE_BUTTON = "border-neutral-200 bg-neutral-50 text-neutral-400 dark:border-[#283548] dark:bg-[#141c28] dark:text-neutral-500";
+const CODEX_BUTTON = "cursor-pointer border-neutral-300 bg-white text-neutral-900 enabled:hover:border-neutral-500 enabled:hover:bg-neutral-100 enabled:active:bg-neutral-200 dark:border-[#46566d] dark:bg-[#202c3d] dark:text-neutral-100 dark:enabled:hover:border-emerald-500 dark:enabled:hover:bg-[#293c4d] dark:enabled:active:bg-[#31495b]";
+const CLAUDE_BUTTON = "cursor-pointer border-[#d7a38c] bg-[#fff8f3] text-[#9b482d] enabled:hover:border-[#b85b35] enabled:hover:bg-[#f9e7dc] enabled:active:bg-[#f2d8c8] dark:border-[#8b5c47] dark:bg-[#322820] dark:text-[#f0b693] dark:enabled:hover:border-[#dc986f] dark:enabled:hover:bg-[#493225] dark:enabled:active:bg-[#563c2c]";
+
+async function readState(url: string): Promise<State> {
+  const response = await fetch(url, { cache: "no-store" });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Unable to load your connection.");
+  return { ...data, connection: data.connection && Date.parse(data.connection.expires_at) > Date.now() ? data.connection : null };
+}
+
+export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }: {
+  projectId: string; projectSlug: string; onApplied?: () => Promise<void> | void;
+}) {
+  const endpoint = `/api/dashboard/projects/${encodeURIComponent(projectSlug)}/canvas/mcp`;
+  const { data, error: loadError, mutate, isLoading } = useSWR<State>(endpoint, readState, { refreshInterval: 5000, shouldRetryOnError: false });
+  const [token, setToken] = useState<string | null>(null);
+  const [shell, setShell] = useState<"powershell" | "bash">("powershell");
+  const [prompt, setPrompt] = useState("");
+  const [mode, setMode] = useState<AIGenerationMode>("workflow");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [handoff, setHandoff] = useState<Handoff | null>(null);
+  const active = Boolean(data?.connection);
+  const setup = token ? mcpSetup(projectId, window.location.origin, token, shell) : null;
+  const canLaunch = Boolean(prompt.trim()) && !busy;
+
+  async function launch(provider: DesktopAssistant) {
+    if (!prompt.trim() || busy) return;
+    setBusy(true); setError(null); setNotice(null); setHandoff(null);
+    try {
+      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "launch", provider, prompt: prompt.trim(), mode }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to prepare your request.");
+      setHandoff(result);
+      // A supported protocol link opens the app's composer; it never sends a message.
+      const link = document.createElement("a");
+      link.href = result.url; link.rel = "noreferrer"; link.click();
+      await mutate();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to open your assistant."); }
+    finally { setBusy(false); }
+  }
+
+  async function act(body: Record<string, unknown>, method = "POST") {
+    setBusy(true); setError(null); setNotice(null);
+    try {
+      const response = await fetch(endpoint, { method, headers: { "Content-Type": "application/json" }, body: method === "DELETE" ? undefined : JSON.stringify(body) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to complete this action.");
+      if (body.action === "connect") { setToken(result.token); setNotice("Connection created. Copy and run a setup command below."); }
+      if (method === "DELETE") { setToken(null); setNotice("Connection revoked. The old credential can no longer access this canvas."); }
+      if (body.action === "request") { setPrompt(""); setNotice("Request queued. Ask your connected assistant to read list_requests and generate your draft."); }
+      if (body.action === "apply") { await onApplied?.(); setNotice("Diagram added to your canvas."); }
+      if ((body.action === "dismiss" || body.action === "apply") && body.id === handoff?.requestId) setHandoff(null);
+      await mutate();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Something went wrong."); }
+    finally { setBusy(false); }
+  }
+  async function copy(value: string, label: string) {
+    try { await navigator.clipboard.writeText(value); setNotice(`${label} copied.`); setError(null); }
+    catch { setError("Clipboard unavailable. Select and copy the text below."); }
+  }
+
+  return <section aria-label="Connect your AI" className="mt-3 space-y-3 text-neutral-800 dark:text-neutral-200">
+    <p className="text-xs leading-5 text-neutral-500 dark:text-neutral-400">Describe your diagram, then choose an app. Review the prepared message and press Send there. Your model generates a draft here for you to review.</p>
+    {(error || loadError) && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">{error || loadError?.message}</p>}
+    {notice && <p role="status" className="text-xs leading-5 text-emerald-700 dark:text-emerald-400">{notice}</p>}
+    {isLoading && <p className="flex gap-2 text-xs"><Loader2 className="h-4 w-4 animate-spin" />Loading connection…</p>}
+    {data && <>
+      <form onSubmit={event => { event.preventDefault(); const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null; void launch(submitter?.value === "claude" ? "claude" : "codex"); }} className="space-y-2">
+        <label className="block text-xs font-semibold" htmlFor="desktop-ai-mode">What would you like to build?</label>
+        <CanvasAIModeSelect id="desktop-ai-mode" value={mode} onChange={setMode} disabled={busy} />
+        <textarea required aria-label="Describe your diagram" className={`${FIELD} min-h-24 resize-y leading-5`} maxLength={8000} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="A secure serverless app with authentication, a database, monitoring, and delivery milestones…" />
+        <div className="grid grid-cols-2 gap-2">
+          <button type="submit" name="assistant" value="codex" disabled={!canLaunch} className={`${LAUNCH_BUTTON} ${canLaunch ? CODEX_BUTTON : INACTIVE_BUTTON}`}><CodexIcon className="h-7 w-7" />Open Codex</button>
+          <button type="submit" name="assistant" value="claude" disabled={!canLaunch} className={`${LAUNCH_BUTTON} ${canLaunch ? CLAUDE_BUTTON : INACTIVE_BUTTON}`}><ClaudeIcon className="h-7 w-7" />Open Claude</button>
+        </div>
+        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">Desktop app required. No terminal setup. Temporary canvas access lasts 15 minutes. Your assistant account and its limits apply; no NovaStage AI credits.</p>
+      </form>
+      {busy && <p role="status" className="flex items-center gap-2 text-xs"><Loader2 className="h-3.5 w-3.5 animate-spin" />Preparing your request…</p>}
+      {handoff && <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+        <p role="status" className="text-xs font-medium">Request prepared for {handoff.provider === "codex" ? "Codex" : "Claude"}. Press Send in the app, then return here for your draft.</p>
+        <div className="flex flex-wrap gap-2"><a href={handoff.url} rel="noreferrer" className={BUTTON}>Open {handoff.provider === "codex" ? "Codex" : "Claude"} again</a><button type="button" className={BUTTON} onClick={() => copy(handoff.prompt, "Prepared request")}>Copy prepared request</button></div>
+        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">If the app did not open, open its desktop version and paste the prepared request. Allow network access if your assistant asks. For a long-running request, dismiss it and open a fresh one after access expires.</p>
+      </div>}
+      <details className="rounded-lg border border-neutral-200 p-3 dark:border-[#384961]">
+      <summary className="cursor-pointer text-xs font-medium text-neutral-500 dark:text-neutral-400">Advanced: persistent MCP connection</summary>
+      <div className="mt-3 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-medium">{active ? data.connection?.last_used_at ? "MCP client reached this canvas" : "Waiting for your MCP client" : "No active connection"}</p>
+        {active && <button type="button" disabled={busy} className={BUTTON} onClick={() => act({}, "DELETE")}>Revoke</button>}
+      </div>
+      {!token && <button type="button" disabled={busy} className={`${BUTTON} w-full bg-neutral-900 text-white hover:bg-neutral-700 dark:bg-emerald-700 dark:hover:bg-emerald-600`} onClick={() => act({ action: "connect" })}>
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}{active ? "Replace connection & get setup" : "Create canvas connection"}
+      </button>}
+      {setup && <div className="space-y-2 rounded-xl border border-neutral-200 p-3 dark:border-[#384961]">
+        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">Codex setup requires Node.js and npm. It runs the official Codex CLI through npx, which downloads it if needed. Claude setup requires Claude Code installed in your terminal.</p>
+        <label className="flex items-center justify-between gap-2 text-xs">Your terminal<select aria-label="Setup terminal" value={shell} onChange={event => setShell(event.target.value as typeof shell)} className="rounded border border-neutral-200 bg-white p-1 dark:border-[#384961] dark:bg-[#161d27]"><option value="powershell">PowerShell</option><option value="bash">macOS / Linux (Bash)</option></select></label>
+        {(["codex", "claude"] as const).map(client => <div key={client} className="space-y-1">
+          <button type="button" onClick={() => copy(setup[client], client === "codex" ? "Codex setup" : "Claude Code setup")} className={`${BUTTON} w-full`}><Copy className="h-3.5 w-3.5" />Copy {client === "codex" ? "Codex" : "Claude Code"} setup</button>
+          <details><summary className="cursor-pointer text-[11px] text-neutral-500 dark:text-neutral-400">View command</summary><pre className="mt-1 max-h-28 overflow-auto rounded bg-neutral-100 p-2 text-[10px] dark:bg-[#10151f]">{setup[client]}</pre></details>
+        </div>)}
+        <button type="button" onClick={() => copy(setup.codexLaunch, "Codex launch command")} className={`${BUTTON} w-full`}><Copy className="h-3.5 w-3.5" />Copy Codex launch command</button>
+        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">First run the setup command. Then run the launch command in that same terminal so Codex inherits the token, and sign in if prompted. The credential is shown only now, expires after 30 days, and grants read and draft access to this canvas. Keep copied commands private. Replacing it revokes the previous credential.</p>
+        <button type="button" className={BUTTON} onClick={() => setToken(null)}>Hide setup credential</button>
+      </div>}
+      {active && <>
+        <p className="flex items-start gap-2 text-[11px] leading-5 text-neutral-500 dark:text-neutral-400"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />Only this canvas is shared with your assistant. You review drafts before adding them. Existing work stays in place. Expires {new Date(data.connection!.expires_at).toLocaleDateString()}.</p>
+        <form onSubmit={event => { event.preventDefault(); if (prompt.trim()) void act({ action: "request", prompt, mode }); }} className="space-y-2 border-t border-neutral-200 pt-3 dark:border-[#384961]">
+          <label className="block text-xs font-semibold" htmlFor="mcp-mode">What would you like to build?</label>
+          <CanvasAIModeSelect id="mcp-mode" value={mode} onChange={setMode} disabled={busy} label="Persistent generation mode" />
+          <textarea aria-label="Prompt for your AI" className={`${FIELD} min-h-20 resize-y`} maxLength={8000} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="Describe the workflow or architecture you need…" />
+          <button type="submit" disabled={busy || !prompt.trim()} className={BUTTON}>Queue for your assistant</button>
+        </form>
+        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">After queuing, paste this into Codex or Claude Code. Your assistant must be running and prompted; requests do not start it automatically.</p>
+        <button type="button" className={`${BUTTON} w-full`} onClick={() => copy(`Use the ${mcpSetup(projectId, window.location.origin, "", shell).name} MCP server. Read get_canvas and list_requests, generate the pending diagram using my selected model, search_aws_services for canonical AWS IDs, then call propose_workflow with the requestId. Tell me when the draft is ready to review in NovaStage.`, "Assistant prompt")}><Copy className="h-3.5 w-3.5" />Copy assistant prompt</button>
+      </>}
+      </div></details>
+      {!!data.drafts.length && <div className="space-y-2 border-t border-neutral-200 pt-3 dark:border-[#384961]">
+        <h4 className="text-xs font-semibold">Your requests & drafts</h4>
+        {data.drafts.map(draft => <article key={draft.id} className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-[#384961]">
+          <p className="break-words text-xs font-semibold">{draft.workflow?.summary || draft.prompt}</p>
+          <p className="text-[11px] font-semibold">{draft.mode === "aws_architecture" ? "AWS Architecture" : "Workflow"}</p>
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{draft.status === "pending" ? "Queued · Waiting for your assistant" : draft.status === "ready" ? "Draft ready · Review before adding" : draft.status}</p>
+          {draft.workflow && <details><summary className="cursor-pointer text-xs font-medium">Review diagram content · {draft.workflow.milestones.length} milestones · {draft.workflow.serviceNodes.length} services</summary>
+            <div className="mt-2 max-h-64 space-y-2 overflow-auto text-xs leading-5">
+              <GeneratedDiagramPreview workflow={{ ...draft.workflow, intent: "create_parallel" }} />
+              {draft.workflow.milestones.map(node => <div key={node.tempId}><p className="font-semibold">{node.title}</p><p className="whitespace-pre-wrap break-words">{node.description}</p><ul className="list-inside list-disc">{node.checkpoints.map((cp, index) => <li key={index}>{cp.title}</li>)}</ul></div>)}
+              {draft.workflow.serviceNodes.map(node => <div key={node.tempId}><p className="font-semibold">{node.name} · {node.serviceId}</p><p className="break-words">{node.description}</p><p>{node.region}</p>{Object.entries(node.config || {}).map(([key, value]) => <p className="break-words" key={key}>{key}: {value}</p>)}</div>)}
+              {draft.workflow.groups.map(group => <p key={group.tempId}>{group.label} ({group.style}) · {group.childTempIds.join(", ")}</p>)}
+              {[...draft.workflow.edges, ...draft.workflow.dataFlowEdges].map((edge, index) => <p className="break-words" key={index}>{edge.fromId} → {edge.toId}{"label" in edge && edge.label ? ` · ${edge.label}` : ""}</p>)}
+              <p className="text-neutral-500 dark:text-neutral-400">NovaStage validates dependencies and nesting and arranges the diagram when you add it.</p>
+            </div>
+          </details>}
+          <div className="flex gap-2">{draft.status === "ready" && <button type="button" className={`${BUTTON} text-emerald-700 dark:text-emerald-400`} disabled={busy} onClick={() => act({ action: "apply", id: draft.id })}><Check className="h-3.5 w-3.5" />Add to canvas</button>}
+            {draft.status !== "applying" && <button type="button" className={BUTTON} disabled={busy} onClick={() => act({ action: "dismiss", id: draft.id })}>Dismiss</button>}
+          </div>
+        </article>)}
+      </div>}
+    </>}
+  </section>;
+}
