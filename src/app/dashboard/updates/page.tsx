@@ -5,6 +5,18 @@ const releases = [
   {
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
+    title: "Bring Your Own AI to the Canvas",
+    summary: "Create workflows, AWS architecture, and full-stack diagrams with your own Codex or Claude Code models, then review and add them to your canvas.",
+    changes: [
+      "Connect your AI: Set up Codex or Claude Code with a personal, expiring MCP connection scoped to one canvas, with revocation at any time.",
+      "Prompt from the canvas: Queue a workflow, AWS architecture, or full-stack request and ask your connected assistant to generate it using your selected model, without spending NovaStage AI credits.",
+      "Review before adding: Inspect generated milestones, tasks, services, configuration, and connections, then add the diagram alongside existing work or dismiss it.",
+      "More reliable diagrams: Validate AWS catalog IDs and graph references, repair circular dependencies, and save accepted diagrams together so a failed save leaves no partial changes.",
+    ],
+  },
+  {
+    version: "Beta v1.1.3",
+    date: "October 25, 2026",
     title: "View-Only Sharing & a Better Mobile Canvas",
     summary: "Share your canvas without inviting collaborators, with faster loading and more comfortable controls on phones.",
     changes: [
