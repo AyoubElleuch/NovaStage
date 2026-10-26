@@ -43,7 +43,7 @@ describe("external assistant generation", () => {
     const duplicate = sampleArchitecture(); duplicate.serviceNodes[0].tempId = duplicate.serviceNodes[1].tempId;
     expect(() => prepareWorkflow(duplicate)).toThrow("unique tempIds");
   });
-  it("keeps orphan repair acyclic when an existing dependency points backwards", () => {
+  it("preserves a disconnected milestone when a dependency points backwards", () => {
     const input = sampleWorkflow();
     input.milestones.push({ ...structuredClone(input.milestones[1]), tempId: "verify", title: "Verify release" });
     input.edges = [{ fromId: "verify", toId: "plan" }];
@@ -51,7 +51,8 @@ describe("external assistant generation", () => {
     const adjacency = new Map(workflow.milestones.map(node => [node.tempId!, workflow.edges.filter(edge => edge.fromId === node.tempId).map(edge => edge.toId)]));
     const cycle = (id: string, path = new Set<string>()): boolean => path.has(id) || (adjacency.get(id) || []).some(next => cycle(next, new Set([...path, id])));
     expect([...adjacency.keys()].some(id => cycle(id))).toBe(false);
-    expect(report.cyclesRemoved).toBeGreaterThan(0);
+    expect(report.cyclesRemoved).toBe(0);
+    expect(workflow.edges).toEqual(input.edges);
   });
   it("supports workflow-only and AWS-only diagrams and enforces mode contents and size limits", () => {
     const base = sampleWorkflow();

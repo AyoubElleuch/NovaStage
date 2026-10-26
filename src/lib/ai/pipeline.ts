@@ -14,6 +14,7 @@ import { decomposePrompt } from "./phases/decompose";
 import { generateDeepWorkflow } from "./phases/generate";
 import { generateAWSArchitecture } from "./phases/generate-aws";
 import { validateAndRepairWorkflow } from "./phases/validate";
+import { assertSemanticGraph } from "./semantic-graph";
 
 export * from "./types";
 
@@ -42,7 +43,7 @@ export async function executeAIPipeline(
   // Phase 1: Decompose prompt into structured architectural specification
   let decomposition;
   try {
-    decomposition = await decomposePrompt(cleanPrompt);
+    decomposition = await decomposePrompt(cleanPrompt, mode);
   } catch (decompErr) {
     console.warn("[AI Pipeline] Phase 1 decomposition encountered error, continuing with fallback:", decompErr);
   }
@@ -60,6 +61,7 @@ export async function executeAIPipeline(
   }
 
   // Phase 3: Validate, sanitize, and auto-repair graph DAG
+  assertSemanticGraph(rawWorkflow, mode);
   const { workflow: validatedWorkflow, report } = validateAndRepairWorkflow(rawWorkflow);
 
   if (process.env.NODE_ENV !== "production") {

@@ -3,7 +3,7 @@
  * Analyzes the user's raw prompt into domain tags, complexity tier, concern areas, and parallel tracks.
  */
 
-import { PromptDecomposition } from "../types";
+import { PromptDecomposition, type AIGenerationMode } from "../types";
 import { DECOMPOSE_SYSTEM_INSTRUCTION } from "../prompts/system-decompose";
 import { callGemini } from "../gemini";
 
@@ -187,9 +187,9 @@ export function buildFallbackDecomposition(prompt: string): PromptDecomposition 
 /**
  * Execute Phase 1: Decompose user prompt into structured architectural spec
  */
-export async function decomposePrompt(prompt: string): Promise<PromptDecomposition> {
+export async function decomposePrompt(prompt: string, mode: AIGenerationMode = "workflow"): Promise<PromptDecomposition> {
   const result = await callGemini<PromptDecomposition>(
-    `Analyze and technically decompose this project request:\n\n"${prompt}"`,
+    `Selected mode: ${mode}. ${mode === "aws_architecture" ? "Analyze infrastructure requirements, service roles, containment and data flow only. Do not produce implementation phases or milestones." : "Analyze delivery milestones, checkpoints and explicit dependencies only. Do not design AWS resources."}\nAnalyze this request:\n\n"${prompt}"`,
     DECOMPOSITION_SCHEMA,
     {
       systemInstruction: DECOMPOSE_SYSTEM_INSTRUCTION,

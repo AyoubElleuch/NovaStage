@@ -51,5 +51,23 @@ export function architectureTopologyIssues(result: AIWorkflowResult): string[] {
     issues.push("Connections must reference distinct declared resources");
   }
   if (services.some(service => !service.serviceId || !service.tempId)) issues.push("Every service requires serviceId and tempId");
+  const parents = new Map<string, string>();
+  const groupIds = new Set(groups.map(group => group.tempId));
+  const assign = (id: string, parent: string) => {
+    if (!groupIds.has(parent) || parent === id || (parents.has(id) && parents.get(id) !== parent)) issues.push(`Conflicting or invalid parent containment for ${id}`);
+    parents.set(id, parent);
+  };
+  for (const node of resources) if (node.parentGroupTempId) assign(node.tempId, node.parentGroupTempId);
+  for (const group of groups) for (const child of group.childTempIds || []) {
+    if (!allowed.has(child)) issues.push(`Unknown child ${child}`);
+    assign(child, group.tempId);
+  }
+  for (const id of parents.keys()) {
+    const seen = new Set([id]); let parent = parents.get(id);
+    while (parent) {
+      if (seen.has(parent)) { issues.push(`Containment cycle involving ${id}`); break; }
+      seen.add(parent); parent = parents.get(parent);
+    }
+  }
   return issues;
 }
