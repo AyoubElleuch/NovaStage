@@ -35,7 +35,7 @@ async function check(label, action) {
 }
 async function fixturePage(context, shared = false, empty = false) {
   const page = await context.newPage();
-  const state = { nodes: empty ? [] : structuredClone(nodes), edges: empty ? [] : structuredClone(edges), mutations: [], shareToken: null };
+  const state = { nodes: empty ? [] : structuredClone(nodes), edges: empty ? [] : structuredClone(edges), mutations: [], shareToken: null, mcpConnection: null, mcpDrafts: [] };
   const errors = [];
   page.on("pageerror", error => { errors.push(error.message); console.error(error.message); });
   page.setDefaultTimeout(15_000);
@@ -44,6 +44,20 @@ async function fixturePage(context, shared = false, empty = false) {
     const url = new URL(request.url());
     if (url.origin !== origin) return route.abort();
     if (!url.pathname.startsWith("/api/")) return route.continue();
+    if (url.pathname.endsWith("/mcp")) {
+      if (request.method() === "GET") return route.fulfill({ json: { connection: state.mcpConnection, drafts: state.mcpDrafts } });
+      if (request.method() === "DELETE") { state.mcpConnection = null; return route.fulfill({ json: { success: true } }); }
+      const body = request.postDataJSON();
+      state.mutations.push({ mcp: true, ...body });
+      if (body.action === "connect") {
+        state.mcpConnection = { expires_at: "2099-01-01T00:00:00Z", last_used_at: null };
+        return route.fulfill({ json: { token: `ns_mcp_${"a".repeat(64)}` } });
+      }
+      if (body.action === "request") state.mcpDrafts.push({ id: "mcp-draft", prompt: body.prompt, mode: body.mode, status: "pending", workflow: null });
+      if (body.action === "apply") { state.nodes.push({ ...structuredClone(nodes[0]), id: "mcp-generated", title: "MCP release milestone", claimed_by: null }); state.mcpDrafts = []; }
+      if (body.action === "dismiss") state.mcpDrafts = [];
+      return route.fulfill({ json: { success: true } });
+    }
     if (url.pathname.endsWith("/share")) {
       if (request.method() === "POST") state.shareToken ||= "a".repeat(64);
       if (request.method() === "DELETE") state.shareToken = null;
@@ -113,6 +127,46 @@ try {
       assert.ok((await item.boundingBox()).y > find.y + find.height, "fitted nodes clear the Find control");
     }
     await page.screenshot({ path: resolve(output, "desktop.png") });
+  });
+  await check("MCP setup, request queue, draft review, acceptance and revocation preserve the canvas", async () => {
+    await page.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
+    const assistant = page.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByRole("button", { name: "Create canvas connection", exact: true }).focus();
+    await page.keyboard.press("Tab");
+    assert.equal(await page.getByRole("button", { name: "Close AI Assistant", exact: true }).evaluate(element => element === document.activeElement), true, "keyboard focus stays in the assistant");
+    await assistant.getByRole("button", { name: "Create canvas connection", exact: true }).click();
+    await assistant.getByRole("button", { name: "Copy Codex setup", exact: true }).click();
+    assert.match(await page.evaluate(() => navigator.clipboard.readText()), /codex mcp add .* --url .*\/api\/mcp/);
+    await assistant.getByRole("button", { name: "Copy Claude Code setup", exact: true }).click();
+    assert.match(await page.evaluate(() => navigator.clipboard.readText()), /claude mcp add --transport http/);
+    await page.screenshot({ path: resolve(output, "desktop-mcp-setup.png") });
+    await assistant.getByRole("button", { name: "Hide setup credential", exact: true }).click();
+    await assistant.getByRole("textbox", { name: "Prompt for your AI", exact: true }).fill("Plan a secure serverless API");
+    await assistant.getByRole("button", { name: "Queue for your assistant", exact: true }).click();
+    await assistant.getByText("Queued · Waiting for your assistant", { exact: true }).waitFor();
+    state.mcpConnection.last_used_at = new Date().toISOString();
+    state.mcpDrafts[0] = { ...state.mcpDrafts[0], status: "ready", workflow: {
+      summary: "Secure serverless API", mode: "workflow", milestones: [{ tempId: "release", title: "MCP release milestone", checkpoints: [{ title: "Verify access boundaries" }] }],
+      edges: [], serviceNodes: [], groups: [], dataFlowEdges: [],
+    } };
+    await assistant.getByText("Draft ready · Review before adding", { exact: true }).waitFor();
+    await assistant.getByText(/Review diagram content/).click();
+    await assistant.getByText("Verify access boundaries", { exact: true }).waitFor();
+    await page.screenshot({ path: resolve(output, "desktop-mcp-draft.png") });
+    const previousCount = state.nodes.length;
+    await assistant.getByRole("button", { name: "Add to canvas", exact: true }).click();
+    await assistant.getByText("Diagram added to your canvas.", { exact: true }).waitFor();
+    assert.equal(state.nodes.length, previousCount + 1);
+    assert.equal(state.mutations.some(body => body.prompt && !body.mcp), false, "MCP generation must not call built-in AI");
+    await assistant.getByRole("button", { name: "Revoke", exact: true }).click();
+    await assistant.getByText("No active connection", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "Close AI Assistant", exact: true }).click();
+    assert.equal(await page.getByRole("button", { name: "Toggle AI Assistant", exact: true }).evaluate(element => element === document.activeElement), true, "closing restores trigger focus");
+    // Restore the independent navigation fixture after the dedicated MCP flow.
+    state.nodes = state.nodes.filter(node => node.id !== "mcp-generated");
+    state.mutations = [];
+    await page.reload();
+    await page.getByRole("button", { name: "Find on canvas" }).waitFor();
   });
   await check("search finds a checkpoint and jumps to its milestone", async () => {
     await page.getByRole("button", { name: "Find on canvas" }).click();
@@ -385,6 +439,18 @@ try {
     await creator.getByRole("button", { name: "Deselect AWS resource", exact: true }).click();
     await creator.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
     const assistant = creator.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByRole("button", { name: "Create canvas connection", exact: true }).click();
+    assert.equal(await assistant.evaluate(element => element.scrollWidth <= element.clientWidth + 1), true, "MCP panel fits a 320px phone");
+    await creator.screenshot({ path: resolve(output, "mobile-mcp-setup.png") });
+    await assistant.getByRole("button", { name: "Hide setup credential", exact: true }).click();
+    await assistant.getByRole("textbox", { name: "Prompt for your AI", exact: true }).fill("Create an AWS architecture");
+    await creator.setViewportSize({ width: 320, height: 330 });
+    await creator.waitForFunction(() => document.documentElement.style.getPropertyValue("--canvas-visible-height") === "330px");
+    const mcpBounds = await assistant.boundingBox();
+    assert.ok(mcpBounds.y >= -1 && mcpBounds.y + mcpBounds.height <= 331, "MCP panel stays above the phone keyboard");
+    await creator.screenshot({ path: resolve(output, "mobile-mcp-keyboard.png") });
+    await creator.setViewportSize({ width: 320, height: 568 });
+    await assistant.getByRole("button", { name: "Built-in AI", exact: true }).click();
     await assistant.getByRole("button", { name: "Workflow", exact: true }).click();
     await assistant.getByRole("button", { name: "AWS", exact: true }).click();
     await assistant.getByRole("button", { name: /Full Stack/ }).click();

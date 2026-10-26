@@ -16,8 +16,12 @@ import {
 } from "lucide-react";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
 import { AIGenerationMode } from "@/lib/ai/types";
+import CanvasMcpAssistant from "./canvas-mcp-assistant";
 
 interface CanvasAIAssistantProps {
+  projectId?: string;
+  projectSlug?: string;
+  onExternalApplied?: () => Promise<void> | void;
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
@@ -152,6 +156,9 @@ declare global {
 const emptySubscribe = () => () => {};
 
 export default function CanvasAIAssistant({
+  projectId,
+  projectSlug,
+  onExternalApplied,
   isOpen,
   onToggle,
   onClose,
@@ -161,6 +168,7 @@ export default function CanvasAIAssistant({
   userPlan = "free",
   onSubmitPrompt,
 }: CanvasAIAssistantProps) {
+  const [provider, setProvider] = useState<"external" | "builtin">(projectSlug ? "external" : "builtin");
   const [prompt, setPrompt] = useState("");
   const [mode, setMode] = useState<AIGenerationMode>("workflow");
   const [isListening, setIsListening] = useState(false);
@@ -172,6 +180,7 @@ export default function CanvasAIAssistant({
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const speechSupported = useSyncExternalStore(
@@ -208,6 +217,26 @@ export default function CanvasAIAssistant({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, isListening, onClose, stopListening]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const trigger = triggerRef.current;
+    dialogRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), summary, a[href]"
+      ) || []).filter(element => element.getClientRects().length > 0);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
+        event.preventDefault(); first?.focus();
+      }
+    };
+    document.addEventListener("keydown", trapFocus);
+    return () => { document.removeEventListener("keydown", trapFocus); trigger?.focus(); };
+  }, [isOpen]);
+
   // Adjust textarea height smoothly based on content
   const adjustHeight = useCallback(() => {
     const el = textareaRef.current;
@@ -220,13 +249,14 @@ export default function CanvasAIAssistant({
 
   // Focus and adjust height when prompt or open state changes
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
+    if (isOpen && provider === "builtin") {
+      const timer = setTimeout(() => {
         textareaRef.current?.focus();
         adjustHeight();
       }, 50);
+      return () => clearTimeout(timer);
     }
-  }, [isOpen, adjustHeight]);
+  }, [isOpen, adjustHeight, provider]);
 
   useEffect(() => {
     adjustHeight();
@@ -366,6 +396,7 @@ export default function CanvasAIAssistant({
     <>
       {/* Floating AI Trigger Button (Separated from bottom dock) */}
       <button
+        ref={triggerRef}
         type="button"
         onClick={onToggle}
         title={isOpen ? "Close AI Assistant" : "Open AI Assistant"}
@@ -420,7 +451,7 @@ export default function CanvasAIAssistant({
                 >
                   AI assistant
                 </h3>
-                <span
+                {provider === "builtin" && <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
                     isQuotaDepleted
                       ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/50"
@@ -438,10 +469,10 @@ export default function CanvasAIAssistant({
                   <span className="hidden md:inline text-[9px] font-medium opacity-75 border-l border-neutral-300 dark:border-neutral-600 pl-1.5">
                     {userPlan === "pro" ? "Gemini Ultra" : userPlan === "plus" ? "Gemini Pro" : "Gemini Flash"}
                   </span>
-                </span>
+                </span>}
               </div>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                Describe what to create or change.
+                {provider === "external" ? "Connect Codex or Claude Code to this canvas." : "Describe what to create or change."}
               </p>
             </div>
 
@@ -455,8 +486,16 @@ export default function CanvasAIAssistant({
             </button>
           </div>
 
+          {projectId && projectSlug && <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-[#10151f]" aria-label="AI provider">
+            {(["external", "builtin"] as const).map(value => <button key={value} type="button" aria-pressed={provider === value}
+              onClick={() => { if (!isThinking) { stopListening(); setProvider(value); } }} disabled={isThinking}
+              className={`min-h-10 rounded-md px-2 text-xs font-semibold ${provider === value ? "bg-white text-neutral-900 shadow-sm dark:bg-[#283548] dark:text-white" : "text-neutral-500 dark:text-neutral-400"}`}>
+              {value === "external" ? "Your AI · MCP" : "Built-in AI"}
+            </button>)}
+          </div>}
+          {provider === "external" && projectId && projectSlug && <CanvasMcpAssistant projectId={projectId} projectSlug={projectSlug} onApplied={onExternalApplied} />}
           {/* Form & Input Area */}
-          <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
+          {provider === "builtin" && <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
             {/* Mode Selector */}
             <div className="grid w-full grid-cols-3 p-1 bg-neutral-100 dark:bg-[#1e2634] rounded-lg border border-neutral-200/60 dark:border-[#283548] md:flex md:w-fit [&>button]:min-w-0 [&>button]:justify-center [&>button]:flex-wrap">
               <button
@@ -657,7 +696,7 @@ export default function CanvasAIAssistant({
                 </div>
               </div>
             )}
-          </form>
+          </form>}
         </div>
         </>,
         portalContainer ?? document.body
