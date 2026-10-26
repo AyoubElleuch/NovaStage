@@ -472,7 +472,7 @@ export default function CanvasAIAssistant({
                 </span>}
               </div>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                {provider === "external" ? "Connect Codex or Claude Code to this canvas." : "Describe what to create or change."}
+                {provider === "external" ? "Open your AI with a prepared request." : "Describe what to create or change."}
               </p>
             </div>
 
@@ -490,7 +490,7 @@ export default function CanvasAIAssistant({
             {(["external", "builtin"] as const).map(value => <button key={value} type="button" aria-pressed={provider === value}
               onClick={() => { if (!isThinking) { stopListening(); setProvider(value); } }} disabled={isThinking}
               className={`min-h-10 rounded-md px-2 text-xs font-semibold ${provider === value ? "bg-white text-neutral-900 shadow-sm dark:bg-[#283548] dark:text-white" : "text-neutral-500 dark:text-neutral-400"}`}>
-              {value === "external" ? "Your AI · MCP" : "Built-in AI"}
+              {value === "external" ? "Your AI" : "Built-in AI"}
             </button>)}
           </div>}
           {provider === "external" && projectId && projectSlug && <CanvasMcpAssistant projectId={projectId} projectSlug={projectSlug} onApplied={onExternalApplied} />}

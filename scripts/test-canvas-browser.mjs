@@ -35,6 +35,15 @@ async function check(label, action) {
 }
 async function fixturePage(context, shared = false, empty = false) {
   const page = await context.newPage();
+  // Validate protocol URLs without opening installed desktop apps or sending messages.
+  await page.addInitScript(() => {
+    window.__assistantLaunches = [];
+    const nativeClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function () {
+      if (this.protocol === "codex:" || this.protocol === "claude:") { window.__assistantLaunches.push(this.href); return; }
+      return nativeClick.call(this);
+    };
+  });
   const state = { nodes: empty ? [] : structuredClone(nodes), edges: empty ? [] : structuredClone(edges), mutations: [], shareToken: null, mcpConnection: null, mcpDrafts: [] };
   const errors = [];
   page.on("pageerror", error => { errors.push(error.message); console.error(error.message); });
@@ -49,6 +58,13 @@ async function fixturePage(context, shared = false, empty = false) {
       if (request.method() === "DELETE") { state.mcpConnection = null; return route.fulfill({ json: { success: true } }); }
       const body = request.postDataJSON();
       state.mutations.push({ mcp: true, ...body });
+      if (body.action === "launch") {
+        const id = `desktop-${state.mutations.length}`;
+        state.mcpDrafts.push({ id, prompt: body.prompt, mode: body.mode, status: "pending", workflow: null });
+        const prompt = `Generate request ${id} from ${origin}/api/mcp using temporary canvas access, then propose_workflow. No terminal setup needed.`;
+        const url = body.provider === "codex" ? `codex://new?prompt=${encodeURIComponent(prompt)}` : `claude://code/new?q=${encodeURIComponent(prompt)}`;
+        return route.fulfill({ json: { requestId: id, provider: body.provider, prompt, url, expiresAt: "2099-01-01T00:00:00Z" } });
+      }
       if (body.action === "connect") {
         state.mcpConnection = { expires_at: "2099-01-01T00:00:00Z", last_used_at: null };
         return route.fulfill({ json: { token: `ns_mcp_${"a".repeat(64)}` } });
@@ -128,9 +144,45 @@ try {
     }
     await page.screenshot({ path: resolve(output, "desktop.png") });
   });
+  await check("two assistant buttons open prepared desktop requests without MCP installation", async () => {
+    await page.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
+    const assistant = page.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByRole("button", { name: "Open Codex", exact: true }).waitFor();
+    assert.equal(await assistant.getByRole("button", { name: "Create canvas connection", exact: true }).isVisible(), false, "terminal setup is hidden under Advanced");
+    assert.equal(await assistant.getByRole("button", { name: "Open Codex", exact: true }).isDisabled(), true);
+    await assistant.getByRole("textbox", { name: "Describe your diagram", exact: true }).fill("Plan a secure serverless API");
+    await page.screenshot({ path: resolve(output, "desktop-assistant-buttons.png") });
+    await assistant.getByRole("button", { name: "Open Codex", exact: true }).click();
+    await assistant.getByRole("link", { name: "Open Codex again", exact: true }).waitFor();
+    const launched = await page.evaluate(() => window.__assistantLaunches);
+    assert.equal(new URL(launched[0]).protocol, "codex:");
+    assert.match(new URL(launched[0]).searchParams.get("prompt"), /temporary canvas access/);
+    assert.equal(state.mcpConnection, null, "opening an assistant must not install or rotate a persistent connection");
+    await assistant.getByRole("button", { name: "Copy prepared request", exact: true }).click();
+    assert.match(await page.evaluate(() => navigator.clipboard.readText()), /propose_workflow/);
+    state.mcpDrafts[0] = { ...state.mcpDrafts[0], status: "ready", workflow: {
+      summary: "Diagram from desktop app", mode: "workflow", milestones: [{ tempId: "release", title: "MCP release milestone", checkpoints: [{ title: "Verify access boundaries" }] }],
+      edges: [], serviceNodes: [], groups: [], dataFlowEdges: [],
+    } };
+    await assistant.getByText("Draft ready · Review before adding", { exact: true }).waitFor();
+    await assistant.getByRole("button", { name: "Add to canvas", exact: true }).click();
+    await assistant.getByText("Diagram added to your canvas.", { exact: true }).waitFor();
+    await assistant.getByRole("button", { name: "Open Claude", exact: true }).click();
+    await assistant.getByRole("link", { name: "Open Claude again", exact: true }).waitFor();
+    const claude = new URL((await page.evaluate(() => window.__assistantLaunches)).at(-1));
+    assert.equal(claude.protocol, "claude:"); assert.equal(claude.pathname, "/new");
+    assert.match(claude.searchParams.get("q"), /temporary canvas access/);
+    await assistant.getByRole("button", { name: "Dismiss", exact: true }).click();
+    await assistant.getByRole("link", { name: "Open Claude again", exact: true }).waitFor({ state: "hidden" });
+    assert.equal(state.mutations.filter(body => !body.mcp).length, 0, "desktop requests must not invoke built-in AI");
+    await page.getByRole("button", { name: "Close AI Assistant", exact: true }).click();
+    state.nodes = state.nodes.filter(node => node.id !== "mcp-generated"); state.mutations = [];
+    await page.reload(); await page.getByRole("button", { name: "Find on canvas" }).waitFor();
+  });
   await check("MCP setup, request queue, draft review, acceptance and revocation preserve the canvas", async () => {
     await page.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
     const assistant = page.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByText("Advanced: persistent MCP connection", { exact: true }).click();
     await assistant.getByRole("button", { name: "Create canvas connection", exact: true }).focus();
     await page.keyboard.press("Tab");
     assert.equal(await page.getByRole("button", { name: "Close AI Assistant", exact: true }).evaluate(element => element === document.activeElement), true, "keyboard focus stays in the assistant");
@@ -442,6 +494,11 @@ try {
     await creator.getByRole("button", { name: "Deselect AWS resource", exact: true }).click();
     await creator.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
     const assistant = creator.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByRole("textbox", { name: "Describe your diagram", exact: true }).fill("Create an AWS architecture");
+    assert.equal(await assistant.getByRole("button", { name: "Open Codex", exact: true }).isEnabled(), true);
+    assert.equal(await assistant.getByRole("button", { name: "Open Claude", exact: true }).isEnabled(), true);
+    await creator.screenshot({ path: resolve(output, "mobile-assistant-buttons.png") });
+    await assistant.getByText("Advanced: persistent MCP connection", { exact: true }).click();
     await assistant.getByRole("button", { name: "Create canvas connection", exact: true }).click();
     assert.equal(await assistant.evaluate(element => element.scrollWidth <= element.clientWidth + 1), true, "MCP panel fits a 320px phone");
     await creator.screenshot({ path: resolve(output, "mobile-mcp-setup.png") });

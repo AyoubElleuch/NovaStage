@@ -7,10 +7,13 @@ import type { AIGenerationMode } from "@/lib/ai/types";
 import type { z } from "zod";
 import type { workflowSchema } from "@/lib/mcp/workflow";
 import { mcpSetup } from "@/lib/mcp/setup";
+import type { DesktopAssistant } from "@/lib/mcp/desktop";
+import { CodexIcon, ClaudeIcon } from "@/components/assistant-logos";
 
 type Workflow = z.infer<typeof workflowSchema>;
 type Draft = { id: string; prompt: string; mode: string; status: string; workflow: Workflow | null; validation: Record<string, number | boolean> | null };
 type State = { connection: { expires_at: string; last_used_at: string | null } | null; drafts: Draft[] };
+type Handoff = { url: string; prompt: string; provider: DesktopAssistant; requestId: string; expiresAt: string };
 const BUTTON = "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold transition hover:bg-neutral-100 disabled:opacity-50 dark:border-[#384961] dark:hover:bg-[#283548]";
 const FIELD = "w-full rounded-lg border border-neutral-200 bg-transparent p-2.5 text-xs dark:border-[#384961]";
 
@@ -33,8 +36,26 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [handoff, setHandoff] = useState<Handoff | null>(null);
   const active = Boolean(data?.connection);
   const setup = token ? mcpSetup(projectId, window.location.origin, token, shell) : null;
+
+  async function launch(provider: DesktopAssistant) {
+    if (!prompt.trim() || busy) return;
+    setBusy(true); setError(null); setNotice(null); setHandoff(null);
+    try {
+      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "launch", provider, prompt: prompt.trim(), mode }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to prepare your request.");
+      setHandoff(result);
+      // A supported protocol link opens the app's composer; it never sends a message.
+      const link = document.createElement("a");
+      link.href = result.url; link.rel = "noreferrer"; link.click();
+      await mutate();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to open your assistant."); }
+    finally { setBusy(false); }
+  }
 
   async function act(body: Record<string, unknown>, method = "POST") {
     setBusy(true); setError(null); setNotice(null);
@@ -46,6 +67,7 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
       if (method === "DELETE") { setToken(null); setNotice("Connection revoked. The old credential can no longer access this canvas."); }
       if (body.action === "request") { setPrompt(""); setNotice("Request queued. Ask your connected assistant to read list_requests and generate your draft."); }
       if (body.action === "apply") { await onApplied?.(); setNotice("Diagram added to your canvas."); }
+      if ((body.action === "dismiss" || body.action === "apply") && body.id === handoff?.requestId) setHandoff(null);
       await mutate();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Something went wrong."); }
     finally { setBusy(false); }
@@ -56,14 +78,30 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
   }
 
   return <section aria-label="Connect your AI" className="mt-3 space-y-3 text-neutral-800 dark:text-neutral-200">
-    <div className="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/30">
-      <div className="flex items-center gap-2 text-sm font-semibold"><Link2 className="h-4 w-4 text-emerald-600" />Your models. Your canvas.</div>
-      <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">Generate workflows, AWS architecture, and full-stack diagrams with Codex or Claude Code. Uses your assistant account and its limits; no NovaStage AI credits.</p>
-    </div>
+    <p className="text-xs leading-5 text-neutral-500 dark:text-neutral-400">Describe your diagram, then choose an app. Review the prepared message and press Send there. Your model generates a draft here for you to review.</p>
     {(error || loadError) && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">{error || loadError?.message}</p>}
     {notice && <p role="status" className="text-xs leading-5 text-emerald-700 dark:text-emerald-400">{notice}</p>}
     {isLoading && <p className="flex gap-2 text-xs"><Loader2 className="h-4 w-4 animate-spin" />Loading connection…</p>}
     {data && <>
+      <form onSubmit={event => { event.preventDefault(); const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null; void launch(submitter?.value === "claude" ? "claude" : "codex"); }} className="space-y-2">
+        <label className="block text-xs font-semibold" htmlFor="desktop-ai-mode">What would you like to build?</label>
+        <select id="desktop-ai-mode" className={`${FIELD} bg-white dark:bg-[#161d27]`} value={mode} onChange={event => setMode(event.target.value as AIGenerationMode)}><option value="workflow">Workflow</option><option value="aws_architecture">AWS architecture</option><option value="full_stack">Full stack</option></select>
+        <textarea required aria-label="Describe your diagram" className={`${FIELD} min-h-24 resize-y leading-5`} maxLength={8000} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="A secure serverless app with authentication, a database, monitoring, and delivery milestones…" />
+        <div className="grid grid-cols-2 gap-2">
+          <button type="submit" name="assistant" value="codex" disabled={busy || !prompt.trim()} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-2 py-3 text-xs font-semibold transition hover:border-neutral-400 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-emerald-500 disabled:opacity-40 dark:border-[#384961] dark:bg-[#1e2634] dark:hover:border-neutral-400"><CodexIcon className="h-7 w-7" />Open Codex</button>
+          <button type="submit" name="assistant" value="claude" disabled={busy || !prompt.trim()} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-2 py-3 text-xs font-semibold transition hover:border-[#c87858] hover:bg-[#fbf4ef] focus-visible:outline-2 focus-visible:outline-emerald-500 disabled:opacity-40 dark:border-[#384961] dark:bg-[#1e2634] dark:hover:border-[#c87858]"><ClaudeIcon className="h-7 w-7 text-[#c87858]" />Open Claude</button>
+        </div>
+        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">Desktop app required. No terminal setup. Temporary canvas access lasts 15 minutes. Your assistant account and its limits apply; no NovaStage AI credits.</p>
+      </form>
+      {busy && <p role="status" className="flex items-center gap-2 text-xs"><Loader2 className="h-3.5 w-3.5 animate-spin" />Preparing your request…</p>}
+      {handoff && <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+        <p role="status" className="text-xs font-medium">Request prepared for {handoff.provider === "codex" ? "Codex" : "Claude"}. Press Send in the app, then return here for your draft.</p>
+        <div className="flex flex-wrap gap-2"><a href={handoff.url} rel="noreferrer" className={BUTTON}>Open {handoff.provider === "codex" ? "Codex" : "Claude"} again</a><button type="button" className={BUTTON} onClick={() => copy(handoff.prompt, "Prepared request")}>Copy prepared request</button></div>
+        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">If the app did not open, open its desktop version and paste the prepared request. Allow network access if your assistant asks. For a long-running request, dismiss it and open a fresh one after access expires.</p>
+      </div>}
+      <details className="rounded-lg border border-neutral-200 p-3 dark:border-[#384961]">
+      <summary className="cursor-pointer text-xs font-medium text-neutral-500 dark:text-neutral-400">Advanced: persistent MCP connection</summary>
+      <div className="mt-3 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-medium">{active ? data.connection?.last_used_at ? "MCP client reached this canvas" : "Waiting for your MCP client" : "No active connection"}</p>
         {active && <button type="button" disabled={busy} className={BUTTON} onClick={() => act({}, "DELETE")}>Revoke</button>}
@@ -93,6 +131,7 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
         <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">After queuing, paste this into Codex or Claude Code. Your assistant must be running and prompted; requests do not start it automatically.</p>
         <button type="button" className={`${BUTTON} w-full`} onClick={() => copy(`Use the ${mcpSetup(projectId, window.location.origin, "", shell).name} MCP server. Read get_canvas and list_requests, generate the pending diagram using my selected model, search_aws_services for canonical AWS IDs, then call propose_workflow with the requestId. Tell me when the draft is ready to review in NovaStage.`, "Assistant prompt")}><Copy className="h-3.5 w-3.5" />Copy assistant prompt</button>
       </>}
+      </div></details>
       {!!data.drafts.length && <div className="space-y-2 border-t border-neutral-200 pt-3 dark:border-[#384961]">
         <h4 className="text-xs font-semibold">Your requests & drafts</h4>
         {data.drafts.map(draft => <article key={draft.id} className="space-y-2 rounded-lg border border-neutral-200 p-3 dark:border-[#384961]">

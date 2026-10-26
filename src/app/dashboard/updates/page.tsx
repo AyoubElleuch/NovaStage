@@ -8,8 +8,8 @@ const releases = [
     title: "Bring Your Own AI to the Canvas",
     summary: "Create workflows, AWS architecture, and full-stack diagrams with your own Codex or Claude Code models, then review and add them to your canvas.",
     changes: [
-      "Connect your AI: Set up Codex or Claude Code with a personal, expiring MCP connection scoped to one canvas, with revocation at any time.",
-      "Prompt from the canvas: Queue a workflow, AWS architecture, or full-stack request and ask your connected assistant to generate it using your selected model, without spending NovaStage AI credits.",
+      "Open your AI: Choose the Codex or Claude button to open its desktop app with your request prepared and temporary canvas access. No terminal setup is needed.",
+      "Use your own models: Describe a workflow, AWS architecture, or full-stack diagram, then review and send the prepared message in your AI app without spending NovaStage AI credits.",
       "Review before adding: Inspect generated milestones, tasks, services, configuration, and connections, then add the diagram alongside existing work or dismiss it.",
       "More reliable diagrams: Validate AWS catalog IDs and graph references, repair circular dependencies, and save accepted diagrams together so a failed save leaves no partial changes.",
     ],
