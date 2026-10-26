@@ -11,10 +11,6 @@
 
 ---
 
-## Authorship
-
-I directed the product, architecture, collaboration rules, and behavioral testing. AI wrote the application code as an experiment in AI-assisted development. This project demonstrates that experiment and its implemented behavior; it is not presented as independently handwritten application code.
-
 ## Overview
 
 NovaStage is a real-time collaborative workspace designed for software architects and engineering teams to model roadmaps, milestones, and AWS cloud architectures on a shared infinite canvas.
