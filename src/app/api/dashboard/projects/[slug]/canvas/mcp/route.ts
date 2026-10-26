@@ -1,7 +1,8 @@
 import { getAuthenticatedUser } from "@/lib/auth/session";
 import { getProjectBySlug } from "@/lib/projects";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createMcpToken, hashMcpToken, hasMcpProjectAccess } from "@/lib/mcp/auth";
+import { createMcpToken, createHandoffToken, hashMcpToken, hasMcpProjectAccess } from "@/lib/mcp/auth";
+import { desktopAssistantLink, desktopHandoffPrompt } from "@/lib/mcp/desktop";
 import { prepareWorkflow } from "@/lib/mcp/workflow";
 import { getProjectCanvasData } from "@/lib/canvas/server";
 import { buildMcpGraph } from "@/lib/mcp/graph";
@@ -49,9 +50,20 @@ async function handle(request: Request, context: Context) {
       if (error) throw new Error("MCP is unavailable. Apply database migration 023_canvas_mcp.sql.");
       return reply({ token, expiresAt });
     }
-    if (body?.action === "request") {
+    if (body?.action === "request" || body?.action === "launch") {
       const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
       if (!prompt || prompt.length > 8000 || !["workflow", "aws_architecture", "full_stack"].includes(body.mode)) return reply({ error: "Enter a prompt of up to 8,000 characters and a valid mode." }, 400);
+      if (body.action === "launch") {
+        if (body.provider !== "codex" && body.provider !== "claude") return reply({ error: "Choose Codex or Claude." }, 400);
+        const { data: draft, error } = await admin.from("canvas_mcp_drafts")
+          .insert({ project_id: project.id, user_id: user.id, prompt, mode: body.mode }).select("id").single();
+        if (error || !draft) throw error || new Error("Could not prepare desktop request.");
+        const { token, expiresAt } = createHandoffToken(draft.id);
+        const origin = request.headers.get("origin") || new URL(request.url).origin;
+        const handoffPrompt = desktopHandoffPrompt(new URL("/api/mcp", origin).href, token, draft.id, expiresAt);
+        return reply({ requestId: draft.id, expiresAt, provider: body.provider, prompt: handoffPrompt,
+          url: desktopAssistantLink(body.provider, handoffPrompt) });
+      }
       const { data: connection } = await admin.from("canvas_mcp_connections").select("id")
         .eq("project_id", project.id).eq("user_id", user.id).gt("expires_at", new Date().toISOString()).maybeSingle();
       if (!connection) return reply({ error: "Create an MCP connection first." }, 409);

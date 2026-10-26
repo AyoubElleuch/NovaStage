@@ -9,7 +9,7 @@ const mock = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth/session", () => ({ getAuthenticatedUser: async () => mock.user ? { id: "user" } : null }));
 vi.mock("@/lib/projects", () => ({ getProjectBySlug: async () => ({ id: "project" }) }));
-vi.mock("@/lib/mcp/auth", () => ({ hasMcpProjectAccess: async () => mock.member, createMcpToken: () => "ns_mcp_" + "a".repeat(64), hashMcpToken: () => "hashed-token" }));
+vi.mock("@/lib/mcp/auth", () => ({ hasMcpProjectAccess: async () => mock.member, createMcpToken: () => "ns_mcp_" + "a".repeat(64), hashMcpToken: () => "hashed-token", createHandoffToken: () => ({ token: "temporary-handoff", expiresAt: "2100-01-01" }) }));
 vi.mock("@/lib/security/rate-limit", () => ({ checkRateLimitAsync: async () => ({ allowed: true }) }));
 vi.mock("@/lib/canvas/server", () => ({ getProjectCanvasData: async () => ({ nodes: [], edges: [] }) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc: mock.rpc, from: (table: string) => {
@@ -22,7 +22,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc: mock.r
     upsert: (body: Record<string, unknown>) => { operation.operation = "upsert"; operation.body = body; return query; },
     insert: (body: Record<string, unknown>) => { operation.operation = "insert"; operation.body = body; return query; },
     update: (body: Record<string, unknown>) => { operation.operation = "update"; operation.body = body; return query; },
-    delete: () => { operation.operation = "delete"; return query; }, maybeSingle: async () => result(),
+    delete: () => { operation.operation = "delete"; return query; }, maybeSingle: async () => result(), single: async () => result(),
     then: (resolve: (value: unknown) => unknown) => Promise.resolve(result()).then(resolve),
   }; return query;
 } }) }));
@@ -72,4 +72,22 @@ it("accepts only an owned ready draft using the atomic RPC and propagates transa
 it("rejects unavailable drafts before building or saving a diagram", async () => {
   expect((await POST(request({ action: "apply", id: "foreign-draft" }), context)).status).toBe(409);
   expect(mock.rpc).not.toHaveBeenCalled();
+});
+it.each(["codex", "claude"])("prepares %s with an owned pending request and short-lived access, without rotating MCP credentials", async provider => {
+  mock.draft = { id: "30000000-0000-4000-8000-000000000001" };
+  const response = await POST(request({ action: "launch", provider, prompt: "Design an API", mode: "full_stack" }), context);
+  expect(response.status).toBe(200);
+  const result = await response.json();
+  expect(result.url).toMatch(provider === "codex" ? /^codex:\/\/new\?prompt=/ : /^claude:\/\/code\/new\?q=/);
+  expect(result.prompt).toContain("http");
+  expect(result.prompt).toContain("temporary-handoff");
+  expect(result.requestId).toBe("30000000-0000-4000-8000-000000000001");
+  expect(mock.writes).toHaveLength(1);
+  expect(mock.writes[0]).toMatchObject({ table: "canvas_mcp_drafts", operation: "insert", body: { project_id: "project", user_id: "user", prompt: "Design an API", mode: "full_stack" } });
+  expect(mock.rpc).not.toHaveBeenCalled();
+  expect(response.headers.get("cache-control")).toContain("no-store");
+});
+it("rejects unsupported desktop apps before queuing a request", async () => {
+  expect((await POST(request({ action: "launch", provider: "other", prompt: "Diagram", mode: "workflow" }), context)).status).toBe(400);
+  expect(mock.writes).toHaveLength(0);
 });
