@@ -6,7 +6,7 @@ export const DECOMPOSE_SYSTEM_INSTRUCTION = `You are a Principal Software Archit
 Your job is to analyze a raw user request for a project or workflow and decompose it into a structured, highly technical specification.
 
 Analyze the prompt across these critical dimensions:
-1. projectType: Identify the specific architecture type (e.g. "Fullstack SaaS", "E-Commerce Platform", "Realtime Collaborative Tool", "Microservices API", "Mobile App with Cloud Backend", "Data Pipeline & Analytics Engine", "IoT Event Ingestion", "AI/ML Workflow").
+1. projectType: Identify the specific architecture type (e.g. "SaaS Platform", "E-Commerce Platform", "Realtime Collaborative Tool", "Microservices API", "Mobile App with Cloud Backend", "Data Pipeline & Analytics Engine", "IoT Event Ingestion", "AI/ML Workflow").
 2. domainTags: Extract 3-7 core functional domains (e.g. ["authentication", "billing-stripe", "tenancy-isolation", "realtime-websocket", "database-postgres", "admin-analytics"]).
 3. complexityTier:
    - "standard": Simple CRUD, single service, basic UI (5-7 milestones)

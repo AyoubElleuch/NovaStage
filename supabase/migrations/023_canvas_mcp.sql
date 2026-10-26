@@ -16,7 +16,7 @@ create table public.canvas_mcp_drafts (
   project_id uuid not null references public.projects(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   prompt text not null check (length(prompt) between 1 and 8000),
-  mode text not null check (mode in ('workflow', 'aws_architecture', 'full_stack')),
+  mode text not null check (mode in ('workflow', 'aws_architecture')),
   status text not null default 'pending' check (status in ('pending', 'ready', 'applying', 'applied', 'dismissed', 'failed')),
   workflow jsonb,
   validation jsonb,

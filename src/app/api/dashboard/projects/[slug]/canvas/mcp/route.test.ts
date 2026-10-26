@@ -75,7 +75,7 @@ it("rejects unavailable drafts before building or saving a diagram", async () =>
 });
 it.each(["codex", "claude"])("prepares %s with an owned pending request and short-lived access, without rotating MCP credentials", async provider => {
   mock.draft = { id: "30000000-0000-4000-8000-000000000001" };
-  const response = await POST(request({ action: "launch", provider, prompt: "Design an API", mode: "full_stack" }), context);
+  const response = await POST(request({ action: "launch", provider, prompt: "Design an API", mode: "workflow" }), context);
   expect(response.status).toBe(200);
   const result = await response.json();
   expect(result.url).toMatch(provider === "codex" ? /^codex:\/\/new\?prompt=/ : /^claude:\/\/code\/new\?q=/);
@@ -83,11 +83,15 @@ it.each(["codex", "claude"])("prepares %s with an owned pending request and shor
   expect(result.prompt).toContain("temporary-handoff");
   expect(result.requestId).toBe("30000000-0000-4000-8000-000000000001");
   expect(mock.writes).toHaveLength(1);
-  expect(mock.writes[0]).toMatchObject({ table: "canvas_mcp_drafts", operation: "insert", body: { project_id: "project", user_id: "user", prompt: "Design an API", mode: "full_stack" } });
+  expect(mock.writes[0]).toMatchObject({ table: "canvas_mcp_drafts", operation: "insert", body: { project_id: "project", user_id: "user", prompt: "Design an API", mode: "workflow" } });
   expect(mock.rpc).not.toHaveBeenCalled();
   expect(response.headers.get("cache-control")).toContain("no-store");
 });
 it("rejects unsupported desktop apps before queuing a request", async () => {
   expect((await POST(request({ action: "launch", provider: "other", prompt: "Diagram", mode: "workflow" }), context)).status).toBe(400);
+  expect(mock.writes).toHaveLength(0);
+});
+it.each(["launch", "request"])("rejects an unsupported %s mode without queuing a request", async action => {
+  expect((await POST(request({ action, provider: "codex", prompt: "Diagram", mode: "unsupported" }), context)).status).toBe(400);
   expect(mock.writes).toHaveLength(0);
 });

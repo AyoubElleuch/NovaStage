@@ -1,8 +1,8 @@
 import { PromptDecomposition } from "../types";
 import { getAWSTemplateGuidance } from "./aws-templates";
-import { AWS_WEB_APP_FEW_SHOT_EXAMPLE, FULL_STACK_FEW_SHOT_EXAMPLE } from "./aws-few-shot-examples";
+import { AWS_WEB_APP_FEW_SHOT_EXAMPLE } from "./aws-few-shot-examples";
 
-function providerExample(example: typeof AWS_WEB_APP_FEW_SHOT_EXAMPLE | typeof FULL_STACK_FEW_SHOT_EXAMPLE) {
+function providerExample(example: typeof AWS_WEB_APP_FEW_SHOT_EXAMPLE) {
   return {
     ...example,
     serviceNodes: (example.serviceNodes || []).map((service) => {
@@ -47,7 +47,7 @@ CRITICAL AWS ARCHITECTURAL STANDARDS:
    - serviceId must be a canonical NovaStage AWS catalog key. Common keys include cloudfront, route53, waf, apigateway, elb, ecs, eks, ec2, lambda, fargate, rds, aurora, dynamodb, elasticache, s3, sqs, sns, eventbridge, kms, secretsmanager, cloudwatch, cloudtrail, and certificatemanager.
 1. Topology Contract (the application owns all layout):
    - Return services, directed connections, and direct group membership only. Never return coordinates, dimensions, visual ordering, or spacer resources. The deterministic canvas engine computes placement and container sizes.
-   - Use globally unique, nonempty tempIds across services and groups. Every edge endpoint must reference a declared resource (or a declared milestone in full-stack mode).
+   - Use globally unique, nonempty tempIds across services and groups. Every edge endpoint must reference a declared resource. Return AWS resources only; delivery milestones are a separate generation mode.
    - Never emit empty groups. For a serverless or static design, omit VPC/subnet boundaries unless networking is actually required.
    - Model the requested scope faithfully, including one or two services for a genuinely small request. Do not expand a small diagram to meet a service count.
    - Separate traffic (sync_http/data_flow), asynchronous messaging (async_queue/event), and security permissions (security_iam). Telemetry edges point from the instrumented service to CloudWatch; IAM/KMS edges express permissions, not request ordering.
@@ -81,59 +81,5 @@ ${domainGuidanceText}
 
 GOLD STANDARD REFERENCE ARCHITECTURE:
 ${JSON.stringify(providerExample(AWS_WEB_APP_FEW_SHOT_EXAMPLE), null, 2)}
-`;
-}
-
-export function buildFullStackSystemInstruction(
-  prompt: string,
-  decomposition?: PromptDecomposition
-): string {
-  const domainGuidances = decomposition
-    ? getAWSTemplateGuidance(decomposition.domainTags, prompt)
-    : [];
-
-  let domainGuidanceText = "";
-  if (domainGuidances.length > 0) {
-    domainGuidanceText = `\n\nDOMAIN-SPECIFIC ARCHITECTURAL CONSIDERATIONS:\n` +
-      domainGuidances
-        .map(
-          (g) =>
-            `### ${g.domain}\nKey Considerations:\n${g.keyArchitecturalConsiderations.map((c) => `- ${c}`).join("\n")}`
-        )
-        .join("\n\n");
-  }
-
-  return `You are an Elite Enterprise Cloud Architect and Technical Project Lead for NovaStage.
-Your mission is to generate a unified, deeply INTERLOCKED full-stack solution combining:
-1. An actionable, technical Execution Roadmap (Milestones with deep engineering checkpoints).
-2. A production-grade AWS Cloud Infrastructure Topology (VPC, Subnets, Services, Data Flow).
-3. INTERLOCKING BRIDGES: Explicit dependency edges connecting Milestones directly to the AWS cloud resources they provision!
-
-CRITICAL FULL-STACK GENERATION RULES:
-1. NO CLICHÉ, NO SHALLOW CHECKPOINTS:
-   - Do NOT output generic milestones like "Requirements Gathering" or "Testing".
-   - Every milestone must be a concrete engineering phase (e.g., "1. Global Ingress & CDN Security", "2. Multi-AZ VPC Network Fabric", "3. Ingress Routing & SSL Termination", "4. Microservices Container Deployment", "5. Aurora PostgreSQL & Redis Caching", "6. Production Observability & Encryption").
-   - Each checkpoint must specify EXACT technical actions: CLI flags, CIDR ranges, instance families, cipher suites, migration tools, or alarm thresholds.
-
-2. ARCHITECTURAL HIERARCHY:
-   - Return semantic topology only; the application computes all coordinates and container sizes. Use unique tempIds, valid edge endpoints, consistent direct membership, and no empty groups. Match the user's requested scope, including very small designs.
-   - Edge services (CloudFront, Route 53, WAF) reside OUTSIDE the VPC.
-   - VPC is a grand container (style: "vpc") containing Subnets (style: "subnet").
-   - Databases MUST be placed in dedicated Isolated Database Subnets.
-   - CloudWatch and KMS reside in an observability tier.
-
-3. INTERLOCKING CROSS-EDGES (BRIDGES):
-   - In dataFlowEdges, include cross-connecting dependency edges that LINK each Milestone to the AWS Service(s) it sets up:
-     * Milestone m_edge -> CloudFront (label: "Configures Edge", edgeType: "dependency")
-     * Milestone m_net -> VPC (label: "Provisions CIDR", edgeType: "dependency")
-     * Milestone m_alb -> ALB (label: "Binds Listeners", edgeType: "dependency")
-     * Milestone m_ecs -> ECS (label: "Deploys Tasks", edgeType: "dependency")
-     * Milestone m_db -> RDS (label: "Runs Migrations", edgeType: "dependency")
-     * Milestone m_sec -> CloudWatch (label: "Instruments Alarms", edgeType: "dependency")
-   - In edges, define milestone progression dependencies (m_edge -> m_alb, m_net -> m_alb, m_alb -> m_ecs, m_db -> m_ecs, m_ecs -> m_sec).
-${domainGuidanceText}
-
-GOLD STANDARD INTERLOCKED FULL-STACK REFERENCE:
-${JSON.stringify(providerExample(FULL_STACK_FEW_SHOT_EXAMPLE), null, 2)}
 `;
 }

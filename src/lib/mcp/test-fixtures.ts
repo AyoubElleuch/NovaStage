@@ -2,7 +2,7 @@ import type { z } from "zod";
 import type { workflowSchema } from "./workflow";
 
 export const sampleWorkflow = (): z.infer<typeof workflowSchema> => ({
-  mode: "full_stack", summary: "An API with delivery milestones and a serverless backend.",
+  mode: "workflow", summary: "Delivery milestones for a serverless API.",
   milestones: [
     { tempId: "plan", title: "Design the API", phase: "architecture", checkpoints: [
       { title: "Document API input and output contracts" }, { title: "Specify authorization boundaries" },
@@ -14,6 +14,12 @@ export const sampleWorkflow = (): z.infer<typeof workflowSchema> => ({
     ] },
   ],
   edges: [{ fromId: "plan", toId: "ship" }],
+  serviceNodes: [], groups: [], dataFlowEdges: [],
+});
+
+export const sampleArchitecture = (): z.infer<typeof workflowSchema> => ({
+  mode: "aws_architecture", summary: "A serverless API and private database.",
+  milestones: [], edges: [],
   serviceNodes: [
     { tempId: "gateway", serviceId: "api_gateway", name: "Public API" },
     { tempId: "handler", serviceId: "lambda", name: "Request handler", parentGroupTempId: "private", config: { runtime: "nodejs" } },
@@ -26,6 +32,5 @@ export const sampleWorkflow = (): z.infer<typeof workflowSchema> => ({
   dataFlowEdges: [
     { fromId: "gateway", toId: "handler", edgeType: "sync_http", label: "HTTPS" },
     { fromId: "handler", toId: "db", edgeType: "data_flow", label: "SQL" },
-    { fromId: "ship", toId: "handler", edgeType: "dependency", label: "Deploys" },
   ],
 });

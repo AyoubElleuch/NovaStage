@@ -1854,7 +1854,6 @@ components:
           enum:
             - workflow
             - aws_architecture
-            - full_stack
           default: workflow
         operation:
           type: string
@@ -1882,7 +1881,6 @@ components:
           enum:
             - workflow
             - aws_architecture
-            - full_stack
         operation:
           type: string
           enum:

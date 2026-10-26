@@ -8,6 +8,7 @@ import { getProjectCanvasData } from "@/lib/canvas/server";
 import { buildMcpGraph } from "@/lib/mcp/graph";
 import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { isSameOriginRequest } from "@/lib/security/request-origin";
+import { AI_GENERATION_MODES, isAIGenerationMode } from "@/lib/ai/types";
 
 type Context = { params: Promise<{ slug: string }> };
 const reply = (body: unknown, status = 200) => Response.json(body, {
@@ -28,6 +29,7 @@ async function handle(request: Request, context: Context) {
         admin.from("canvas_mcp_connections").select("expires_at,last_used_at").eq("project_id", project.id).eq("user_id", user.id).maybeSingle(),
         admin.from("canvas_mcp_drafts").select("id,prompt,mode,status,workflow,validation,created_at")
           .eq("project_id", project.id).eq("user_id", user.id).in("status", ["pending", "ready", "applying", "failed"])
+          .in("mode", [...AI_GENERATION_MODES])
           .order("created_at", { ascending: false }).limit(10),
       ]);
       if (connection.error || drafts.error) throw new Error("MCP is unavailable. Apply database migration 023_canvas_mcp.sql.");
@@ -52,7 +54,7 @@ async function handle(request: Request, context: Context) {
     }
     if (body?.action === "request" || body?.action === "launch") {
       const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-      if (!prompt || prompt.length > 8000 || !["workflow", "aws_architecture", "full_stack"].includes(body.mode)) return reply({ error: "Enter a prompt of up to 8,000 characters and a valid mode." }, 400);
+      if (!prompt || prompt.length > 8000 || !isAIGenerationMode(body.mode)) return reply({ error: "Enter a prompt of up to 8,000 characters and choose Workflow or AWS Architecture." }, 400);
       if (body.action === "launch") {
         if (body.provider !== "codex" && body.provider !== "claude") return reply({ error: "Choose Codex or Claude." }, 400);
         const { data: draft, error } = await admin.from("canvas_mcp_drafts")

@@ -442,15 +442,14 @@ export async function applyAIWorkflowResult(
 export async function applyAWSServiceNodes(
   projectId: string,
   result: AIWorkflowResult,
-  existingData: { nodes: CanvasNode[]; edges: CanvasEdge[] },
-  initialTempIdToUuid?: Record<string, string>
+  existingData: { nodes: CanvasNode[]; edges: CanvasEdge[] }
 ): Promise<{
   nodes: CanvasNode[];
   edges: CanvasEdge[];
 }> {
   result = normalizeArchitectureTopology(result);
   const adminClient = createAdminClient();
-  const tempIdToUuid: Record<string, string> = { ...(initialTempIdToUuid || {}) };
+  const tempIdToUuid: Record<string, string> = {};
 
   const groups = result.groups || [];
   const serviceNodes = result.serviceNodes || [];
@@ -628,7 +627,7 @@ export async function applyAWSServiceNodes(
     }
   }
 
-  // 6. Insert Data Flow & Interlocking Bridges
+  // 6. Insert architecture data flow edges.
   if (result.dataFlowEdges && result.dataFlowEdges.length > 0) {
     const edgeInserts: Array<{
       project_id: string;
@@ -645,21 +644,15 @@ export async function applyAWSServiceNodes(
       const targetUuid = tempIdToUuid[edge.toId] || edge.toId;
 
       if (sourceUuid && targetUuid && sourceUuid !== targetUuid) {
-        // Determine handles: if source is a milestone and target is an infra resource, flow top-to-bottom!
-        const isSourceMilestone = result.milestones?.some(
-          (m) => tempIdToUuid[m.tempId || m.id || ""] === sourceUuid
-        );
         const sourcePlacement = placements.get(edge.fromId), targetPlacement = placements.get(edge.toId);
         const handles = sourcePlacement && targetPlacement ? architectureHandles(sourcePlacement, targetPlacement) : { source: "right", target: "left" };
-        const sourceHandle = isSourceMilestone ? "bottom" : handles.source;
-        const targetHandle = isSourceMilestone ? "top" : handles.target;
 
         edgeInserts.push({
           project_id: projectId,
           source_node_id: sourceUuid,
           target_node_id: targetUuid,
-          source_handle: sourceHandle,
-          target_handle: targetHandle,
+          source_handle: handles.source,
+          target_handle: handles.target,
           edge_type: normalizeEdgeType(edge.edgeType, edge.protocol),
           label: edge.label || edge.protocol || null,
         });

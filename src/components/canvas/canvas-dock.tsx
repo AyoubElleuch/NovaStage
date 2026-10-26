@@ -1,4 +1,5 @@
 "use client";
+import AWSLogo from "@/components/aws-logo";
 
 import React, { useEffect, useId, useRef, useState } from "react";
 import {
@@ -301,9 +302,10 @@ export default function CanvasDock({
             onClick={onToggleServicePalette}
             disabled={isBusy}
             title="AWS Services"
+            aria-label="AWS Services"
             className="inline-flex h-8 md:h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-[#FF9900]/30 bg-[#FF9900]/10 px-2 md:px-2.5 text-xs font-bold text-[#FF9900] shadow-[0_2px_5px_rgba(255,153,0,0.08)] transition-all hover:bg-[#FF9900]/20 hover:scale-[1.02] cursor-pointer"
           >
-            AWS
+            <AWSLogo className="h-6 w-7" />
           </button>
         )}
 

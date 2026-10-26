@@ -46,9 +46,9 @@ export function architectureTopologyIssues(result: AIWorkflowResult): string[] {
   const ids = resources.map(node => node.tempId);
   const issues: string[] = [];
   if (ids.some(id => !id?.trim()) || new Set(ids).size !== ids.length) issues.push("Resource tempIds must be nonempty and globally unique");
-  const allowed = new Set([...ids, ...(result.milestones || []).flatMap(node => [node.id, node.tempId].filter(Boolean))]);
+  const allowed = new Set(ids);
   if ((result.dataFlowEdges || []).some(edge => !allowed.has(edge.fromId) || !allowed.has(edge.toId) || edge.fromId === edge.toId)) {
-    issues.push("Connections must reference distinct declared resources or milestones");
+    issues.push("Connections must reference distinct declared resources");
   }
   if (services.some(service => !service.serviceId || !service.tempId)) issues.push("Every service requires serviceId and tempId");
   return issues;

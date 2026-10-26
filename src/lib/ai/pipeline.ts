@@ -6,15 +6,13 @@
  * 2. Phase 2: Deep Branching DAG Workflow Generation (Gemini Call #2)
  *    - Mode A: Milestone workflow DAG
  *    - Mode B: AWS infrastructure architecture topology
- *    - Mode C: Full stack (both milestones + AWS architecture)
  * 3. Phase 3: Local Deterministic Graph Validation & Auto-Repair (Algorithmic)
  */
 
-import { CanvasAIContext, AIWorkflowResult, AIGenerationMode, AIGenerationOperation } from "./types";
+import { CanvasAIContext, AIWorkflowResult, AIGenerationMode, AIGenerationOperation, isAIGenerationMode } from "./types";
 import { decomposePrompt } from "./phases/decompose";
 import { generateDeepWorkflow } from "./phases/generate";
 import { generateAWSArchitecture } from "./phases/generate-aws";
-import { generateFullStack } from "./phases/generate-fullstack";
 import { validateAndRepairWorkflow } from "./phases/validate";
 
 export * from "./types";
@@ -22,7 +20,7 @@ export * from "./types";
 /**
  * Executes the complete 3-phase AI workflow generation pipeline
  * @param prompt - User's natural language description
- * @param mode - Generation mode: "workflow", "aws_architecture", or "full_stack"
+ * @param mode - Generation mode: "workflow" or "aws_architecture"
  * @param context - Current canvas state for in-place updates
  */
 export async function executeAIPipeline(
@@ -31,6 +29,7 @@ export async function executeAIPipeline(
   context?: CanvasAIContext,
   options?: { plan?: string; operation?: AIGenerationOperation }
 ): Promise<AIWorkflowResult> {
+  if (!isAIGenerationMode(mode)) throw new Error("Choose Workflow or AWS Architecture.");
   const cleanPrompt = prompt.trim();
   if (!cleanPrompt) {
     throw new Error("Prompt cannot be empty");
@@ -53,9 +52,6 @@ export async function executeAIPipeline(
   switch (mode) {
     case "aws_architecture":
       rawWorkflow = await generateAWSArchitecture(cleanPrompt, decomposition, pipelineContext);
-      break;
-    case "full_stack":
-      rawWorkflow = await generateFullStack(cleanPrompt, decomposition, pipelineContext);
       break;
     case "workflow":
     default:

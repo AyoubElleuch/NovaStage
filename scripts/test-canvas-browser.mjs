@@ -136,6 +136,7 @@ try {
   const { page, state, errors } = await fixturePage(desktop);
   const canvas = page.locator("[data-canvas-viewport]");
   await check("desktop canvas renders fitted milestones, AWS resources and wires", async () => {
+    assert.equal(await page.getByRole("button", { name: "AWS Services", exact: true }).locator("svg").count(), 1, "the AWS dock button uses an SVG brand mark");
     assert.equal(await page.getByRole("group", { name: /^Milestone / }).count(), 3);
     assert.equal(await page.getByRole("button", { name: /^Connection from / }).count(), 3);
     const find = await page.getByRole("button", { name: "Find on canvas" }).boundingBox();
@@ -147,6 +148,10 @@ try {
   await check("two assistant buttons open prepared desktop requests without MCP installation", async () => {
     await page.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
     const assistant = page.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByRole("textbox", { name: "AI prompt", exact: true }).waitFor();
+    assert.deepEqual(await assistant.locator('[aria-label="AI provider"] button').allTextContents(), ["Built-in AI", "Your AI"]);
+    assert.equal(await assistant.getByRole("button", { name: "Built-in AI", exact: true }).getAttribute("aria-pressed"), "true");
+    await assistant.getByRole("button", { name: "Your AI", exact: true }).click();
     await assistant.getByRole("button", { name: "Open Codex", exact: true }).waitFor();
     assert.equal(await assistant.getByRole("button", { name: "Create canvas connection", exact: true }).isVisible(), false, "terminal setup is hidden under Advanced");
     assert.equal(await assistant.getByRole("button", { name: "Open Codex", exact: true }).isDisabled(), true);
@@ -179,9 +184,63 @@ try {
     state.nodes = state.nodes.filter(node => node.id !== "mcp-generated"); state.mutations = [];
     await page.reload(); await page.getByRole("button", { name: "Find on canvas" }).waitFor();
   });
+  await check("AI controls keep dark-theme contrast, disable empty-prompt hover, and use the custom mode picker", async () => {
+    await page.getByRole("button", { name: "Toggle dark mode", exact: true }).click();
+    await page.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
+    const assistant = page.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByRole("button", { name: "Your AI", exact: true }).click();
+    const prompt = assistant.getByRole("textbox", { name: "Describe your diagram", exact: true });
+    const colorState = button => button.evaluate(element => {
+      const style = getComputedStyle(element), svgStyle = getComputedStyle(element.querySelector("svg"));
+      const canvas = document.createElement("canvas"), context = canvas.getContext("2d"); canvas.width = canvas.height = 1;
+      const rgb = color => { context.clearRect(0, 0, 1, 1); context.fillStyle = color; context.fillRect(0, 0, 1, 1); return Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3); };
+      return { background: rgb(style.backgroundColor), text: rgb(style.color), logo: rgb(svgStyle.color), border: style.borderColor, transform: style.transform };
+    });
+    const luminance = rgb => rgb.map(value => { const c = value / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+    const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + 0.05) / (Math.min(luminance(a), luminance(b)) + 0.05);
+    for (const name of ["Open Codex", "Open Claude"]) {
+      const button = assistant.getByRole("button", { name, exact: true });
+      const idle = await colorState(button);
+      await page.screenshot({ path: resolve(output, "desktop-ai-dark-disabled.png") });
+      await button.hover(); await page.waitForTimeout(220);
+      assert.deepEqual(await colorState(button), idle, `${name} must have no disabled hover effect`);
+      await button.click({ force: true });
+      assert.equal(state.mcpDrafts.length, 0, "disabled controls must not queue a request");
+    }
+    await prompt.fill("   ");
+    assert.equal(await assistant.getByRole("button", { name: "Open Codex", exact: true }).isDisabled(), true);
+    await prompt.fill("Create an AWS architecture");
+    for (const name of ["Open Codex", "Open Claude"]) {
+      const button = assistant.getByRole("button", { name, exact: true });
+      assert.equal(await button.isEnabled(), true);
+      await button.hover(); await page.waitForTimeout(220);
+      const hovered = await colorState(button);
+      await page.screenshot({ path: resolve(output, `desktop-ai-dark-${name === "Open Codex" ? "codex" : "claude"}-hover.png`) });
+      assert.ok(Math.max(...hovered.background) < 100, `${name} must retain a dark hover surface`);
+      assert.ok(contrast(hovered.text, hovered.background) >= 4.5, `${name} hover text must be readable`);
+      assert.ok(contrast(hovered.logo, hovered.background) >= 4.5, `${name} hover logo must be readable`);
+      await page.mouse.down(); await page.waitForTimeout(220);
+      const pressed = await colorState(button);
+      await page.screenshot({ path: resolve(output, `desktop-ai-dark-${name === "Open Codex" ? "codex" : "claude"}-pressed.png`) });
+      assert.ok(contrast(pressed.text, pressed.background) >= 4.5, `${name} pressed text must be readable`);
+      await page.mouse.move(10, 10); await page.mouse.up();
+    }
+    const picker = assistant.getByRole("combobox", { name: "Generation mode", exact: true });
+    await picker.click();
+    assert.deepEqual(await page.getByRole("listbox", { name: "Generation mode", exact: true }).getByRole("option").allTextContents(), ["Workflow", "AWS Architecture"]);
+    await page.getByRole("listbox", { name: "Generation mode", exact: true }).waitFor({ state: "visible" });
+    await page.screenshot({ path: resolve(output, "desktop-ai-dark-dropdown.png") });
+    await page.getByRole("option", { name: "AWS Architecture", exact: true }).click();
+    assert.match(await picker.innerText(), /AWS Architecture/);
+    await page.screenshot({ path: resolve(output, "desktop-ai-dark-hover.png") });
+    await page.getByRole("button", { name: "Close AI Assistant", exact: true }).click();
+    await page.getByRole("button", { name: "Toggle dark mode", exact: true }).click();
+    assert.equal(state.mutations.length, 0, "theme and mode inspection must not submit a diagram");
+  });
   await check("MCP setup, request queue, draft review, acceptance and revocation preserve the canvas", async () => {
     await page.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
     const assistant = page.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByRole("button", { name: "Your AI", exact: true }).click();
     await assistant.getByText("Advanced: persistent MCP connection", { exact: true }).click();
     await assistant.getByRole("button", { name: "Create canvas connection", exact: true }).focus();
     await page.keyboard.press("Tab");
@@ -451,7 +510,7 @@ try {
       await phone.screenshot({ path: resolve(output, `mobile-${size}-details.png`) });
       await phone.getByRole("button", { name: "Close details", exact: true }).click();
       if (viewport.width < 768) await phone.getByRole("button", { name: "Deselect milestone", exact: true }).click();
-      await phone.getByRole("button", { name: "AWS", exact: true }).click();
+      await phone.getByRole("button", { name: "AWS Services", exact: true }).click();
       const palette = phone.getByRole("dialog", { name: "AWS services", exact: true });
       await palette.getByRole("textbox", { name: "Search AWS services", exact: true }).fill("SES");
       await palette.getByRole("button", { name: "Add Amazon Simple Email Service to canvas", exact: true }).waitFor();
@@ -478,7 +537,7 @@ try {
     await creator.getByRole("button", { name: "Close details", exact: true }).click();
     await creator.getByRole("button", { name: "Focus selected item", exact: true }).click();
     await creator.getByRole("button", { name: "Deselect milestone", exact: true }).click();
-    await creator.getByRole("button", { name: "AWS", exact: true }).click();
+    await creator.getByRole("button", { name: "AWS Services", exact: true }).click();
     await creator.getByRole("textbox", { name: "Search AWS services", exact: true }).fill("SES");
     await creator.getByRole("button", { name: "Add Amazon Simple Email Service to canvas", exact: true }).click();
     await creator.getByRole("textbox", { name: "Resource label", exact: true }).waitFor();
@@ -494,6 +553,8 @@ try {
     await creator.getByRole("button", { name: "Deselect AWS resource", exact: true }).click();
     await creator.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
     const assistant = creator.getByRole("dialog", { name: "AI assistant", exact: true });
+    await assistant.getByRole("textbox", { name: "AI prompt", exact: true }).waitFor();
+    await assistant.getByRole("button", { name: "Your AI", exact: true }).click();
     await assistant.getByRole("textbox", { name: "Describe your diagram", exact: true }).fill("Create an AWS architecture");
     assert.equal(await assistant.getByRole("button", { name: "Open Codex", exact: true }).isEnabled(), true);
     assert.equal(await assistant.getByRole("button", { name: "Open Claude", exact: true }).isEnabled(), true);
@@ -511,10 +572,10 @@ try {
     await creator.screenshot({ path: resolve(output, "mobile-mcp-keyboard.png") });
     await creator.setViewportSize({ width: 320, height: 568 });
     await assistant.getByRole("button", { name: "Built-in AI", exact: true }).click();
-    await assistant.getByRole("button", { name: "Workflow", exact: true }).click();
-    await assistant.getByRole("button", { name: "AWS", exact: true }).click();
-    await assistant.getByRole("button", { name: /Full Stack/ }).click();
-    await assistant.getByRole("button", { name: "Workflow", exact: true }).click();
+    await assistant.getByRole("combobox", { name: "Generation mode", exact: true }).click();
+    await creator.getByRole("option", { name: "AWS Architecture", exact: true }).click();
+    await assistant.getByRole("combobox", { name: "Generation mode", exact: true }).click();
+    await creator.getByRole("option", { name: "Workflow", exact: true }).click();
     assert.equal(await assistant.evaluate(element => element.scrollWidth <= element.clientWidth + 1), true);
     await creator.setViewportSize({ width: 320, height: 330 });
     await creator.waitForFunction(() => document.documentElement.style.getPropertyValue("--canvas-visible-height") === "330px");

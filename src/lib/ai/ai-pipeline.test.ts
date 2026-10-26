@@ -111,7 +111,7 @@ describe("AI Workflow Pipeline, Graph Validation & Quality Engine", () => {
 
     await expect(executeAIPipeline(
       "Deploy scalable SaaS with Next.js and Aurora",
-      "full_stack"
+      "aws_architecture"
     )).rejects.toThrow("No canvas changes were applied");
   });
 

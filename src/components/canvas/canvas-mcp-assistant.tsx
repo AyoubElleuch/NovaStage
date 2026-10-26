@@ -9,6 +9,7 @@ import type { workflowSchema } from "@/lib/mcp/workflow";
 import { mcpSetup } from "@/lib/mcp/setup";
 import type { DesktopAssistant } from "@/lib/mcp/desktop";
 import { CodexIcon, ClaudeIcon } from "@/components/assistant-logos";
+import CanvasAIModeSelect from "./canvas-ai-mode-select";
 
 type Workflow = z.infer<typeof workflowSchema>;
 type Draft = { id: string; prompt: string; mode: string; status: string; workflow: Workflow | null; validation: Record<string, number | boolean> | null };
@@ -16,6 +17,10 @@ type State = { connection: { expires_at: string; last_used_at: string | null } |
 type Handoff = { url: string; prompt: string; provider: DesktopAssistant; requestId: string; expiresAt: string };
 const BUTTON = "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold transition hover:bg-neutral-100 disabled:opacity-50 dark:border-[#384961] dark:hover:bg-[#283548]";
 const FIELD = "w-full rounded-lg border border-neutral-200 bg-transparent p-2.5 text-xs dark:border-[#384961]";
+const LAUNCH_BUTTON = "flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed";
+const INACTIVE_BUTTON = "border-neutral-200 bg-neutral-50 text-neutral-400 dark:border-[#283548] dark:bg-[#141c28] dark:text-neutral-500";
+const CODEX_BUTTON = "cursor-pointer border-neutral-300 bg-white text-neutral-900 enabled:hover:border-neutral-500 enabled:hover:bg-neutral-100 enabled:active:bg-neutral-200 dark:border-[#46566d] dark:bg-[#202c3d] dark:text-neutral-100 dark:enabled:hover:border-emerald-500 dark:enabled:hover:bg-[#293c4d] dark:enabled:active:bg-[#31495b]";
+const CLAUDE_BUTTON = "cursor-pointer border-[#d7a38c] bg-[#fff8f3] text-[#9b482d] enabled:hover:border-[#b85b35] enabled:hover:bg-[#f9e7dc] enabled:active:bg-[#f2d8c8] dark:border-[#8b5c47] dark:bg-[#322820] dark:text-[#f0b693] dark:enabled:hover:border-[#dc986f] dark:enabled:hover:bg-[#493225] dark:enabled:active:bg-[#563c2c]";
 
 async function readState(url: string): Promise<State> {
   const response = await fetch(url, { cache: "no-store" });
@@ -32,13 +37,14 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
   const [token, setToken] = useState<string | null>(null);
   const [shell, setShell] = useState<"powershell" | "bash">("powershell");
   const [prompt, setPrompt] = useState("");
-  const [mode, setMode] = useState<AIGenerationMode>("full_stack");
+  const [mode, setMode] = useState<AIGenerationMode>("workflow");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [handoff, setHandoff] = useState<Handoff | null>(null);
   const active = Boolean(data?.connection);
   const setup = token ? mcpSetup(projectId, window.location.origin, token, shell) : null;
+  const canLaunch = Boolean(prompt.trim()) && !busy;
 
   async function launch(provider: DesktopAssistant) {
     if (!prompt.trim() || busy) return;
@@ -85,11 +91,11 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
     {data && <>
       <form onSubmit={event => { event.preventDefault(); const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null; void launch(submitter?.value === "claude" ? "claude" : "codex"); }} className="space-y-2">
         <label className="block text-xs font-semibold" htmlFor="desktop-ai-mode">What would you like to build?</label>
-        <select id="desktop-ai-mode" className={`${FIELD} bg-white dark:bg-[#161d27]`} value={mode} onChange={event => setMode(event.target.value as AIGenerationMode)}><option value="workflow">Workflow</option><option value="aws_architecture">AWS architecture</option><option value="full_stack">Full stack</option></select>
+        <CanvasAIModeSelect id="desktop-ai-mode" value={mode} onChange={setMode} disabled={busy} />
         <textarea required aria-label="Describe your diagram" className={`${FIELD} min-h-24 resize-y leading-5`} maxLength={8000} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="A secure serverless app with authentication, a database, monitoring, and delivery milestones…" />
         <div className="grid grid-cols-2 gap-2">
-          <button type="submit" name="assistant" value="codex" disabled={busy || !prompt.trim()} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-2 py-3 text-xs font-semibold transition hover:border-neutral-400 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-emerald-500 disabled:opacity-40 dark:border-[#384961] dark:bg-[#1e2634] dark:hover:border-neutral-400"><CodexIcon className="h-7 w-7" />Open Codex</button>
-          <button type="submit" name="assistant" value="claude" disabled={busy || !prompt.trim()} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-2 py-3 text-xs font-semibold transition hover:border-[#c87858] hover:bg-[#fbf4ef] focus-visible:outline-2 focus-visible:outline-emerald-500 disabled:opacity-40 dark:border-[#384961] dark:bg-[#1e2634] dark:hover:border-[#c87858]"><ClaudeIcon className="h-7 w-7 text-[#c87858]" />Open Claude</button>
+          <button type="submit" name="assistant" value="codex" disabled={!canLaunch} className={`${LAUNCH_BUTTON} ${canLaunch ? CODEX_BUTTON : INACTIVE_BUTTON}`}><CodexIcon className="h-7 w-7" />Open Codex</button>
+          <button type="submit" name="assistant" value="claude" disabled={!canLaunch} className={`${LAUNCH_BUTTON} ${canLaunch ? CLAUDE_BUTTON : INACTIVE_BUTTON}`}><ClaudeIcon className="h-7 w-7" />Open Claude</button>
         </div>
         <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">Desktop app required. No terminal setup. Temporary canvas access lasts 15 minutes. Your assistant account and its limits apply; no NovaStage AI credits.</p>
       </form>
@@ -124,7 +130,7 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
         <p className="flex items-start gap-2 text-[11px] leading-5 text-neutral-500 dark:text-neutral-400"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />Only this canvas is shared with your assistant. You review drafts before adding them. Existing work stays in place. Expires {new Date(data.connection!.expires_at).toLocaleDateString()}.</p>
         <form onSubmit={event => { event.preventDefault(); if (prompt.trim()) void act({ action: "request", prompt, mode }); }} className="space-y-2 border-t border-neutral-200 pt-3 dark:border-[#384961]">
           <label className="block text-xs font-semibold" htmlFor="mcp-mode">What would you like to build?</label>
-          <select id="mcp-mode" className={`${FIELD} bg-white dark:bg-[#161d27]`} value={mode} onChange={event => setMode(event.target.value as AIGenerationMode)}><option value="workflow">Workflow</option><option value="aws_architecture">AWS architecture</option><option value="full_stack">Full stack</option></select>
+          <CanvasAIModeSelect id="mcp-mode" value={mode} onChange={setMode} disabled={busy} label="Persistent generation mode" />
           <textarea aria-label="Prompt for your AI" className={`${FIELD} min-h-20 resize-y`} maxLength={8000} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="Describe the workflow or architecture you need…" />
           <button type="submit" disabled={busy || !prompt.trim()} className={BUTTON}>Queue for your assistant</button>
         </form>

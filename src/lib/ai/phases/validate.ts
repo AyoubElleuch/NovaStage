@@ -190,7 +190,6 @@ export function validateAndRepairWorkflow(
   const architectureNodeIds = new Set([
     ...groups.map((group) => group.tempId),
     ...services.map((service) => service.tempId),
-    ...(workflow.milestones || []).flatMap((milestone) => [milestone.id, milestone.tempId].filter(Boolean) as string[]),
   ]);
   const architectureEdgeKeys = new Set<string>();
   const dataFlowEdges = (workflow.dataFlowEdges || []).filter((edge) => {

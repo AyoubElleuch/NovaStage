@@ -96,7 +96,7 @@ const DECOMPOSITION_SCHEMA = {
  */
 export function buildFallbackDecomposition(prompt: string): PromptDecomposition {
   const lower = prompt.toLowerCase();
-  let projectType = "Fullstack Web Application";
+  let projectType = "Web Application";
   const domainTags: string[] = [];
   const techStackHints: string[] = ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"];
   const riskFactors: string[] = ["Data consistency", "Latency under load", "Permission enforcement"];

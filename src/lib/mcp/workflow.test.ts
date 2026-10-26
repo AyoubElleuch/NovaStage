@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { prepareWorkflow } from "./workflow";
 import { buildMcpGraph } from "./graph";
-import { sampleWorkflow } from "./test-fixtures";
+import { sampleWorkflow, sampleArchitecture } from "./test-fixtures";
 import { mcpSetup } from "./setup";
 
 describe("external assistant generation", () => {
   it("normalizes AWS aliases and builds a complete nested graph without changing existing content", () => {
-    const { workflow } = prepareWorkflow(sampleWorkflow());
+    const { workflow } = prepareWorkflow(sampleArchitecture());
     expect(workflow.serviceNodes![0].serviceId).toBe("apigateway");
     const { nodes, edges } = buildMcpGraph(workflow, []);
-    expect(nodes).toHaveLength(7);
-    expect(edges).toHaveLength(4);
-    expect(nodes.flatMap(node => node.checkpoints)).toHaveLength(8);
+    expect(nodes).toHaveLength(5);
+    expect(edges).toHaveLength(2);
+    expect(nodes.flatMap(node => node.checkpoints)).toHaveLength(0);
     const handler = nodes.find(node => node.title === "Request handler")!;
     const subnet = nodes.find(node => node.title === "Private subnet")!;
     expect(handler.parent_group_id).toBe(subnet.id);
@@ -36,11 +36,11 @@ describe("external assistant generation", () => {
     expect(() => prepareWorkflow({ ...input, milestones: [{ ...input.milestones[0], id: "existing" }] })).toThrow();
     input.milestones[0].checkpoints[0] = { title: "Task", id: "existing" } as never;
     expect(() => prepareWorkflow(input)).toThrow();
-    const service = sampleWorkflow(); service.serviceNodes[0].serviceId = "made-up-service";
+    const service = sampleArchitecture(); service.serviceNodes[0].serviceId = "made-up-service";
     expect(() => prepareWorkflow(service)).toThrow("Unknown AWS service");
-    const edge = sampleWorkflow(); edge.dataFlowEdges[0].toId = "other_project_node";
+    const edge = sampleArchitecture(); edge.dataFlowEdges[0].toId = "other_project_node";
     expect(() => prepareWorkflow(edge)).toThrow("generated nodes");
-    const duplicate = sampleWorkflow(); duplicate.serviceNodes[0].tempId = "plan";
+    const duplicate = sampleArchitecture(); duplicate.serviceNodes[0].tempId = duplicate.serviceNodes[1].tempId;
     expect(() => prepareWorkflow(duplicate)).toThrow("unique tempIds");
   });
   it("keeps orphan repair acyclic when an existing dependency points backwards", () => {
@@ -55,11 +55,22 @@ describe("external assistant generation", () => {
   });
   it("supports workflow-only and AWS-only diagrams and enforces mode contents and size limits", () => {
     const base = sampleWorkflow();
-    expect(prepareWorkflow({ ...base, mode: "workflow", serviceNodes: [], groups: [], dataFlowEdges: [] }).workflow.milestones).toHaveLength(2);
-    expect(prepareWorkflow({ ...base, mode: "aws_architecture", milestones: [], edges: [], dataFlowEdges: base.dataFlowEdges.slice(0, 2) }).workflow.serviceNodes).toHaveLength(3);
-    expect(() => prepareWorkflow({ ...base, serviceNodes: [] })).toThrow("requires AWS");
+    const architecture = sampleArchitecture();
+    expect(prepareWorkflow(base).workflow.milestones).toHaveLength(2);
+    expect(prepareWorkflow(architecture).workflow.serviceNodes).toHaveLength(3);
+    expect(() => prepareWorkflow({ ...architecture, serviceNodes: [] })).toThrow("requires AWS");
     expect(() => prepareWorkflow({ ...base, milestones: [] })).toThrow("requires delivery");
+    expect(() => prepareWorkflow({ ...base, serviceNodes: architecture.serviceNodes })).toThrow("milestones and dependency edges only");
+    expect(() => prepareWorkflow({ ...architecture, milestones: base.milestones })).toThrow("services, groups, and data flow edges only");
+    expect(() => prepareWorkflow({ ...base, mode: "unsupported" })).toThrow();
     expect(() => prepareWorkflow({ ...base, summary: "x".repeat(2001) })).toThrow();
+  });
+  it("builds delivery milestones with their tasks and dependency edges", () => {
+    const { nodes, edges } = buildMcpGraph(prepareWorkflow(sampleWorkflow()).workflow, []);
+    expect(nodes).toHaveLength(2);
+    expect(nodes.flatMap(node => node.checkpoints)).toHaveLength(8);
+    expect(edges).toHaveLength(1);
+    expect(nodes.every(node => node.node_type === "milestone")).toBe(true);
   });
   it("generates per-canvas setup commands for PowerShell and Bash without credentials in URLs", () => {
     const ps = mcpSetup("aaaa-bbbb", "https://novastage.dev", "ns_mcp_test", "powershell");

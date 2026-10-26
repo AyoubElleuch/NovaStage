@@ -9,7 +9,7 @@ vi.mock("./gemini", () => ({ callGemini: vi.fn() }));
 vi.mock("./phases/decompose", () => ({ decomposePrompt: async () => undefined }));
 
 describe("AWS provider wire contract through orchestration", () => {
-  it.each(["aws_architecture", "full_stack"] as const)("preserves empty-boundary removals on %s updates", async mode => {
+  it.each(["aws_architecture"] as const)("preserves empty-boundary removals on %s updates", async mode => {
     const result = structuredClone(AWS_ARCHITECTURE_FIXTURES[1].result);
     result.groups!.push({ id: "saved-empty", tempId: "saved-empty", label: "Unused VPC", style: "vpc", childTempIds: [] });
     result.serviceNodes = result.serviceNodes!.map(service => ({ ...service, config: { Environment: "fixture", Purpose: service.serviceId } }));

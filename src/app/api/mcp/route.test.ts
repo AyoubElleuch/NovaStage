@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { POST, GET } from "./route";
-import { sampleWorkflow } from "@/lib/mcp/test-fixtures";
+import { sampleWorkflow, sampleArchitecture } from "@/lib/mcp/test-fixtures";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), limit: vi.fn(), writes: [] as { table: string; body: Record<string, unknown> }[], filters: [] as [string, string, unknown][] }));
 vi.mock("@/lib/mcp/auth", () => ({ authenticateMcp: mocks.auth }));
@@ -11,7 +11,7 @@ vi.mock("@/lib/canvas/server", () => ({ getProjectCanvasData: async () => ({ nod
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: (table: string) => {
   let write = false;
   const query = {
-    select: () => query, eq: (key: string, value: unknown) => { mocks.filters.push([table, key, value]); return query; }, order: () => query, limit: () => query,
+    select: () => query, eq: (key: string, value: unknown) => { mocks.filters.push([table, key, value]); return query; }, in: () => query, order: () => query, limit: () => query,
     insert: (body: Record<string, unknown>) => { write = true; mocks.writes.push({ table, body }); return query; },
     update: (body: Record<string, unknown>) => { write = true; mocks.writes.push({ table, body }); return query; },
     maybeSingle: async () => ({ data: { id: "draft-id" }, error: null }),
@@ -40,7 +40,7 @@ it("supports real SDK initialization, discovery, canvas reads, catalog searches 
     expect(JSON.stringify(proposal)).toContain("ready");
     expect(mocks.writes).toHaveLength(1);
     expect(mocks.writes[0].body).toMatchObject({ project_id: "project", user_id: "user", status: "ready" });
-    const invalid = sampleWorkflow(); invalid.serviceNodes[0].serviceId = "fake-service";
+    const invalid = sampleArchitecture(); invalid.serviceNodes[0].serviceId = "fake-service";
     const rejected = await client.callTool({ name: "propose_workflow", arguments: { prompt: "Invalid API", workflow: invalid } });
     expect(rejected.isError).toBe(true);
     expect(mocks.writes).toHaveLength(1);

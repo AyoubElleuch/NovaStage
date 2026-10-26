@@ -2,6 +2,7 @@ import { z } from "zod";
 import { validateAndRepairWorkflow } from "@/lib/ai/phases/validate";
 import { getAWSServiceDefinition } from "@/lib/canvas/aws-catalog-lookup";
 import { EDGE_TYPES } from "@/lib/canvas/types";
+import { AI_GENERATION_MODES } from "@/lib/ai/types";
 
 const text = z.string().trim().min(1).max(2000);
 const ref = z.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/);
@@ -9,7 +10,7 @@ const pair = { fromId: ref, toId: ref };
 
 /** Deliberately additive: an external assistant cannot delete or overwrite a collaborator's work. */
 export const workflowSchema = z.object({
-  mode: z.enum(["workflow", "aws_architecture", "full_stack"]),
+  mode: z.enum(AI_GENERATION_MODES),
   summary: text,
   milestones: z.array(z.object({
     tempId: ref, title: text, description: text.optional(),
@@ -41,10 +42,14 @@ export function prepareWorkflow(input: unknown) {
   const groups = new Set(parsed.groups.map(node => node.tempId));
   const ids = [...parsed.milestones, ...parsed.serviceNodes, ...parsed.groups].map(node => node.tempId);
   const all = new Set(ids);
+  if (parsed.mode === "workflow") {
+    if (!milestones.size) throw new Error("Workflow mode requires delivery milestones.");
+    if (parsed.serviceNodes.length || parsed.groups.length || parsed.dataFlowEdges.length) throw new Error("Workflow mode accepts milestones and dependency edges only.");
+  } else {
+    if (!parsed.serviceNodes.length) throw new Error("AWS architecture mode requires AWS services.");
+    if (milestones.size || parsed.edges.length) throw new Error("AWS architecture mode accepts services, groups, and data flow edges only.");
+  }
   if (!ids.length || all.size !== ids.length) throw new Error("Use at least one node and unique tempIds across all node types.");
-  if (parsed.mode !== "aws_architecture" && !milestones.size) throw new Error("This mode requires delivery milestones.");
-  if (parsed.mode !== "workflow" && !parsed.serviceNodes.length) throw new Error("This mode requires AWS services.");
-  if (parsed.mode === "workflow" && (parsed.serviceNodes.length || parsed.groups.length || parsed.dataFlowEdges.length)) throw new Error("Use full_stack mode for a combined diagram.");
   for (const service of parsed.serviceNodes) {
     if (!getAWSServiceDefinition(service.serviceId)) throw new Error(`Unknown AWS service: ${service.serviceId}. Search the catalog first.`);
   }

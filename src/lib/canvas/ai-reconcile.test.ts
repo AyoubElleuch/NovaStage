@@ -42,7 +42,7 @@ const legacy: CanvasNode = {
 describe("AI AWS catalog node persistence", () => {
   beforeEach(() => { writes.length = 0; vi.clearAllMocks(); });
 
-  it.each(["aws_architecture", "full_stack"] as const)("creates current catalog cards for %s without rewriting saved legacy nodes", async (mode) => {
+  it.each(["aws_architecture"] as const)("creates current catalog cards for %s without rewriting saved legacy nodes", async (mode) => {
     const result: AIWorkflowResult = {
       mode, intent: "create_pipeline", summary: "Create architecture", milestones: [], edges: [],
       serviceNodes: [{ tempId: "dns", serviceId: "route53", name: "Global DNS & Latency Routing", description: "Routes traffic", config: { routing: "latency" } }],
