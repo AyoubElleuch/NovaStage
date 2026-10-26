@@ -305,7 +305,8 @@ export async function POST(
       const reconciled = await applyAIWorkflowResult(
         project.id,
         workflowResult,
-        currentCanvasData
+        currentCanvasData,
+        session.user.id
       );
       finalNodes = reconciled.nodes;
       finalEdges = reconciled.edges;
@@ -320,7 +321,8 @@ export async function POST(
       const awsReconciled = await applyAWSServiceNodes(
         project.id,
         workflowResult,
-        { nodes: finalNodes, edges: finalEdges }
+        { nodes: finalNodes, edges: finalEdges },
+        session.user.id
       );
       finalNodes = awsReconciled.nodes;
       finalEdges = awsReconciled.edges;

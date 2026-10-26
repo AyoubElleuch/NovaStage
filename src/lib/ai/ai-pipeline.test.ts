@@ -3,7 +3,6 @@ import { generateFallbackWorkflow } from "./gemini";
 import { executeAIPipeline } from "./pipeline";
 import { validateAndRepairWorkflow, resolveMilestoneColor } from "./phases/validate";
 import { evaluateArchitectureQuality, normalizeArchitectureResult } from "./architecture-quality";
-import type { AIWorkflowResult } from "./types";
 
 describe("AI Workflow Pipeline, Graph Validation & Quality Engine", () => {
   const originalEnv = process.env.GEMINI_API_KEY;

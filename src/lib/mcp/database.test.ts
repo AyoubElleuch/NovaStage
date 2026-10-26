@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import { sampleWorkflow, sampleArchitecture } from "./test-fixtures";
 import { prepareWorkflow } from "./workflow";
 import { buildMcpGraph } from "./graph";
+import { buildAIGraph } from "../canvas/ai-graph";
 
 const db = new PGlite();
 const user = "10000000-0000-4000-8000-000000000001";
@@ -25,6 +26,7 @@ beforeAll(async () => {
   await db.exec(readFileSync("supabase/migrations/023_canvas_mcp.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/024_retire_combined_generation.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/025_enforce_mcp_diagram_modes.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/026_atomic_ai_canvas_graph.sql", "utf8"));
 }, 30000);
 beforeEach(async () => {
   await db.exec(`truncate public.projects, auth.users, public.project_members, public.project_banned_members cascade;
@@ -37,6 +39,39 @@ afterAll(async () => { await db.close(); });
 const graph = () => buildMcpGraph(prepareWorkflow(sampleArchitecture()).workflow, []);
 const apply = (payload: unknown, draftId = draft, caller = user) => db.query("select public.apply_canvas_mcp_draft($1, $2, $3::jsonb)", [draftId, caller, JSON.stringify(payload)]);
 const count = async (table: string) => Number((await db.query<{ count: number }>(`select count(*) from public.${table}`)).rows[0].count);
+
+const applyAI = (graph: ReturnType<typeof buildAIGraph>, mode = graph.mode) => db.query("select public.apply_canvas_ai_graph($1,$2,$3,$4::jsonb)", [project,user,mode,JSON.stringify(graph)]);
+it("commits built-in creation atomically and rejects mixed modes and foreign endpoints", async () => {
+  await db.query("update public.projects set ai_generating_by=$1, ai_generating_at=now()", [user]);
+  const graph = buildAIGraph({ ...sampleWorkflow(), intent: "create_pipeline" }, [], "workflow");
+  await expect(applyAI(graph, "aws_architecture")).rejects.toThrow(/mode/);
+  graph.edges[0].target_node_id = randomUUID();
+  await expect(applyAI(graph)).rejects.toThrow("Foreign endpoint");
+  expect(await count("canvas_nodes")).toBe(0);
+  expect(await count("canvas_checkpoints")).toBe(0);
+  const valid = buildAIGraph({ ...sampleWorkflow(), intent: "create_pipeline" }, [], "workflow");
+  await applyAI(valid);
+  expect(await count("canvas_nodes")).toBe(2);
+  expect(await count("canvas_checkpoints")).toBe(8);
+  await expect(applyAI(valid)).rejects.toThrow("append new resources");
+  const bad = buildAIGraph({ ...sampleArchitecture(), intent: "create_pipeline" }, [], "aws_architecture");
+  bad.nodes[0].checkpoints = valid.nodes[0].checkpoints;
+  await expect(applyAI(bad)).rejects.toThrow("without tasks");
+  expect(await count("canvas_nodes")).toBe(2);
+});
+it("preserves claims and completed work on updates, and rolls back stale writes", async () => {
+  await db.query("update public.projects set ai_generating_by=$1, ai_generating_at=now()", [user]);
+  const graph = buildAIGraph({ ...sampleWorkflow(), intent: "create_pipeline" }, [], "workflow");
+  await applyAI(graph);
+  await db.query("update public.canvas_nodes set claimed_by=$1 where id=$2", [user,graph.nodes[0].id]);
+  await db.query("update public.canvas_checkpoints set is_completed=true where id=$1", [graph.nodes[0].checkpoints[0].id]);
+  const update = { ...graph, update: true };
+  await applyAI(update);
+  expect((await db.query<{ claimed_by: string }>("select claimed_by from public.canvas_nodes where id=$1", [graph.nodes[0].id])).rows[0].claimed_by).toBe(user);
+  expect((await db.query<{ is_completed: boolean }>("select is_completed from public.canvas_checkpoints where id=$1", [graph.nodes[0].checkpoints[0].id])).rows[0].is_completed).toBe(true);
+  await expect(applyAI(update)).rejects.toThrow("Stale");
+  expect(await count("canvas_nodes")).toBe(2);
+});
 
 it("saves nested AWS content and acceptance atomically and prevents duplicate acceptance", async () => {
   await apply(graph());

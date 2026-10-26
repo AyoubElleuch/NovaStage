@@ -1,4 +1,5 @@
 import type { AIWorkflowResult } from "./types";
+import { normalizeAWSServiceId } from "../canvas/aws-catalog-lookup";
 
 /** Resolve containment once, before either quality checks or canvas persistence. */
 export function normalizeArchitectureTopology(result: AIWorkflowResult): AIWorkflowResult {
@@ -68,6 +69,27 @@ export function architectureTopologyIssues(result: AIWorkflowResult): string[] {
       if (seen.has(parent)) { issues.push(`Containment cycle involving ${id}`); break; }
       seen.add(parent); parent = parents.get(parent);
     }
+  }
+  const byGroup = new Map(groups.map(group => [group.tempId, group]));
+  for (const service of services) {
+    const serviceId = normalizeAWSServiceId(service.serviceId);
+    const seen = new Set<string>(); let parent = parents.get(service.tempId);
+    while (parent && !seen.has(parent)) {
+      seen.add(parent);
+      const group = byGroup.get(parent);
+      if (!group) break;
+      const network = ["vpc", "subnet", "availability_zone"].includes(group.style);
+      if (network && ["cloudfront", "route53", "apigateway", "waf", "s3", "dynamodb", "sqs", "sns", "eventbridge", "kms", "secretsmanager", "cloudwatch", "cloudtrail", "iam"].includes(serviceId)) {
+        issues.push(`${service.tempId} (${serviceId}) cannot be hosted inside ${group.style}; use a regional/custom boundary or model the network endpoint separately`);
+      }
+      parent = parents.get(parent);
+    }
+  }
+  for (const group of groups) {
+    const parent = byGroup.get(parents.get(group.tempId) || "");
+    if (parent && ((group.style === "region" && parent.style !== "custom") ||
+      (group.style === "vpc" && !["region", "custom"].includes(parent.style)) ||
+      (group.style === "availability_zone" && parent.style === "subnet"))) issues.push(`Invalid infrastructure containment: ${group.style} inside ${parent.style}`);
   }
   return issues;
 }

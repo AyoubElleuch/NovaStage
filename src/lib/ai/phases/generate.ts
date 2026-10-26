@@ -141,7 +141,7 @@ export async function generateDeepWorkflow(
     )}`;
   }
 
-  const userPromptText = `${contextDescription}${decompositionContext}\n\nUser Request: "${prompt}"`;
+  const userPromptText = `Selected mode: Workflow. Operation: ${context?.operation || "create"}. ${context?.operation === "update" ? "Return the complete desired workflow, retaining existing milestone and checkpoint IDs." : "Create a distinct new workflow using new tempIds only. Existing work is context; do not modify or delete it."}\n${contextDescription}${decompositionContext}\n\nUser Request: "${prompt}"`;
 
   let feedback = "";
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -150,7 +150,7 @@ export async function generateDeepWorkflow(
     });
     try {
       if (!result) throw new Error("No structured workflow was returned.");
-      const workflow = { ...result, mode: "workflow" as const, decomposition };
+      const workflow = { ...result, intent: context?.operation === "update" ? "update_pipeline" as const : "create_pipeline" as const, mode: "workflow" as const, decomposition };
       assertSemanticGraph(workflow, "workflow");
       return workflow;
     } catch (error) {

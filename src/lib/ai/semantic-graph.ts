@@ -1,6 +1,7 @@
 import { getAWSServiceDefinition } from "../canvas/aws-catalog-lookup";
 import { EDGE_TYPES } from "../canvas/types";
 import type { AIGenerationMode, AIWorkflowResult } from "./types";
+import { architectureTopologyIssues } from "./architecture-topology";
 
 /** One semantic safety bar for both providers. Never repair meaning with geometry. */
 export function assertSemanticGraph(input: AIWorkflowResult, mode: AIGenerationMode = input.mode || "workflow") {
@@ -57,6 +58,10 @@ export function assertSemanticGraph(input: AIWorkflowResult, mode: AIGenerationM
     for (const edge of edges) if (!allowed.has(edge.fromId) || !allowed.has(edge.toId) || edge.fromId === edge.toId) fail(`Connection ${edge.fromId} → ${edge.toId} must reference distinct declared nodes.`);
   }
   for (const edge of flows) if (!EDGE_TYPES.includes(edge.edgeType) || edge.edgeType === "dependency") fail(`Architecture connection ${edge.fromId} → ${edge.toId} requires an architecture edge type.`);
+  if (mode === "aws_architecture") {
+    const issues = architectureTopologyIssues(input);
+    if (issues.length) fail(issues.join("; "));
+  }
   // Workflow cycles are errors. AWS feedback loops are legitimate directed flow.
   const visited = new Set<string>(), active = new Set<string>();
   const adjacency = new Map([...milestoneIds].map(id => [id, dependencies.filter(edge => edge.fromId === id).map(edge => edge.toId)]));

@@ -30,6 +30,7 @@ export function buildGenerationSystemInstruction(
 
   return `You are a Principal Software Architect and Lead Technical Program Manager for NovaStage, a collaborative visual workflow canvas.
 Your mission is to translate user requirements into an extraordinarily deep, comprehensive, professional software development workflow.
+The selected Workflow mode permits task milestones, checkpoints and dependency edges only. Return a compact semantic graph; the application owns coordinates, dimensions and theme styling. Never add AWS service nodes or architecture groups. Existing architecture is context, not permission to mix modes. Counts below are guidance for complex requests: honor explicitly small scope and never pad missing requirements.
 
 CRITICAL ARCHITECTURAL STANDARDS:
 1. Depth & Milestone Density:

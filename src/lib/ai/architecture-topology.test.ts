@@ -3,7 +3,7 @@ import { normalizeArchitectureResult, hasUsableArchitecture } from "./architectu
 import type { AIWorkflowResult } from "./types";
 
 describe("AWS containment normalization", () => {
-  it("resolves conflicting membership, breaks containment cycles, and removes empty ancestors", () => {
+  it("preserves invalid containment evidence for rejection rather than guessing a repair", () => {
     const result: AIWorkflowResult = {
       intent: "update_pipeline", summary: "Repair topology", milestones: [], edges: [],
       groups: [
@@ -16,11 +16,8 @@ describe("AWS containment normalization", () => {
       dataFlowEdges: [],
     };
     const normalized = normalizeArchitectureResult(result)!;
-    expect(normalized.groups?.map(group => group.tempId)).toEqual(["a", "b"]);
-    expect(normalized.groups?.find(group => group.tempId === "a")?.parentGroupTempId).toBeUndefined();
-    expect(normalized.groups?.find(group => group.tempId === "a")?.childTempIds).toEqual(["b"]);
-    expect(normalized.groups?.find(group => group.tempId === "b")?.childTempIds).toEqual(["service"]);
-    expect(normalized.deletedGroupIds).toContain("old-empty");
+    expect(normalized.groups).toEqual(result.groups);
+    expect(hasUsableArchitecture(normalized)).toBe(false);
     expect(normalizeArchitectureResult(normalized)).toEqual(normalized);
     expect(result.groups).toHaveLength(4);
   });
