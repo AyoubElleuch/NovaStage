@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Check, Sparkles } from "lucide-react";
 import { APP_RELEASE, APP_RELEASE_DATE } from "@/lib/release";
 
@@ -286,6 +289,7 @@ const releases = [
 ] as const;
 
 export default function UpdatesPage() {
+  const [visibleCount, setVisibleCount] = useState(3);
   return (
     <div className="mx-auto max-w-3xl">
       <header className="dash-enter border-b border-neutral-200 dark:border-[#283548] pb-8">
@@ -299,12 +303,12 @@ export default function UpdatesPage() {
         </p>
       </header>
 
-      <div className="relative py-3 before:absolute before:bottom-8 before:left-1.75 before:top-8 before:w-px before:bg-neutral-200 dark:before:bg-[#283548]">
-        {releases.map((release, index) => (
+      <div id="release-history" className="relative py-3 before:absolute before:bottom-8 before:left-1.75 before:top-8 before:w-px before:bg-neutral-200 dark:before:bg-[#283548]">
+        {releases.slice(0, visibleCount).map((release, index) => (
           <article
             key={release.version}
             className="dash-enter relative grid grid-cols-[16px_1fr] gap-5 py-7"
-            style={{ "--dash-delay": `${70 + index * 55}ms` } as React.CSSProperties}
+            style={{ "--dash-delay": `${70 + (index % 3) * 55}ms` } as React.CSSProperties}
           >
             <span
               className={`relative z-10 mt-1 h-3.75 w-3.75 rounded-full border-4 border-white dark:border-[#0f141c] ${
@@ -338,6 +342,18 @@ export default function UpdatesPage() {
           </article>
         ))}
       </div>
+      {visibleCount < releases.length && (
+        <div className="pb-8 pl-9">
+          <button
+            type="button"
+            aria-controls="release-history"
+            onClick={() => setVisibleCount(count => count + 3)}
+            className="cursor-pointer text-sm text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500 dark:text-blue-400"
+          >
+            Load more
+          </button>
+        </div>
+      )}
     </div>
   );
 }
