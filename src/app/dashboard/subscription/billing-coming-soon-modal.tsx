@@ -9,6 +9,7 @@ interface BillingComingSoonModalProps {
   selectedPlan: "free" | "plus" | "pro" | "enterprise" | null;
   hasPlusCredit?: boolean;
   proPrice?: string;
+  variant?: "landing" | "default";
 }
 
 export default function BillingComingSoonModal({
@@ -17,6 +18,7 @@ export default function BillingComingSoonModal({
   selectedPlan,
   hasPlusCredit = false,
   proPrice,
+  variant = "default",
 }: BillingComingSoonModalProps) {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -70,7 +72,7 @@ export default function BillingComingSoonModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-headline"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${variant === "landing" ? "landing-original-billing dark" : ""}`}
     >
       {/* Backdrop */}
       <div
@@ -80,7 +82,7 @@ export default function BillingComingSoonModal({
       />
 
       {/* Modal Card */}
-      <div className="dash-pop relative w-full max-w-lg overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-[#283548] dark:bg-[#151c27]">
+      <div className="billing-modal-card dash-pop relative w-full max-w-lg overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-[#283548] dark:bg-[#151c27]">
         {/* Close Button */}
         <button
           type="button"
@@ -97,13 +99,13 @@ export default function BillingComingSoonModal({
           </span>
           <h2
             id="modal-headline"
-            className="mt-2 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white"
+            className="billing-modal-title mt-2 text-xl font-semibold tracking-tight text-neutral-900 dark:text-white"
           >
             Subscriptions Are Coming Soon
           </h2>
         </div>
 
-        <div className="mt-4 space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
+        <div className="billing-modal-copy mt-4 space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
           <p>
             You selected the{" "}
             <strong className="font-semibold text-neutral-900 dark:text-white">
@@ -114,7 +116,7 @@ export default function BillingComingSoonModal({
           <p className="text-neutral-500 dark:text-neutral-400">
             NovaStage is currently operating in early beta preview. Our corporate entity and automated payment processing are being finalized, so checkout is not live yet.
           </p>
-          <div className="rounded-xl border border-neutral-100 bg-neutral-50/80 p-4 text-xs text-neutral-600 dark:border-[#283548]/80 dark:bg-[#1e2736]/50 dark:text-neutral-300">
+          <div className="billing-modal-notice rounded-xl border border-neutral-100 bg-neutral-50/80 p-4 text-xs text-neutral-600 dark:border-[#283548]/80 dark:bg-[#1e2736]/50 dark:text-neutral-300">
             <div className="flex items-center gap-2 font-medium text-neutral-900 dark:text-white">
               <ShieldCheck className="h-4 w-4 text-emerald-500" />
               Provisional Testing Notice
@@ -126,7 +128,7 @@ export default function BillingComingSoonModal({
         </div>
 
         {/* Notify / Waitlist Form */}
-        <div className="mt-6 border-t border-neutral-100 pt-5 dark:border-[#283548]">
+        <div className="billing-modal-form mt-6 border-t border-neutral-100 pt-5 dark:border-[#283548]">
           {isSubmitted ? (
             <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
               <Check className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />

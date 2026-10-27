@@ -7,11 +7,12 @@ import { Shield, X } from "lucide-react";
 interface PrivacyPolicyModalProps {
   isOpen: boolean;
   onClose: () => void;
+  variant?: "landing" | "default";
 }
 
 const emptySubscribe = () => () => {};
 
-export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps) {
+export function PrivacyPolicyModal({ isOpen, onClose, variant = "default" }: PrivacyPolicyModalProps) {
   const isMounted = useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -41,7 +42,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
 
   const modalContent = (
     <div
-      className="dash-fade fixed inset-0 z-[90] flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm dark:bg-black/60"
+      className={`dash-fade fixed inset-0 z-[90] flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm dark:bg-black/60 ${variant === "landing" ? "landing-legal dark" : ""}`}
       role="presentation"
       onMouseDown={onClose}
     >
@@ -49,7 +50,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
         role="dialog"
         aria-modal="true"
         aria-labelledby="privacy-policy-title"
-        className="dash-pop relative flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-[#283548] dark:bg-[#161d27]"
+        className="legal-dialog dash-pop relative flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-[#283548] dark:bg-[#161d27]"
         onMouseDown={(event) => event.stopPropagation()}
       >
         {/* Close Button */}
@@ -63,8 +64,8 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
         </button>
 
         {/* Modal Header */}
-        <div className="flex items-start gap-4 border-b border-neutral-100 dark:border-[#283548] pb-5 pr-8">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-neutral-100 text-neutral-800 dark:bg-[#1e2634] dark:text-neutral-200">
+        <div className="legal-header flex items-start gap-4 border-b border-neutral-100 dark:border-[#283548] pb-5 pr-8">
+          <div className="legal-symbol grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-neutral-100 text-neutral-800 dark:bg-[#1e2634] dark:text-neutral-200">
             <Shield className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
@@ -86,7 +87,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
           className="flex-1 space-y-6 overflow-y-auto py-5 pr-4 text-[13px] leading-relaxed text-neutral-600 dark:text-neutral-300 focus-visible:outline-none"
         >
           {/* Key Principles Banner */}
-          <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/70 p-4 dark:border-[#283548] dark:bg-[#1e2634]/60">
+          <div className="legal-summary rounded-xl border border-neutral-200/80 bg-neutral-50/70 p-4 dark:border-[#283548] dark:bg-[#1e2634]/60">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-700 dark:text-neutral-200">
               Our Core Privacy Principles
             </h3>
@@ -204,7 +205,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-end border-t border-neutral-100 dark:border-[#283548] pt-4">
+        <div className="legal-footer flex items-center justify-end border-t border-neutral-100 dark:border-[#283548] pt-4">
           <button
             type="button"
             onClick={onClose}

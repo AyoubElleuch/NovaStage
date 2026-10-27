@@ -2,7 +2,7 @@
 import React from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import Dropdown from "./dropdown";
+import Dropdown, { DropdownBoundary } from "./dropdown";
 
 afterEach(cleanup);
 const options = [{ value: "draft", label: "Planned" }, { value: "blocked", label: "Blocked", disabled: true }, { value: "completed", label: "Complete" }];
@@ -46,4 +46,20 @@ it("selects by pointer and skips disabled choices with ArrowUp", () => {
   expect(change).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole("option", { name: "Planned" }));
   expect(screen.queryByRole("listbox")).toBeNull();
+});
+
+it("renders a bounded menu inside the supplied container", () => {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  vi.spyOn(container, "getBoundingClientRect").mockReturnValue({ left: 100, top: 100, right: 500, bottom: 500, width: 400, height: 400, x: 100, y: 100, toJSON() {} });
+  const { unmount } = render(<DropdownBoundary container={container}><Dropdown aria-label="Status" value="draft" options={options} onChange={() => {}} /></DropdownBoundary>);
+  const trigger = screen.getByRole("combobox");
+  vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue({ left: 150, top: 420, right: 350, bottom: 460, width: 200, height: 40, x: 150, y: 420, toJSON() {} });
+  fireEvent.click(trigger);
+  const list = screen.getByRole("listbox");
+  expect(container.contains(list)).toBe(true);
+  expect(list.style.position).toBe("absolute");
+  expect(parseFloat(list.style.top)).toBeGreaterThanOrEqual(0);
+  expect(parseFloat(list.style.top) + parseFloat(list.style.maxHeight)).toBeLessThanOrEqual(400);
+  unmount(); container.remove();
 });

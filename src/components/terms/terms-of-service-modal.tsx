@@ -8,11 +8,12 @@ import { TermsOfServiceContent } from "./terms-of-service-content";
 interface TermsOfServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
+  variant?: "landing" | "default";
 }
 
 const emptySubscribe = () => () => {};
 
-export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProps) {
+export function TermsOfServiceModal({ isOpen, onClose, variant = "default" }: TermsOfServiceModalProps) {
   const isMounted = useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -42,7 +43,7 @@ export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProp
 
   const modalContent = (
     <div
-      className="dash-fade fixed inset-0 z-[90] flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm dark:bg-black/60"
+      className={`dash-fade fixed inset-0 z-[90] flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm dark:bg-black/60 ${variant === "landing" ? "landing-legal dark" : ""}`}
       role="presentation"
       onMouseDown={onClose}
     >
@@ -50,7 +51,7 @@ export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProp
         role="dialog"
         aria-modal="true"
         aria-labelledby="terms-of-service-title"
-        className="dash-pop relative flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-[#283548] dark:bg-[#161d27]"
+        className="legal-dialog dash-pop relative flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-[#283548] dark:bg-[#161d27]"
         onMouseDown={(event) => event.stopPropagation()}
       >
         {/* Close Button */}
@@ -64,8 +65,8 @@ export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProp
         </button>
 
         {/* Modal Header */}
-        <div className="flex items-start gap-4 border-b border-neutral-100 dark:border-[#283548] pb-5 pr-8">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-neutral-100 text-neutral-800 dark:bg-[#1e2634] dark:text-neutral-200">
+        <div className="legal-header flex items-start gap-4 border-b border-neutral-100 dark:border-[#283548] pb-5 pr-8">
+          <div className="legal-symbol grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-neutral-100 text-neutral-800 dark:bg-[#1e2634] dark:text-neutral-200">
             <FileText className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
@@ -90,7 +91,7 @@ export function TermsOfServiceModal({ isOpen, onClose }: TermsOfServiceModalProp
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-end border-t border-neutral-100 dark:border-[#283548] pt-4">
+        <div className="legal-footer flex items-center justify-end border-t border-neutral-100 dark:border-[#283548] pt-4">
           <button
             type="button"
             onClick={onClose}

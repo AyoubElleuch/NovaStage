@@ -21,12 +21,7 @@
 .home-sandbox > [aria-hidden="true"].fixed.inset-0 { position: absolute !important; inset: 0 !important; }
 .home-sandbox [class*="backdrop-blur"] { backdrop-filter: none !important; }
 .home-assembled-node { position: absolute; top: 0; left: 0; opacity: clamp(0, calc(var(--assembly) * 2 - var(--node-order) * .15), 1); transform: translate3d(0, calc((1 - var(--assembly)) * 70px), 0); }
-.home-assembled-node > .group:not([data-node-type="aws_service"]) { background: var(--home-surface) !important; border: 1px solid var(--home-border) !important; border-radius: 8px; transition-property: box-shadow, border-color !important; }
-.home-assembled-node [data-no-drag="true"]:not(input), .home-assembled-node span.inline-block { border: none !important; background: transparent !important; box-shadow: none !important; }
-.home-assembled-node span.inline-block { max-width: none; }
-.home-assembled-node > .group > div:first-child { padding-bottom: 8px; }
 .home-assembled-edges { opacity: var(--assembly); }
-.home-assembled-edges foreignObject span { border: none !important; background: var(--home-bg) !important; box-shadow: none !important; border-radius: 0 !important; }
 .novastage-home:not([data-phase="canvas"]) .home-assembled-edges path[marker-end] { stroke-dasharray: 1000; stroke-dashoffset: calc((1 - var(--assembly)) * 1000); }
 .home-packet-layer { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
 .home-assembly-cursor { opacity: clamp(0, calc((var(--assembly) - .65) * 3), 1); }

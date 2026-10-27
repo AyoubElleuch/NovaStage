@@ -36,34 +36,31 @@ export function createGroup(id: string, position_x: number, position_y: number):
 
 export function createInitialGraph(compact = false): CanvasGraphData {
   const nodes: CanvasNode[] = [
-    { ...createGroup("edge-group", 20, 90), title: "Global edge", width: 580, height: 280, group_metadata: { label: "Global edge", style: "custom", childNodeIds: ["edge", "web"] } },
-    { ...createGroup("vpc-group", 670, 60), title: "Production VPC", width: 850, height: 540, group_metadata: { label: "Production VPC", style: "vpc", childNodeIds: ["api", "queue", "worker", "postgres", "redis"] } },
-    createService("edge", "Amazon CloudFront", "cloudfront", 70, 160),
-    createService("web", "Next.js application", "lambda", 300, 160),
-    createService("api", "API Gateway", "apigateway", 730, 150),
-    createService("worker", "Lambda workers", "lambda", 1260, 150),
-    createService("postgres", "Amazon RDS", "rds", 1000, 390),
-    createService("redis", "ElastiCache", "elasticache", 1260, 390),
-    createService("queue", "Amazon SQS", "sqs", 1000, 150),
+    { ...createGroup("edge-group", 0, 0), title: "Global edge", width: 590, height: 400, group_metadata: { label: "Global edge", style: "custom", childNodeIds: ["edge", "web"] } },
+    { ...createGroup("vpc-group", 710, 0), title: "Production VPC", width: 660, height: 730, group_metadata: { label: "Production VPC", style: "vpc", childNodeIds: ["api", "queue", "worker", "postgres"] } },
+    createService("edge", "Amazon CloudFront", "cloudfront", 75, 100),
+    createService("web", "Next.js application", "lambda", 325, 100),
+    createService("api", "API Gateway", "apigateway", 790, 100),
+    createService("queue", "Amazon SQS", "sqs", 1090, 100),
+    createService("postgres", "Amazon RDS", "rds", 790, 430),
+    createService("worker", "Lambda workers", "lambda", 1090, 430),
   ];
   if (compact) {
-    const positions = [[0, 0], [0, 500], [40, 80], [40, 280], [40, 580], [40, 980], [260, 580], [260, 780], [40, 780]];
+    const positions = [[0, 0], [0, 500], [75, 100], [325, 100], [75, 600], [325, 600], [75, 930], [325, 930]];
     nodes.forEach((node, index) => { [node.position_x, node.position_y] = positions[index]; });
-    nodes[0] = { ...nodes[0], width: 500, height: 420 };
-    nodes[1] = { ...nodes[1], width: 500, height: 800 };
+    nodes[0] = { ...nodes[0], width: 590, height: 400 };
+    nodes[1] = { ...nodes[1], width: 590, height: 730 };
   }
   const connections = [
-    ["edge", "web", "HTTPS", "network"],
-    ["web", "api", "HTTPS", "network"],
-    ["api", "queue", "Jobs", "event"],
-    ["queue", "worker", "Events", "event"],
-    ["api", "postgres", "PostgreSQL / TLS", "data_flow"],
-    ["worker", "redis", "Cache", "data_flow"],
+    ["edge", "web", "HTTPS", "network", "right", "left"],
+    ["web", "api", "HTTPS", "network", compact ? "bottom" : "right", compact ? "top" : "left"],
+    ["api", "queue", "Jobs", "event", "right", "left"],
+    ["queue", "worker", "Events", "event", "bottom", "top"],
+    ["api", "postgres", "PostgreSQL / TLS", "data_flow", "bottom", "top"],
   ] as const;
-  return { nodes, edges: connections.map(([source, target, label, edge_type]) => ({
+  return { nodes, edges: connections.map(([source, target, label, edge_type, source_handle, target_handle]) => ({
     id: `${source}-${target}`, project_id: PROJECT_ID, source_node_id: source,
-    target_node_id: target, source_handle: compact && source !== "edge" ? "bottom" : "right",
-    target_handle: compact && source !== "edge" ? "top" : "left", label, edge_type,
+    target_node_id: target, source_handle, target_handle, label, edge_type,
   })) };
 }
 

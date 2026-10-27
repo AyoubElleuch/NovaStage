@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Check } from "lucide-react";
 import BillingComingSoonModal from "@/app/dashboard/subscription/billing-coming-soon-modal";
 
@@ -65,6 +65,7 @@ const plans: Plan[] = [
 export default function PricingSection() {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
   const [selectedPlan, setSelectedPlan] = useState<"free" | "plus" | "pro" | "enterprise" | null>(null);
+  const closeModal = useCallback(() => setSelectedPlan(null), []);
 
   return <section id="pricing" className="home-pricing" aria-labelledby="pricing-title">
     <div className="home-pricing-heading home-reveal">
@@ -98,6 +99,6 @@ export default function PricingSection() {
       })}
     </div>
     <p className="home-pricing-note home-reveal">Early beta preview. Paid billing activates after launch; published rates and plan capacity are shown above.</p>
-    <BillingComingSoonModal isOpen={selectedPlan !== null} selectedPlan={selectedPlan} onClose={() => setSelectedPlan(null)} />
+    <BillingComingSoonModal isOpen={selectedPlan !== null} selectedPlan={selectedPlan} onClose={closeModal} variant="landing" />
   </section>;
 }

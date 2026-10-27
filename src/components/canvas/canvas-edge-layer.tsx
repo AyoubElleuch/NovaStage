@@ -25,6 +25,7 @@ interface CanvasEdgeLayerProps {
   } | null;
   onDeleteEdge: (edgeId: string) => void;
   onUpdateEdge?: (edgeId: string, updates: ConnectionUpdate) => Promise<void>;
+  onEditEdge?: (edgeId: string) => void;
   currentUserId?: string;
   isOwner?: boolean;
   isCycleDetected?: boolean;
@@ -38,6 +39,7 @@ export default function CanvasEdgeLayer({
   draftEdge,
   onDeleteEdge,
   onUpdateEdge,
+  onEditEdge,
   currentUserId,
   isOwner,
   isCycleDetected = false,
@@ -45,6 +47,7 @@ export default function CanvasEdgeLayer({
 }: CanvasEdgeLayerProps) {
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
+  const openEditor = (id: string) => { if (onEditEdge) onEditEdge(id); else setEditingEdgeId(id); };
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const padding = 200;
@@ -112,7 +115,7 @@ export default function CanvasEdgeLayer({
         >
           <path d="M 0 1 L 8 5 L 0 9 z" fill={isDark ? "#34d399" : "#10b981"} />
         </marker>
-        
+
         {/* Data Flow Arrowhead */}
         <marker id="arrow-data-flow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 1 L 8 5 L 0 9 z" fill={isDark ? "#60a5fa" : "#3B48CC"} />
@@ -157,7 +160,7 @@ export default function CanvasEdgeLayer({
           (Boolean(currentUserId) &&
             (sourceNode.claimed_by === currentUserId ||
               targetNode.claimed_by === currentUserId)));
-        
+
         // Exact geometric midpoint located on the actual cubic bezier curve path
         const center = routed?.center || getBezierPoint(
           0.5,
@@ -173,7 +176,7 @@ export default function CanvasEdgeLayer({
         const isInterlockingBridge =
           (sourceNode.node_type === "milestone" && (targetNode.node_type === "aws_service" || targetNode.node_type === "group")) ||
           Boolean(edge.label && (edge.label.includes("Provisions") || edge.label.includes("Configures") || edge.label.includes("Deploys") || edge.label.includes("Instruments") || edge.label.includes("Runs")));
-        
+
         let strokeColor = isDark ? "#64748b" : "#9ca3af";
         let strokeDasharray: string | undefined;
         let animationClass = "";
@@ -221,12 +224,12 @@ export default function CanvasEdgeLayer({
             onBlur={() => setHoveredEdgeId(null)}
             onKeyDown={(event) => {
               if ((event.key === "Enter" || event.key === " ") && onUpdateEdge && canDelete) {
-                event.preventDefault(); event.stopPropagation(); setEditingEdgeId(edge.id);
+                event.preventDefault(); event.stopPropagation(); openEditor(edge.id);
               }
             }}
             className="pointer-events-auto cursor-pointer group outline-none focus:outline-none focus-visible:outline-none"
             onPointerDown={event => event.stopPropagation()}
-            onClick={event => { event.stopPropagation(); if (onUpdateEdge && canDelete) setEditingEdgeId(edge.id); }}
+            onClick={event => { event.stopPropagation(); if (onUpdateEdge && canDelete) openEditor(edge.id); }}
             onMouseEnter={() => setHoveredEdgeId(edge.id)}
             onMouseLeave={() => setHoveredEdgeId(null)}
           >
@@ -281,7 +284,7 @@ export default function CanvasEdgeLayer({
                     aria-label={readOnly ? `Connection label: ${edge.label}` : `Edit connection: ${edge.label || "Add label"}`}
                     title={readOnly ? edge.label || edgeType : `${edge.label || "Add label"} — ${canDelete ? "Edit connection label and type" : "Claim a connected resource to edit"}`}
                     onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => { event.stopPropagation(); setEditingEdgeId(edge.id); }}
+                    onClick={(event) => { event.stopPropagation(); openEditor(edge.id); }}
                     className={`min-h-8 max-w-full truncate rounded-lg px-3 py-1.5 text-[10px] font-semibold shadow-xs border ${
                       isInterlockingBridge
                         ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800"

@@ -11,6 +11,7 @@ const INTERACTIVE_SELECTOR = "button, input, textarea, select, a, [contenteditab
 
 interface CanvasViewportProps {
   allowHandToolClick?: boolean;
+  allowPageScroll?: boolean;
   viewport: CanvasViewport;
   onViewportChange: (newViewport: CanvasViewport) => void;
   activeTool: CanvasTool;
@@ -26,6 +27,7 @@ interface CanvasViewportProps {
 
 export default function CanvasViewportContainer({
   allowHandToolClick = false,
+  allowPageScroll = false,
   viewport,
   onViewportChange,
   activeTool,
@@ -116,6 +118,7 @@ export default function CanvasViewportContainer({
   const handleWheel = useCallback(
     (e: WheelEvent) => {
       if (!containerRef.current) return;
+      if (allowPageScroll && !e.ctrlKey && !e.metaKey) return;
       if (!e.ctrlKey && !e.metaKey && e.target instanceof Element && e.target.closest("[data-canvas-scroll]")) return;
       e.preventDefault();
       const viewport = viewportRef.current;
@@ -149,7 +152,7 @@ export default function CanvasViewportContainer({
         });
       }
     },
-    [getScreenPoint, updateViewport]
+    [allowPageScroll, getScreenPoint, updateViewport]
   );
 
   useEffect(() => {
