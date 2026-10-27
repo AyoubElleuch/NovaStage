@@ -3,7 +3,7 @@ import React from "react";
 export function TermsOfServiceContent() {
   return (
     <div className="space-y-4 text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
-      <div className="rounded-md border border-neutral-200/80 bg-neutral-100/60 p-2.5 dark:border-[#283548] dark:bg-[#1e2634]/60">
+      <div className="legal-summary rounded-md border border-neutral-200/80 bg-neutral-100/60 p-2.5 dark:border-[#283548] dark:bg-[#1e2634]/60">
         <p className="font-semibold text-neutral-800 text-[11px] uppercase tracking-wider dark:text-white">
           Summary of Key Commitments
         </p>

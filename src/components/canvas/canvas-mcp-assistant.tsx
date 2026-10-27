@@ -8,7 +8,7 @@ import type { z } from "zod";
 import type { workflowSchema } from "@/lib/mcp/workflow";
 import { mcpSetup } from "@/lib/mcp/setup";
 import type { DesktopAssistant } from "@/lib/mcp/desktop";
-import { CodexIcon, ClaudeIcon } from "@/components/assistant-logos";
+import CanvasMcpLaunchForm from "./canvas-mcp-launch-form";
 import CanvasAIModeSelect from "./canvas-ai-mode-select";
 import GeneratedDiagramPreview from "./generated-diagram-preview";
 
@@ -18,10 +18,6 @@ type State = { connection: { expires_at: string; last_used_at: string | null } |
 type Handoff = { url: string; prompt: string; provider: DesktopAssistant; requestId: string; expiresAt: string };
 const BUTTON = "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold transition hover:bg-neutral-100 disabled:opacity-50 dark:border-[#384961] dark:hover:bg-[#283548]";
 const FIELD = "w-full rounded-lg border border-neutral-200 bg-transparent p-2.5 text-xs dark:border-[#384961]";
-const LAUNCH_BUTTON = "flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border px-2 py-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed";
-const INACTIVE_BUTTON = "border-neutral-200 bg-neutral-50 text-neutral-400 dark:border-[#283548] dark:bg-[#141c28] dark:text-neutral-500";
-const CODEX_BUTTON = "cursor-pointer border-neutral-300 bg-white text-neutral-900 enabled:hover:border-neutral-500 enabled:hover:bg-neutral-100 enabled:active:bg-neutral-200 dark:border-[#46566d] dark:bg-[#202c3d] dark:text-neutral-100 dark:enabled:hover:border-emerald-500 dark:enabled:hover:bg-[#293c4d] dark:enabled:active:bg-[#31495b]";
-const CLAUDE_BUTTON = "cursor-pointer border-[#d7a38c] bg-[#fff8f3] text-[#9b482d] enabled:hover:border-[#b85b35] enabled:hover:bg-[#f9e7dc] enabled:active:bg-[#f2d8c8] dark:border-[#8b5c47] dark:bg-[#322820] dark:text-[#f0b693] dark:enabled:hover:border-[#dc986f] dark:enabled:hover:bg-[#493225] dark:enabled:active:bg-[#563c2c]";
 
 async function readState(url: string): Promise<State> {
   const response = await fetch(url, { cache: "no-store" });
@@ -45,7 +41,6 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
   const [handoff, setHandoff] = useState<Handoff | null>(null);
   const active = Boolean(data?.connection);
   const setup = token ? mcpSetup(projectId, window.location.origin, token, shell) : null;
-  const canLaunch = Boolean(prompt.trim()) && !busy;
 
   async function launch(provider: DesktopAssistant) {
     if (!prompt.trim() || busy) return;
@@ -90,16 +85,7 @@ export default function CanvasMcpAssistant({ projectId, projectSlug, onApplied }
     {notice && <p role="status" className="text-xs leading-5 text-emerald-700 dark:text-emerald-400">{notice}</p>}
     {isLoading && <p className="flex gap-2 text-xs"><Loader2 className="h-4 w-4 animate-spin" />Loading connection…</p>}
     {data && <>
-      <form onSubmit={event => { event.preventDefault(); const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null; void launch(submitter?.value === "claude" ? "claude" : "codex"); }} className="space-y-2">
-        <label className="block text-xs font-semibold" htmlFor="desktop-ai-mode">What would you like to build?</label>
-        <CanvasAIModeSelect id="desktop-ai-mode" value={mode} onChange={setMode} disabled={busy} />
-        <textarea required aria-label="Describe your diagram" className={`${FIELD} min-h-24 resize-y leading-5`} maxLength={8000} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="A secure serverless app with authentication, a database, monitoring, and delivery milestones…" />
-        <div className="grid grid-cols-2 gap-2">
-          <button type="submit" name="assistant" value="codex" disabled={!canLaunch} className={`${LAUNCH_BUTTON} ${canLaunch ? CODEX_BUTTON : INACTIVE_BUTTON}`}><CodexIcon className="h-7 w-7" />Open Codex</button>
-          <button type="submit" name="assistant" value="claude" disabled={!canLaunch} className={`${LAUNCH_BUTTON} ${canLaunch ? CLAUDE_BUTTON : INACTIVE_BUTTON}`}><ClaudeIcon className="h-7 w-7" />Open Claude</button>
-        </div>
-        <p className="text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">Desktop app required. No terminal setup. Temporary canvas access lasts 15 minutes. Your assistant account and its limits apply; no NovaStage AI credits.</p>
-      </form>
+      <CanvasMcpLaunchForm mode={mode} prompt={prompt} busy={busy} onModeChange={setMode} onPromptChange={setPrompt} onLaunch={(provider) => void launch(provider)} />
       {busy && <p role="status" className="flex items-center gap-2 text-xs"><Loader2 className="h-3.5 w-3.5 animate-spin" />Preparing your request…</p>}
       {handoff && <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
         <p role="status" className="text-xs font-medium">Request prepared for {handoff.provider === "codex" ? "Codex" : "Claude"}. Press Send in the app, then return here for your draft.</p>

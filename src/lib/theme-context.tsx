@@ -102,6 +102,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Provides a fixed visual theme without changing user preferences. */
+export function DarkPreviewTheme({ children }: { children: React.ReactNode }) {
+  return <ThemeContext.Provider value={{ theme: "dark", setTheme: () => {}, toggleTheme: () => {} }}>{children}</ThemeContext.Provider>;
+}
+
 export function useTheme() {
   return useContext(ThemeContext);
 }
