@@ -1,41 +1,31 @@
 // Manual visual QA against the real canvas components with disposable, in-memory data.
 // No credentials, cloud calls, or production projects are used.
-import { createServer } from "vite";
-import react from "@vitejs/plugin-react";
-import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
+import { startHarness } from "./harness.mjs";
+import { createApiModel, COLLABORATOR, OWNER } from "./api-model.mjs";
 import { nodes, edges } from "./fixtures.mjs";
-const root = fileURLToPath(new URL("../../", import.meta.url));
-const mocks = resolve(root, "scripts/canvas-smoke/mocks.jsx");
-const state = { nodes: structuredClone(nodes), edges: structuredClone(edges), token: null };
-const server = await createServer({
-  root, configFile: false,
-  plugins: [react(), { name: "disposable-canvas-api", configureServer(server) {
-    server.middlewares.use(async (req, res, next) => {
-      if (!req.url.startsWith("/api/")) return next();
-      res.setHeader("Content-Type", "application/json");
-      if (req.url.endsWith("/share")) {
-        if (req.method === "POST") state.token ||= "a".repeat(64);
-        if (req.method === "DELETE") state.token = null;
-        return res.end(JSON.stringify({ token: state.token }));
-      }
-      if (req.method === "GET") return res.end(JSON.stringify(state));
-      if (req.method === "HEAD") return res.end();
-      let raw = "";
-      for await (const chunk of req) raw += chunk;
-      const body = raw ? JSON.parse(raw) : {};
-      if (body.action === "update_node") state.nodes = state.nodes.map(node => node.id === body.node_id ? { ...node, ...body.updates } : node);
-      if (body.action === "create_node") state.nodes.push({ ...body, project_id: "canvas-smoke", status: "draft", sort_order: state.nodes.length, claimed_by: "smoke-user", version: 1, checkpoints: [] });
-      if (body.action === "delete_node") state.nodes = state.nodes.filter(node => node.id !== body.node_id);
-      return res.end(JSON.stringify({ success: true }));
-    });
-  } }],
-  resolve: { alias: [
-    ...["@/lib/supabase/client", "@/components/notifications/notification-provider", "@/lib/canvas/sound-effects", "next/link"].map(find => ({ find, replacement: mocks })),
-    { find: "@", replacement: resolve(root, "src") },
-  ] },
-  optimizeDeps: { entries: ["scripts/canvas-smoke/main.jsx"] },
-  server: { host: "127.0.0.1", port: 4173, strictPort: true, watch: { ignored: ["**/.next/**", "**/.tmp/**"] } },
-});
-await server.listen();
-console.log("Visual QA: http://127.0.0.1:4173/scripts/canvas-smoke/index.html (also ?shared or ?empty)");
+
+// Interactive review fixture. State lives in memory in this process and is shared by every tab, so open
+// two tabs (?live and ?live&user=collab) to see collaboration. POST /__reset restores the seed data;
+// /__fail/<status> makes the next API request fail; /__latency/<ms> slows every response.
+const model = createApiModel({ nodes, edges });
+const port = Number(process.env.PORT || 4173);
+const { server, origin } = await startHarness({ port, extraPlugins: [{ name: "disposable-canvas-api", configureServer(server) {
+  server.middlewares.use(async (req, res, next) => {
+    const url = new URL(req.url, "http://fixture.local");
+    if (url.pathname === "/__reset") { Object.assign(model, createApiModel({ nodes, edges }), { skew: 0 }); res.end("reset"); return; }
+    if (url.pathname.startsWith("/__fail/")) { model.fail(() => true, { status: Number(url.pathname.split("/")[2]) || 500, json: { error: "Injected server failure" } }); res.end("armed"); return; }
+    if (url.pathname.startsWith("/__latency/")) { model.latencyMs = Number(url.pathname.split("/")[2]) || 0; res.end("ok"); return; }
+    if (!url.pathname.startsWith("/api/")) return next();
+    let raw = "";
+    for await (const chunk of req) raw += chunk;
+    const referer = req.headers.referer ? new URL(req.headers.referer).searchParams : new URLSearchParams();
+    const user = referer.get("user") === "collab" ? COLLABORATOR : OWNER;
+    const result = await model.handle({ method: req.method, pathname: url.pathname, body: raw ? JSON.parse(raw) : {}, user });
+    if (result.network) return req.socket.destroy();
+    res.statusCode = result.status;
+    res.setHeader("Content-Type", "application/json");
+    res.end(result.status === 204 ? undefined : JSON.stringify(result.json));
+  });
+} }] });
+console.log(`Visual QA: ${origin}/scripts/canvas-smoke/index.html?live (also ?live&user=collab, ?empty, ?shared)`);
+void server;

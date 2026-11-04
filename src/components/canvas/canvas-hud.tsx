@@ -23,6 +23,8 @@ import { useTheme } from "@/lib/theme-context";
 import UserAvatar from "@/components/ui/user-avatar";
 import CanvasShareDialog from "./canvas-share-dialog";
 import CanvasMobileActions from "./canvas-mobile-actions";
+import CanvasSaveStatus from "./canvas-save-status";
+import type { SaveIndicator } from "@/lib/canvas/save-status";
 
 interface CanvasHudProps {
   projectSlug?: string;
@@ -35,6 +37,8 @@ interface CanvasHudProps {
   currentUserId: string;
   networkStatus?: CanvasNetworkStatus;
   latencyMs?: number | null;
+  saveIndicator?: SaveIndicator;
+  onSaveAction?: (action: NonNullable<SaveIndicator["action"]>) => void;
   followingUserId?: string | null;
   onCopyInvite: () => void | Promise<void>;
   onToggleFollowUser?: (userId: string) => void;
@@ -53,6 +57,8 @@ export default function CanvasHud({
   currentUserId,
   networkStatus = "online",
   latencyMs = null,
+  saveIndicator,
+  onSaveAction,
   followingUserId = null,
   onCopyInvite,
   onToggleFollowUser,
@@ -129,13 +135,19 @@ export default function CanvasHud({
             </div>
 
             {/* Total Project Roadmap Progress */}
-            <div className="flex items-center gap-1.5 text-[10px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
+            <div className="flex flex-wrap items-center gap-x-1.5 text-[10px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">
               <span className="hidden md:inline">
                 {completedNodes}/{totalNodes} milestones ({overallProgress}%)
               </span>
               <span className="md:hidden">
                 {completedNodes}/{totalNodes} ({overallProgress}%)
               </span>
+              {saveIndicator && (
+                <>
+                  <span aria-hidden="true" className="text-neutral-300 dark:text-neutral-600">·</span>
+                  <CanvasSaveStatus indicator={saveIndicator} onAction={onSaveAction} />
+                </>
+              )}
             </div>
           </div>
         </div>

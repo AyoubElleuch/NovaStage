@@ -28,33 +28,44 @@ export async function POST(
     const { action, node_id, checkpoint_id, title, is_completed } = body;
     const adminClient = createAdminClient();
 
-    // Verify claim lock on node before altering checkpoints
-    let targetNodeId = node_id;
-    if (!targetNodeId && checkpoint_id) {
+    // The claim must cover the milestone that actually owns the checkpoint, never a caller-supplied node.
+    let targetNodeId: string | undefined = node_id;
+    if (checkpoint_id) {
       const { data: cp } = await adminClient
         .from("canvas_checkpoints")
         .select("node_id")
         .eq("id", checkpoint_id)
-        .maybeSingle();
-      targetNodeId = cp?.node_id;
-    }
-
-    if (targetNodeId) {
-      const { data: node } = await adminClient
-        .from("canvas_nodes")
-        .select("claimed_by, claim_expires_at")
-        .eq("id", targetNodeId)
         .eq("project_id", project.id)
         .maybeSingle();
-
-      const isExpired = Boolean(node?.claim_expires_at && new Date(node.claim_expires_at) < new Date());
-      const isClaimedByMe = node?.claimed_by === session.user.id && !isExpired;
-      if (!isClaimedByMe) {
-        return NextResponse.json(
-          { error: "You must claim this milestone box to alter or check its steps" },
-          { status: 423 }
-        );
+      if (!cp) {
+        return action === "delete"
+          ? NextResponse.json({ success: true })
+          : NextResponse.json({ error: "Checkpoint not found" }, { status: 404 });
       }
+      if (node_id && cp.node_id !== node_id) {
+        return NextResponse.json({ error: "Checkpoint does not belong to this milestone" }, { status: 400 });
+      }
+      targetNodeId = cp.node_id;
+    }
+
+    if (!targetNodeId) {
+      return NextResponse.json({ error: "A milestone is required" }, { status: 400 });
+    }
+
+    const { data: node } = await adminClient
+      .from("canvas_nodes")
+      .select("claimed_by, claim_expires_at")
+      .eq("id", targetNodeId)
+      .eq("project_id", project.id)
+      .maybeSingle();
+
+    const isExpired = Boolean(node?.claim_expires_at && new Date(node.claim_expires_at) < new Date());
+    const isClaimedByMe = node?.claimed_by === session.user.id && !isExpired;
+    if (!isClaimedByMe) {
+      return NextResponse.json(
+        { error: "You must claim this milestone box to alter or check its steps" },
+        { status: 423 }
+      );
     }
 
     // 1. Toggle Checkpoint

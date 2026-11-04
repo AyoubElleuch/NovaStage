@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useReducer, useRef, useSyncExternalStore } from "react";
 import { Loader2, Flag, Box, Sparkles, X, Scan, Trash2 } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -30,7 +30,21 @@ import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
 import { fitCanvasNodes, getDragNodeIds, getOpenNodePosition, zoomAroundCenter, getCanvasNodeAtPoint } from "@/lib/canvas/workspace";
 import { useCanvasVisualViewport } from "@/lib/canvas/use-visual-viewport";
 import { readAIGenerationResponse } from "@/lib/ai/response";
-import { assertCanvasSaved } from "@/lib/canvas/mutation";
+import {
+  applyOps,
+  canRedo as historyCanRedo,
+  canUndo as historyCanUndo,
+  diffCanvas,
+  emptyHistory,
+  findCheckpoint,
+  findEdge,
+  invertOps,
+  recordHistory,
+  type CanvasOp,
+  type CanvasState,
+  type History,
+} from "@/lib/canvas/history";
+import { describeSave, friendlySaveError, INITIAL_SAVE_STATE, reduceSaveState } from "@/lib/canvas/save-status";
 import CanvasViewportContainer from "@/components/canvas/canvas-viewport";
 import CanvasNodeComponent from "@/components/canvas/canvas-node";
 import CanvasEdgeLayer from "@/components/canvas/canvas-edge-layer";
@@ -92,13 +106,6 @@ type DraftEdgeState = {
   sourceHandle: HandlePosition;
   currentPos: { x: number; y: number };
 };
-
-type HistorySnapshot = {
-  nodes: CanvasNode[];
-  edges: CanvasEdge[];
-};
-
-const MAX_HISTORY_STEPS = 30;
 
 export default function ProjectCanvasClient({
   project,
@@ -216,6 +223,12 @@ export default function ProjectCanvasClient({
   const [networkStatus, setNetworkStatus] = useState<CanvasNetworkStatus>("online");
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [followingUserId, setFollowingUserId] = useState<string | null>(null);
+  const resyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveStateRef = useRef(INITIAL_SAVE_STATE);
+  const followingUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    followingUserIdRef.current = followingUserId;
+  }, [followingUserId]);
   const lastOutboundCursorTimeRef = useRef<number>(0);
   const lastOutboundPosRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -243,29 +256,61 @@ export default function ProjectCanvasClient({
   const collaboratorsRef = useRef<CollaboratorPresence[]>([]);
   const [incomingClaimModal, setIncomingClaimModal] = useState<CanvasClaimRequest | null>(null);
 
-  // Undo / Redo Local History Stack
-  const historyRef = useRef<HistorySnapshot[]>([
-    { nodes: initialNodes, edges: initialEdges },
-  ]);
-  const historyIndexRef = useRef<number>(0);
+  // Undo / redo history stores the user's own changes (deltas), so reverting never overwrites collaborators.
+  const historyRef = useRef<History>(emptyHistory());
+  const nodesRef = useRef<CanvasNode[]>(initialNodes);
+  const edgesRef = useRef<CanvasEdge[]>(initialEdges);
+  const historyQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [saveState, dispatchSave] = useReducer(reduceSaveState, INITIAL_SAVE_STATE);
 
+  useEffect(() => {
+    nodesRef.current = nodes;
+    edgesRef.current = edges;
+  }, [nodes, edges]);
+
+  useEffect(() => {
+    saveStateRef.current = saveState;
+  }, [saveState]);
+
+  const syncHistoryFlags = useCallback(() => {
+    setCanUndo(historyCanUndo(historyRef.current));
+    setCanRedo(historyCanRedo(historyRef.current));
+  }, []);
+
+  // Records the change from the latest known canvas to the given one.
   const pushHistorySnapshot = useCallback(
     (newNodes: CanvasNode[], newEdges: CanvasEdge[]) => {
-      const idx = historyIndexRef.current;
-      const sliced = historyRef.current.slice(0, idx + 1);
-      sliced.push({ nodes: newNodes, edges: newEdges });
-      if (sliced.length > MAX_HISTORY_STEPS) {
-        sliced.shift();
-      }
-      historyRef.current = sliced;
-      historyIndexRef.current = sliced.length - 1;
-      setCanUndo(historyIndexRef.current > 0);
-      setCanRedo(false);
+      const ops = diffCanvas({ nodes: nodesRef.current, edges: edgesRef.current }, { nodes: newNodes, edges: newEdges });
+      nodesRef.current = newNodes;
+      edgesRef.current = newEdges;
+      if (!ops.length) return;
+      historyRef.current = recordHistory(historyRef.current, ops);
+      syncHistoryFlags();
     },
-    []
+    [syncHistoryFlags]
   );
+
+  const trackSave = useCallback(async <T,>(operation: () => Promise<T>): Promise<T> => {
+    dispatchSave({ type: "started" });
+    try {
+      const result = await operation();
+      dispatchSave({ type: "succeeded" });
+      return result;
+    } catch (error) {
+      dispatchSave({ type: "failed", message: friendlySaveError(error) });
+      throw error;
+    }
+  }, []);
+
+  // Warn before leaving while a save is in flight or the canvas is known to be out of sync.
+  useEffect(() => {
+    if (!saveState.pending && !saveState.diverged) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [saveState.pending, saveState.diverged]);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
@@ -319,7 +364,13 @@ export default function ProjectCanvasClient({
   const secureFetch = useCallback(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const res = await fetch(input, init);
-      if (res.status === 401 || res.status === 403) {
+      let revoked = res.status === 401;
+      if (res.status === 403) {
+        // Only the project membership check means "removed"; other 403s are ordinary permission answers.
+        const body = await res.clone().json().catch(() => null);
+        revoked = body?.error === "Forbidden" || body?.error === "Unauthorized";
+      }
+      if (revoked) {
         handleEviction();
         throw new Error("Access Revoked");
       }
@@ -328,20 +379,58 @@ export default function ProjectCanvasClient({
     [handleEviction]
   );
 
-  // Resync full canvas state on reconnection
-  const resyncCanvasState = useCallback(async () => {
+  // Sends one canvas mutation and throws unless the server confirms it was stored.
+  const saveRequest = useCallback(
+    async (path: "canvas" | "canvas/checkpoints" | "canvas/claim", body: Record<string, unknown>) => {
+      const response = await secureFetch(`/api/dashboard/projects/${project.slug}/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      let data: { success?: boolean; error?: string; [key: string]: unknown } | null = null;
+      try { data = await response.json(); } catch {}
+      if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to save canvas changes. Please try again.");
+      return data;
+    },
+    [project.slug, secureFetch]
+  );
+
+  // Resync full canvas state on reconnection or after a failed save.
+  const resyncCanvasState = useCallback(async (options: { quiet?: boolean } = {}) => {
     try {
-      const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`);
+      const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, { cache: "no-store" });
       if (res.ok) {
+        const hadUnsavedEdits = saveStateRef.current.diverged;
         const data = await res.json();
-        if (data.nodes) setNodes(data.nodes);
-        if (data.edges) setEdges(data.edges);
-        notify({ title: "Canvas Synced", message: "Refreshed latest roadmap changes" });
+        if (data.nodes) { nodesRef.current = data.nodes; setNodes(data.nodes); }
+        if (data.edges) { edgesRef.current = data.edges; setEdges(data.edges); }
+        dispatchSave({ type: "synced" });
+        if (!options.quiet) {
+          notify(hadUnsavedEdits
+            ? { tone: "error", title: "Unsaved edits discarded", message: "Changes made while disconnected could not be saved, so the canvas now shows the saved version. Please repeat them." }
+            : { title: "Canvas Synced", message: "Refreshed latest roadmap changes" });
+        }
+        return true;
       }
     } catch (e) {
       console.warn("Failed to resync canvas state:", e);
     }
+    return false;
   }, [notify, project.slug, secureFetch]);
+
+  // A failed save leaves the screen showing the saved version; say what happened and how to recover.
+  const reportSaveFailure = useCallback(async (title: string, error: unknown) => {
+    console.error(title, error);
+    const synced = await resyncCanvasState({ quiet: true });
+    // Collaborators may have received the change that was just rejected; have them reload the saved version.
+    if (synced) broadcastEvent("canvas:resync", { userId: currentUser.id });
+    const reason = friendlySaveError(error);
+    notify({
+      tone: "error",
+      title,
+      message: synced ? `${reason} The canvas now shows the saved version.` : `${reason} Reconnect to refresh the canvas.`,
+    });
+  }, [broadcastEvent, currentUser.id, notify, resyncCanvasState]);
 
   // Add Milestone Box (Optimistic Instant Pop)
   const handleAddNode = useCallback(
@@ -399,22 +488,14 @@ export default function ProjectCanvasClient({
       notify({ title: "Milestone Created", message: `Added "${defaultTitle}" to canvas` });
 
       // Background persistence
-      secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create_node",
-          id: clientNodeId,
-          title: defaultTitle,
-          position_x: finalX,
-          position_y: finalY,
-          checkpoints: [],
-        }),
-      }).then(assertCanvasSaved).catch(async (e) => {
-        console.error("Failed to persist milestone node:", e);
-        await resyncCanvasState();
-        notify({ tone: "error", title: "Error", message: "Failed to create milestone box" });
-      });
+      void trackSave(() => saveRequest("canvas", {
+        action: "create_node",
+        id: clientNodeId,
+        title: defaultTitle,
+        position_x: finalX,
+        position_y: finalY,
+        checkpoints: [],
+      })).catch((e) => reportSaveFailure("Milestone Not Saved", e));
     },
     [
       broadcastEvent,
@@ -427,12 +508,12 @@ export default function ProjectCanvasClient({
       nodes,
       notify,
       project.id,
-      project.slug,
+      saveRequest,
+      trackSave,
+      reportSaveFailure,
       pushHistorySnapshot,
-      secureFetch,
       snapGrid,
       getCanvasArea,
-      resyncCanvasState,
       viewport,
       isMobile,
     ]
@@ -496,26 +577,18 @@ export default function ProjectCanvasClient({
       notify({ title: "AWS Service Added", message: `Added "${serviceName}" to canvas` });
 
       // Background persistence
-      secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create_node",
-          id: clientNodeId,
-          title: serviceName,
-          node_type: "aws_service",
-          width: serviceData.width,
-          height: serviceData.height,
-          position_x: finalX,
-          position_y: finalY,
-          aws_metadata: serviceData.aws_metadata,
-          checkpoints: [],
-        }),
-      }).then(assertCanvasSaved).catch(async (e) => {
-        console.error("Failed to persist AWS service node:", e);
-        await resyncCanvasState();
-        notify({ tone: "error", title: "Error", message: "Failed to add AWS service node" });
-      });
+      void trackSave(() => saveRequest("canvas", {
+        action: "create_node",
+        id: clientNodeId,
+        title: serviceName,
+        node_type: "aws_service",
+        width: serviceData.width,
+        height: serviceData.height,
+        position_x: finalX,
+        position_y: finalY,
+        aws_metadata: serviceData.aws_metadata,
+        checkpoints: [],
+      })).catch((e) => reportSaveFailure("AWS Service Not Saved", e));
     },
     [
       broadcastEvent,
@@ -528,12 +601,12 @@ export default function ProjectCanvasClient({
       nodes,
       notify,
       project.id,
-      project.slug,
+      saveRequest,
+      trackSave,
+      reportSaveFailure,
       pushHistorySnapshot,
-      secureFetch,
       snapGrid,
       getCanvasArea,
-      resyncCanvasState,
       viewport,
       isMobile,
     ]
@@ -601,30 +674,22 @@ export default function ProjectCanvasClient({
       notify({ title: "Group Created", message: `Added "${defaultTitle}" to canvas` });
 
       // Background persistence
-      secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create_node",
-          id: clientNodeId,
-          title: defaultTitle,
-          node_type: "group",
-          width: 440,
-          height: 320,
-          position_x: finalX,
-          position_y: finalY,
-          group_metadata: {
-            label: defaultTitle,
-            style: "vpc",
-            childNodeIds: [],
-          },
-          checkpoints: [],
-        }),
-      }).then(assertCanvasSaved).catch(async (e) => {
-        console.error("Failed to persist group container:", e);
-        await resyncCanvasState();
-        notify({ tone: "error", title: "Error", message: "Failed to create group container" });
-      });
+      void trackSave(() => saveRequest("canvas", {
+        action: "create_node",
+        id: clientNodeId,
+        title: defaultTitle,
+        node_type: "group",
+        width: 440,
+        height: 320,
+        position_x: finalX,
+        position_y: finalY,
+        group_metadata: {
+          label: defaultTitle,
+          style: "vpc",
+          childNodeIds: [],
+        },
+        checkpoints: [],
+      })).catch((e) => reportSaveFailure("Group Not Saved", e));
     },
     [
       broadcastEvent,
@@ -637,12 +702,12 @@ export default function ProjectCanvasClient({
       nodes,
       notify,
       project.id,
-      project.slug,
+      saveRequest,
+      trackSave,
+      reportSaveFailure,
       pushHistorySnapshot,
-      secureFetch,
       snapGrid,
       getCanvasArea,
-      resyncCanvasState,
       viewport,
       isMobile,
     ]
@@ -651,35 +716,21 @@ export default function ProjectCanvasClient({
   // Update Milestone Content
   const handleUpdateNode = useCallback(
     async (nodeId: string, updates: Partial<CanvasNode>) => {
-      setNodes((prev) => {
-        const next = prev.map((n) => (n.id === nodeId ? { ...n, ...updates } : n));
-        pushHistorySnapshot(next, edges);
-        return next;
-      });
+      const nextNodes = nodesRef.current.map((n) => (n.id === nodeId ? { ...n, ...updates } : n));
+      pushHistorySnapshot(nextNodes, edgesRef.current);
+      setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, ...updates } : n)));
 
       // Instant broadcast to collaborators
       broadcastEvent("node:updated", { nodeId, updates });
 
       try {
-        const response = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "update_node",
-            node_id: nodeId,
-            updates,
-          }),
-        });
-        const result = await response.json();
-        if (!response.ok || !result.success) throw new Error(result.error || "Unable to save changes");
+        await trackSave(() => saveRequest("canvas", { action: "update_node", node_id: nodeId, updates }));
       } catch (e) {
-        console.error("Failed to update node:", e);
-        await resyncCanvasState();
-        notify({ tone: "error", title: "Changes Not Saved", message: e instanceof Error ? e.message : "Please try again." });
+        await reportSaveFailure("Changes Not Saved", e);
         throw e;
       }
     },
-    [broadcastEvent, edges, project.slug, pushHistorySnapshot, secureFetch, resyncCanvasState, notify]
+    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure]
   );
 
   // Delete Milestone Box
@@ -710,20 +761,13 @@ export default function ProjectCanvasClient({
       broadcastEvent("node:deleted", { nodeId });
 
       try {
-        const response = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "delete_node", node_id: nodeId }),
-        });
-        await assertCanvasSaved(response);
-        notify({ title: "Node Deleted" });
+        await trackSave(() => saveRequest("canvas", { action: "delete_node", node_id: nodeId }));
+        notify({ title: "Node Deleted", message: "You can undo this with Ctrl or ⌘ Z." });
       } catch (e) {
-        console.error("Failed to delete node:", e);
-        await resyncCanvasState();
-        notify({ tone: "error", title: "Delete Not Saved", message: "The canvas has been refreshed. Please try again." });
+        await reportSaveFailure("Delete Not Saved", e);
       }
     },
-    [broadcastEvent, currentUser.id, edges, isOwner, nodes, notify, project.slug, pushHistorySnapshot, secureFetch, resyncCanvasState]
+    [broadcastEvent, currentUser.id, edges, isOwner, nodes, notify, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure]
   );
 
   // Delete All Selected Nodes (Atomic Batch Delete)
@@ -776,45 +820,32 @@ export default function ProjectCanvasClient({
 
     // Delete in database in parallel
     try {
-      const saves = await Promise.allSettled(
-        Array.from(deletableNodeIds).map((nodeId) =>
-          secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "delete_node", node_id: nodeId }),
-          }).then(assertCanvasSaved)
-        )
-      );
-      if (saves.some(result => result.status === "rejected")) throw new Error("Some selected items could not be deleted.");
+      await trackSave(async () => {
+        const saves = await Promise.allSettled(
+          Array.from(deletableNodeIds).map((nodeId) => saveRequest("canvas", { action: "delete_node", node_id: nodeId }))
+        );
+        if (saves.some(result => result.status === "rejected")) throw new Error("Some selected items could not be deleted.");
+      });
     } catch (e) {
-      console.error("Failed to delete batch nodes from database:", e);
-      await resyncCanvasState();
-      notify({ tone: "error", title: "Delete Not Fully Saved", message: "Some items could not be deleted. The canvas has been refreshed." });
+      await reportSaveFailure("Delete Not Fully Saved", e);
     }
-  }, [broadcastEvent, currentUser.id, edges, isOwner, nodes, notify, project.slug, pushHistorySnapshot, secureFetch, selectedNodeId, selectedNodeIds, resyncCanvasState]);
+  }, [broadcastEvent, currentUser.id, edges, isOwner, nodes, notify, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure, selectedNodeId, selectedNodeIds]);
 
   // Toggle Checkpoint Checkbox
   const handleToggleCheckpoint = useCallback(
     async (checkpointId: string, nodeId: string, nextCompleted: boolean) => {
-      setNodes((prev) => {
-        const next = prev.map((n) => {
-          if (n.id !== nodeId) return n;
-          const updatedCps = n.checkpoints.map((cp) =>
-            cp.id === checkpointId ? { ...cp, is_completed: nextCompleted } : cp
-          );
-          const allDone = updatedCps.every((c) => c.is_completed);
-          const anyDone = updatedCps.some((c) => c.is_completed);
-          const nextStatus = allDone ? "completed" : anyDone ? "in_progress" : "draft";
-
-          return {
-            ...n,
-            checkpoints: updatedCps,
-            status: nextStatus as CanvasNode["status"],
-          };
-        });
-        pushHistorySnapshot(next, edges);
-        return next;
+      const toggle = (list: CanvasNode[]) => list.map((n) => {
+        if (n.id !== nodeId) return n;
+        const updatedCps = n.checkpoints.map((cp) =>
+          cp.id === checkpointId ? { ...cp, is_completed: nextCompleted } : cp
+        );
+        const allDone = updatedCps.every((c) => c.is_completed);
+        const anyDone = updatedCps.some((c) => c.is_completed);
+        const nextStatus = allDone ? "completed" : anyDone ? "in_progress" : "draft";
+        return { ...n, checkpoints: updatedCps, status: nextStatus as CanvasNode["status"] };
       });
+      pushHistorySnapshot(toggle(nodesRef.current), edgesRef.current);
+      setNodes(toggle);
 
       if (nextCompleted) {
         canvasSounds.completeTask();
@@ -828,97 +859,55 @@ export default function ProjectCanvasClient({
       });
 
       try {
-        const res = await secureFetch(
-          `/api/dashboard/projects/${project.slug}/canvas/checkpoints`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "toggle",
-              node_id: nodeId,
-              checkpoint_id: checkpointId,
-              is_completed: nextCompleted,
-            }),
-          }
-        );
-
-        if (!res.ok) {
-          const err = await res.json();
-          notify({ tone: "error", title: "Action Failed", message: err.error });
-        }
+        await trackSave(() => saveRequest("canvas/checkpoints", {
+          action: "toggle",
+          node_id: nodeId,
+          checkpoint_id: checkpointId,
+          is_completed: nextCompleted,
+        }));
       } catch (e) {
-        console.error("Failed to toggle checkpoint:", e);
+        await reportSaveFailure("Checkpoint Not Saved", e);
       }
     },
-    [broadcastEvent, edges, notify, project.slug, pushHistorySnapshot, secureFetch]
+    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure]
   );
 
-  // Add Checkpoint
+  // Add Checkpoint (waits for the server so the checkpoint has its real ID)
   const handleAddCheckpoint = useCallback(
     async (nodeId: string, title: string) => {
       try {
-        const res = await secureFetch(
-          `/api/dashboard/projects/${project.slug}/canvas/checkpoints`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "add",
-              node_id: nodeId,
-              title,
-            }),
-          }
-        );
-        const data = await res.json();
-        if (data.success && data.checkpoint) {
-          setNodes((prev) => {
-            const next = prev.map((n) =>
-              n.id === nodeId
-                ? { ...n, checkpoints: [...n.checkpoints, data.checkpoint] }
-                : n
-            );
-            pushHistorySnapshot(next, edges);
-            return next;
-          });
-          broadcastEvent("checkpoint:added", { nodeId, checkpoint: data.checkpoint });
-        }
+        const data = await trackSave(() => saveRequest("canvas/checkpoints", { action: "add", node_id: nodeId, title }));
+        const checkpoint = data.checkpoint as CanvasNode["checkpoints"][number] | undefined;
+        if (!checkpoint) throw new Error("The checkpoint was not returned by the server.");
+        const add = (list: CanvasNode[]) => list.map((n) => (n.id === nodeId ? { ...n, checkpoints: [...n.checkpoints, checkpoint] } : n));
+        pushHistorySnapshot(add(nodesRef.current), edgesRef.current);
+        setNodes(add);
+        broadcastEvent("checkpoint:added", { nodeId, checkpoint });
       } catch (e) {
-        console.error("Failed to add checkpoint:", e);
+        await reportSaveFailure("Checkpoint Not Added", e);
       }
     },
-    [broadcastEvent, edges, project.slug, pushHistorySnapshot, secureFetch]
+    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure]
   );
 
   // Delete Checkpoint
   const handleDeleteCheckpoint = useCallback(
     async (checkpointId: string, nodeId: string) => {
-      setNodes((prev) => {
-        const next = prev.map((n) =>
-          n.id === nodeId
-            ? { ...n, checkpoints: n.checkpoints.filter((c) => c.id !== checkpointId) }
-            : n
-        );
-        pushHistorySnapshot(next, edges);
-        return next;
-      });
+      const remove = (list: CanvasNode[]) => list.map((n) =>
+        n.id === nodeId ? { ...n, checkpoints: n.checkpoints.filter((c) => c.id !== checkpointId) } : n
+      );
+      pushHistorySnapshot(remove(nodesRef.current), edgesRef.current);
+      setNodes(remove);
 
       broadcastEvent("checkpoint:deleted", { nodeId, checkpointId });
 
       try {
-        await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/checkpoints`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "delete",
-            node_id: nodeId,
-            checkpoint_id: checkpointId,
-          }),
-        });
+        await trackSave(() => saveRequest("canvas/checkpoints", { action: "delete", node_id: nodeId, checkpoint_id: checkpointId }));
       } catch (e) {
-        console.error("Failed to delete checkpoint:", e);
+        await reportSaveFailure("Checkpoint Not Deleted", e);
       }
     },
-    [broadcastEvent, edges, project.slug, pushHistorySnapshot, secureFetch]
+    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure]
   );
 
   // Claim Methods with instant peer broadcast
@@ -946,36 +935,24 @@ export default function ProjectCanvasClient({
         )
       );
 
-      // Instant broadcast to peers
-      broadcastEvent("claim:changed", {
-        nodeId,
-        claimedBy: currentUser.id,
-        claimHolder: myHolder,
-        expiresAt,
-        action: "claim",
-      });
-
+      // Peers only hear about the claim once the server has actually granted it.
       try {
-        const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "claim", node_id: nodeId }),
+        await saveRequest("canvas/claim", { action: "claim", node_id: nodeId });
+        broadcastEvent("claim:changed", {
+          nodeId,
+          claimedBy: currentUser.id,
+          claimHolder: myHolder,
+          expiresAt,
+          action: "claim",
         });
-
-        const data = await res.json();
-        if (data.success) {
-          notify({ title: "Claim Acquired", message: "You now have exclusive edit lock" });
-        } else {
-          // Revert optimistic update on collision/error
-          resyncCanvasState();
-          notify({ tone: "error", title: "Claim Failed", message: data.error });
-        }
+        notify({ title: "Claim Acquired", message: "You now have exclusive edit lock" });
       } catch (e) {
         console.error("Failed to claim node:", e);
-        resyncCanvasState();
+        await resyncCanvasState({ quiet: true });
+        notify({ tone: "error", title: "Claim Failed", message: friendlySaveError(e) });
       }
     },
-    [broadcastEvent, currentUser.avatarUrl, currentUser.email, currentUser.fullName, currentUser.id, notify, project.slug, resyncCanvasState, secureFetch]
+    [broadcastEvent, currentUser.avatarUrl, currentUser.email, currentUser.fullName, currentUser.id, notify, resyncCanvasState, saveRequest]
   );
 
   const handleReleaseNode = useCallback(
@@ -999,18 +976,15 @@ export default function ProjectCanvasClient({
       });
 
       try {
-        await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "release", node_id: nodeId }),
-        });
+        await saveRequest("canvas/claim", { action: "release", node_id: nodeId });
         notify({ title: "Claim Released", message: "Milestone is now free for collaborators" });
       } catch (e) {
         console.error("Failed to release claim:", e);
-        resyncCanvasState();
+        await resyncCanvasState({ quiet: true });
+        notify({ tone: "error", title: "Release Failed", message: `${friendlySaveError(e)} The canvas now shows who holds this card.` });
       }
     },
-    [broadcastEvent, notify, project.slug, resyncCanvasState, secureFetch]
+    [broadcastEvent, notify, resyncCanvasState, saveRequest]
   );
 
   const handleRequestClaim = useCallback(
@@ -1021,92 +995,74 @@ export default function ProjectCanvasClient({
       }
 
       try {
-        const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "request_claim", node_id: node.id }),
+        const data = await saveRequest("canvas/claim", { action: "request_claim", node_id: node.id });
+        const request = data.request as { id?: string } | undefined;
+        broadcastEvent("claim:requested", {
+          id: request?.id,
+          node_id: node.id,
+          node_title: node.title,
+          requester_id: currentUser.id,
+          requester_name: currentUser.fullName,
+          current_holder_id: node.claimed_by,
         });
 
-        const data = await res.json();
-        if (data.success) {
-          broadcastEvent("claim:requested", {
-            id: data.request?.id,
-            node_id: node.id,
-            node_title: node.title,
-            requester_id: currentUser.id,
-            requester_name: currentUser.fullName,
-            current_holder_id: node.claimed_by,
-          });
-
-          notify({
-            title: "Claim Requested",
-            message: `Sent edit handoff request to ${node.claim_holder?.fullName || "the editor"}.`,
-          });
-        } else {
-          notify({ tone: "error", title: "Request Failed", message: data.error });
-        }
+        notify({
+          title: "Claim Requested",
+          message: `Sent edit handoff request to ${node.claim_holder?.fullName || "the editor"}.`,
+        });
       } catch (e) {
         console.error("Failed to request claim:", e);
+        notify({ tone: "error", title: "Request Failed", message: friendlySaveError(e) });
       }
     },
-    [broadcastEvent, currentUser.fullName, currentUser.id, handleClaimNode, notify, project.slug, secureFetch]
+    [broadcastEvent, currentUser.fullName, currentUser.id, handleClaimNode, notify, saveRequest]
   );
 
   const handleResolveClaimRequest = useCallback(
     async (requestId: string, accept: boolean) => {
       try {
-        const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "resolve_claim",
-            request_id: requestId,
-            accept,
-          }),
-        });
+        await saveRequest("canvas/claim", { action: "resolve_claim", request_id: requestId, accept });
+        if (accept && incomingClaimModal) {
+          const newHolder = {
+            id: incomingClaimModal.requester_id,
+            fullName: incomingClaimModal.requester_name || "Collaborator",
+            email: "",
+            avatarUrl: null,
+          };
 
-        const data = await res.json();
-        if (data.success) {
-          if (accept && incomingClaimModal) {
-            const newHolder = {
-              id: incomingClaimModal.requester_id,
-              fullName: incomingClaimModal.requester_name || "Collaborator",
-              email: "",
-              avatarUrl: null,
-            };
-
-            broadcastEvent("claim:changed", {
-              nodeId: incomingClaimModal.node_id,
-              claimedBy: incomingClaimModal.requester_id,
-              claimHolder: newHolder,
-              expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-              action: "transfer",
-            });
-
-            setNodes((prev) =>
-              prev.map((n) =>
-                n.id === incomingClaimModal.node_id
-                  ? {
-                      ...n,
-                      claimed_by: incomingClaimModal.requester_id,
-                      claim_holder: newHolder,
-                    }
-                  : n
-              )
-            );
-          }
-
-          setIncomingClaimModal(null);
-          notify({
-            title: accept ? "Claim Granted" : "Claim Request Declined",
-            message: accept ? "Transferred edit lock to collaborator" : undefined,
+          broadcastEvent("claim:changed", {
+            nodeId: incomingClaimModal.node_id,
+            claimedBy: incomingClaimModal.requester_id,
+            claimHolder: newHolder,
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            action: "transfer",
           });
+
+          setNodes((prev) =>
+            prev.map((n) =>
+              n.id === incomingClaimModal.node_id
+                ? {
+                    ...n,
+                    claimed_by: incomingClaimModal.requester_id,
+                    claim_holder: newHolder,
+                  }
+                : n
+            )
+          );
         }
+
+        setIncomingClaimModal(null);
+        notify({
+          title: accept ? "Claim Granted" : "Claim Request Declined",
+          message: accept ? "Transferred edit lock to collaborator" : undefined,
+        });
       } catch (e) {
         console.error("Failed to resolve claim:", e);
+        setIncomingClaimModal(null);
+        notify({ tone: "error", title: "Request Not Resolved", message: `${friendlySaveError(e)} The request may have expired.` });
       }
     },
-    [broadcastEvent, incomingClaimModal, notify, project.slug, secureFetch]
+    [broadcastEvent, incomingClaimModal, notify, saveRequest]
   );
 
   const handleForceUnlock = useCallback(
@@ -1119,56 +1075,152 @@ export default function ProjectCanvasClient({
         )
       );
 
-      broadcastEvent("claim:changed", {
-        nodeId,
-        claimedBy: null,
-        claimHolder: null,
-        expiresAt: null,
-        action: "force_unlock",
-      });
-
       try {
-        await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "force_unlock", node_id: nodeId }),
+        await saveRequest("canvas/claim", { action: "force_unlock", node_id: nodeId });
+        broadcastEvent("claim:changed", {
+          nodeId,
+          claimedBy: null,
+          claimHolder: null,
+          expiresAt: null,
+          action: "force_unlock",
         });
         notify({ title: "Milestone Unlocked", message: "Owner override applied" });
       } catch (e) {
         console.error("Failed to force unlock:", e);
+        await resyncCanvasState({ quiet: true });
+        notify({ tone: "error", title: "Unlock Failed", message: friendlySaveError(e) });
       }
     },
-    [broadcastEvent, notify, project.slug, secureFetch]
+    [broadcastEvent, notify, resyncCanvasState, saveRequest]
   );
 
-  // Undo / Redo Handlers
-  const handleUndo = useCallback(() => {
-    if (historyIndexRef.current <= 0) return;
-    const nextIdx = historyIndexRef.current - 1;
-    historyIndexRef.current = nextIdx;
-    const snapshot = historyRef.current[nextIdx];
-    if (snapshot) {
-      setNodes(snapshot.nodes);
-      setEdges(snapshot.edges);
-      setCanUndo(nextIdx > 0);
-      setCanRedo(true);
-      notify({ title: "Undo Applied", message: "Restored previous state" });
+  // Sends history operations to the server in order, skipping anything whose target another person already removed.
+  const persistOps = useCallback(async (ops: CanvasOp[], before: CanvasState, after: CanvasState) => {
+    const nodeIn = (state: CanvasState, id: string) => state.nodes.find((node) => node.id === id);
+    // Cards nobody holds (for example, AI-generated ones) must be claimed before they can be edited or deleted.
+    const ensureClaim = async (nodeId: string) => {
+      const node = nodeIn(after, nodeId) ?? nodeIn(before, nodeId);
+      if (node && !node.claimed_by) await saveRequest("canvas/claim", { action: "claim", node_id: nodeId });
+    };
+    for (const op of ops) {
+      switch (op.kind) {
+        case "node:create": {
+          const node = op.node;
+          const data = await saveRequest("canvas", {
+            action: "create_node", id: node.id, title: node.title, description: node.description,
+            position_x: node.position_x, position_y: node.position_y, width: node.width, height: node.height,
+            node_type: node.node_type, aws_metadata: node.aws_metadata, group_metadata: node.group_metadata,
+            annotation_metadata: node.annotation_metadata, parent_group_id: node.parent_group_id,
+            checkpoints: node.checkpoints.map((checkpoint) => checkpoint.title),
+          });
+          const extra: Record<string, unknown> = {};
+          if (node.color && node.color !== "default") extra.color = node.color;
+          if (node.status !== "draft" && !node.checkpoints.length) extra.status = node.status;
+          if (Object.keys(extra).length) await saveRequest("canvas", { action: "update_node", node_id: node.id, updates: extra });
+          const created = (data.node as CanvasNode | null)?.checkpoints ?? [];
+          for (const [index, checkpoint] of node.checkpoints.entries()) {
+            if (checkpoint.is_completed && created[index]) {
+              await saveRequest("canvas/checkpoints", { action: "toggle", node_id: node.id, checkpoint_id: created[index].id, is_completed: true });
+            }
+          }
+          break;
+        }
+        case "node:delete":
+          if (!nodeIn(before, op.node.id)) break;
+          await ensureClaim(op.node.id);
+          await saveRequest("canvas", { action: "delete_node", node_id: op.node.id });
+          break;
+        case "node:update":
+          if (!nodeIn(after, op.nodeId)) break;
+          await ensureClaim(op.nodeId);
+          await saveRequest("canvas", { action: "update_node", node_id: op.nodeId, updates: op.to });
+          break;
+        case "checkpoint:add":
+          if (!nodeIn(after, op.nodeId)) break;
+          await ensureClaim(op.nodeId);
+          await saveRequest("canvas/checkpoints", { action: "add", node_id: op.nodeId, title: op.checkpoint.title });
+          break;
+        case "checkpoint:delete": {
+          const target = findCheckpoint(nodeIn(before, op.nodeId), op.checkpoint);
+          if (!target) break;
+          await ensureClaim(op.nodeId);
+          await saveRequest("canvas/checkpoints", { action: "delete", node_id: op.nodeId, checkpoint_id: target.id });
+          break;
+        }
+        case "checkpoint:toggle":
+        case "checkpoint:edit": {
+          const target = findCheckpoint(nodeIn(after, op.nodeId), op.checkpoint);
+          if (!target) break;
+          await ensureClaim(op.nodeId);
+          await saveRequest("canvas/checkpoints", op.kind === "checkpoint:toggle"
+            ? { action: "toggle", node_id: op.nodeId, checkpoint_id: target.id, is_completed: op.to }
+            : { action: "edit", node_id: op.nodeId, checkpoint_id: target.id, title: op.to });
+          break;
+        }
+        case "edge:create": {
+          if (!nodeIn(after, op.edge.source_node_id) || !nodeIn(after, op.edge.target_node_id)) break;
+          const data = await saveRequest("canvas", {
+            action: "create_edge", source_node_id: op.edge.source_node_id, target_node_id: op.edge.target_node_id,
+            source_handle: op.edge.source_handle, target_handle: op.edge.target_handle, edge_type: op.edge.edge_type,
+          });
+          const created = data.edge as CanvasEdge | undefined;
+          if (created && op.edge.label) await saveRequest("canvas", { action: "update_edge", edge_id: created.id, updates: { label: op.edge.label, edge_type: op.edge.edge_type } });
+          break;
+        }
+        case "edge:delete": {
+          const target = findEdge(before.edges, op.edge);
+          if (target) await saveRequest("canvas", { action: "delete_edge", edge_id: target.id });
+          break;
+        }
+        case "edge:update": {
+          const target = findEdge(after.edges, op.edge);
+          if (target) await saveRequest("canvas", { action: "update_edge", edge_id: target.id, updates: { label: op.to.label ?? "", edge_type: op.to.edge_type ?? op.edge.edge_type } });
+          break;
+        }
+      }
     }
-  }, [notify]);
+  }, [saveRequest]);
 
-  const handleRedo = useCallback(() => {
-    if (historyIndexRef.current >= historyRef.current.length - 1) return;
-    const nextIdx = historyIndexRef.current + 1;
-    historyIndexRef.current = nextIdx;
-    const snapshot = historyRef.current[nextIdx];
-    if (snapshot) {
-      setNodes(snapshot.nodes);
-      setEdges(snapshot.edges);
-      setCanUndo(true);
-      setCanRedo(nextIdx < historyRef.current.length - 1);
-      notify({ title: "Redo Applied", message: "Reapplied state change" });
-    }
-  }, [notify]);
+  // Undo / Redo apply the inverse (or the original) of one recorded change locally, then save it.
+  const stepHistory = useCallback((direction: "undo" | "redo") => {
+    if (isAIGenerating) return;
+    // Steps run one at a time so rapid presses stay ordered and a failure can restore the right position.
+    historyQueueRef.current = historyQueueRef.current.then(async () => {
+      const history = historyRef.current;
+      const entryIndex = direction === "undo" ? history.index - 1 : history.index;
+      const entry = history.entries[entryIndex];
+      if (!entry) return;
+      const ops = direction === "undo" ? invertOps(entry) : entry;
+      const before: CanvasState = { nodes: nodesRef.current, edges: edgesRef.current };
+      const after = applyOps(before, ops);
+      historyRef.current = { ...history, index: direction === "undo" ? entryIndex : entryIndex + 1 };
+      syncHistoryFlags();
+      nodesRef.current = after.nodes;
+      edgesRef.current = after.edges;
+      setNodes(after.nodes);
+      setEdges(after.edges);
+      const remaining = new Set(after.nodes.map((node) => node.id));
+      setSelectedNodeId((current) => (current && !remaining.has(current) ? null : current));
+      setSelectedNodeIds((current) => new Set([...current].filter((id) => remaining.has(id))));
+      try {
+        await trackSave(() => persistOps(ops, before, after));
+        // Adopt the server's IDs for anything that was re-created, and tell collaborators to do the same.
+        await resyncCanvasState({ quiet: true });
+        broadcastEvent("canvas:resync", { userId: currentUser.id });
+        notify({
+          title: direction === "undo" ? "Undo Applied" : "Redo Applied",
+          message: direction === "undo" ? "Your last change was reverted and saved." : "Your change was re-applied and saved.",
+        });
+      } catch (error) {
+        historyRef.current = history;
+        syncHistoryFlags();
+        await reportSaveFailure(direction === "undo" ? "Undo Not Saved" : "Redo Not Saved", error);
+      }
+    });
+  }, [broadcastEvent, currentUser.id, isAIGenerating, notify, persistOps, reportSaveFailure, resyncCanvasState, syncHistoryFlags, trackSave]);
+
+  const handleUndo = useCallback(() => stepHistory("undo"), [stepHistory]);
+  const handleRedo = useCallback(() => stepHistory("redo"), [stepHistory]);
 
   // Generate Visual Workflow Pipeline with AI
   const handleGenerateAIWorkflow = useCallback(
@@ -1199,11 +1251,10 @@ export default function ProjectCanvasClient({
           const isUpdateIntent = data.intent === "update_pipeline";
 
           if (isUpdateIntent) {
+            const nextEdges = data.edges || edgesRef.current;
+            pushHistorySnapshot(data.nodes, nextEdges);
             setNodes(data.nodes);
-            if (data.edges) {
-              setEdges(data.edges);
-            }
-            pushHistorySnapshot(data.nodes, data.edges || edges);
+            setEdges(nextEdges);
 
             broadcastEvent("canvas:batch_updated", {
               nodes: data.nodes,
@@ -1217,31 +1268,27 @@ export default function ProjectCanvasClient({
               message: data.summary || "AI updated the workflow pipeline.",
             });
           } else {
-            let nextNodes: CanvasNode[] = [];
-            let nextEdges: CanvasEdge[] = [];
-
-            setNodes((prev) => {
-              const dataMap = new Map(data.nodes.map((n: CanvasNode) => [n.id, n]));
-              const updatedPrev = prev.map((n) => (dataMap.has(n.id) ? (dataMap.get(n.id) as CanvasNode) : n));
-              const prevIds = new Set(prev.map((n) => n.id));
-              const brandNew = data.nodes.filter((n: CanvasNode) => !prevIds.has(n.id));
-              nextNodes = [...updatedPrev, ...brandNew];
-              return nextNodes;
-            });
-
+            // Merge synchronously from the latest known canvas, so history records exactly what the generation added.
+            const generatedById = new Map<string, CanvasNode>(data.nodes.map((n: CanvasNode) => [n.id, n]));
+            const knownNodeIds = new Set(nodesRef.current.map((n) => n.id));
+            const nextNodes: CanvasNode[] = [
+              ...nodesRef.current.map((n) => generatedById.get(n.id) ?? n),
+              ...data.nodes.filter((n: CanvasNode) => !knownNodeIds.has(n.id)),
+            ];
+            let nextEdges: CanvasEdge[] = edgesRef.current;
             if (data.edges) {
-              const generatedEdges = data.edges;
-              setEdges((prev) => {
-                const dataMap = new Map(generatedEdges.map((e: CanvasEdge) => [e.id, e]));
-                const updatedPrev = prev.map((e) => (dataMap.has(e.id) ? (dataMap.get(e.id) as CanvasEdge) : e));
-                const prevIds = new Set(prev.map((e) => e.id));
-                const brandNew = generatedEdges.filter((e: CanvasEdge) => !prevIds.has(e.id));
-                nextEdges = [...updatedPrev, ...brandNew];
-                return nextEdges;
-              });
+              const generatedEdges: CanvasEdge[] = data.edges;
+              const generatedEdgeById = new Map(generatedEdges.map((e) => [e.id, e]));
+              const knownEdgeIds = new Set(edgesRef.current.map((e) => e.id));
+              nextEdges = [
+                ...edgesRef.current.map((e) => generatedEdgeById.get(e.id) ?? e),
+                ...generatedEdges.filter((e) => !knownEdgeIds.has(e.id)),
+              ];
             }
 
             pushHistorySnapshot(nextNodes, nextEdges);
+            setNodes(nextNodes);
+            setEdges(nextEdges);
 
             broadcastEvent("canvas:batch_created", {
               nodes: data.nodes,
@@ -1273,7 +1320,7 @@ export default function ProjectCanvasClient({
         setIsAuraExiting(true);
       }
     },
-    [broadcastEvent, currentUser.email, currentUser.fullName, currentUser.id, edges, getCanvasArea, notify, project.slug, pushHistorySnapshot, secureFetch]
+    [broadcastEvent, currentUser.email, currentUser.fullName, currentUser.id, getCanvasArea, notify, project.slug, pushHistorySnapshot, secureFetch]
   );
 
   // ---------------------------------------------------------------------------
@@ -1324,7 +1371,8 @@ export default function ProjectCanvasClient({
         );
 
         // If following this user, smoothly update viewport to center on their cursor
-        if (followingUserId && payload.userId === followingUserId && payload.cursor) {
+        const followedId = followingUserIdRef.current;
+        if (followedId && payload.userId === followedId && payload.cursor) {
           setViewport((prev) => ({
             ...prev,
             x: Math.round(window.innerWidth / 2 - payload.cursor.x * prev.zoom),
@@ -1458,6 +1506,20 @@ export default function ProjectCanvasClient({
       .on("broadcast", { event: "edge:updated" }, ({ payload }) => {
         if (payload?.edge) setEdges((previous) => previous.map((edge) => edge.id === payload.edge.id ? payload.edge : edge));
       })
+      .on("broadcast", { event: "claim:renewed" }, ({ payload }) => {
+        setNodes((prev) => prev.map((n) => (n.id === payload?.nodeId && n.claimed_by === payload?.userId ? { ...n, claim_expires_at: payload.expiresAt } : n)));
+      })
+      .on("broadcast", { event: "edge:confirmed" }, ({ payload }) => {
+        // The creator's optimistic edge ID was replaced by the stored one; follow it so later edits target a real row.
+        if (payload?.clientId && payload?.edge) {
+          setEdges((prev) => prev.map((e) => (e.id === payload.clientId ? payload.edge : e)));
+        }
+      })
+      .on("broadcast", { event: "canvas:resync" }, ({ payload }) => {
+        if (payload?.userId === currentUser.id) return;
+        if (resyncTimerRef.current) clearTimeout(resyncTimerRef.current);
+        resyncTimerRef.current = setTimeout(() => { void resyncCanvasState({ quiet: true }); }, 200);
+      })
       .on("broadcast", { event: "edge:deleted" }, ({ payload }) => {
         if (payload?.edgeId) {
           setEdges((prev) => prev.filter((e) => e.id !== payload.edgeId));
@@ -1516,9 +1578,15 @@ export default function ProjectCanvasClient({
       });
 
     canvasChannelRef.current = channel;
+    // Changes made by others while the realtime channel was down are never replayed, so reload after reconnecting.
+    let wasDisconnected = false;
     channel.subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
         setNetworkStatus("online");
+        if (wasDisconnected) {
+          wasDisconnected = false;
+          void resyncCanvasState({ quiet: true });
+        }
         await channel.track({
           userId: currentUser.id,
           email: currentUser.email,
@@ -1528,15 +1596,17 @@ export default function ProjectCanvasClient({
           selectedNodeId: null,
         });
       } else if (status === "TIMED_OUT" || status === "CHANNEL_ERROR") {
+        wasDisconnected = true;
         setNetworkStatus("reconnecting");
       } else if (status === "CLOSED") {
+        wasDisconnected = true;
         setNetworkStatus("offline");
       }
     });
 
     const handleOnline = () => {
       setNetworkStatus("online");
-      resyncCanvasState();
+      void resyncCanvasState();
     };
     const handleOffline = () => setNetworkStatus("offline");
 
@@ -1546,12 +1616,13 @@ export default function ProjectCanvasClient({
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      if (resyncTimerRef.current) clearTimeout(resyncTimerRef.current);
       if (canvasChannelRef.current === channel) {
         canvasChannelRef.current = null;
       }
       supabase.removeChannel(channel);
     };
-  }, [project.id, currentUser.id, currentUser.email, currentUser.fullName, currentUser.avatarUrl, supabase, notify, resyncCanvasState, followingUserId]);
+  }, [project.id, currentUser.id, currentUser.email, currentUser.fullName, currentUser.avatarUrl, supabase, notify, resyncCanvasState]);
 
   // Ping probe
   useEffect(() => {
@@ -1579,14 +1650,19 @@ export default function ProjectCanvasClient({
           const rtt = Math.max(1, Math.round(performance.now() - start));
           setLatencyMs(rtt);
           setNetworkStatus(rtt > 300 ? "slow" : "online");
+        } else if (!isCancelled) {
+          // The browser is online but NovaStage answered with an error.
+          setNetworkStatus("reconnecting");
         }
       } catch (err: unknown) {
         if (isCancelled) return;
-        if (err instanceof Error && err.name === "TimeoutError") {
+        if (!navigator.onLine) {
+          setNetworkStatus("offline");
+        } else if (err instanceof Error && err.name === "TimeoutError") {
           setLatencyMs(5000);
           setNetworkStatus("slow");
-        } else if (!navigator.onLine) {
-          setNetworkStatus("offline");
+        } else {
+          setNetworkStatus("reconnecting");
         }
       }
     };
@@ -1637,7 +1713,10 @@ export default function ProjectCanvasClient({
     };
 
     verifyAccess();
-    const interval = setInterval(verifyAccess, 2000);
+    // A full canvas read per poll is expensive; membership changes are also caught on focus and by every save.
+    const interval = setInterval(() => {
+      if (document.visibilityState !== "hidden") void verifyAccess();
+    }, 10_000);
     window.addEventListener("focus", verifyAccess);
 
     return () => {
@@ -1674,23 +1753,28 @@ export default function ProjectCanvasClient({
     return () => clearInterval(timer);
   }, []);
 
-  // Heartbeat lease renewal
+  // Heartbeat lease renewal. It reads the latest nodes from a ref so edits never restart (and starve) the timer.
   useEffect(() => {
     const interval = setInterval(async () => {
-      const heldNodes = nodes.filter((n) => n.claimed_by === currentUser.id);
+      const heldNodes = nodesRef.current.filter((n) => n.claimed_by === currentUser.id);
       for (const node of heldNodes) {
         try {
-          await fetch(`/api/dashboard/projects/${project.slug}/canvas/claim`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "heartbeat", node_id: node.id }),
-          });
-        } catch {}
+          const data = await saveRequest("canvas/claim", { action: "heartbeat", node_id: node.id });
+          const expiresAt = data.expiresAt as string;
+          setNodes((prev) => prev.map((n) => (n.id === node.id && n.claimed_by === currentUser.id ? { ...n, claim_expires_at: expiresAt } : n)));
+          broadcastEvent("claim:renewed", { nodeId: node.id, userId: currentUser.id, expiresAt });
+        } catch (error) {
+          // Network problems are retried next minute; a rejected renewal means the claim is really gone.
+          if (error instanceof Error && /no longer hold/i.test(error.message)) {
+            await resyncCanvasState({ quiet: true });
+            notify({ tone: "error", title: "Edit access ended", message: `You no longer hold "${node.title}". Claim it again to keep editing.` });
+          }
+        }
       }
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [nodes, currentUser.id, project.slug]);
+  }, [broadcastEvent, currentUser.id, notify, resyncCanvasState, saveRequest]);
 
   // Pointer Move (Cursor broadcast + dragging + magnetic handle snapping)
   const handlePointerMove = useCallback(
@@ -1849,28 +1933,17 @@ export default function ProjectCanvasClient({
       const position = positions.get(node.id);
       return position ? { ...node, position_x: position.x, position_y: position.y } : node;
     }), edges);
-    const saves = await Promise.allSettled(changed.map(async ([nodeId, pos]) => {
+    const saves = await Promise.allSettled(changed.map(([nodeId, pos]) => {
       broadcastEvent("node:drag", { nodeId, x: pos.x, y: pos.y });
-      const response = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "update_node",
-            node_id: nodeId,
-            updates: {
-              position_x: pos.x,
-              position_y: pos.y,
-            },
-          }),
-        });
-      const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.error || "Unable to save position");
+      return trackSave(() => saveRequest("canvas", {
+        action: "update_node",
+        node_id: nodeId,
+        updates: { position_x: pos.x, position_y: pos.y },
+      }));
     }));
-    if (saves.some(result => result.status === "rejected")) {
-      await resyncCanvasState();
-      notify({ tone: "error", title: "Position Not Saved", message: "The canvas has been refreshed. Try moving the items again." });
-    }
-  }, [project.slug, secureFetch, pushHistorySnapshot, nodes, edges, broadcastEvent, resyncCanvasState, notify]);
+    const failed = saves.find((result): result is PromiseRejectedResult => result.status === "rejected");
+    if (failed) await reportSaveFailure("Position Not Saved", failed.reason);
+  }, [pushHistorySnapshot, nodes, edges, broadcastEvent, saveRequest, trackSave, reportSaveFailure]);
 
   // Marquee Selection Handlers
   const handleMarqueeStart = (worldPos: { x: number; y: number }) => {
@@ -2128,42 +2201,35 @@ export default function ProjectCanvasClient({
     }
 
     // Background persistence with success reconciliation & automatic rollback on error
-    secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "create_edge",
-        source_node_id: sourceNodeId,
-        target_node_id: targetNodeId,
-        source_handle: sourceHandle,
-        target_handle: targetHandle,
-        edge_type: edgeType,
-      }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (data.success && data.edge) {
-          // Edge confirmed and persisted on server
-          setEdges((prev) =>
-            prev.map((e) => (e.id === clientEdgeId ? data.edge : e))
+    trackSave(() => saveRequest("canvas", {
+      action: "create_edge",
+      source_node_id: sourceNodeId,
+      target_node_id: targetNodeId,
+      source_handle: sourceHandle,
+      target_handle: targetHandle,
+      edge_type: edgeType,
+    }))
+      .then((data) => {
+        const stored = data.edge as CanvasEdge | undefined;
+        if (!stored) throw new Error("Failed to persist dependency wire");
+        // Edge confirmed and persisted on server; collaborators still hold the temporary ID, so tell them.
+        setEdges((prev) => prev.map((e) => (e.id === clientEdgeId ? stored : e)));
+        edgesRef.current = edgesRef.current.map((e) => (e.id === clientEdgeId ? stored : e));
+        broadcastEvent("edge:confirmed", { clientId: clientEdgeId, edge: stored });
+        try {
+          const currentCached = JSON.parse(
+            window.localStorage.getItem(cacheKey) || "[]"
+          ) as CanvasEdge[];
+          const updatedCached = currentCached.map((e) =>
+            e.id === clientEdgeId ? stored : e
           );
-          try {
-            const currentCached = JSON.parse(
-              window.localStorage.getItem(cacheKey) || "[]"
-            ) as CanvasEdge[];
-            const updatedCached = currentCached.map((e) =>
-              e.id === clientEdgeId ? data.edge : e
-            );
-            window.localStorage.setItem(cacheKey, JSON.stringify(updatedCached));
-          } catch {}
-        } else {
-          throw new Error(data.error || "Failed to persist dependency wire");
-        }
+          window.localStorage.setItem(cacheKey, JSON.stringify(updatedCached));
+        } catch {}
       })
       .catch((err) => {
-        console.error("Failed to link nodes on server, rolling back:", err);
         // Instant rollback on error
         setEdges((prev) => prev.filter((e) => e.id !== clientEdgeId));
+        edgesRef.current = edgesRef.current.filter((e) => e.id !== clientEdgeId);
         try {
           const currentCached = JSON.parse(
             window.localStorage.getItem(cacheKey) || "[]"
@@ -2172,11 +2238,7 @@ export default function ProjectCanvasClient({
           window.localStorage.setItem(cacheKey, JSON.stringify(rolledBack));
         } catch {}
         broadcastEvent("edge:deleted", { edgeId: clientEdgeId });
-        notify({
-          tone: "error",
-          title: "Connection Failed",
-          message: err instanceof Error ? err.message : "Failed to connect milestones",
-        });
+        void reportSaveFailure("Connection Not Saved", err);
       });
   };
 
@@ -2190,14 +2252,14 @@ export default function ProjectCanvasClient({
   };
 
   const handleUpdateEdge = async (edgeId: string, updates: { label: string; edge_type: EdgeType }) => {
-    const response = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "update_edge", edge_id: edgeId, updates }),
-    });
-    const data = await response.json();
-    if (!response.ok || !data.success || !data.edge) throw new Error(data.error || "Unable to save connection");
-    setEdges((previous) => previous.map((edge) => edge.id === edgeId ? data.edge : edge));
-    broadcastEvent("edge:updated", { edge: data.edge });
+    const previous = edgesRef.current.find((edge) => edge.id === edgeId);
+    const data = await trackSave(() => saveRequest("canvas", { action: "update_edge", edge_id: edgeId, updates }));
+    const stored = data.edge as CanvasEdge | undefined;
+    if (!stored) throw new Error("Unable to save connection");
+    const nextEdges = edgesRef.current.map((edge) => edge.id === edgeId ? stored : edge);
+    if (previous) pushHistorySnapshot(nodesRef.current, nextEdges);
+    setEdges(nextEdges);
+    broadcastEvent("edge:updated", { edge: stored });
   };
 
   const handleDeleteEdge = async (edgeId: string) => {
@@ -2225,16 +2287,9 @@ export default function ProjectCanvasClient({
     } catch {}
 
     try {
-      const response = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete_edge", edge_id: edgeId }),
-      });
-      await assertCanvasSaved(response);
+      await trackSave(() => saveRequest("canvas", { action: "delete_edge", edge_id: edgeId }));
     } catch (e) {
-      console.error("Failed to delete edge:", e);
-      await resyncCanvasState();
-      notify({ tone: "error", title: "Connection Not Removed", message: "The canvas has been refreshed. Please try again." });
+      await reportSaveFailure("Connection Not Removed", e);
     }
   };
 
@@ -2250,23 +2305,17 @@ export default function ProjectCanvasClient({
     setNodes(tidyNodes);
     pushHistorySnapshot(tidyNodes, edges);
 
-    const saves = await Promise.allSettled(changedNodes.map(async (node) => {
+    const saves = await Promise.allSettled(changedNodes.map((node) => {
       const updates = {
         position_x: node.position_x, position_y: node.position_y,
         width: node.width, height: node.height,
       };
       broadcastEvent("node:updated", { nodeId: node.id, updates });
-      const response = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update_node", node_id: node.id, updates }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error("Layout save failed");
+      return trackSave(() => saveRequest("canvas", { action: "update_node", node_id: node.id, updates }));
     }));
-    if (saves.some((result) => result.status === "rejected")) {
-      await resyncCanvasState();
-      notify({ tone: "error", title: "Layout Not Fully Saved", message: "Some changes could not be saved. The canvas has been refreshed." });
+    const failed = saves.find((result): result is PromiseRejectedResult => result.status === "rejected");
+    if (failed) {
+      await reportSaveFailure("Layout Not Fully Saved", failed.reason);
     } else {
       notify({ title: "Auto-Layout Complete", message: "Arranged nodes with space for connections and nested groups" });
     }
@@ -2355,6 +2404,11 @@ export default function ProjectCanvasClient({
         currentUserId={currentUser.id}
         networkStatus={networkStatus}
         latencyMs={latencyMs}
+        saveIndicator={describeSave(saveState, networkStatus)}
+        onSaveAction={(action) => {
+          if (action === "dismiss") dispatchSave({ type: "dismissed" });
+          else void resyncCanvasState().then((ok) => { if (!ok) notify({ tone: "error", title: "Still offline", message: "NovaStage couldn't be reached. Try again when your connection returns." }); });
+        }}
         followingUserId={followingUserId}
         onToggleFollowUser={(uId) =>
           setFollowingUserId((prev) => (prev === uId ? null : uId))
@@ -2647,7 +2701,7 @@ export default function ProjectCanvasClient({
             <CanvasAIAssistant
               projectId={project.id}
               projectSlug={project.slug}
-              onExternalApplied={resyncCanvasState}
+              onExternalApplied={() => { void resyncCanvasState(); }}
               isOpen={isAIAssistantOpen}
               portalContainer={canvasRootElement}
               onToggle={() => {

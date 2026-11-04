@@ -45,7 +45,7 @@ export async function POST(
     // 3. Heartbeat Lease Renewal
     if (action === "heartbeat") {
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-      const { error } = await adminClient
+      const { data: renewed, error } = await adminClient
         .from("canvas_nodes")
         .update({
           claim_expires_at: expiresAt,
@@ -53,13 +53,18 @@ export async function POST(
         })
         .eq("id", node_id)
         .eq("project_id", project.id)
-        .eq("claimed_by", session.user.id);
+        .eq("claimed_by", session.user.id)
+        .select("id");
 
-      if (!error) {
+      // An update that matched no row means the claim already expired or moved to someone else.
+      const isRenewed = !error && Boolean(renewed?.length);
+      if (isRenewed) {
         await safeRedisExpire(`canvas:lock:${project.id}:${node_id}`, 300);
       }
 
-      return NextResponse.json({ success: !error, expiresAt });
+      return NextResponse.json(
+        isRenewed ? { success: true, expiresAt } : { success: false, error: "You no longer hold this claim" }
+      );
     }
 
     // 4. Request Claim Handoff from Holder

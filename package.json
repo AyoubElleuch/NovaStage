@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:canvas-browser": "node scripts/test-canvas-browser.mjs",
     "test:usability-browser": "node scripts/test-usability-browser.mjs",
+    "test:reliability-browser": "node scripts/test-reliability-browser.mjs",
     "test:generation-browser": "node scripts/test-generation-browser.mjs",
     "test:aws-layout": "vitest run src/lib/canvas/aws-layout.test.ts src/lib/ai/aws-generation.test.ts",
     "preview:aws-layout": "node scripts/preview-aws-layout.mjs",
