@@ -371,7 +371,7 @@ export default function CanvasAIAssistant({
         onClick={() => { setProvider("builtin"); onToggle(); }}
         title={isOpen ? "Close AI Assistant" : "Open AI Assistant"}
         aria-label="Toggle AI Assistant"
-        className={`group relative flex h-9 sm:h-12 items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl border px-2.5 sm:px-3.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all cursor-pointer select-none ${
+        className={`group relative flex h-11 sm:h-12 items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl border px-2.5 sm:px-3.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all cursor-pointer select-none ${
           isOpen
             ? "border-neutral-900 bg-neutral-900 text-white shadow-neutral-900/20 scale-[1.03] dark:border-emerald-600 dark:bg-emerald-600"
             : "border-neutral-200/80 bg-white/95 text-neutral-800 hover:border-neutral-300 hover:bg-white hover:scale-[1.02] dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-neutral-200 dark:hover:border-[#384961] dark:hover:bg-[#1e2634]"

@@ -37,6 +37,8 @@ async function fixturePage(context, shared = false, empty = false) {
   const page = await context.newPage();
   // Validate protocol URLs without opening installed desktop apps or sending messages.
   await page.addInitScript(() => {
+    // The guide has its own suite (test-usability-browser); dismiss it so these checks see the bare canvas.
+    try { localStorage.setItem("novastage:canvas-guide:v1:smoke-user", "dismissed"); } catch {}
     window.__assistantLaunches = [];
     const nativeClick = HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click = function () {

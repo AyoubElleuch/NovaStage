@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { Loader2, Flag, Box, Sparkles, X, Scan, Trash2 } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -48,6 +48,8 @@ import CanvasReleasePulse from "@/components/canvas/canvas-release-pulse";
 import CanvasServicePalette from "@/components/canvas/canvas-service-palette";
 import CanvasNavigator from "@/components/canvas/canvas-navigator";
 import CanvasShortcuts from "@/components/canvas/canvas-shortcuts";
+import CanvasGuide from "@/components/canvas/canvas-guide";
+import { isGuideDismissed, setGuideDismissed, subscribeGuide } from "@/lib/canvas/guide";
 import { createAWSServiceNodeData, AWS_SERVICE_NODE_SIZE } from "@/lib/canvas/aws-service-node";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
@@ -150,6 +152,7 @@ export default function ProjectCanvasClient({
   const [isServicePaletteOpen, setIsServicePaletteOpen] = useState(false);
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isGuideRequested, setIsGuideRequested] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
@@ -166,6 +169,26 @@ export default function ProjectCanvasClient({
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
+
+  // Show the first-run guide until this person dismisses it (the server snapshot hides it to avoid hydration drift).
+  const isGuideDismissedForUser = useSyncExternalStore(subscribeGuide, () => isGuideDismissed(currentUser.id), () => true);
+  const isGuideAutoVisible = !isGuideDismissedForUser;
+
+  const hasNodes = nodes.length > 0;
+  const closeGuide = useCallback(() => {
+    setIsGuideRequested(false);
+    setGuideDismissed(currentUser.id, true);
+  }, [currentUser.id]);
+
+  const toggleGuide = useCallback(() => {
+    if (isGuideRequested || (isGuideAutoVisible && hasNodes)) {
+      closeGuide();
+      return;
+    }
+    setIsGuideRequested(true);
+    setIsNavigatorOpen(false);
+    setIsServicePaletteOpen(false);
+  }, [closeGuide, hasNodes, isGuideAutoVisible, isGuideRequested]);
 
   // Sync edges into browser cache
   useEffect(() => {
@@ -270,8 +293,10 @@ export default function ProjectCanvasClient({
   useEffect(() => {
     if (!canvasRootElement || hasInitiallyFitted.current || !initialNodes.length) return;
     hasInitiallyFitted.current = true;
-    setViewport(fitCanvasNodes(initialNodes, { width: canvasRootElement.clientWidth, height: canvasRootElement.clientHeight }));
-  }, [canvasRootElement, initialNodes]);
+    // Leave room for the first-run guide so it never opens over the diagram.
+    const leftInset = !isGuideDismissed(currentUser.id) && canvasRootElement.clientWidth >= 900 ? 340 : 0;
+    setViewport(fitCanvasNodes(initialNodes, { width: canvasRootElement.clientWidth, height: canvasRootElement.clientHeight, leftInset }));
+  }, [canvasRootElement, initialNodes, currentUser.id]);
 
   // ---------------------------------------------------------------------------
   // Canvas CRUD & Concurrency Methods
@@ -2296,6 +2321,10 @@ export default function ProjectCanvasClient({
       : n.status === "completed"
   ).length;
 
+  const isGuideVisible =
+    (isGuideRequested || (isGuideAutoVisible && nodes.length > 0)) &&
+    !isNavigatorOpen && !isServicePaletteOpen && !isAIAssistantOpen && !isAIGenerating && !(isMobile && selectedNode);
+
   if (isEvicted) {
     return (
       <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col items-center justify-center bg-neutral-950 text-white">
@@ -2344,28 +2373,37 @@ export default function ProjectCanvasClient({
         onToggle={() => { setIsServicePaletteOpen(false); setIsNavigatorOpen(open => !open); }}
         onClose={() => setIsNavigatorOpen(false)} onJumpToNode={handleJumpToNode} />
 
-      {!nodes.length && !isAIGenerating && (
+      {!nodes.length && !isAIGenerating && !isGuideVisible && (
         <section data-canvas-ui aria-label="Start your canvas" className="canvas-empty-state absolute inset-0 z-10 flex items-center justify-center px-5 pb-32 pt-28 pointer-events-none">
           <div className="canvas-empty-card pointer-events-auto w-full max-w-lg rounded-3xl border border-neutral-200/80 bg-linear-to-br from-white via-white/95 to-emerald-50/80 p-6 text-center shadow-xl shadow-emerald-950/5 backdrop-blur-xl sm:p-8 dark:border-[#283548] dark:from-[#161d27] dark:via-[#161d27]/95 dark:to-[#1e2634]">
             <span className="mx-auto hidden md:grid h-14 w-14 place-items-center rounded-2xl border border-emerald-200/60 bg-emerald-50 shadow-sm dark:border-emerald-500/20 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"><Sparkles className="h-5 w-5" /></span>
             <h2 className="mt-5 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white"><span className="md:hidden">Start your canvas</span><span className="hidden md:inline">Make room for your next idea</span></h2>
             <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-300">Plan a milestone, map your cloud architecture, or let AI help you start.</p>
             <div className="mt-5 grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => handleAddNode()} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-emerald-400 hover:bg-emerald-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100/70 dark:bg-emerald-500/10"><Flag className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /></span>Add Milestone</button>
-              <button type="button" onClick={() => setIsServicePaletteOpen(true)} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-orange-400 hover:bg-orange-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-100/70 dark:bg-orange-500/10"><Box className="h-5 w-5 text-orange-500" /></span>AWS Services</button>
-              <button type="button" onClick={() => setIsAIAssistantOpen(true)} className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-violet-400 hover:bg-violet-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-100/70 dark:bg-violet-500/10"><Sparkles className="h-5 w-5 text-violet-500 dark:text-violet-400" /></span>Ask AI</button>
+              <button type="button" onClick={() => handleAddNode()} className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-emerald-400 hover:bg-emerald-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100/70 dark:bg-emerald-500/10"><Flag className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /></span>Add Milestone<span className="hidden text-[11px] font-normal leading-4 text-neutral-500 sm:block dark:text-neutral-400">A step with checkpoints to tick off</span></button>
+              <button type="button" onClick={() => setIsServicePaletteOpen(true)} className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-orange-400 hover:bg-orange-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-100/70 dark:bg-orange-500/10"><Box className="h-5 w-5 text-orange-500" /></span>AWS Services<span className="hidden text-[11px] font-normal leading-4 text-neutral-500 sm:block dark:text-neutral-400">Place and connect architecture parts</span></button>
+              <button type="button" onClick={() => setIsAIAssistantOpen(true)} className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-violet-400 hover:bg-violet-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-100/70 dark:bg-violet-500/10"><Sparkles className="h-5 w-5 text-violet-500 dark:text-violet-400" /></span>Ask AI<span className="hidden text-[11px] font-normal leading-4 text-neutral-500 sm:block dark:text-neutral-400">Draft a workflow or AWS diagram</span></button>
             </div>
-            <p className="mt-6 border-t border-neutral-200/70 pt-4 text-[11px] leading-5 text-neutral-500 dark:border-[#283548] dark:text-neutral-300"><span className="md:hidden">Drag to pan · Pinch to zoom · Tap a card for details</span><span className="hidden md:inline">Drag to select · Space to pan · Ctrl K to find</span></p>
+            <p className="mt-6 border-t border-neutral-200/70 pt-4 text-[11px] leading-5 text-neutral-500 dark:border-[#283548] dark:text-neutral-300"><span className="md:hidden">Drag to pan · Pinch to zoom · Tap a card for details</span><span className="hidden md:inline">Drag to select · Space to pan · Ctrl K to find</span> · <button type="button" data-guide-trigger onClick={toggleGuide} className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-400">How it works</button></p>
           </div>
         </section>
+      )}
+
+      {isGuideVisible && <CanvasGuide isTouch={isMobile} onClose={closeGuide} />}
+
+      {draftEdge && (
+        <div data-canvas-ui role="status" className="pointer-events-auto absolute left-1/2 top-[7.25rem] z-30 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50/95 py-1.5 pl-3 pr-1.5 text-xs text-emerald-900 shadow-lg backdrop-blur dark:border-emerald-500/40 dark:bg-[#10281f]/95 dark:text-emerald-100 sm:top-[5.5rem]">
+          <span className="min-w-0">Connecting from <strong className="font-semibold">{draftEdge.sourceNode.title}</strong>. Choose a dot on another card<span className="hidden sm:inline"> · Esc to cancel</span></span>
+          <button type="button" onClick={() => { draftEdgeRef.current = null; setDraftEdge(null); setSnappedHandle(null); }} className="h-11 shrink-0 rounded-lg px-3 font-semibold hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:h-8 dark:hover:bg-emerald-500/20">Cancel</button>
+        </div>
       )}
 
       {selectedNodeIds.size > 1 && !isAIGenerating && (
         <div data-canvas-ui role="toolbar" aria-label="Selected items" className="absolute left-1/2 top-24 z-30 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-neutral-200 bg-white/95 p-1.5 text-neutral-600 shadow-lg backdrop-blur dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-neutral-300">
           <span className="whitespace-nowrap px-2 text-xs font-semibold">{selectedNodeIds.size} selected</span>
-          <button type="button" aria-label="Fit selected items" title="Fit selection (Shift 2)" onClick={() => handleFitView(true)} className="rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><Scan className="h-4 w-4" /></button>
-          <button type="button" aria-label="Delete selected items" onClick={handleDeleteSelectedNodes} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></button>
-          <button type="button" aria-label="Deselect all items" onClick={() => { setSelectedNodeId(null); setSelectedNodeIds(new Set()); }} className="rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><X className="h-4 w-4" /></button>
+          <button type="button" aria-label="Fit selected items" title="Fit selection (Shift 2)" onClick={() => handleFitView(true)} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><Scan className="h-4 w-4" /></button>
+          <button type="button" aria-label="Delete selected items" onClick={handleDeleteSelectedNodes} className="grid h-10 w-10 place-items-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="Deselect all items" onClick={() => { setSelectedNodeId(null); setSelectedNodeIds(new Set()); }} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -2661,6 +2699,8 @@ export default function ProjectCanvasClient({
             onUndo={handleUndo}
             onRedo={handleRedo}
             onOpenShortcuts={() => setIsShortcutsOpen(true)}
+            onOpenGuide={toggleGuide}
+            isGuideOpen={isGuideVisible}
             isMinimapOpen={isMinimapOpen}
             onToggleMinimap={() => setIsMinimapOpen((v) => !v)}
             isReleasePulseOpen={isReleasePulseOpen}
