@@ -219,7 +219,25 @@ export function applyOps(state: CanvasState, ops: CanvasOp[]): CanvasState {
 
 export interface OpSummary { text: string; counts: Record<string, number> }
 
-/** Plain-language description of what a set of operations changes, for confirmations and history messages. */
+const nounOf = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
+const joinAnd = (parts: string[]) => (parts.length < 2 ? parts.join("") : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`);
+
+/** Past-tense description of what happened, for confirmations such as "Added 3 cards and 2 connections". */
+export function describeOpsDone(ops: CanvasOp[]): string {
+  const { counts } = summarizeOps(ops);
+  const clauses = [
+    ["added", [counts.added && nounOf(counts.added, "card"), counts.connectionsAdded && nounOf(counts.connectionsAdded, "connection")]],
+    ["updated", [counts.changed && nounOf(counts.changed, "card"), counts.connectionsChanged && nounOf(counts.connectionsChanged, "connection")]],
+    ["changed", [counts.checkpoints && nounOf(counts.checkpoints, "checkpoint")]],
+    ["removed", [counts.removed && nounOf(counts.removed, "card"), counts.connectionsRemoved && nounOf(counts.connectionsRemoved, "connection")]],
+  ]
+    .map(([verb, nouns]) => [verb, (nouns as Array<string | number | undefined>).filter(Boolean) as string[]] as const)
+    .filter(([, nouns]) => nouns.length)
+    .map(([verb, nouns]) => `${verb} ${joinAnd(nouns)}`);
+  if (!clauses.length) return "No changes";
+  const sentence = joinAnd(clauses);
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+}
 export function summarizeOps(ops: CanvasOp[]): OpSummary {
   const counts: Record<string, number> = {};
   const bump = (key: string) => { counts[key] = (counts[key] || 0) + 1; };

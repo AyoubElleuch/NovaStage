@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CanvasCheckpoint, CanvasEdge, CanvasNode } from "./types";
-import { applyOps, canRedo, canUndo, diffCanvas, edgeKey, emptyHistory, invertOps, MAX_HISTORY_ENTRIES, recordHistory, summarizeOps } from "./history";
+import { applyOps, canRedo, canUndo, describeOpsDone, diffCanvas, edgeKey, emptyHistory, invertOps, MAX_HISTORY_ENTRIES, recordHistory, summarizeOps } from "./history";
 
 const node = (id: string, extra: Partial<CanvasNode> = {}): CanvasNode => ({
   id, project_id: "p", title: id, description: "", status: "draft", position_x: 0, position_y: 0, width: 280, height: 170,
@@ -120,5 +120,14 @@ describe("canvas history deltas", () => {
     ]);
     expect(summary.text).toBe("add 2 cards, remove 1 card, change 1 checkpoint, add 1 connection");
     expect(summarizeOps([]).text).toBe("make no changes");
+  });
+
+  it("describes completed changes in the past tense", () => {
+    const created = [node("a"), node("b"), node("c")].map((item) => ({ kind: "node:create" as const, node: item }));
+    expect(describeOpsDone([...created, { kind: "edge:create", edge: edge("e1", "a", "b") }, { kind: "edge:create", edge: edge("e2", "b", "c") }])).toBe("Added 3 cards and 2 connections");
+    expect(describeOpsDone([{ kind: "node:delete", node: node("a") }])).toBe("Removed 1 card");
+    expect(describeOpsDone([{ kind: "node:update", nodeId: "a", from: { title: "a" }, to: { title: "b" } }, { kind: "node:create", node: node("z") }, { kind: "edge:delete", edge: edge("e", "a", "b") }])).toBe("Added 1 card, updated 1 card and removed 1 connection");
+    expect(describeOpsDone([{ kind: "node:delete", node: node("a") }, { kind: "edge:delete", edge: edge("e", "a", "b") }])).toBe("Removed 1 card and 1 connection");
+    expect(describeOpsDone([])).toBe("No changes");
   });
 });

@@ -3,6 +3,8 @@
 import { useCallback, useState } from "react";
 import { Check } from "lucide-react";
 import BillingComingSoonModal from "@/app/dashboard/subscription/billing-coming-soon-modal";
+import { BILLING, PLANNED_NOTE, PLAN_FEATURES, PLAN_PRICES } from "@/lib/plans";
+import AuthTransitionLink from "../navigation/auth-transition-link";
 
 type BillingInterval = "monthly" | "annual";
 
@@ -22,42 +24,42 @@ const plans: Plan[] = [
   {
     name: "Free",
     description: "Personal sandboxes and basic architecture planning.",
-    monthlyPrice: "$0",
-    annualPrice: "$0",
+    monthlyPrice: PLAN_PRICES.free.monthly,
+    annualPrice: PLAN_PRICES.free.annual,
     monthlyBilling: "Free forever",
     annualBilling: "Free forever",
-    features: ["10 lifetime AI workflow requests", "Standard models (Gemini Flash)", "Up to 5 members per project", "Real-time collaborative canvas", "Community support"],
+    features: PLAN_FEATURES.free,
     action: "Create free account",
   },
   {
     name: "Plus",
-    description: "Expanded intelligence and larger team collaboration.",
-    monthlyPrice: "$1.99",
-    annualPrice: "$1.59",
-    monthlyBilling: "Billed monthly",
-    annualBilling: "Billed annually ($19.00/yr)",
-    features: ["3x AI limit (30 requests)", "Enhanced reasoning models (Gemini Pro, Sonnet)", "Up to 10 members per project (2x limit)", "Unlimited project canvas checkpoints", "Priority real-time canvas sync", "Standard email support"],
-    action: "Join the beta",
+    description: "More AI requests and larger project teams.",
+    monthlyPrice: PLAN_PRICES.plus.monthly,
+    annualPrice: PLAN_PRICES.plus.annual,
+    monthlyBilling: "Planned: billed monthly",
+    annualBilling: `Planned: billed annually (${PLAN_PRICES.plus.annualTotal}/yr)`,
+    features: PLAN_FEATURES.plus,
+    action: "Get notified",
     featured: true,
   },
   {
     name: "Pro",
-    description: "For power architects, lead engineers, and active studios.",
-    monthlyPrice: "$4.99",
-    annualPrice: "$3.99",
-    monthlyBilling: "Billed monthly",
-    annualBilling: "Billed annually ($47.90/yr)",
-    features: ["5x AI limit (50 requests)", "Flagship frontier models (Gemini Ultra, Opus)", "Up to 25 members per project", "Priority beta access to new features", "Checkpoint rollbacks & branch diffs", "24/7 dedicated support"],
-    action: "Join the beta",
+    description: "For active engineering teams with larger projects.",
+    monthlyPrice: PLAN_PRICES.pro.monthly,
+    annualPrice: PLAN_PRICES.pro.annual,
+    monthlyBilling: "Planned: billed monthly",
+    annualBilling: `Planned: billed annually (${PLAN_PRICES.pro.annualTotal}/yr)`,
+    features: PLAN_FEATURES.pro,
+    action: "Get notified",
   },
   {
     name: "Enterprise",
-    description: "Custom setups, enterprise security, and dedicated infrastructure.",
+    description: "Custom terms for large organizations.",
     monthlyPrice: "Custom",
     annualPrice: "Custom",
     monthlyBilling: "Annual or multi-year terms",
     annualBilling: "Annual or multi-year terms",
-    features: ["Unlimited AI quota & BYOK keys", "Unlimited project members & teams", "Dedicated account manager & custom SLA", "SSO / SAML & audit logging", "Private VPC / On-premise deployment"],
+    features: PLAN_FEATURES.enterprise,
     action: "Contact us",
   },
 ];
@@ -94,11 +96,13 @@ export default function PricingSection() {
           </div>
           <p className="home-plan-billing">{billingInterval === "monthly" ? plan.monthlyBilling : plan.annualBilling}</p>
           <ul>{plan.features.map((feature) => <li key={feature}><Check size={14} /><span>{feature}</span></li>)}</ul>
-          <button type="button" className="home-plan-action" onClick={() => setSelectedPlan(plan.name.toLowerCase() as "free" | "plus" | "pro" | "enterprise")}>{plan.action}</button>
+          {plan.name === "Free"
+            ? <AuthTransitionLink href="/signup" className="home-plan-action">{plan.action}</AuthTransitionLink>
+            : <button type="button" className="home-plan-action" onClick={() => setSelectedPlan(plan.name.toLowerCase() as "free" | "plus" | "pro" | "enterprise")}>{plan.action}</button>}
         </article>;
       })}
     </div>
-    <p className="home-pricing-note home-reveal">Early beta preview. Paid billing activates after launch; published rates and plan capacity are shown above.</p>
+    <p className="home-pricing-note home-reveal">{BILLING.note} {PLANNED_NOTE}</p>
     <BillingComingSoonModal isOpen={selectedPlan !== null} selectedPlan={selectedPlan} onClose={closeModal} variant="landing" />
   </section>;
 }

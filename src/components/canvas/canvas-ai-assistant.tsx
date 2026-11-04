@@ -14,7 +14,10 @@ import {
   X,
 } from "lucide-react";
 import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal";
-import { AIGenerationMode } from "@/lib/ai/types";
+import { AIGenerationMode, AIGenerationOperation } from "@/lib/ai/types";
+import { AIGenerationError, describeAIFailure, toAIGenerationError } from "@/lib/ai/response";
+import { previewGeneration } from "@/lib/ai/preview";
+import type { CanvasNode } from "@/lib/canvas/types";
 import CanvasMcpAssistant from "./canvas-mcp-assistant";
 import CanvasAIModeSelect from "./canvas-ai-mode-select";
 
@@ -29,7 +32,10 @@ interface CanvasAIAssistantProps {
   requestsRemaining?: number;
   maxRequests?: number;
   userPlan?: string;
-  onSubmitPrompt?: (prompt: string, mode?: string) => Promise<void> | void;
+  /** Existing canvas content, so the assistant can say what a request will change before it runs. */
+  existingNodes?: Pick<CanvasNode, "node_type">[];
+  onReloadCanvas?: () => void;
+  onSubmitPrompt?: (prompt: string, mode?: string, operation?: AIGenerationOperation) => Promise<void> | void;
 }
 
 const getThinkingStages = (mode: AIGenerationMode) => {
@@ -138,15 +144,17 @@ export default function CanvasAIAssistant({
   portalContainer,
   requestsRemaining = 10,
   maxRequests = 10,
-  userPlan = "free",
+  existingNodes = [],
+  onReloadCanvas,
   onSubmitPrompt,
 }: CanvasAIAssistantProps) {
   const [provider, setProvider] = useState<"external" | "builtin">("builtin");
   const [prompt, setPrompt] = useState("");
   const [mode, setMode] = useState<AIGenerationMode>("workflow");
+  const [operationChoice, setOperationChoice] = useState<AIGenerationOperation | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<AIGenerationError | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStep, setThinkingStep] = useState(0);
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
@@ -278,7 +286,7 @@ export default function CanvasAIAssistant({
   // Speech Recognition Control
   const startListening = () => {
     setSpeechError(null);
-    setApiError(null);
+    setFailure(null);
     const SpeechRecognitionClass =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -337,28 +345,30 @@ export default function CanvasAIAssistant({
     if (!trimmed || isThinking || requestsRemaining <= 0) return;
 
     if (isListening) stopListening();
-    setApiError(null);
+    setFailure(null);
     setIsThinking(true);
     setThinkingStep(0);
     setSubmittedMessage(trimmed);
 
     try {
       if (onSubmitPrompt) {
-        await onSubmitPrompt(trimmed, mode);
+        await onSubmitPrompt(trimmed, mode, preview.operation);
       } else {
         // Visual placeholder delay for demo/thinking simulation
         await new Promise((resolve) => setTimeout(resolve, 2400));
       }
       setPrompt("");
+      setOperationChoice(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to generate workflow";
-      setApiError(msg);
+      setFailure(toAIGenerationError(err));
     } finally {
       setIsThinking(false);
     }
   };
 
   const isQuotaDepleted = requestsRemaining <= 0;
+  const preview = previewGeneration({ mode, prompt, nodes: existingNodes, chosenOperation: operationChoice });
+  const guidance = failure ? describeAIFailure(failure, { maxRequests }) : null;
   const stages = getThinkingStages(mode);
   const currentStage = stages[thinkingStep] || stages[0];
 
@@ -437,7 +447,7 @@ export default function CanvasAIAssistant({
                       : `${requestsRemaining} of ${maxRequests} requests left`}
                   </span>
                   <span className="hidden md:inline text-[9px] font-medium opacity-75 border-l border-neutral-300 dark:border-neutral-600 pl-1.5">
-                    {userPlan === "pro" ? "Gemini Ultra" : userPlan === "plus" ? "Gemini Pro" : "Gemini Flash"}
+                    Google Gemini
                   </span>
                 </span>}
               </div>
@@ -463,10 +473,32 @@ export default function CanvasAIAssistant({
               {value === "external" ? "Your AI" : "Built-in AI"}
             </button>)}
           </div>}
+          {projectId && projectSlug && <p className="mt-1.5 px-0.5 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+            {provider === "builtin" ? "Built-in AI adds its result to the canvas right away. Undo is available." : "Your AI (Codex or Claude) prepares a draft that you review before anything is added."}
+          </p>}
           {provider === "external" && projectId && projectSlug && <CanvasMcpAssistant projectId={projectId} projectSlug={projectSlug} onApplied={onExternalApplied} />}
           {/* Form & Input Area */}
           {provider === "builtin" && <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
-            <CanvasAIModeSelect id="builtin-ai-mode" value={mode} onChange={setMode} disabled={isThinking || isQuotaDepleted} />
+            <CanvasAIModeSelect id="builtin-ai-mode" value={mode} onChange={(next) => { setMode(next); setOperationChoice(null); }} disabled={isThinking || isQuotaDepleted} />
+
+            <section aria-label="What this will change" data-ai-preview className="rounded-lg border border-neutral-200 bg-neutral-50/80 p-2.5 text-[11px] leading-relaxed text-neutral-600 dark:border-[#283548] dark:bg-[#10151f] dark:text-neutral-300">
+              <p><span className="font-semibold text-neutral-800 dark:text-neutral-100">{preview.modeLabel}:</span> {preview.builds} {preview.leavesAlone}</p>
+              <p className="mt-1.5 font-semibold text-neutral-800 dark:text-neutral-100">{preview.headline}</p>
+              {preview.details.map((line) => <p key={line} className="mt-0.5">{line}</p>)}
+              {preview.canChooseOperation && (
+                <div role="group" aria-label="Choose how to apply this" className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-neutral-200/60 p-0.5 dark:bg-[#1e2634]">
+                  {([["update", "Update existing"], ["create", "Add new"]] as const).map(([value, label]) => (
+                    <button key={value} type="button" aria-pressed={preview.operation === value} disabled={isThinking || isQuotaDepleted}
+                      onClick={() => setOperationChoice(value)}
+                      className={`min-h-9 rounded px-2 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${preview.operation === value ? "bg-white text-neutral-900 shadow-sm dark:bg-[#283548] dark:text-white" : "text-neutral-500 dark:text-neutral-400"}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {preview.canChooseOperation && preview.inferred && <p className="mt-1 text-[10px] text-neutral-500 dark:text-neutral-400">{preview.operation === "update" ? "Chosen because your canvas already has content. Pick Add new to keep it untouched." : "Chosen because your request asks for something new."}</p>}
+              {maxRequests < 999 && <p className="mt-1.5 text-[10px] text-neutral-500 dark:text-neutral-400">Uses 1 of your {requestsRemaining} remaining requests. It&apos;s restored if generation fails.</p>}
+            </section>
 
             <div className="rounded-xl border border-neutral-200 bg-white shadow-2xs transition-all focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/5 dark:border-[#283548] dark:bg-[#121721] dark:focus-within:border-emerald-500 dark:focus-within:ring-emerald-500/10">
               <textarea
@@ -578,12 +610,31 @@ export default function CanvasAIAssistant({
               </PrivacyPolicyTrigger>
             </div>
 
-            {/* Collision or API Error Notice */}
-            {apiError && (
-              <div className="flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs font-medium text-amber-900 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60">
-                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-                <div className="min-w-0 flex-1">
-                  <p>{apiError}</p>
+            {/* Recoverable failure with next steps */}
+            {failure && guidance && (
+              <div role="alert" data-ai-failure={failure.code} className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">{guidance.title}</p>
+                    <p className="mt-0.5 font-medium">{guidance.message}</p>
+                    {guidance.note && <p className="mt-1 text-[11px] opacity-80">{guidance.note}</p>}
+                    {guidance.actions.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {guidance.actions.map((action) => (
+                          <button key={action} type="button" disabled={isThinking}
+                            onClick={() => {
+                              if (action === "retry") void handleSubmit({ preventDefault() {} } as React.FormEvent);
+                              else if (action === "reload") { setFailure(null); onReloadCanvas?.(); }
+                              else if (projectId && projectSlug) { setFailure(null); setProvider("external"); }
+                            }}
+                            className="min-h-9 rounded-lg border border-amber-300 bg-white px-3 text-[11px] font-semibold text-amber-900 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50 dark:border-amber-700 dark:bg-transparent dark:text-amber-200 dark:hover:bg-amber-900/30">
+                            {action === "retry" ? "Try again" : action === "reload" ? "Reload canvas" : "Use your own AI"}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

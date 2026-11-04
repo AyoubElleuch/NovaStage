@@ -4,7 +4,8 @@ import { resolve } from "node:path";
 import { chromium } from "playwright";
 import { startHarness, root } from "./canvas-smoke/harness.mjs";
 import { nodes, edges } from "./canvas-smoke/fixtures.mjs";
-import { COLLABORATOR, OWNER, createApiModel, routeModel } from "./canvas-smoke/api-model.mjs";
+import { COLLABORATOR, OWNER, createApiModel } from "./canvas-smoke/api-model.mjs";
+import { createSessions, toastWith, toasts, until } from "./canvas-smoke/browser-helpers.mjs";
 
 // Persistence, undo/redo, collaboration, conflict, failure and offline checks.
 // The API is a MODEL of the canvas routes (scripts/canvas-smoke/api-model.mjs), shared by real
@@ -22,41 +23,10 @@ const check = async (label, action) => {
 };
 
 const freshModel = () => createApiModel({ nodes, edges });
-const until = async (condition, message, timeout = 12_000) => {
-  const deadline = Date.now() + timeout;
-  let last;
-  while (Date.now() < deadline) {
-    try { last = await condition(); if (last) return last; } catch (error) { last = error; }
-    await new Promise(done => setTimeout(done, 60));
-  }
-  assert.fail(`Timed out: ${message}${last instanceof Error ? ` (${last.message})` : ""}`);
-};
-
-async function openContext(options = {}) {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...options });
-  // The guide has its own suite; keep it out of the way here.
-  await context.addInitScript(() => { try { for (const id of ["smoke-user", "collab-user"]) localStorage.setItem(`novastage:canvas-guide:v1:${id}`, "dismissed"); } catch {} });
-  return context;
-}
-async function openPage(context, model, { user = OWNER, query = "?live", clock } = {}) {
-  const page = await context.newPage();
-  page.setDefaultTimeout(15_000);
-  page.errors = [];
-  page.on("pageerror", error => page.errors.push(error.message));
-  const session = await routeModel(page, model, { origin: harness.origin, user });
-  if (clock) await page.clock.install({ time: clock });
-  const suffix = user.id === COLLABORATOR.id ? "&user=collab" : "";
-  page.session = session;
-  page.url0 = `${harness.origin}/scripts/canvas-smoke/index.html${query}${suffix}`;
-  await page.goto(page.url0);
-  await page.getByRole("region", { name: "Interactive canvas" }).waitFor();
-  return page;
-}
+const { openContext, openPage } = createSessions({ browser, harness });
 const indicator = page => page.locator("[data-save-state]").first();
 const drawer = page => page.locator("aside[aria-label$='details']");
 const saveState = page => indicator(page).getAttribute("data-save-state");
-const toasts = page => page.evaluate(() => (window.__canvasSmokeNotifications || []).map(item => `${item.tone || "info"}|${item.title}|${item.message || ""}`));
-const toastWith = async (page, text) => until(async () => (await toasts(page)).find(item => item.includes(text)), `a notification containing "${text}"`);
 const card = (page, title) => page.getByRole("group", { name: new RegExp(`^(Milestone \\d+: )?${title}[.,]`) }).first();
 const settled = async (page, expected = "saved") => until(async () => (await saveState(page)) === expected, `save state ${expected}`);
 const nodeByTitle = (model, title) => model.nodes.find(node => node.title === title);

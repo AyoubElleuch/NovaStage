@@ -2,9 +2,9 @@ name: NovaStage CI Pipeline
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, dev]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, dev]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -28,10 +28,41 @@ jobs:
         run: npm ci
 
       - name: Run ESLint
-        run: npm run lint
+        run: npx eslint src scripts middleware.ts
+
+      - name: TypeScript check
+        run: npm run typecheck
 
       - name: Run Vitest Suite
         run: npm test
+
+  browser-checks:
+    name: Browser Suites (isolated fixtures)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # These use in-memory fixtures only: no Supabase, accounts, or paid AI quota.
+      - name: Canvas smoke, usability, reliability and AI assistant suites
+        run: |
+          npm run test:canvas-browser
+          npm run test:usability-browser
+          npm run test:reliability-browser
+          npm run test:ai-browser
+          npm run test:generation-browser
 
   build-verification:
     name: Production Build Verification

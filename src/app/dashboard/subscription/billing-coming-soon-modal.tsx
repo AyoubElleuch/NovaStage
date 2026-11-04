@@ -61,10 +61,10 @@ export default function BillingComingSoonModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
+    // Nothing is stored by NovaStage: this only opens the person's own mail client.
+    const body = encodeURIComponent(`Please tell me when ${planTitle} billing opens.\nReply to: ${email.trim()}`);
+    window.location.href = `mailto:support@novastage.com?subject=${encodeURIComponent("Notify me when billing opens")}&body=${body}`;
     setIsSubmitted(true);
-    setTimeout(() => {
-      // Auto close after brief acknowledgment
-    }, 2000);
   };
 
   return (
@@ -133,9 +133,9 @@ export default function BillingComingSoonModal({
             <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
               <Check className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <div>
-                <p className="font-semibold">You are on the priority launch list!</p>
+                <p className="font-semibold">Your email app should have opened.</p>
                 <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                  We will email you the moment payment and automated upgrades go live.
+                  NovaStage doesn&apos;t store your address from this form. Send the prepared message to be told when billing opens.
                 </p>
               </div>
             </div>
@@ -164,7 +164,7 @@ export default function BillingComingSoonModal({
                   type="submit"
                   className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-neutral-900 px-4 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-neutral-800 dark:bg-blue-600 dark:hover:bg-blue-500"
                 >
-                  Notify Me
+                  Email Us
                 </button>
               </div>
             </form>

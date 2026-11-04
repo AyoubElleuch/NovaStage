@@ -14,6 +14,8 @@ export function createApiModel({ nodes = [], edges = [], projectId = "canvas-smo
   const model = {
     nodes: clone(nodes), edges: clone(edges), claimRequests: [], shareToken: null,
     requests: [], failures: [], skew: 0, latencyMs: 0, counter: 0, ownerId: OWNER.id,
+    // Built-in AI state: remaining allowance, a collaborator holding the project lock, or a one-off model failure.
+    ai: { remaining: 10, max: 10, lockedBy: null, failNext: false },
   };
   const now = () => Date.now() + model.skew;
   const id = prefix => `${prefix}-${++model.counter}`;
@@ -170,6 +172,46 @@ export function createApiModel({ nodes = [], edges = [], projectId = "canvas-smo
     }
   }
 
+  /** Deterministic stand-in for the built-in generation route: no model is called and no quota is spent. */
+  function aiAction(body, user) {
+    if (!["workflow", "aws_architecture"].includes(body.mode ?? "workflow")) return reply({ error: "Choose Workflow or AWS Architecture." }, 400);
+    const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    if (!prompt) return reply({ error: "Prompt is required to generate or update a workflow" }, 400);
+    const mode = body.mode ?? "workflow";
+    if (model.ai.lockedBy) return reply({ error: "COLLISION_LOCKED", message: "Another collaborator is currently using AI for this project. Please wait.", generatingUser: model.ai.lockedBy }, 409);
+    if (model.ai.remaining <= 0) return reply({ error: "QUOTA_EXCEEDED", message: `You have reached your limit of ${model.ai.max} AI workflow requests.`, requests_used: model.ai.max, requests_remaining: 0, max_requests: model.ai.max }, 403);
+    if (model.ai.failNext) {
+      model.ai.failNext = false;
+      return reply({ error: "AI_GENERATION_FAILED", message: "The model returned a graph that failed validation." }, 502);
+    }
+    model.ai.remaining -= 1;
+    const relevant = model.nodes.some(node => mode === "workflow" ? (!node.node_type || node.node_type === "milestone") : ["aws_service", "group"].includes(node.node_type));
+    const operation = body.operation || (relevant ? "update" : "create");
+    const base = { project_id: projectId, description: "", status: "draft", color: "default", claimed_by: null, claim_expires_at: null, version: 1, checkpoints: [] };
+    const added = [];
+    const addedEdges = [];
+    const at = model.nodes.length;
+    if (mode === "workflow") {
+      for (const [index, title] of ["Discovery", "Build", "Launch"].entries()) {
+        const node = { ...base, id: id("ai-node"), title: `${title}: ${prompt.slice(0, 24)}`, position_x: 2400 + index * 360, position_y: 1200, width: 280, height: 170, sort_order: at + index, node_type: "milestone" };
+        added.push(node);
+      }
+      addedEdges.push(...[[0, 1], [1, 2]].map(([from, to]) => ({ id: id("ai-edge"), project_id: projectId, source_node_id: added[from].id, target_node_id: added[to].id, source_handle: "right", target_handle: "left", edge_type: "dependency", label: null })));
+    } else {
+      const group = { ...base, id: id("ai-group"), title: "Application VPC", position_x: 2400, position_y: 1200, width: 700, height: 300, sort_order: at, node_type: "group", group_metadata: { label: "Application VPC", style: "vpc", childNodeIds: [] } };
+      const services = ["ec2", "s3"].map((serviceId, index) => ({ ...base, id: id("ai-service"), title: serviceId.toUpperCase(), position_x: 2440 + index * 340, position_y: 1300, width: 240, height: 150, sort_order: at + 1 + index, node_type: "aws_service", parent_group_id: group.id, aws_metadata: { serviceId, region: "eu-west-1", config: {} } }));
+      group.group_metadata.childNodeIds = services.map(service => service.id);
+      added.push(group, ...services);
+      addedEdges.push({ id: id("ai-edge"), project_id: projectId, source_node_id: services[0].id, target_node_id: services[1].id, source_handle: "right", target_handle: "left", edge_type: "data_flow", label: null });
+    }
+    model.nodes.push(...added);
+    model.edges.push(...addedEdges);
+    return reply({
+      success: true, intent: operation === "update" ? "update_pipeline" : "create_pipeline", mode, operation, summary: `Generated ${added.length} items`,
+      nodes: model.nodes.map(view), edges: clone(model.edges), requests_used: model.ai.max - model.ai.remaining, requests_remaining: model.ai.remaining,
+    });
+  }
+
   /** Handles one request. `user` is the signed-in profile; `null` simulates a signed-out or removed member. */
   async function handle({ method, pathname, body = {}, user }) {
     model.requests.push({ method, pathname, body, user: user?.id ?? null });
@@ -190,6 +232,7 @@ export function createApiModel({ nodes = [], edges = [], projectId = "canvas-smo
     }
     if (method === "GET") return reply({ project: { id: projectId, slug: projectId, name: "Launch workspace" }, nodes: model.nodes.map(view), edges: clone(model.edges), claimRequests: [] });
     if (method !== "POST") return reply({ error: "Method not allowed" }, 405);
+    if (pathname.endsWith("/canvas/ai-generate")) return aiAction(body, user);
     if (pathname.endsWith("/canvas/checkpoints")) return checkpointAction(body, user);
     if (pathname.endsWith("/canvas/claim")) return claimAction(body, user);
     if (pathname.endsWith("/canvas")) return canvasAction(body, user);

@@ -29,11 +29,13 @@ import {
 import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
 import { fitCanvasNodes, getDragNodeIds, getOpenNodePosition, zoomAroundCenter, getCanvasNodeAtPoint } from "@/lib/canvas/workspace";
 import { useCanvasVisualViewport } from "@/lib/canvas/use-visual-viewport";
-import { readAIGenerationResponse } from "@/lib/ai/response";
+import { AIGenerationOperation } from "@/lib/ai/types";
+import { readAIGenerationResponse, toAIGenerationError } from "@/lib/ai/response";
 import {
   applyOps,
   canRedo as historyCanRedo,
   canUndo as historyCanUndo,
+  describeOpsDone,
   diffCanvas,
   emptyHistory,
   findCheckpoint,
@@ -63,6 +65,7 @@ import CanvasServicePalette from "@/components/canvas/canvas-service-palette";
 import CanvasNavigator from "@/components/canvas/canvas-navigator";
 import CanvasShortcuts from "@/components/canvas/canvas-shortcuts";
 import CanvasGuide from "@/components/canvas/canvas-guide";
+import CanvasChangeBanner from "@/components/canvas/canvas-change-banner";
 import { isGuideDismissed, setGuideDismissed, subscribeGuide } from "@/lib/canvas/guide";
 import { createAWSServiceNodeData, AWS_SERVICE_NODE_SIZE } from "@/lib/canvas/aws-service-node";
 import { useNotifications } from "@/components/notifications/notification-provider";
@@ -263,6 +266,8 @@ export default function ProjectCanvasClient({
   const historyQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const [aiChange, setAiChange] = useState<{ text: string; index: number; label: string } | null>(null);
   const [saveState, dispatchSave] = useReducer(reduceSaveState, INITIAL_SAVE_STATE);
 
   useEffect(() => {
@@ -277,17 +282,19 @@ export default function ProjectCanvasClient({
   const syncHistoryFlags = useCallback(() => {
     setCanUndo(historyCanUndo(historyRef.current));
     setCanRedo(historyCanRedo(historyRef.current));
+    setHistoryIndex(historyRef.current.index);
   }, []);
 
-  // Records the change from the latest known canvas to the given one.
+  // Records the change from the latest known canvas to the given one and returns what changed.
   const pushHistorySnapshot = useCallback(
-    (newNodes: CanvasNode[], newEdges: CanvasEdge[]) => {
+    (newNodes: CanvasNode[], newEdges: CanvasEdge[]): CanvasOp[] => {
       const ops = diffCanvas({ nodes: nodesRef.current, edges: edgesRef.current }, { nodes: newNodes, edges: newEdges });
       nodesRef.current = newNodes;
       edgesRef.current = newEdges;
-      if (!ops.length) return;
+      if (!ops.length) return ops;
       historyRef.current = recordHistory(historyRef.current, ops);
       syncHistoryFlags();
+      return ops;
     },
     [syncHistoryFlags]
   );
@@ -1224,11 +1231,12 @@ export default function ProjectCanvasClient({
 
   // Generate Visual Workflow Pipeline with AI
   const handleGenerateAIWorkflow = useCallback(
-    async (promptText: string, mode?: string) => {
+    async (promptText: string, mode?: string, operation?: AIGenerationOperation) => {
       const generatorName = currentUser.fullName || currentUser.email;
       setIsAIGenerating(true);
       setAiGeneratingUser(generatorName);
       setIsAuraExiting(false);
+      setAiChange(null);
       broadcastEvent("ai:generating_start", {
         userId: currentUser.id,
         userName: generatorName,
@@ -1240,7 +1248,7 @@ export default function ProjectCanvasClient({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: promptText, mode: mode || "workflow" }),
+            body: JSON.stringify({ prompt: promptText, mode: mode || "workflow", ...(operation ? { operation } : {}) }),
             signal: AbortSignal.timeout(125_000),
           }
         );
@@ -1249,10 +1257,11 @@ export default function ProjectCanvasClient({
 
         if (data.success && data.nodes) {
           const isUpdateIntent = data.intent === "update_pipeline";
+          let changeOps: CanvasOp[] = [];
 
           if (isUpdateIntent) {
             const nextEdges = data.edges || edgesRef.current;
-            pushHistorySnapshot(data.nodes, nextEdges);
+            changeOps = pushHistorySnapshot(data.nodes, nextEdges);
             setNodes(data.nodes);
             setEdges(nextEdges);
 
@@ -1286,7 +1295,7 @@ export default function ProjectCanvasClient({
               ];
             }
 
-            pushHistorySnapshot(nextNodes, nextEdges);
+            changeOps = pushHistorySnapshot(nextNodes, nextEdges);
             setNodes(nextNodes);
             setEdges(nextEdges);
 
@@ -1303,6 +1312,10 @@ export default function ProjectCanvasClient({
             });
           }
 
+          if (changeOps.length) {
+            setAiChange({ text: describeOpsDone(changeOps), index: historyRef.current.index, label: mode === "aws_architecture" ? "AWS architecture generated" : "Workflow generated" });
+          }
+
           if (typeof data.requests_remaining === "number") {
             setAiRequestsRemaining(data.requests_remaining);
           }
@@ -1311,10 +1324,7 @@ export default function ProjectCanvasClient({
           setIsAIAssistantOpen(false);
         }
       } catch (error) {
-        if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
-          throw new Error("AI generation timed out. Refresh the canvas before retrying to check whether it completed.");
-        }
-        throw error;
+        throw toAIGenerationError(error);
       } finally {
         broadcastEvent("ai:generating_end", { userId: currentUser.id });
         setIsAuraExiting(true);
@@ -2445,6 +2455,10 @@ export default function ProjectCanvasClient({
 
       {isGuideVisible && <CanvasGuide isTouch={isMobile} onClose={closeGuide} />}
 
+      {aiChange && historyIndex === aiChange.index && !isAIGenerating && !draftEdge && (
+        <CanvasChangeBanner label={aiChange.label} text={aiChange.text} onUndo={() => { handleUndo(); setAiChange(null); }} onDismiss={() => setAiChange(null)} />
+      )}
+
       {draftEdge && (
         <div data-canvas-ui role="status" className="pointer-events-auto absolute left-1/2 top-[7.25rem] z-30 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50/95 py-1.5 pl-3 pr-1.5 text-xs text-emerald-900 shadow-lg backdrop-blur dark:border-emerald-500/40 dark:bg-[#10281f]/95 dark:text-emerald-100 sm:top-[5.5rem]">
           <span className="min-w-0">Connecting from <strong className="font-semibold">{draftEdge.sourceNode.title}</strong>. Choose a dot on another card<span className="hidden sm:inline"> · Esc to cancel</span></span>
@@ -2717,6 +2731,8 @@ export default function ProjectCanvasClient({
               requestsRemaining={aiRequestsRemaining}
               maxRequests={maxAiRequests}
               userPlan={userPlan}
+              existingNodes={nodes}
+              onReloadCanvas={() => { void resyncCanvasState(); }}
               onSubmitPrompt={handleGenerateAIWorkflow}
             />
 
