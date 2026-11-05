@@ -2,9 +2,10 @@ name: NovaStage CI Pipeline
 
 on:
   push:
-    branches: [main, master, dev]
+    branches: [main, master]
+  workflow_dispatch:
   pull_request:
-    branches: [main, master, dev]
+    branches: [main, master]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -37,14 +38,19 @@ jobs:
         run: npm test
 
   browser-checks:
-    name: Browser Suites (isolated fixtures)
+    name: Browser (${{ matrix.suite }})
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [canvas, usability, reliability, ai, generation]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -52,17 +58,17 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Cache Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      # These use in-memory fixtures only: no Supabase, accounts, or paid AI quota.
-      - name: Canvas smoke, usability, reliability and AI assistant suites
-        run: |
-          npm run test:canvas-browser
-          npm run test:usability-browser
-          npm run test:reliability-browser
-          npm run test:ai-browser
-          npm run test:generation-browser
+      - name: Run browser suite
+        run: npm run test:${{ matrix.suite }}-browser
 
   build-verification:
     name: Production Build Verification
@@ -74,10 +80,10 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://localhost:3000
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm

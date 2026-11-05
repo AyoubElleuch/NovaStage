@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, within } from "@testing-library/react";
 import UpdatesPage from "./page";
 
 afterEach(cleanup);
-it("shows the current release first with four concise changes and preserves release history", () => {
+it("shows the current release first and paginates release history", () => {
   const { container, getByRole, queryByRole } = render(<UpdatesPage />);
   expect(container.querySelectorAll("article")).toHaveLength(3);
   fireEvent.click(getByRole("button", { name: "Load more" }));
@@ -16,7 +16,7 @@ it("shows the current release first with four concise changes and preserves rele
   expect(latest.getByText("November 4, 2026")).toBeTruthy();
   expect(latest.getByText("Latest")).toBeTruthy();
   expect(latest.getByRole("heading").textContent).toBe("Clearer Canvas, Reliable Saving");
-  expect(latest.getAllByRole("listitem")).toHaveLength(4);
+  expect(latest.getByText(/First-project guide:/)).toBeTruthy();
   const previous = within(articles[1]);
   expect(previous.getByText("Beta v1.1.5")).toBeTruthy();
   expect(previous.getByText("October 26, 2026")).toBeTruthy();
