@@ -3,7 +3,7 @@
 Real-time collaborative canvas for engineering roadmaps and AWS architecture diagrams.
 
 [![CI Pipeline](https://github.com/AyoubElleuch/NovaStage/actions/workflows/ci.yml/badge.svg)](https://github.com/AyoubElleuch/NovaStage/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/Beta-v1.1.5-10b981)](docs/releases/v1.1.5-pr.md)
+[![Release](https://img.shields.io/badge/Beta-v1.1.6-10b981)](docs/releases/v1.1.6-pr.md)
 [![Next.js](https://img.shields.io/badge/Next.js-16.4-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)](https://supabase.com/)
@@ -23,11 +23,11 @@ NovaStage gives engineering teams a shared workspace for delivery planning and c
 - **View-only sharing:** Project owners can enable or revoke a public canvas link. Visitors can navigate and inspect shared content without editing or viewing project membership.
 - **Access controls:** Project membership, roles, row-level security, editing leases and generation locks govern protected actions.
 
-## Beta v1.1.5
+## Beta v1.1.6
 
 This release rebuilds canvas generation and layout: dependency-based ordering, readable long-content previews, correctly sized nested boundaries, routed connections, external draft previews and complete fit-to-canvas on phones. Built-in diagram creation and updates now commit in one transaction and preserve retained identity, completed checkpoints and editing claims.
 
-See the [release notes](docs/releases/v1.1.5-pr.md), [technical report and before/after screenshots](docs/canvas-generation-rebuild.md), and [layout contract and limitations](docs/aws-architecture-layout.md).
+See the [release notes](docs/releases/v1.1.6-pr.md), [technical report and before/after screenshots](docs/canvas-generation-rebuild.md), and [layout contract and limitations](docs/aws-architecture-layout.md).
 
 **Deployment requirement:** Apply migration `026_atomic_ai_canvas_graph.sql` after migrations 001–025 before deploying this release. No existing saved canvas is automatically rearranged.
 

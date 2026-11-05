@@ -1,7 +1,7 @@
 import type { CanvasNode, CanvasViewport } from "./types";
 import { getNodeDimensions, screenToWorld, snapToGrid } from "./coordinate-math";
 
-export interface CanvasArea { width: number; height: number; rightInset?: number; bottomInset?: number }
+export interface CanvasArea { width: number; height: number; leftInset?: number; rightInset?: number; bottomInset?: number }
 export const MIN_CANVAS_ZOOM = 0.001;
 
 /** Resolve taps after viewport pointer capture, preferring resources to groups. */
@@ -18,7 +18,7 @@ export function getCanvasNodeAtPoint(nodes: CanvasNode[], point: { x: number; y:
 
 export function zoomAroundCenter(viewport: CanvasViewport, zoom: number, area: CanvasArea): CanvasViewport {
   const nextZoom = Math.min(2.5, Math.max(MIN_CANVAS_ZOOM, zoom));
-  const x = Math.max(1, area.width - (area.rightInset || 0)) / 2;
+  const x = (area.leftInset || 0) + Math.max(1, area.width - (area.rightInset || 0) - (area.leftInset || 0)) / 2;
   const y = area.height / 2;
   return { x: x - ((x - viewport.x) / viewport.zoom) * nextZoom,
     y: y - ((y - viewport.y) / viewport.zoom) * nextZoom, zoom: nextZoom };
@@ -30,14 +30,15 @@ export function fitCanvasNodes(nodes: CanvasNode[], area: CanvasArea): CanvasVie
   const minY = Math.min(...nodes.map(n => n.position_y));
   const maxX = Math.max(...nodes.map(n => n.position_x + getNodeDimensions(n).width));
   const maxY = Math.max(...nodes.map(n => n.position_y + getNodeDimensions(n).height));
-  const width = Math.max(1, area.width - (area.rightInset || 0));
+  const leftInset = area.leftInset || 0;
+  const width = Math.max(1, area.width - (area.rightInset || 0) - leftInset);
   // Keep cards and raised group headers below Find and above the mobile dock.
   const topPadding = area.height < 600 ? 124 : 160;
   const bottomPadding = Math.max(area.height < 600 ? 88 : 144, area.bottomInset || 0);
   const availableW = Math.max(1, width - 80);
   const availableH = Math.max(1, area.height - topPadding - bottomPadding);
   const zoom = Math.max(MIN_CANVAS_ZOOM, Math.min(1.2, availableW / Math.max(1, maxX - minX), availableH / Math.max(1, maxY - minY)));
-  return { x: width / 2 - (minX + maxX) / 2 * zoom,
+  return { x: leftInset + width / 2 - (minX + maxX) / 2 * zoom,
     y: topPadding + availableH / 2 - (minY + maxY) / 2 * zoom, zoom };
 }
 
@@ -48,7 +49,7 @@ export function getOpenNodePosition(
   area: CanvasArea,
   dimensions: { width: number; height: number } = { width: 280, height: 170 }
 ): { x: number; y: number } {
-  const center = screenToWorld(Math.max(1, area.width - (area.rightInset || 0)) / 2, area.height / 2, viewport);
+  const center = screenToWorld((area.leftInset || 0) + Math.max(1, area.width - (area.rightInset || 0) - (area.leftInset || 0)) / 2, area.height / 2, viewport);
   const width = Math.max(1, dimensions.width);
   const height = Math.max(1, dimensions.height);
   const origin = { x: snapToGrid(center.x - width / 2), y: snapToGrid(center.y - height / 2) };

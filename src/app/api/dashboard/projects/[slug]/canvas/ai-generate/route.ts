@@ -7,6 +7,7 @@ import { executeAIPipeline } from "@/lib/ai/pipeline";
 import { CanvasAIContext, isAIGenerationMode } from "@/lib/ai/types";
 import { resolveGenerationOperation } from "@/lib/ai/orchestration";
 import { getProjectCanvasData, applyAIWorkflowResult, applyAWSServiceNodes } from "@/lib/canvas/server";
+import { getAiRequestLimit } from "@/lib/plans";
 
 export const maxDuration = 120;
 
@@ -88,14 +89,7 @@ export async function POST(
       (session.user.user_metadata?.plan as string) ||
       "free";
 
-    const maxAiRequests =
-      userPlan === "enterprise"
-        ? 999999
-        : userPlan === "pro"
-        ? 50
-        : userPlan === "plus"
-        ? 30
-        : 10;
+    const maxAiRequests = getAiRequestLimit(userPlan);
 
     let quotaResult: {
       success: boolean;

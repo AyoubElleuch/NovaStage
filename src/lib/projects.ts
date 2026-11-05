@@ -7,6 +7,7 @@ import type {
   ProjectJoinRequestInfo,
   ProjectBannedMemberInfo,
 } from "@/lib/dashboard-data";
+import { getMemberLimit } from "@/lib/plans";
 
 /**
  * Maximum number of members allowed in a project: 1 owner + 4 collaborators = 5 total.
@@ -21,10 +22,7 @@ export const MAX_PROJECT_MEMBERS = 5;
  * - Enterprise: 999999 (Unlimited)
  */
 export function getMaxMembersForPlan(plan?: string | null): number {
-  if (plan === "enterprise") return 999999;
-  if (plan === "pro") return 25;
-  if (plan === "plus") return 10;
-  return MAX_PROJECT_MEMBERS;
+  return getMemberLimit(plan);
 }
 
 /**

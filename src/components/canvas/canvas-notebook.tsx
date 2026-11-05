@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { trapMobilePanelTab, useMobilePanelFocus } from "@/lib/canvas/panel-focus";
 import { createPortal } from "react-dom";
-import { BookOpen, HelpCircle, Plus, Trash2, X } from "lucide-react";
+import { BookOpen, Plus, Trash2, X } from "lucide-react";
 
 type NotebookTab = "notes" | "questions";
 
@@ -211,8 +211,8 @@ export default function CanvasNotebook({ projectId, isOpen, onToggle, onClose }:
         document.body
       )}
 
-      <button type="button" onClick={onToggle} title="Open project notebook" aria-label="Open project notebook" aria-expanded={isOpen} className={`flex h-9 w-9 sm:h-12 sm:w-12 cursor-pointer items-center justify-center rounded-xl sm:rounded-2xl border shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-colors ${isOpen ? "border-neutral-900 bg-neutral-900 text-white dark:border-emerald-600 dark:bg-emerald-600" : "border-neutral-200/80 bg-white/95 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"}`}>
-        {isOpen ? <X className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />}
+      <button type="button" onClick={onToggle} title="Open project notebook" aria-label="Open project notebook" aria-expanded={isOpen} className={`flex h-11 w-11 sm:h-12 sm:w-12 cursor-pointer items-center justify-center rounded-xl sm:rounded-2xl border shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-colors ${isOpen ? "border-neutral-900 bg-neutral-900 text-white dark:border-emerald-600 dark:bg-emerald-600" : "border-neutral-200/80 bg-white/95 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"}`}>
+        {isOpen ? <X className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
       </button>
     </>
   );

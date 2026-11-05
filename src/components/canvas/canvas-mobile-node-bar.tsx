@@ -62,7 +62,7 @@ export default function CanvasMobileNodeBar({
       data-canvas-ui="true"
       role="region"
       aria-label={`Selected ${kind}: ${node.title}`}
-      className="dash-pop pointer-events-auto fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] inset-x-3 z-30 mx-auto max-w-md rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-xl md:hidden dark:border-[#283548] dark:bg-[#161d27]/95"
+      className="dash-pop pointer-events-auto fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] inset-x-3 z-10 mx-auto max-w-md rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-xl md:hidden dark:border-[#283548] dark:bg-[#161d27]/95"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       onKeyDown={(event) => { event.stopPropagation(); if (event.key === "Escape") { event.preventDefault(); onDeselect(); } }}

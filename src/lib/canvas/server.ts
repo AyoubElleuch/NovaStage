@@ -364,13 +364,15 @@ export async function createCanvasEdge(
   if (edgeType && !EDGE_TYPES.includes(edgeType)) throw new Error("Invalid connection type");
   const adminClient = createAdminClient();
 
-  if (!isOwner && userId) {
-    const { data: nodes } = await adminClient
-      .from("canvas_nodes")
-      .select("id, claimed_by, claim_expires_at, node_type")
-      .in("id", [sourceNodeId, targetNodeId])
-      .eq("project_id", projectId);
+  // Both endpoints must belong to this project, whoever is connecting them.
+  const { data: nodes } = await adminClient
+    .from("canvas_nodes")
+    .select("id, claimed_by, claim_expires_at, node_type")
+    .in("id", [sourceNodeId, targetNodeId])
+    .eq("project_id", projectId);
+  if ((nodes?.length ?? 0) !== 2) return null;
 
+  if (!isOwner && userId) {
     const now = new Date();
     // Only enforce milestone claim checks if BOTH nodes are milestones
     const allMilestones = nodes?.every((n) => !n.node_type || n.node_type === "milestone");
@@ -475,6 +477,7 @@ export async function deleteCanvasEdge(
     .from("canvas_edges")
     .delete()
     .eq("id", edgeId)
+    .eq("project_id", projectId);
   return { success: !error };
 }
 

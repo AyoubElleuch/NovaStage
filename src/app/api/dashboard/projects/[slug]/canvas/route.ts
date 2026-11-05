@@ -90,6 +90,9 @@ export async function POST(
         },
         session.user.id
       );
+      if (!newNode) {
+        return NextResponse.json({ success: false, error: "Unable to create this item. Please try again." }, { status: 500 });
+      }
       return NextResponse.json({ success: true, node: newNode });
     }
 

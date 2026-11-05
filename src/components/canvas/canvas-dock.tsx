@@ -4,6 +4,7 @@ import AWSLogo from "@/components/aws-logo";
 import React, { useEffect, useId, useRef, useState } from "react";
 import {
   Activity,
+  CircleHelp,
   Grid,
   Hand,
   Keyboard,
@@ -46,6 +47,8 @@ interface CanvasDockProps {
   onToggleReleasePulse?: () => void;
   onToggleServicePalette?: () => void;
   onOpenShortcuts?: () => void;
+  onOpenGuide?: () => void;
+  isGuideOpen?: boolean;
 }
 
 export default function CanvasDock({
@@ -73,6 +76,8 @@ export default function CanvasDock({
   onToggleReleasePulse,
   onToggleServicePalette,
   onOpenShortcuts,
+  onOpenGuide,
+  isGuideOpen,
 }: CanvasDockProps) {
   const [isQuickToolsOpen, setIsQuickToolsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -161,6 +166,10 @@ export default function CanvasDock({
             {onAddGroup && <button type="button" disabled={isBusy} onClick={() => { onAddGroup(); setIsQuickToolsOpen(false); }} className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 dark:border-[#283548] dark:text-neutral-300"><Square className="h-4 w-4" />Add group</button>}
             {onUndo && <button type="button" disabled={!canUndo || isBusy} onClick={onUndo} className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 dark:border-[#283548] dark:text-neutral-300"><Undo2 className="h-4 w-4" />Undo</button>}
             {onRedo && <button type="button" disabled={!canRedo || isBusy} onClick={onRedo} className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 dark:border-[#283548] dark:text-neutral-300"><Redo2 className="h-4 w-4" />Redo</button>}
+            {onOpenGuide && <button type="button" data-guide-trigger onClick={() => { setIsQuickToolsOpen(false); onOpenGuide(); }}
+              className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 hover:bg-neutral-50 dark:border-[#283548] dark:text-neutral-300 dark:hover:bg-[#1e2634]">
+              <CircleHelp className="h-3.5 w-3.5" />{isGuideOpen ? "Hide canvas guide" : "Canvas guide"}
+            </button>}
             {onOpenShortcuts && <button type="button" onClick={() => { quickToolsRef.current?.focus(); setIsQuickToolsOpen(false); onOpenShortcuts(); }}
               className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 hover:bg-neutral-50 dark:border-[#283548] dark:text-neutral-300 dark:hover:bg-[#1e2634]">
               <Keyboard className="h-3.5 w-3.5" />Keyboard shortcuts
@@ -243,7 +252,7 @@ export default function CanvasDock({
             aria-label="Select and move nodes"
             aria-pressed={activeTool === "select"}
             title="Select & Marquee tool (V)"
-            className={`flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
+            className={`flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
               activeTool === "select"
                 ? "bg-neutral-900 text-white shadow-xs dark:bg-emerald-600"
                 : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
@@ -258,7 +267,7 @@ export default function CanvasDock({
             aria-label="Pan canvas"
             aria-pressed={activeTool === "hand"}
             title="Hand / Pan tool (H or Spacebar)"
-            className={`flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
+            className={`flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
               activeTool === "hand"
                 ? "bg-neutral-900 text-white shadow-xs dark:bg-emerald-600"
                 : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
@@ -275,7 +284,7 @@ export default function CanvasDock({
           disabled={isBusy}
           aria-label="Add milestone"
           title="Add Milestone Node (N)"
-          className="inline-flex h-8 md:h-9 shrink-0 items-center gap-1 md:gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-2 md:px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 hover:scale-[1.02] cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
+          className="inline-flex h-11 md:h-9 shrink-0 items-center gap-1 md:gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 hover:scale-[1.02] cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
         >
           <Plus className="h-3.5 w-3.5 shrink-0" />
           <span className="hidden md:inline">Milestone</span>
@@ -288,6 +297,7 @@ export default function CanvasDock({
             onClick={onAddGroup}
             disabled={isBusy}
             title="Add Group"
+            aria-label="Add group"
             className="hidden md:inline-flex h-8 md:h-9 shrink-0 items-center gap-1 md:gap-1.5 whitespace-nowrap rounded-xl border border-neutral-200/80 bg-white/90 px-2 md:px-3 text-xs font-semibold text-neutral-700 shadow-[0_2px_5px_rgba(0,0,0,0.04)] transition-all hover:bg-neutral-50 hover:scale-[1.02] cursor-pointer dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
           >
             <Square className="h-3.5 w-3.5 shrink-0" />
@@ -303,7 +313,7 @@ export default function CanvasDock({
             disabled={isBusy}
             title="AWS Services"
             aria-label="AWS Services"
-            className="inline-flex h-8 md:h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-[#FF9900]/30 bg-[#FF9900]/10 px-2 md:px-2.5 text-xs font-bold text-[#FF9900] shadow-[0_2px_5px_rgba(255,153,0,0.08)] transition-all hover:bg-[#FF9900]/20 hover:scale-[1.02] cursor-pointer"
+            className="inline-flex h-11 md:h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-[#FF9900]/30 bg-[#FF9900]/10 px-2 md:px-2.5 text-xs font-bold text-[#FF9900] shadow-[0_2px_5px_rgba(255,153,0,0.08)] transition-all hover:bg-[#FF9900]/20 hover:scale-[1.02] cursor-pointer"
           >
             <AWSLogo className="h-6 w-7" />
           </button>
@@ -318,7 +328,7 @@ export default function CanvasDock({
           aria-expanded={isQuickToolsOpen}
           aria-controls={quickToolsId}
           title="Open Canvas Tools"
-          className={`md:hidden flex h-8 items-center gap-1 rounded-xl px-2 text-xs font-semibold transition-colors cursor-pointer ${
+          className={`md:hidden flex h-11 items-center gap-1 rounded-xl px-3 text-xs font-semibold transition-colors cursor-pointer ${
             isQuickToolsOpen
               ? "bg-neutral-900 text-white dark:bg-emerald-600"
               : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-[#1e2634]"
@@ -335,6 +345,7 @@ export default function CanvasDock({
             onClick={onTidyLayout}
             disabled={isBusy}
             title="Auto-Layout / Tidy Graph"
+            aria-label="Tidy layout"
             className="flex h-9 items-center gap-1 rounded-xl px-2 text-xs font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
           >
             <Waypoints className="h-3.5 w-3.5" />
@@ -397,6 +408,7 @@ export default function CanvasDock({
             type="button"
             onClick={onZoomOut}
             title="Zoom Out (Ctrl -)"
+            aria-label="Zoom out"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
           >
             <Minus className="h-3.5 w-3.5" />
@@ -406,6 +418,7 @@ export default function CanvasDock({
             type="button"
             onClick={onResetZoom}
             title="Reset Zoom to 100%"
+            aria-label={`Reset zoom, currently ${zoomPct}%`}
             className="min-w-11 px-1 py-1 text-center font-mono text-[11px] font-semibold text-neutral-700 hover:bg-neutral-100 rounded-md transition-colors cursor-pointer dark:text-neutral-300 dark:hover:bg-[#1e2634]"
           >
             {zoomPct}%
@@ -415,6 +428,7 @@ export default function CanvasDock({
             type="button"
             onClick={onZoomIn}
             title="Zoom In (Ctrl +)"
+            aria-label="Zoom in"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -424,12 +438,15 @@ export default function CanvasDock({
             type="button"
             onClick={onFitView}
             title="Fit to screen (Shift 1)"
+            aria-label="Fit all items to screen"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
           >
             <Maximize2 className="h-3.5 w-3.5" />
           </button>
         </div>
 
+        {onOpenGuide && <button type="button" data-guide-trigger onClick={onOpenGuide} aria-label="Canvas guide" aria-pressed={Boolean(isGuideOpen)} title="Canvas guide"
+          className={`hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-neutral-100 md:flex dark:hover:bg-[#1e2634] dark:hover:text-white ${isGuideOpen ? "bg-neutral-100 text-neutral-900 dark:bg-[#1e2634] dark:text-white" : "text-neutral-500 dark:text-neutral-400"}`}><CircleHelp className="h-4 w-4" /></button>}
         {onOpenShortcuts && <button type="button" onClick={onOpenShortcuts} aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"
           className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 md:flex dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"><Keyboard className="h-4 w-4" /></button>}
 
@@ -441,6 +458,7 @@ export default function CanvasDock({
               onClick={onUndo}
               disabled={!canUndo || isBusy}
               title="Undo (Ctrl Z)"
+              aria-label="Undo"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >
               <Undo2 className="h-3.5 w-3.5" />
@@ -450,6 +468,7 @@ export default function CanvasDock({
               onClick={onRedo}
               disabled={!canRedo || isBusy}
               title="Redo (Ctrl Shift Z)"
+              aria-label="Redo"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
             >
               <Redo2 className="h-3.5 w-3.5" />

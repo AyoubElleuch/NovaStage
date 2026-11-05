@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth, getAuthenticatedProfile } from "@/lib/auth/session";
 import { isProjectMember } from "@/lib/projects";
 import { getProjectCanvasData } from "@/lib/canvas/server";
+import { getAiRequestLimit } from "@/lib/plans";
 import ProjectCanvasClient from "./project-canvas-client";
 
 export default async function ProjectPage({
@@ -45,14 +46,7 @@ export default async function ProjectPage({
     (user.user_metadata?.plan as string) ||
     "free";
 
-  const maxAiRequests =
-    userPlan === "enterprise"
-      ? 999999
-      : userPlan === "pro"
-      ? 50
-      : userPlan === "plus"
-      ? 30
-      : 10;
+  const maxAiRequests = getAiRequestLimit(userPlan);
 
   const aiRequestsRemaining = Math.max(0, maxAiRequests - (profile?.ai_requests_count ?? 0));
 

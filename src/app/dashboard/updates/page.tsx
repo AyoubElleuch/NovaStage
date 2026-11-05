@@ -8,6 +8,17 @@ const releases = [
   {
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
+    title: "Clearer Canvas, Reliable Saving",
+    summary: "A guided first canvas, honest save status, undo that persists, and clearer AI generation.",
+    changes: [
+      "First-project guide: A short dismissible guide covers milestones, checkpoints, connections, claims and navigation, with touch and keyboard wording and larger mobile controls.",
+      "Honest saving: The header shows Saved, Saving, Not saved or Offline. Failed saves revert with a reason; there is no offline edit queue. Undo and redo are saved and never overwrite collaborators.",
+      "AI generation: See whether a request updates or adds before it runs, get an Undo banner afterwards, and recover from quota, busy and network failures. Pricing shows only enforced limits; billing is not live.",
+    ],
+  },
+  {
+    version: "Beta v1.1.5",
+    date: "October 26, 2026",
     title: "Clearer Generated Diagrams",
     summary: "More readable workflows and AWS architectures, with consistent layouts across built-in AI, Codex and Claude.",
     changes: [

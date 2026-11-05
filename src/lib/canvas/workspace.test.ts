@@ -45,6 +45,19 @@ describe("canvas fit and zoom", () => {
     }
   });
 
+  it("reserves space for a left-hand guide without changing the other insets", () => {
+    const area = { width: 1440, height: 900, leftInset: 340 };
+    const viewport = fitCanvasNodes(nodes, area);
+    for (const node of nodes) {
+      expect(viewport.x + node.position_x * viewport.zoom).toBeGreaterThanOrEqual(area.leftInset + 24);
+      expect(viewport.x + (node.position_x + getNodeDimensions(node).width) * viewport.zoom).toBeLessThanOrEqual(area.width - 24);
+    }
+    const initial = { x: 400, y: 170, zoom: 0.6 };
+    const next = zoomAroundCenter(initial, 1.2, area);
+    const center = { x: area.leftInset + (area.width - area.leftInset) / 2, y: area.height / 2 };
+    expect((center.x - next.x) / next.zoom).toBeCloseTo((center.x - initial.x) / initial.zoom);
+  });
+
   it("anchors toolbar zoom in the visible canvas center beside an open drawer", () => {
     const area = { width: 1440, height: 1000, rightInset: 420 };
     const initial = { x: -260, y: 170, zoom: 0.6 };
