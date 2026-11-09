@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import EmbedChromeBoundary from "@/components/canvas/embed-chrome-boundary";
 import LoadingScreen from "./loading-screen";
 import { NotificationProvider } from "@/components/notifications/notification-provider";
 import PlatformAnnouncementBanner from "@/components/announcements/platform-announcement-banner";
@@ -45,7 +46,8 @@ export default async function RootLayout({
             __html: `
               try {
                 const theme = localStorage.getItem('novastage-theme');
-                if (theme === 'dark') {
+                const embedSystemDark = theme !== 'light' && theme !== 'dark' && location.pathname.startsWith('/share/') && location.pathname.replace(/[/]+$/, '').endsWith('/embed') && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (theme === 'dark' || embedSystemDark) {
                   document.documentElement.classList.add('dark');
                   document.documentElement.setAttribute('data-theme', 'dark');
                 } else {
@@ -59,7 +61,7 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen bg-[#fafafa] text-neutral-900 dark:bg-[#0f141c] dark:text-[#f1f5f9] antialiased transition-colors duration-200">
         <ThemeProvider>
-          <PlatformAnnouncementBanner initialAnnouncement={activeAnnouncement} />
+          <EmbedChromeBoundary><PlatformAnnouncementBanner initialAnnouncement={activeAnnouncement} /></EmbedChromeBoundary>
           <NotificationProvider><AuthTransitionProvider>{children}</AuthTransitionProvider></NotificationProvider>
           <LoadingScreen />
         </ThemeProvider>

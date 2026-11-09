@@ -9,9 +9,12 @@ export default function CanvasShareDialog({ slug, onClose }: { slug: string; onC
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
   const [origin, setOrigin] = useState("");
   const endpoint = `/api/dashboard/projects/${encodeURIComponent(slug)}/canvas/share`;
   const url = token ? `${origin}/share/${token}` : "";
+
+  const embedCode = token ? `<iframe src="${origin}/share/${token}/embed" title="NovaStage canvas" width="100%" height="600" style="border:0;border-radius:12px" loading="lazy" referrerpolicy="no-referrer"></iframe>` : "";
 
   useEffect(() => {
     ref.current?.showModal();
@@ -24,7 +27,7 @@ export default function CanvasShareDialog({ slug, onClose }: { slug: string; onC
   }, [endpoint]);
 
   const update = async (method: "POST" | "DELETE") => {
-    setLoading(true); setError(""); setCopied(false);
+    setLoading(true); setError(""); setCopied(false); setEmbedCopied(false);
     try {
       const res = await fetch(endpoint, { method });
       const data = await res.json();
@@ -55,6 +58,13 @@ export default function CanvasShareDialog({ slug, onClose }: { slug: string; onC
         try { await navigator.clipboard.writeText(url); setCopied(true); setError(""); }
         catch { setError("Copy the link from the field above."); }
       }} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white disabled:opacity-50">{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? "Link copied" : "Copy link"}</button>
+      <label className="block text-xs font-semibold" htmlFor="canvas-embed-code">Embed in a website</label>
+      <textarea id="canvas-embed-code" readOnly value={embedCode} rows={4} onFocus={event => event.currentTarget.select()} className="w-full rounded-lg border border-neutral-300 p-3 font-mono text-xs dark:border-[#384961]" />
+      <button type="button" disabled={loading} onClick={async () => {
+        try { await navigator.clipboard.writeText(embedCode); setEmbedCopied(true); setError(""); }
+        catch { setError("Copy the embed code from the field above."); }
+      }} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 px-4 text-sm font-semibold dark:border-[#384961]">{embedCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{embedCopied ? "Embed code copied" : "Copy embed code"}</button>
+      <p className="text-xs leading-5 text-neutral-500 dark:text-neutral-400">Paste into a website or post that supports iframes. Saved changes appear automatically within about 5 seconds. Disabling sharing also disables embeds.</p>
       <button type="button" disabled={loading} onClick={() => void update("DELETE")} className="min-h-11 w-full rounded-xl border border-red-200 px-4 text-sm font-medium text-red-600 disabled:opacity-50 dark:border-red-900 dark:text-red-400">Disable link</button>
       <p className="text-xs leading-5 text-neutral-500 dark:text-neutral-400">Disabling stops new visits. Enabling again creates a new link. People may keep content they have already viewed.</p>
     </div> : <button type="button" disabled={loading} onClick={() => void update("POST")} className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white disabled:opacity-50"><Link2 className="h-4 w-4" />Enable view-only link</button>}

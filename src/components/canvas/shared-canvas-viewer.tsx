@@ -14,7 +14,7 @@ import CanvasNodeComponent from "./canvas-node";
 const BUTTON = "grid h-11 min-w-11 place-items-center rounded-xl border border-neutral-200 bg-white/95 px-3 text-sm shadow-sm hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-[#283548] dark:bg-[#161d27] dark:hover:bg-[#1e2634]";
 
 /** Deliberately has no auth client, realtime subscriptions, or mutation callbacks. */
-export default function SharedCanvasViewer({ nodes, edges }: { nodes: CanvasNode[]; edges: CanvasEdge[] }) {
+export default function SharedCanvasViewer({ nodes, edges, embedded = false }: { nodes: CanvasNode[]; edges: CanvasEdge[]; embedded?: boolean }) {
   useCanvasVisualViewport();
   const root = useRef<HTMLElement>(null);
   const [viewport, setViewport] = useState<CanvasViewport>({ x: 0, y: 0, zoom: 1 });
@@ -25,7 +25,9 @@ export default function SharedCanvasViewer({ nodes, edges }: { nodes: CanvasNode
   const milestoneIndex = useMemo(() => new Map(nodes.filter(node => !node.node_type || node.node_type === "milestone").sort((a, b) => a.sort_order - b.sort_order).map((node, index) => [node.id, index])), [nodes]);
   const { theme, toggleTheme } = useTheme();
   const area = () => ({ width: root.current?.clientWidth || window.innerWidth, height: root.current?.clientHeight || window.innerHeight });
-  const fit = useCallback(() => { if (root.current) setViewport(fitCanvasNodes(nodes, { width: root.current.clientWidth, height: root.current.clientHeight })); }, [nodes]);
+  const nodesRef = useRef(nodes);
+  useEffect(() => { nodesRef.current = nodes; }, [nodes]);
+  const fit = useCallback(() => { if (root.current) setViewport(fitCanvasNodes(nodesRef.current, { width: root.current.clientWidth, height: root.current.clientHeight })); }, []);
   useEffect(() => {
     fit();
     const element = root.current;
@@ -43,7 +45,7 @@ export default function SharedCanvasViewer({ nodes, edges }: { nodes: CanvasNode
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing || details.current?.open) return;
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      if (!embedded && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault(); setSearchOpen(open => !open);
       } else if (event.shiftKey && event.code === "Digit1" && !(event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable='true']"))) {
         event.preventDefault(); fit();
@@ -51,18 +53,19 @@ export default function SharedCanvasViewer({ nodes, edges }: { nodes: CanvasNode
     };
     window.addEventListener("keydown", shortcut);
     return () => window.removeEventListener("keydown", shortcut);
-  }, [fit]);
+  }, [fit, embedded]);
   const openNode = (id: string) => { setSearchOpen(false); setSelectedId(id); };
 
   return <main ref={root} aria-label="Shared canvas" className="relative h-dvh w-full overflow-hidden bg-[#faf8f5] text-neutral-900 dark:bg-[#10151f] dark:text-white">
-    <header data-canvas-ui className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+    {!embedded && <header data-canvas-ui className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
       <div className="pointer-events-auto flex min-w-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white/95 px-3 py-2 shadow-sm dark:border-[#283548] dark:bg-[#161d27]"><Eye className="h-4 w-4 shrink-0 text-emerald-600" /><div><h1 className="text-sm font-semibold">Shared canvas</h1><p className="text-[11px] text-neutral-500 dark:text-neutral-400">View only · NovaStage</p></div></div>
       <button type="button" onClick={toggleTheme} aria-label="Toggle dark mode" className={`${BUTTON} pointer-events-auto`}>{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
-    </header>
-    <CanvasNavigator nodes={nodes} isOpen={searchOpen} onToggle={() => setSearchOpen(open => !open)} onClose={() => setSearchOpen(false)} onJumpToNode={id => {
+    </header>}
+    {embedded && <button data-canvas-ui type="button" onClick={toggleTheme} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className={`${BUTTON} absolute right-3 top-3 z-20`}>{theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>}
+    {!embedded && <CanvasNavigator nodes={nodes} isOpen={searchOpen} onToggle={() => setSearchOpen(open => !open)} onClose={() => setSearchOpen(false)} onJumpToNode={id => {
       const node = nodes.find(item => item.id === id);
       if (node) { setViewport(fitCanvasNodes([node], area())); openNode(id); }
-    }} />
+    }} />}
     <CanvasViewportContainer viewport={viewport} onViewportChange={setViewport} activeTool="hand" allowHandToolClick isDraggingNode={false}
       onCanvasClick={point => {
         // Panning captures the pointer on the viewport; resolve a stationary tap
