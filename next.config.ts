@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
         { key: "Referrer-Policy", value: "no-referrer" },
         { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
       ],
+    }, {
+      source: "/share/:token/embed",
+      headers: [{ key: "Content-Security-Policy", value: "frame-ancestors *" }],
     }];
   },
   async redirects() {

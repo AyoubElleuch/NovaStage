@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useCallback, useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export type Theme = "light" | "dark";
 
@@ -47,21 +48,24 @@ function subscribeTheme(callback: () => void) {
   if (typeof window !== "undefined") {
     window.addEventListener("storage", handleStorage);
   }
+  const systemTheme = typeof window !== "undefined" ? window.matchMedia?.("(prefers-color-scheme: dark)") : undefined;
+  systemTheme?.addEventListener("change", callback);
   return () => {
     listeners.delete(callback);
+    systemTheme?.removeEventListener("change", callback);
     if (typeof window !== "undefined") {
       window.removeEventListener("storage", handleStorage);
     }
   };
 }
 
-function getThemeSnapshot(): Theme {
+function getThemeSnapshot(followSystem = false): Theme {
   if (typeof window === "undefined") return "light";
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "dark" || stored === "light") return stored;
   } catch {}
-  return "light";
+  return followSystem && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function getServerThemeSnapshot(): Theme {
@@ -69,7 +73,10 @@ function getServerThemeSnapshot(): Theme {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getServerThemeSnapshot);
+  const pathname = usePathname();
+  const followSystem = /^\/share\/[^/]+\/embed\/?$/.test(pathname);
+  const snapshot = useCallback(() => getThemeSnapshot(followSystem), [followSystem]);
+  const theme = useSyncExternalStore(subscribeTheme, snapshot, getServerThemeSnapshot);
 
   useEffect(() => {
     applyThemeToDocument(theme);
@@ -85,7 +92,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleTheme = useCallback(() => {
-    const current = getThemeSnapshot();
+    const current = getThemeSnapshot(followSystem);
     const nextTheme: Theme = current === "dark" ? "light" : "dark";
     applyThemeToDocument(nextTheme);
     try {
@@ -93,7 +100,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       document.cookie = `${STORAGE_KEY}=${nextTheme}; path=/; max-age=31536000; SameSite=Lax`;
     } catch {}
     notifyThemeListeners();
-  }, []);
+  }, [followSystem]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
