@@ -90,6 +90,9 @@ npm run build
 npm run test:aws-layout
 npm run preview:aws-layout
 npm run test:canvas-browser
+npm run test:usability-browser
+npm run test:reliability-browser
+npm run test:ai-browser
 npm run test:generation-browser
 ```
 
