@@ -12,7 +12,7 @@ export async function startHarness({ port = 0, extraPlugins = [] } = {}) {
   const server = await createServer({
     root, configFile: false, plugins: [react(), ...extraPlugins],
     resolve: { alias: [
-      ...["@/lib/supabase/client", "@/components/notifications/notification-provider", "@/lib/canvas/sound-effects", "next/link"].map(find => ({ find, replacement: mocks })),
+      ...["@/lib/supabase/client", "@/components/notifications/notification-provider", "@/lib/canvas/sound-effects", "next/link", "next/navigation"].map(find => ({ find, replacement: mocks })),
       { find: "@", replacement: resolve(root, "src") },
     ] },
     optimizeDeps: { entries: ["scripts/canvas-smoke/main.jsx"] },

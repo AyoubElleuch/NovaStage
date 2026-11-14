@@ -73,7 +73,7 @@ function getServerThemeSnapshot(): Theme {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const followSystem = /^\/share\/[^/]+\/embed\/?$/.test(pathname);
   const snapshot = useCallback(() => getThemeSnapshot(followSystem), [followSystem]);
   const theme = useSyncExternalStore(subscribeTheme, snapshot, getServerThemeSnapshot);
