@@ -41,8 +41,11 @@ describe("creating connections", () => {
   });
 
   it("does not duplicate an identical connection and rejects self links and unknown types", async () => {
-    await createCanvasEdge("p1", "mine", "theirs", "right", "left", "alice", false);
+    const existing = await createCanvasEdge("p1", "mine", "theirs", "right", "left", "alice", false);
+    expect(existing?.id).toBe("edge-1");
     expect(mocks.tables.canvas_edges.filter((edge) => edge.source_node_id === "mine" && edge.target_node_id === "theirs")).toHaveLength(1);
+    const updated = await createCanvasEdge("p1", "mine", "theirs", "right", "left", "alice", false, "data_flow");
+    expect(updated).toMatchObject({ id: "edge-1", edge_type: "data_flow" });
     expect(await createCanvasEdge("p1", "mine", "mine", "right", "left", "alice", false)).toBeNull();
     await expect(createCanvasEdge("p1", "mine", "free", "right", "left", "alice", false, "nonsense" as never)).rejects.toThrow("Invalid connection type");
   });
