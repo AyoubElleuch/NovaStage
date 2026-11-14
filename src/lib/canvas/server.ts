@@ -388,23 +388,64 @@ export async function createCanvasEdge(
     }
   }
 
+  const { data: existingEdge } = await adminClient
+    .from("canvas_edges")
+    .select()
+    .eq("project_id", projectId)
+    .eq("source_node_id", sourceNodeId)
+    .eq("target_node_id", targetNodeId)
+    .eq("source_handle", sourceHandle)
+    .eq("target_handle", targetHandle)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingEdge) {
+    if (edgeType && existingEdge.edge_type !== edgeType) {
+      const { data: updatedEdge, error: updateError } = await adminClient
+        .from("canvas_edges")
+        .update({ edge_type: edgeType })
+        .eq("id", existingEdge.id)
+        .eq("project_id", projectId)
+        .select()
+        .single();
+
+      if (!updateError && updatedEdge) {
+        return updatedEdge as CanvasEdge;
+      }
+    }
+    return existingEdge as CanvasEdge;
+  }
+
   const { data: edge, error } = await adminClient
     .from("canvas_edges")
-    .upsert(
-      {
-        project_id: projectId,
-        source_node_id: sourceNodeId,
-        target_node_id: targetNodeId,
-        source_handle: sourceHandle,
-        target_handle: targetHandle,
-        ...(edgeType ? { edge_type: edgeType } : {}),
-      },
-      { onConflict: "source_node_id,target_node_id,source_handle,target_handle" }
-    )
+    .insert({
+      project_id: projectId,
+      source_node_id: sourceNodeId,
+      target_node_id: targetNodeId,
+      source_handle: sourceHandle,
+      target_handle: targetHandle,
+      ...(edgeType ? { edge_type: edgeType } : {}),
+    })
     .select()
     .single();
 
   if (error || !edge) {
+    if ((error as { code?: string } | null)?.code === "23505") {
+      const { data: duplicateEdge } = await adminClient
+        .from("canvas_edges")
+        .select()
+        .eq("project_id", projectId)
+        .eq("source_node_id", sourceNodeId)
+        .eq("target_node_id", targetNodeId)
+        .eq("source_handle", sourceHandle)
+        .eq("target_handle", targetHandle)
+        .limit(1)
+        .maybeSingle();
+
+      if (duplicateEdge) {
+        return duplicateEdge as CanvasEdge;
+      }
+    }
     console.error("Error creating canvas edge:", error);
     return null;
   }

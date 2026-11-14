@@ -10,7 +10,7 @@ export function createFakeSupabase(tables: FakeTables) {
   return {
     from(name: string) {
       const filters: Array<(row: Row) => boolean> = [];
-      let operation: { type: "select" | "update" | "insert" | "upsert" | "delete"; payload?: Row; conflict?: string[] } = { type: "select" };
+      let operation: { type: "select" | "update" | "insert" | "delete"; payload?: Row } = { type: "select" };
       let descending = false;
       let orderColumn = "";
       let max = Infinity;
@@ -19,17 +19,6 @@ export function createFakeSupabase(tables: FakeTables) {
         const matches = rows.filter((row) => filters.every((filter) => filter(row)));
         if (operation.type === "insert") {
           const row = { id: `${name}-${rows.length + 1}`, ...operation.payload };
-          rows.push(row);
-          return { data: [row], error: null };
-        }
-        if (operation.type === "upsert") {
-          const payload = operation.payload ?? {};
-          const existing = rows.find((row) => (operation.conflict ?? []).every((column) => row[column] === payload[column]));
-          if (existing) {
-            Object.assign(existing, payload);
-            return { data: [existing], error: null };
-          }
-          const row = { id: `${name}-${rows.length + 1}`, ...payload };
           rows.push(row);
           return { data: [row], error: null };
         }
@@ -46,7 +35,6 @@ export function createFakeSupabase(tables: FakeTables) {
         limit: (count: number) => ((max = count), query),
         update: (payload: Row) => ((operation = { type: "update", payload }), query),
         insert: (payload: Row) => ((operation = { type: "insert", payload }), query),
-        upsert: (payload: Row, options?: { onConflict?: string }) => ((operation = { type: "upsert", payload, conflict: options?.onConflict?.split(",") }), query),
         delete: () => ((operation = { type: "delete" }), query),
         maybeSingle: async () => ({ data: run().data[0] ?? null, error: null }),
         single: async () => {

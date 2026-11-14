@@ -5,34 +5,83 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const INTRO_DURATION = 1000;
+const TRANSITION_INTRO_DURATION = 300;
 const EXIT_DURATION = 480;
+const TRANSITION_EXIT_DURATION = 220;
+const PAGE_READY_CAP_MS = 1200;
 const MAX_WAITING_PROGRESS = 92;
 
+let hasShownInitialLoadingScreen = false;
+
 function waitForImage(image: HTMLImageElement) {
-  if (image.complete) return Promise.resolve();
+  if (image.complete || image.loading === "lazy") return Promise.resolve();
 
   return new Promise<void>((resolve) => {
-    image.addEventListener("load", () => resolve(), { once: true });
-    image.addEventListener("error", () => resolve(), { once: true });
+    const finish = () => {
+      image.removeEventListener("load", finish);
+      image.removeEventListener("error", finish);
+      resolve();
+    };
+    image.addEventListener("load", finish, { once: true });
+    image.addEventListener("error", finish, { once: true });
   });
 }
 
-function waitForVideo(video: HTMLVideoElement) {
-  if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return Promise.resolve();
-
+function waitForPage(signal: AbortSignal) {
   return new Promise<void>((resolve) => {
-    video.addEventListener("canplay", () => resolve(), { once: true });
-    video.addEventListener("error", () => resolve(), { once: true });
+    let settled = false;
+    let timeoutId: number | null = null;
+
+    const startAssetChecks = () => {
+      const images = Array.from(document.images).map(waitForImage);
+      const fonts = "fonts" in document ? [document.fonts.ready.catch(() => undefined)] : [];
+      Promise.all([...images, ...fonts]).then(finish);
+    };
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      window.removeEventListener("load", startAssetChecks);
+      resolve();
+    };
+
+    timeoutId = window.setTimeout(finish, PAGE_READY_CAP_MS);
+    signal.addEventListener("abort", finish, { once: true });
+
+    if (document.readyState === "complete") {
+      startAssetChecks();
+    } else {
+      window.addEventListener("load", startAssetChecks, { once: true });
+    }
   });
 }
 
 type LoadingScreenProps = { ready?: boolean; onComplete?: () => void };
 
 export default function LoadingScreen(props: LoadingScreenProps = {}) {
-  const pathname = usePathname();
-  // Workspace routes have their own useful streaming skeletons. Do not hold
-  // an interactive canvas behind the homepage intro or unrelated media loads.
-  if (!props.onComplete && (pathname.startsWith("/dashboard") || pathname.startsWith("/share/"))) return null;
+  const pathname = usePathname() ?? "";
+  const isTransition = Boolean(props.onComplete);
+  const [shouldShowInitial] = useState(() => {
+    if (isTransition) return true;
+    if (hasShownInitialLoadingScreen) return false;
+    if (pathname === "/") {
+      hasShownInitialLoadingScreen = true;
+      return true;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (!isTransition) {
+      hasShownInitialLoadingScreen = true;
+    }
+    if (!isTransition && (!shouldShowInitial || pathname !== "/")) {
+      document.documentElement.setAttribute("data-loading-state", "complete");
+    }
+  }, [isTransition, shouldShowInitial, pathname]);
+
+  if (!isTransition && (!shouldShowInitial || pathname !== "/")) return null;
   return <BrandedLoadingScreen {...props} />;
 }
 
@@ -42,7 +91,20 @@ function BrandedLoadingScreen({ ready = true, onComplete }: LoadingScreenProps) 
   const [isWaiting, setIsWaiting] = useState(false);
   const [progress, setProgress] = useState(0);
   const completeRef = useRef(onComplete);
-  useEffect(() => { completeRef.current = onComplete; }, [onComplete]);
+  const readyRef = useRef(ready);
+  const tryRemoveRef = useRef<(() => void) | null>(null);
+  const isTransition = Boolean(onComplete);
+
+  useEffect(() => {
+    completeRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    if (ready) {
+      readyRef.current = true;
+      tryRemoveRef.current?.();
+    }
+  }, [ready]);
 
   useEffect(() => {
     let hasFinished = false;
@@ -50,16 +112,19 @@ function BrandedLoadingScreen({ ready = true, onComplete }: LoadingScreenProps) 
     let isPageReady = false;
     let progressTimer: number | undefined;
     let exitTimer: number | undefined;
+    const abortController = new AbortController();
+
+    const introDuration = isTransition ? TRANSITION_INTRO_DURATION : INTRO_DURATION;
+    const exitDuration = isTransition ? TRANSITION_EXIT_DURATION : EXIT_DURATION;
 
     if (typeof document !== "undefined") {
       document.documentElement.setAttribute("data-loading-state", "loading");
     }
 
-    const removeScreen = () => {
-      if (hasFinished || !ready) return;
+    const tryRemove = () => {
+      if (hasFinished || !hasPassedIntro || !isPageReady || !readyRef.current) return;
       hasFinished = true;
       if (progressTimer) window.clearInterval(progressTimer);
-      if (readyTimer) window.clearTimeout(readyTimer);
       setProgress(100);
       setIsExiting(true);
       if (typeof document !== "undefined") {
@@ -73,8 +138,10 @@ function BrandedLoadingScreen({ ready = true, onComplete }: LoadingScreenProps) 
           window.dispatchEvent(new CustomEvent("novastage:loader-complete"));
         }
         completeRef.current?.();
-      }, EXIT_DURATION);
+      }, exitDuration);
     };
+
+    tryRemoveRef.current = tryRemove;
 
     const beginWaiting = () => {
       if (hasFinished) return;
@@ -88,68 +155,52 @@ function BrandedLoadingScreen({ ready = true, onComplete }: LoadingScreenProps) 
       }, 120);
     };
 
-    const markPageReady = () => {
-      isPageReady = true;
-      if (hasPassedIntro) removeScreen();
-    };
-
-    const waitForPage = async () => {
-      const windowLoaded =
-        document.readyState === "complete"
-          ? Promise.resolve()
-          : new Promise<void>((resolve) => {
-              window.addEventListener("load", () => resolve(), { once: true });
-            });
-      const fontsLoaded = document.fonts?.ready ?? Promise.resolve();
-      const imagesLoaded = Array.from(document.images).map(waitForImage);
-      const videosLoaded = Array.from(document.querySelectorAll("video")).map(waitForVideo);
-
-      await Promise.all([windowLoaded, fontsLoaded, ...imagesLoaded, ...videosLoaded]);
-      markPageReady();
-    };
-
     const introTimer = window.setTimeout(() => {
       hasPassedIntro = true;
-      if (isPageReady) {
-        removeScreen();
+      if (isPageReady && readyRef.current) {
+        tryRemove();
       } else {
         beginWaiting();
       }
-    }, INTRO_DURATION);
+    }, introDuration);
 
-    const readyTimer = window.setTimeout(() => {
-      if (!isPageReady) markPageReady();
-    }, 30000);
-
-    void waitForPage();
+    void waitForPage(abortController.signal).then(() => {
+      isPageReady = true;
+      tryRemove();
+    });
 
     return () => {
+      tryRemoveRef.current = null;
+      abortController.abort();
       window.clearTimeout(introTimer);
-      if (readyTimer) window.clearTimeout(readyTimer);
       if (progressTimer) window.clearInterval(progressTimer);
       if (exitTimer) window.clearTimeout(exitTimer);
+      if (typeof document !== "undefined" && !hasFinished) {
+        document.documentElement.setAttribute("data-loading-state", "complete");
+      }
     };
-  }, [ready]);
+  }, [isTransition]);
 
   useEffect(() => {
-    if (!isVisible) return;
-
-    const previousDocumentOverflow = document.documentElement.style.overflow;
-    const previousBodyOverflow = document.body.style.overflow;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
+    if (isVisible && !isExiting) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
 
     return () => {
-      document.documentElement.style.overflow = previousDocumentOverflow;
-      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
     };
-  }, [isVisible]);
+  }, [isVisible, isExiting]);
 
   if (!isVisible) return null;
 
   return (
     <div
-      className={`loading-screen ${isExiting ? "loading-screen--exiting" : ""}`}
+      className={`loading-screen ${isExiting ? "loading-screen--exiting pointer-events-none" : ""}`}
       role="status"
       aria-label={isWaiting ? `Loading ${Math.round(progress)} percent` : "Loading NovaStage"}
       aria-live="polite"

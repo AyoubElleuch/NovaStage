@@ -55,4 +55,5 @@ export function createClient() {
 }
 
 export const canvasSounds = new Proxy({}, { get: () => () => {} });
+export const usePathname = () => (typeof window !== "undefined" ? window.location.pathname : "/");
 export default function Link({ children, ...props }) { return <a {...props}>{children}</a>; }

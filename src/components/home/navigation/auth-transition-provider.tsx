@@ -1,38 +1,67 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import LoadingScreen from "@/app/loading-screen";
 
+type TransitionState = {
+  destination: string;
+  fromPathname: string;
+};
+
 export default function AuthTransitionProvider({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const [destination, setDestination] = useState<string | null>(null);
-  const [error, setError] = useState("");
+  const pathname = usePathname() ?? "";
+  const [transition, setTransition] = useState<TransitionState | null>(null);
 
   useEffect(() => {
     const navigate = (event: Event) => {
       const target = (event as CustomEvent<string>).detail;
       if (target !== "/signup" && target !== "/login") return;
-      setError(""); setDestination(target);
+      const currentPathname = typeof window !== "undefined" ? window.location.pathname : "";
+      if (currentPathname === target) return;
+      setTransition({ destination: target, fromPathname: currentPathname });
     };
     window.addEventListener("novastage:auth-navigation", navigate);
     return () => window.removeEventListener("novastage:auth-navigation", navigate);
   }, []);
 
-  useEffect(() => {
-    if (!destination || pathname === destination) return;
-    const timeout = window.setTimeout(() => {
-      setDestination(null);
-      setError("Navigation is taking longer than expected. Please try again.");
-    }, 15000);
-    return () => window.clearTimeout(timeout);
-  }, [destination, pathname]);
+  const hasNavigated = Boolean(
+    transition && (pathname === transition.destination || pathname !== transition.fromPathname)
+  );
+  const redirectedAwayFromAuth = Boolean(
+    transition &&
+      pathname !== transition.fromPathname &&
+      pathname !== "/login" &&
+      pathname !== "/signup"
+  );
 
-  return <>
-    <div inert={Boolean(destination)}>{children}</div>
-    {destination && <LoadingScreen key={destination} ready={pathname === destination} onComplete={() => setDestination(null)} />}
-    {error && <div className="fixed bottom-5 left-1/2 z-[110] w-[min(90%,440px)] -translate-x-1/2 rounded-lg bg-red-950 p-4 text-sm text-white" role="alert">
-      {error}<button type="button" className="ml-3 underline" onClick={() => setError("")}>Dismiss</button>
-    </div>}
-  </>;
+  useEffect(() => {
+    if (!transition) return;
+    if (redirectedAwayFromAuth) {
+      const clearTimer = window.setTimeout(() => setTransition(null), 0);
+      return () => window.clearTimeout(clearTimer);
+    }
+    if (hasNavigated) return;
+    const timeout = window.setTimeout(() => {
+      setTransition(null);
+    }, 4000);
+    return () => window.clearTimeout(timeout);
+  }, [transition, hasNavigated, redirectedAwayFromAuth]);
+
+  const handleComplete = useCallback(() => {
+    setTransition(null);
+  }, []);
+
+  return (
+    <>
+      {children}
+      {transition && !redirectedAwayFromAuth && (
+        <LoadingScreen
+          key={`${transition.fromPathname}->${transition.destination}`}
+          ready={hasNavigated}
+          onComplete={handleComplete}
+        />
+      )}
+    </>
+  );
 }

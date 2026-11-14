@@ -16,7 +16,7 @@ const server = await createServer({ root, configFile: false, plugins: [react(), 
   });
 } }],
   resolve: { alias: [
-    ...["@/lib/supabase/client", "@/components/notifications/notification-provider", "@/lib/canvas/sound-effects", "next/link"].map(find => ({ find, replacement: resolve(root, "scripts/canvas-smoke/mocks.jsx") })),
+    ...["@/lib/supabase/client", "@/components/notifications/notification-provider", "@/lib/canvas/sound-effects", "next/link", "next/navigation"].map(find => ({ find, replacement: resolve(root, "scripts/canvas-smoke/mocks.jsx") })),
     { find: "@", replacement: resolve(root, "src") },
   ] },
   server: { host: "127.0.0.1", port: 0, watch: { ignored: ["**/.next/**", "**/.tmp/**"] } },
