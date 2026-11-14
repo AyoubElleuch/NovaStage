@@ -15,6 +15,7 @@ export default function AuthPageShell({ children }: { children: ReactNode }) {
         <video
           className="absolute inset-0 h-full w-full object-cover"
           src="/videos/login_page.mp4"
+          preload="metadata"
           autoPlay
           loop
           muted
