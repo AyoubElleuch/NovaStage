@@ -75,7 +75,7 @@ async function main() {
 
   // 1. Check if user already exists in auth.users
   const { data: userList, error: listError } = await supabase.auth.admin.listUsers();
-  
+
   if (listError) {
     console.error(`Failed to query users: ${listError.message}`);
     process.exit(1);
@@ -86,7 +86,9 @@ async function main() {
   let userId;
 
   if (existingUser) {
-    console.log(`User already exists in Supabase Auth (ID: ${existingUser.id}). Updating credentials and privileges...`);
+    console.log(
+      `User already exists in Supabase Auth (ID: ${existingUser.id}). Updating credentials and privileges...`,
+    );
     userId = existingUser.id;
 
     const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
@@ -123,28 +125,32 @@ async function main() {
   }
 
   // 2. Ensure profile exists and has role set to super_admin
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .upsert({
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
       id: userId,
       email,
       full_name: name,
       role: role,
       updated_at: new Date().toISOString(),
-    }, { onConflict: "id" });
+    },
+    { onConflict: "id" },
+  );
 
   if (profileError) {
-    console.error(`Warning: User created in Auth, but profile update failed: ${profileError.message}`);
+    console.error(
+      `Warning: User created in Auth, but profile update failed: ${profileError.message}`,
+    );
   }
 
   // 3. Assign role in public.user_roles junction table
-  const { error: roleError } = await supabase
-    .from("user_roles")
-    .upsert({
+  const { error: roleError } = await supabase.from("user_roles").upsert(
+    {
       user_id: userId,
       role_id: role,
       assigned_at: new Date().toISOString(),
-    }, { onConflict: "user_id,role_id" });
+    },
+    { onConflict: "user_id,role_id" },
+  );
 
   if (roleError) {
     console.error(`Warning: Role assignment in user_roles failed: ${roleError.message}`);

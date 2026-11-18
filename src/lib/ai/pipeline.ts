@@ -9,7 +9,13 @@
  * 3. Phase 3: Shared semantic validation and safe deterministic normalization
  */
 
-import { CanvasAIContext, AIWorkflowResult, AIGenerationMode, AIGenerationOperation, isAIGenerationMode } from "./types";
+import {
+  CanvasAIContext,
+  AIWorkflowResult,
+  AIGenerationMode,
+  AIGenerationOperation,
+  isAIGenerationMode,
+} from "./types";
 import { decomposePrompt } from "./phases/decompose";
 import { generateDeepWorkflow } from "./phases/generate";
 import { generateAWSArchitecture } from "./phases/generate-aws";
@@ -28,7 +34,7 @@ export async function executeAIPipeline(
   prompt: string,
   mode: AIGenerationMode = "workflow",
   context?: CanvasAIContext,
-  options?: { plan?: string; operation?: AIGenerationOperation }
+  options?: { plan?: string; operation?: AIGenerationOperation },
 ): Promise<AIWorkflowResult> {
   if (!isAIGenerationMode(mode)) throw new Error("Choose Workflow or AWS Architecture.");
   const cleanPrompt = prompt.trim();
@@ -45,7 +51,10 @@ export async function executeAIPipeline(
   try {
     decomposition = await decomposePrompt(cleanPrompt, mode);
   } catch (decompErr) {
-    console.warn("[AI Pipeline] Phase 1 decomposition encountered error, continuing with fallback:", decompErr);
+    console.warn(
+      "[AI Pipeline] Phase 1 decomposition encountered error, continuing with fallback:",
+      decompErr,
+    );
   }
 
   // Phase 2: Generate workflow/architecture based on mode
@@ -67,9 +76,9 @@ export async function executeAIPipeline(
   if (process.env.NODE_ENV !== "production") {
     console.log(
       `[AI Pipeline] Mode: ${mode}. Generated ${validatedWorkflow.milestones.length} milestones, ` +
-      `${validatedWorkflow.serviceNodes?.length ?? 0} service nodes, ` +
-      `${validatedWorkflow.edges.length} edges. Validation report:`,
-      report
+        `${validatedWorkflow.serviceNodes?.length ?? 0} service nodes, ` +
+        `${validatedWorkflow.edges.length} edges. Validation report:`,
+      report,
     );
   }
 

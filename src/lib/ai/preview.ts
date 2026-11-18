@@ -20,7 +20,10 @@ export interface GenerationPreview {
   inferred: boolean;
 }
 
-export const MODE_COPY: Record<AIGenerationMode, { label: string; builds: string; leavesAlone: string; item: string; plural: string }> = {
+export const MODE_COPY: Record<
+  AIGenerationMode,
+  { label: string; builds: string; leavesAlone: string; item: string; plural: string }
+> = {
   workflow: {
     label: "Workflow",
     builds: "Milestones with checkpoints and the dependencies between them.",
@@ -48,9 +51,16 @@ export function previewGeneration(input: {
   const copy = MODE_COPY[input.mode];
   const existingCount = input.nodes.filter((node) => {
     const type = node.node_type || "milestone";
-    return input.mode === "workflow" ? type === "milestone" : type === "aws_service" || type === "group";
+    return input.mode === "workflow"
+      ? type === "milestone"
+      : type === "aws_service" || type === "group";
   }).length;
-  const resolved = resolveGenerationOperation(input.mode, input.prompt, input.nodes, input.chosenOperation ?? undefined);
+  const resolved = resolveGenerationOperation(
+    input.mode,
+    input.prompt,
+    input.nodes,
+    input.chosenOperation ?? undefined,
+  );
   const noun = existingCount === 1 ? copy.item : copy.plural;
   const diagram = input.mode === "workflow" ? "workflow" : "architecture";
 
@@ -61,13 +71,21 @@ export function previewGeneration(input: {
     details.push("Nothing on your canvas is changed.");
   } else if (resolved === "update") {
     headline = `Updates your existing ${diagram}`;
-    details.push(`It can rename, reconnect or remove the ${existingCount} existing ${noun} if your request asks for it.`);
-    details.push("Completed checkpoints and edit claims are kept. Nearby layout is rearranged; other diagrams stay put.");
+    details.push(
+      `It can rename, reconnect or remove the ${existingCount} existing ${noun} if your request asks for it.`,
+    );
+    details.push(
+      "Completed checkpoints and edit claims are kept. Nearby layout is rearranged; other diagrams stay put.",
+    );
   } else {
     headline = `Adds a separate new ${diagram}`;
-    details.push(`Your ${existingCount} existing ${noun} ${existingCount === 1 ? "is" : "are"} left as ${existingCount === 1 ? "it is" : "they are"}.`);
+    details.push(
+      `Your ${existingCount} existing ${noun} ${existingCount === 1 ? "is" : "are"} left as ${existingCount === 1 ? "it is" : "they are"}.`,
+    );
   }
-  details.push("It's applied right away for everyone on this canvas, and you can undo it afterwards.");
+  details.push(
+    "Review the generated preview before applying it. You can undo accepted changes afterwards.",
+  );
 
   return {
     mode: input.mode,

@@ -1,34 +1,44 @@
-# Operations: deployment, checks, limitations and rollback
+# Operations: Beta v1.2.0
 
-## Before deploying
+## Deployment order
 
-1. Apply Supabase migrations in order through **026** (`supabase/migrations/`). 023–025 add MCP and mode enforcement; 026 adds the atomic AI canvas write function the app requires. Test them on a staging database first. This repository's tests run them only against isolated embedded PostgreSQL.
-2. Environment variables: see `.env.example` (Supabase URL and keys, `NEXT_PUBLIC_APP_URL`, Gemini key, Redis, Resend). Realtime must be enabled for the project.
-3. CI (`.github/workflows/ci.yml`, on `dev`, `master`, `main`): ESLint, TypeScript, Vitest, production build and the isolated browser suites.
+1. Back up the database and test migrations on staging. Apply migrations through **028** in order: 026 supplies atomic AI graph writes, 027 adds atomic layout batches, and 028 adds private AI previews and acceptance. These additive migrations do not rearrange existing diagrams.
+2. Configure `.env.example` values and enable Supabase Realtime. Deploy the application only after the migrations succeed. Missing functions fail closed; there is no partial-save fallback.
+3. Run the regular CI workflow and the live staging release gate below before promoting to production. Local embedded PostgreSQL and browser API models do not verify a hosted deployment.
 
-## Checks after deploying (staging first)
+## Live staging gate
 
-The automated suites use models of the API and Realtime. They do not replace these live checks:
+The manual **Staging release gate** workflow uses the GitHub `staging` environment. Set environment variables `STAGING_BASE_URL` and `STAGING_PROJECT_SLUG`, plus secrets `STAGING_OWNER_EMAIL`, `STAGING_OWNER_PASSWORD`, `STAGING_MEMBER_EMAIL`, and `STAGING_MEMBER_PASSWORD`. The two accounts must already be members of a disposable staging project; the first must own it. Never point this check at a customer project.
 
-* Sign in; open a project; create a milestone, add and tick a checkpoint, refresh: the change persists and the header shows **Saved**.
-* Two browsers, two members: edits, claims, a claim handoff and undo appear on the other side. Briefly disable one browser's network: it shows **Offline**, and on reconnect reloads.
-* Built-in AI (uses real quota; use a test account): Workflow and AWS runs show the preview, apply, and **Undo** removes the result. Confirm a quota-exhausted account sees the explanation, not a sign-out.
-* A removed member is returned to the dashboard.
-* View-only share link opens without sign-in and cannot edit.
-* Plans page and landing page show billing as not available.
+Run locally with the same environment variables:
 
-## Known limitations
+```sh
+node scripts/test-staging.mjs
+```
 
-* No offline edit queue: edits made offline are discarded on reconnect, with an explanation.
-* Positions and sizes are last-writer-wins; `version` is stored but not enforced.
-* Undo history is per session and limited to 50 steps. See `docs/canvas-reliability.md`.
-* Built-in AI applies immediately (with Undo); only the "Your AI" path shows a draft before adding. Only one generation per project runs at a time.
-* Claim handoff requests are delivered live only.
-* Billing is not live. Plans are assigned by administrators; plan pages list only enforced limits (`src/lib/plans.ts`). The dashboard subscription page still carries older comparison-table wording and should be aligned with `plans.ts` before launch.
-* Each open canvas tab reads the full canvas every ten seconds to detect removal.
+Set `STAGING_TEST_AI=true` for the complete release gate (enabled by default in the manual workflow). This spends one test-account generation request and discards the resulting preview. The script signs in through the app, checks live cookies, access, claims, atomic layout persistence and stale rejection, restores nothing over existing work, measures 20 access requests at concurrency four, and verifies session removal. It creates two UUID-named nodes and deletes only those nodes in `finally`; a cleanup failure reports their IDs.
 
-## Rollback
+Also verify on staging:
 
-* **Application:** redeploy the previous release (Beta v1.1.5 is tag-less; use its commit `7595416` or the prior deployment on your host). The 1.1.6 changes are backward compatible with the 1.1.5 client (no new migrations), so a rollback needs no database change.
-* **Database:** 1.1.6 adds no migration. Migration 026 belongs to 1.1.5; roll it back only with a tested down script, as the app fails safely without its RPC.
-* After a rollback, repeat the live checks above.
+- Two browser sessions receive live edits, claim handoffs and accepted previews; disconnect one session, edit, reconnect, then review and restore its draft.
+- Remove a test member and verify access is revoked; restore membership afterwards. Confirm revoked public links stop working and new anonymous viewers cannot access private metadata.
+- Verify one real Workflow and AWS Architecture preview, acceptance, stale-preview refusal and undo. Check provider failure/refund behavior with the staging provider configuration.
+- Check expected production graph sizes and concurrent traffic against the deployment's latency/error budget. The small access probe is a smoke check, not a capacity certification.
+
+Record the deployment revision and results before production promotion. The repository implementation work did not apply these migrations to the hosted database or execute this live gate.
+
+## Runtime behavior and limits
+
+- Tidy and multi-card moves commit one transaction. Node updates compare versions; conflicts preserve a local draft and refresh the shared state.
+- Failed/offline edits are not silently replayed. Drafts and up to 50 undo steps are scoped to user/project in browser storage, expire after seven days, and are limited to 4 MB. If storage is unavailable, the UI offers an in-tab draft to download before leaving. Clearing browser data removes local history.
+- Restoring a draft requires its starting canvas to match the current shared canvas. Otherwise download it for manual reconciliation. Undo rejects conflicting newer edits.
+- Built-in AI previews expire after 15 minutes. Accepting is idempotent and uses no extra quota; completed generation consumes a request even if discarded. Expired rows are cleaned on that user's next generation; a scheduled database purge can remove expired rows for inactive accounts.
+- Preview acceptance briefly locks graph tables while checking content and applying the transaction; include simultaneous acceptances in staging latency checks.
+- Access polling returns 204 after membership validation, without loading graph tables. Claims renew every minute; handoff notifications remain live-only.
+- Billing is not live. Plans are assigned by administrators, and subscription surfaces use the enforced limits in `src/lib/plans.ts`.
+
+## CI and rollback
+
+CI keeps 196 core unit/integration tests, 54 browser checks and 20 generated-diagram views. It uses three dependency installations rather than seven, a Next build cache, two browser groups, cancellation of superseded runs and failure artifacts. Local unit time fell from roughly 36 seconds to 6 seconds; hosted runner times vary.
+
+For application rollback, redeploy the prior application revision. Leave additive migrations 027–028 installed; older clients do not use them. They will also lack v1.2.0's concurrency and preview protections. Do not drop tables containing previews or remove functions while v1.2.0 instances are still running. Repeat the staging checks after rollback.

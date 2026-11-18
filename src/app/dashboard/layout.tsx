@@ -6,11 +6,7 @@ import DashboardDataProvider from "./dashboard-data-provider";
 import DashboardContentFrame from "./dashboard-content-frame";
 import { MobileNavProvider } from "@/lib/mobile-nav-context";
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAuth("/login");
   const session = await getAuthenticatedProfile();
 

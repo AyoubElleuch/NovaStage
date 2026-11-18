@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || "Could not leave project." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     console.error("Error in leave project API:", error);
     return NextResponse.json(
       { error: "An unexpected error occurred while leaving the project." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

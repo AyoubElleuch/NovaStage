@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     if (name.length > 80) {
       return NextResponse.json(
         { error: "Project name cannot exceed 80 characters." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     if (!result.success || !result.project) {
       return NextResponse.json(
         { error: result.error || "Could not create project." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     console.error("Error creating project:", error);
     return NextResponse.json(
       { error: "An unexpected error occurred while creating the project." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

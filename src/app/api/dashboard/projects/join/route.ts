@@ -20,10 +20,7 @@ export async function POST(request: Request) {
     const inviteCode = String(body.inviteCode || body.code || "").trim();
 
     if (!inviteCode) {
-      return NextResponse.json(
-        { error: "Please enter an invite code." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Please enter an invite code." }, { status: 400 });
     }
 
     const result = await joinProjectByInviteCode({
@@ -34,7 +31,7 @@ export async function POST(request: Request) {
     if (!result.success || !result.project) {
       return NextResponse.json(
         { error: result.error || "Could not join project." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -48,7 +45,7 @@ export async function POST(request: Request) {
     console.error("Error joining project:", error);
     return NextResponse.json(
       { error: "An unexpected error occurred while joining the project." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

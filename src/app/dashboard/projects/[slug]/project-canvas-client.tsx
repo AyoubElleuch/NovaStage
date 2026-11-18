@@ -1,6 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useReducer, useRef, useSyncExternalStore } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useReducer,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 import { Loader2, Flag, Box, Sparkles, X, Scan, Trash2 } from "lucide-react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -27,7 +35,21 @@ import {
   getNodeDimensions,
 } from "@/lib/canvas/coordinate-math";
 import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
-import { fitCanvasNodes, getDragNodeIds, getOpenNodePosition, zoomAroundCenter, getCanvasNodeAtPoint } from "@/lib/canvas/workspace";
+import {
+  readRecovery,
+  writeRecovery,
+  recoveryKey,
+  canRecoverDraft,
+  type CanvasRecovery,
+} from "@/lib/canvas/recovery";
+import {
+  alignNodePosition,
+  fitCanvasNodes,
+  getDragNodeIds,
+  getOpenNodePosition,
+  zoomAroundCenter,
+  getCanvasNodeAtPoint,
+} from "@/lib/canvas/workspace";
 import { useCanvasVisualViewport } from "@/lib/canvas/use-visual-viewport";
 import { AIGenerationOperation } from "@/lib/ai/types";
 import { readAIGenerationResponse, toAIGenerationError } from "@/lib/ai/response";
@@ -46,7 +68,14 @@ import {
   type CanvasState,
   type History,
 } from "@/lib/canvas/history";
-import { describeSave, friendlySaveError, INITIAL_SAVE_STATE, reduceSaveState } from "@/lib/canvas/save-status";
+import {
+  describeSave,
+  friendlySaveError,
+  INITIAL_SAVE_STATE,
+  reduceSaveState,
+} from "@/lib/canvas/save-status";
+import CanvasAIReview from "@/components/canvas/canvas-ai-review";
+import type { AIPreview } from "@/lib/ai/response";
 import CanvasViewportContainer from "@/components/canvas/canvas-viewport";
 import CanvasNodeComponent from "@/components/canvas/canvas-node";
 import CanvasEdgeLayer from "@/components/canvas/canvas-edge-layer";
@@ -158,7 +187,7 @@ export default function ProjectCanvasClient({
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [snapGrid, setSnapGrid] = useState(true);
-  const [isMinimapOpen, setIsMinimapOpen] = useState(true);
+  const [isMinimapOpen, setIsMinimapOpen] = useState(false);
   const [isServicePaletteOpen, setIsServicePaletteOpen] = useState(false);
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -181,7 +210,11 @@ export default function ProjectCanvasClient({
   }, []);
 
   // Show the first-run guide until this person dismisses it (the server snapshot hides it to avoid hydration drift).
-  const isGuideDismissedForUser = useSyncExternalStore(subscribeGuide, () => isGuideDismissed(currentUser.id), () => true);
+  const isGuideDismissedForUser = useSyncExternalStore(
+    subscribeGuide,
+    () => isGuideDismissed(currentUser.id),
+    () => true,
+  );
   const isGuideAutoVisible = !isGuideDismissedForUser;
 
   const hasNodes = nodes.length > 0;
@@ -267,7 +300,10 @@ export default function ProjectCanvasClient({
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(0);
-  const [aiChange, setAiChange] = useState<{ text: string; index: number; label: string } | null>(null);
+  const [aiPreview, setAiPreview] = useState<AIPreview | null>(null);
+  const [aiChange, setAiChange] = useState<{ text: string; index: number; label: string } | null>(
+    null,
+  );
   const [saveState, dispatchSave] = useReducer(reduceSaveState, INITIAL_SAVE_STATE);
 
   useEffect(() => {
@@ -279,6 +315,78 @@ export default function ProjectCanvasClient({
     saveStateRef.current = saveState;
   }, [saveState]);
 
+  const storageKey = recoveryKey(project.id, currentUser.id);
+  const confirmedCanvasRef = useRef<CanvasState>({ nodes: initialNodes, edges: initialEdges });
+  const [recoveryDraft, setRecoveryDraft] = useState<CanvasRecovery | null>(null);
+  const [recoveryPersistent, setRecoveryPersistent] = useState(true);
+  const [isRecovering, setIsRecovering] = useState(false);
+  const preserveDraft = useCallback(() => {
+    const draft = {
+      savedAt: Date.now(),
+      base: confirmedCanvasRef.current,
+      canvas: { nodes: nodesRef.current, edges: edgesRef.current },
+      history: historyRef.current,
+    };
+    if (!diffCanvas(draft.base, draft.canvas).length) return;
+    setRecoveryDraft(draft);
+    try {
+      setRecoveryPersistent(writeRecovery(localStorage, storageKey + ":draft", draft));
+    } catch {
+      setRecoveryPersistent(false);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const saved = readRecovery(localStorage, storageKey);
+        const draft = readRecovery(localStorage, storageKey + ":draft");
+        const current = confirmedCanvasRef.current;
+        if (saved && !diffCanvas(saved.canvas, current).length) {
+          historyRef.current = saved.history;
+          setCanUndo(historyCanUndo(saved.history));
+          setCanRedo(historyCanRedo(saved.history));
+          setHistoryIndex(saved.history.index);
+        } else if (saved && diffCanvas(saved.base, saved.canvas).length) setRecoveryDraft(saved);
+        if (draft) setRecoveryDraft(draft);
+      } catch {
+        /* Storage can be disabled by the browser. */
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [storageKey]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const canvas = { nodes: nodesRef.current, edges: edgesRef.current };
+      if (!saveState.pending && !saveState.diverged) confirmedCanvasRef.current = canvas;
+      try {
+        writeRecovery(localStorage, storageKey, {
+          savedAt: Date.now(),
+          base: confirmedCanvasRef.current,
+          canvas,
+          history: historyRef.current,
+        });
+      } catch {}
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [nodes, edges, saveState, storageKey, historyIndex]);
+
+  useEffect(() => {
+    const flush = () => {
+      try {
+        writeRecovery(localStorage, storageKey, {
+          savedAt: Date.now(),
+          base: confirmedCanvasRef.current,
+          canvas: { nodes: nodesRef.current, edges: edgesRef.current },
+          history: historyRef.current,
+        });
+      } catch {}
+    };
+    window.addEventListener("pagehide", flush);
+    return () => window.removeEventListener("pagehide", flush);
+  }, [storageKey]);
+
   const syncHistoryFlags = useCallback(() => {
     setCanUndo(historyCanUndo(historyRef.current));
     setCanRedo(historyCanRedo(historyRef.current));
@@ -288,7 +396,10 @@ export default function ProjectCanvasClient({
   // Records the change from the latest known canvas to the given one and returns what changed.
   const pushHistorySnapshot = useCallback(
     (newNodes: CanvasNode[], newEdges: CanvasEdge[]): CanvasOp[] => {
-      const ops = diffCanvas({ nodes: nodesRef.current, edges: edgesRef.current }, { nodes: newNodes, edges: newEdges });
+      const ops = diffCanvas(
+        { nodes: nodesRef.current, edges: edgesRef.current },
+        { nodes: newNodes, edges: newEdges },
+      );
       nodesRef.current = newNodes;
       edgesRef.current = newEdges;
       if (!ops.length) return ops;
@@ -296,49 +407,67 @@ export default function ProjectCanvasClient({
       syncHistoryFlags();
       return ops;
     },
-    [syncHistoryFlags]
+    [syncHistoryFlags],
   );
 
-  const trackSave = useCallback(async <T,>(operation: () => Promise<T>): Promise<T> => {
-    dispatchSave({ type: "started" });
-    try {
-      const result = await operation();
-      dispatchSave({ type: "succeeded" });
-      return result;
-    } catch (error) {
-      dispatchSave({ type: "failed", message: friendlySaveError(error) });
-      throw error;
-    }
-  }, []);
+  const trackSave = useCallback(
+    async <T,>(operation: () => Promise<T>): Promise<T> => {
+      dispatchSave({ type: "started" });
+      try {
+        const result = await operation();
+        dispatchSave({ type: "succeeded" });
+        return result;
+      } catch (error) {
+        preserveDraft();
+        dispatchSave({ type: "failed", message: friendlySaveError(error) });
+        throw error;
+      }
+    },
+    [preserveDraft],
+  );
 
   // Warn before leaving while a save is in flight or the canvas is known to be out of sync.
   useEffect(() => {
-    if (!saveState.pending && !saveState.diverged) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    if (!saveState.pending && !saveState.diverged && (!recoveryDraft || recoveryPersistent)) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [saveState.pending, saveState.diverged]);
+  }, [saveState.pending, saveState.diverged, recoveryDraft, recoveryPersistent]);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
   const getCanvasArea = useCallback(() => {
-    const element = canvasRootElement?.querySelector<HTMLElement>("[data-canvas-viewport]") || canvasRootElement;
-    return { width: element?.clientWidth || window.innerWidth, height: element?.clientHeight || window.innerHeight,
-      rightInset: selectedNodeId && !isMobile ? 420 : 0,
-      bottomInset: selectedNodeId && isMobile ? 280 : 0 };
-  }, [canvasRootElement, selectedNodeId, isMobile]);
+    const element =
+      canvasRootElement?.querySelector<HTMLElement>("[data-canvas-viewport]") || canvasRootElement;
+    return {
+      width: element?.clientWidth || window.innerWidth,
+      height: element?.clientHeight || window.innerHeight,
+      rightInset: (selectedNodeId || isReleasePulseOpen) && !isMobile ? 420 : 0,
+      bottomInset: selectedNodeId && isMobile ? 280 : 0,
+    };
+  }, [canvasRootElement, selectedNodeId, isMobile, isReleasePulseOpen]);
 
-  const handleFitView = useCallback((selectionOnly = false) => {
-    const targets = selectionOnly ? nodes.filter(node => selectedNodeIds.has(node.id) || selectedNodeId === node.id) : nodes;
-    if (selectionOnly && !targets.length) return;
-    setFollowingUserId(null);
-    setViewport(fitCanvasNodes(targets, getCanvasArea()));
-  }, [nodes, selectedNodeIds, selectedNodeId, getCanvasArea]);
+  const handleFitView = useCallback(
+    (selectionOnly = false) => {
+      const targets = selectionOnly
+        ? nodes.filter((node) => selectedNodeIds.has(node.id) || selectedNodeId === node.id)
+        : nodes;
+      if (selectionOnly && !targets.length) return;
+      setFollowingUserId(null);
+      setViewport(fitCanvasNodes(targets, getCanvasArea()));
+    },
+    [nodes, selectedNodeIds, selectedNodeId, getCanvasArea],
+  );
 
-  const handleZoom = useCallback((zoom: number) => {
-    setFollowingUserId(null);
-    setViewport(previous => zoomAroundCenter(previous, zoom, getCanvasArea()));
-  }, [getCanvasArea]);
+  const handleZoom = useCallback(
+    (zoom: number) => {
+      setFollowingUserId(null);
+      setViewport((previous) => zoomAroundCenter(previous, zoom, getCanvasArea()));
+    },
+    [getCanvasArea],
+  );
 
   // Open existing diagrams at a usable scale once the canvas is measured.
   const hasInitiallyFitted = useRef(false);
@@ -346,8 +475,15 @@ export default function ProjectCanvasClient({
     if (!canvasRootElement || hasInitiallyFitted.current || !initialNodes.length) return;
     hasInitiallyFitted.current = true;
     // Leave room for the first-run guide so it never opens over the diagram.
-    const leftInset = !isGuideDismissed(currentUser.id) && canvasRootElement.clientWidth >= 900 ? 340 : 0;
-    setViewport(fitCanvasNodes(initialNodes, { width: canvasRootElement.clientWidth, height: canvasRootElement.clientHeight, leftInset }));
+    const leftInset =
+      !isGuideDismissed(currentUser.id) && canvasRootElement.clientWidth >= 900 ? 340 : 0;
+    setViewport(
+      fitCanvasNodes(initialNodes, {
+        width: canvasRootElement.clientWidth,
+        height: canvasRootElement.clientHeight,
+        leftInset,
+      }),
+    );
   }, [canvasRootElement, initialNodes, currentUser.id]);
 
   // ---------------------------------------------------------------------------
@@ -374,7 +510,10 @@ export default function ProjectCanvasClient({
       let revoked = res.status === 401;
       if (res.status === 403) {
         // Only the project membership check means "removed"; other 403s are ordinary permission answers.
-        const body = await res.clone().json().catch(() => null);
+        const body = await res
+          .clone()
+          .json()
+          .catch(() => null);
         revoked = body?.error === "Forbidden" || body?.error === "Unauthorized";
       }
       if (revoked) {
@@ -383,73 +522,147 @@ export default function ProjectCanvasClient({
       }
       return res;
     },
-    [handleEviction]
+    [handleEviction],
   );
+
+  const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const versionsRef = useRef(new Map(initialNodes.map((node) => [node.id, node.version])));
 
   // Sends one canvas mutation and throws unless the server confirms it was stored.
   const saveRequest = useCallback(
-    async (path: "canvas" | "canvas/checkpoints" | "canvas/claim", body: Record<string, unknown>) => {
-      const response = await secureFetch(`/api/dashboard/projects/${project.slug}/${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      let data: { success?: boolean; error?: string; [key: string]: unknown } | null = null;
-      try { data = await response.json(); } catch {}
-      if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to save canvas changes. Please try again.");
-      return data;
+    async (
+      path: "canvas" | "canvas/checkpoints" | "canvas/claim",
+      body: Record<string, unknown>,
+    ) => {
+      const execute = async () => {
+        const payload = { ...body };
+        if (body.action === "update_node")
+          payload.expected_version = versionsRef.current.get(String(body.node_id));
+        if (body.action === "apply_layout")
+          payload.nodes = (body.nodes as CanvasNode[]).map((node) => ({
+            ...node,
+            version: versionsRef.current.get(node.id) ?? node.version,
+          }));
+        const response = await secureFetch(`/api/dashboard/projects/${project.slug}/${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        let data: { success?: boolean; error?: string; [key: string]: unknown } | null = null;
+        try {
+          data = await response.json();
+        } catch {}
+        if (!response.ok || !data?.success)
+          throw new Error(data?.error || "Unable to save canvas changes. Please try again.");
+        const versions = (data.versions ||
+          (typeof data.version === "number"
+            ? { [String(body.node_id)]: data.version }
+            : {})) as Record<string, number>;
+        for (const [id, version] of Object.entries(versions)) versionsRef.current.set(id, version);
+        if (data.node) {
+          const node = data.node as CanvasNode;
+          versionsRef.current.set(node.id, node.version);
+        }
+        setNodes((current) =>
+          current.map((node) =>
+            versions[node.id] ? { ...node, version: versions[node.id] } : node,
+          ),
+        );
+        return data;
+      };
+      const queued = saveQueueRef.current.then(execute);
+      saveQueueRef.current = queued.catch(() => {});
+      return queued;
     },
-    [project.slug, secureFetch]
+    [project.slug, secureFetch],
   );
 
   // Resync full canvas state on reconnection or after a failed save.
-  const resyncCanvasState = useCallback(async (options: { quiet?: boolean } = {}) => {
-    try {
-      const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, { cache: "no-store" });
-      if (res.ok) {
-        const hadUnsavedEdits = saveStateRef.current.diverged;
-        const data = await res.json();
-        if (data.nodes) { nodesRef.current = data.nodes; setNodes(data.nodes); }
-        if (data.edges) { edgesRef.current = data.edges; setEdges(data.edges); }
-        dispatchSave({ type: "synced" });
-        if (!options.quiet) {
-          notify(hadUnsavedEdits
-            ? { tone: "error", title: "Unsaved edits discarded", message: "Changes made while disconnected could not be saved, so the canvas now shows the saved version. Please repeat them." }
-            : { title: "Canvas Synced", message: "Refreshed latest roadmap changes" });
+  const resyncCanvasState = useCallback(
+    async (options: { quiet?: boolean } = {}) => {
+      try {
+        const pending = saveQueueRef.current;
+        await pending;
+        if (pending !== saveQueueRef.current) return false;
+        if (saveStateRef.current.diverged) preserveDraft();
+        const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const hadUnsavedEdits = saveStateRef.current.diverged;
+          const data = await res.json();
+          if (pending !== saveQueueRef.current) return false;
+          if (data.nodes) {
+            versionsRef.current = new Map(
+              (data.nodes as CanvasNode[]).map((node) => [node.id, node.version]),
+            );
+            nodesRef.current = data.nodes;
+            setNodes(data.nodes);
+          }
+          if (data.edges) {
+            edgesRef.current = data.edges;
+            setEdges(data.edges);
+          }
+          confirmedCanvasRef.current = { nodes: data.nodes, edges: data.edges };
+          dispatchSave({ type: "synced" });
+          if (!options.quiet) {
+            notify(
+              hadUnsavedEdits
+                ? {
+                    tone: "error",
+                    title: "Draft preserved",
+                    message:
+                      "Your unsaved edits are kept on this device. Review or download the draft before restoring it.",
+                  }
+                : { title: "Canvas Synced", message: "Refreshed latest roadmap changes" },
+            );
+          }
+          return true;
         }
-        return true;
+      } catch (e) {
+        console.warn("Failed to resync canvas state:", e);
       }
-    } catch (e) {
-      console.warn("Failed to resync canvas state:", e);
-    }
-    return false;
-  }, [notify, project.slug, secureFetch]);
+      return false;
+    },
+    [notify, preserveDraft, project.slug, secureFetch],
+  );
 
   // A failed save leaves the screen showing the saved version; say what happened and how to recover.
-  const reportSaveFailure = useCallback(async (title: string, error: unknown) => {
-    console.error(title, error);
-    const synced = await resyncCanvasState({ quiet: true });
-    // Collaborators may have received the change that was just rejected; have them reload the saved version.
-    if (synced) broadcastEvent("canvas:resync", { userId: currentUser.id });
-    const reason = friendlySaveError(error);
-    notify({
-      tone: "error",
-      title,
-      message: synced ? `${reason} The canvas now shows the saved version.` : `${reason} Reconnect to refresh the canvas.`,
-    });
-  }, [broadcastEvent, currentUser.id, notify, resyncCanvasState]);
+  const reportSaveFailure = useCallback(
+    async (title: string, error: unknown) => {
+      console.error(title, error);
+      const synced = await resyncCanvasState({ quiet: true });
+      // Collaborators may have received the change that was just rejected; have them reload the saved version.
+      if (synced) broadcastEvent("canvas:resync", { userId: currentUser.id });
+      const reason = friendlySaveError(error);
+      notify({
+        tone: "error",
+        title,
+        message: synced
+          ? `${reason} The canvas now shows the saved version.`
+          : `${reason} Reconnect to refresh the canvas.`,
+      });
+    },
+    [broadcastEvent, currentUser.id, notify, resyncCanvasState],
+  );
 
   // Add Milestone Box (Optimistic Instant Pop)
   const handleAddNode = useCallback(
     (customPos?: { x: number; y: number }) => {
       if (isAIGenerating) return;
-      const position = customPos || getOpenNodePosition(nodes, viewport, { ...getCanvasArea(), rightInset: isMobile ? 0 : 420 });
+      const position =
+        customPos ||
+        getOpenNodePosition(nodes, viewport, {
+          ...getCanvasArea(),
+          rightInset: isMobile ? 0 : 420,
+        });
       const posX = position.x;
       const posY = position.y;
       const finalX = snapGrid ? snapToGrid(posX) : posX;
       const finalY = snapGrid ? snapToGrid(posY) : posY;
 
-      const stepNum = nodes.filter(node => !node.node_type || node.node_type === "milestone").length + 1;
+      const stepNum =
+        nodes.filter((node) => !node.node_type || node.node_type === "milestone").length + 1;
       const defaultTitle = `Milestone Step ${stepNum}`;
       const clientNodeId = crypto.randomUUID();
 
@@ -495,14 +708,16 @@ export default function ProjectCanvasClient({
       notify({ title: "Milestone Created", message: `Added "${defaultTitle}" to canvas` });
 
       // Background persistence
-      void trackSave(() => saveRequest("canvas", {
-        action: "create_node",
-        id: clientNodeId,
-        title: defaultTitle,
-        position_x: finalX,
-        position_y: finalY,
-        checkpoints: [],
-      })).catch((e) => reportSaveFailure("Milestone Not Saved", e));
+      void trackSave(() =>
+        saveRequest("canvas", {
+          action: "create_node",
+          id: clientNodeId,
+          title: defaultTitle,
+          position_x: finalX,
+          position_y: finalY,
+          checkpoints: [],
+        }),
+      ).catch((e) => reportSaveFailure("Milestone Not Saved", e));
     },
     [
       broadcastEvent,
@@ -523,14 +738,21 @@ export default function ProjectCanvasClient({
       getCanvasArea,
       viewport,
       isMobile,
-    ]
+    ],
   );
 
   // Add AWS Service Node (Optimistic Instant Pop)
   const handleAddAWSService = useCallback(
     (serviceId: string, customPos?: { x: number; y: number }) => {
       if (isAIGenerating) return;
-      const position = customPos || getOpenNodePosition(nodes, viewport, { ...getCanvasArea(), rightInset: isMobile ? 0 : 420 }, AWS_SERVICE_NODE_SIZE);
+      const position =
+        customPos ||
+        getOpenNodePosition(
+          nodes,
+          viewport,
+          { ...getCanvasArea(), rightInset: isMobile ? 0 : 420 },
+          AWS_SERVICE_NODE_SIZE,
+        );
       const posX = position.x;
       const posY = position.y;
       const finalX = snapGrid ? snapToGrid(posX) : posX;
@@ -584,18 +806,20 @@ export default function ProjectCanvasClient({
       notify({ title: "AWS Service Added", message: `Added "${serviceName}" to canvas` });
 
       // Background persistence
-      void trackSave(() => saveRequest("canvas", {
-        action: "create_node",
-        id: clientNodeId,
-        title: serviceName,
-        node_type: "aws_service",
-        width: serviceData.width,
-        height: serviceData.height,
-        position_x: finalX,
-        position_y: finalY,
-        aws_metadata: serviceData.aws_metadata,
-        checkpoints: [],
-      })).catch((e) => reportSaveFailure("AWS Service Not Saved", e));
+      void trackSave(() =>
+        saveRequest("canvas", {
+          action: "create_node",
+          id: clientNodeId,
+          title: serviceName,
+          node_type: "aws_service",
+          width: serviceData.width,
+          height: serviceData.height,
+          position_x: finalX,
+          position_y: finalY,
+          aws_metadata: serviceData.aws_metadata,
+          checkpoints: [],
+        }),
+      ).catch((e) => reportSaveFailure("AWS Service Not Saved", e));
     },
     [
       broadcastEvent,
@@ -616,7 +840,7 @@ export default function ProjectCanvasClient({
       getCanvasArea,
       viewport,
       isMobile,
-    ]
+    ],
   );
 
   // Add Group Container (Optimistic Instant Pop)
@@ -624,14 +848,14 @@ export default function ProjectCanvasClient({
     (customPos?: { x: number; y: number }) => {
       if (isAIGenerating) return;
       const area = { ...getCanvasArea(), rightInset: isMobile ? 0 : 420 };
-      const position = customPos || { x: ((area.width - (area.rightInset || 0)) / 2 - viewport.x) / viewport.zoom - 220,
-        y: (area.height / 2 - viewport.y) / viewport.zoom - 160 };
+      const position =
+        customPos || getOpenNodePosition(nodes, viewport, area, { width: 440, height: 320 });
       const posX = position.x;
       const posY = position.y;
       const finalX = snapGrid ? snapToGrid(posX) : posX;
       const finalY = snapGrid ? snapToGrid(posY) : posY;
 
-      const defaultTitle = "VPC Network";
+      const defaultTitle = "New Group";
       const clientNodeId = crypto.randomUUID();
 
       const myHolder = {
@@ -660,7 +884,7 @@ export default function ProjectCanvasClient({
         node_type: "group",
         group_metadata: {
           label: defaultTitle,
-          style: "vpc",
+          style: "custom",
           childNodeIds: [],
         },
       };
@@ -681,22 +905,24 @@ export default function ProjectCanvasClient({
       notify({ title: "Group Created", message: `Added "${defaultTitle}" to canvas` });
 
       // Background persistence
-      void trackSave(() => saveRequest("canvas", {
-        action: "create_node",
-        id: clientNodeId,
-        title: defaultTitle,
-        node_type: "group",
-        width: 440,
-        height: 320,
-        position_x: finalX,
-        position_y: finalY,
-        group_metadata: {
-          label: defaultTitle,
-          style: "vpc",
-          childNodeIds: [],
-        },
-        checkpoints: [],
-      })).catch((e) => reportSaveFailure("Group Not Saved", e));
+      void trackSave(() =>
+        saveRequest("canvas", {
+          action: "create_node",
+          id: clientNodeId,
+          title: defaultTitle,
+          node_type: "group",
+          width: 440,
+          height: 320,
+          position_x: finalX,
+          position_y: finalY,
+          group_metadata: {
+            label: defaultTitle,
+            style: "vpc",
+            childNodeIds: [],
+          },
+          checkpoints: [],
+        }),
+      ).catch((e) => reportSaveFailure("Group Not Saved", e));
     },
     [
       broadcastEvent,
@@ -717,7 +943,7 @@ export default function ProjectCanvasClient({
       getCanvasArea,
       viewport,
       isMobile,
-    ]
+    ],
   );
 
   // Update Milestone Content
@@ -731,13 +957,15 @@ export default function ProjectCanvasClient({
       broadcastEvent("node:updated", { nodeId, updates });
 
       try {
-        await trackSave(() => saveRequest("canvas", { action: "update_node", node_id: nodeId, updates }));
+        await trackSave(() =>
+          saveRequest("canvas", { action: "update_node", node_id: nodeId, updates }),
+        );
       } catch (e) {
         await reportSaveFailure("Changes Not Saved", e);
         throw e;
       }
     },
-    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure]
+    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure],
   );
 
   // Delete Milestone Box
@@ -745,13 +973,17 @@ export default function ProjectCanvasClient({
     async (nodeId: string) => {
       const target = nodes.find((n) => n.id === nodeId);
       if (target && target.claimed_by !== currentUser.id && !isOwner) {
-        notify({ tone: "error", title: "Action Denied", message: "You must claim this milestone box to delete it" });
+        notify({
+          tone: "error",
+          title: "Action Denied",
+          message: "You must claim this milestone box to delete it",
+        });
         return;
       }
 
       const nextNodes = nodes.filter((n) => n.id !== nodeId);
       const nextEdges = edges.filter(
-        (e) => e.source_node_id !== nodeId && e.target_node_id !== nodeId
+        (e) => e.source_node_id !== nodeId && e.target_node_id !== nodeId,
       );
 
       setNodes(nextNodes);
@@ -774,7 +1006,18 @@ export default function ProjectCanvasClient({
         await reportSaveFailure("Delete Not Saved", e);
       }
     },
-    [broadcastEvent, currentUser.id, edges, isOwner, nodes, notify, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure]
+    [
+      broadcastEvent,
+      currentUser.id,
+      edges,
+      isOwner,
+      nodes,
+      notify,
+      pushHistorySnapshot,
+      saveRequest,
+      trackSave,
+      reportSaveFailure,
+    ],
   );
 
   // Delete All Selected Nodes (Atomic Batch Delete)
@@ -804,7 +1047,7 @@ export default function ProjectCanvasClient({
     // Atomic local state update
     const nextNodes = nodes.filter((n) => !deletableNodeIds.has(n.id));
     const nextEdges = edges.filter(
-      (e) => !deletableNodeIds.has(e.source_node_id) && !deletableNodeIds.has(e.target_node_id)
+      (e) => !deletableNodeIds.has(e.source_node_id) && !deletableNodeIds.has(e.target_node_id),
     );
 
     setNodes(nextNodes);
@@ -829,28 +1072,45 @@ export default function ProjectCanvasClient({
     try {
       await trackSave(async () => {
         const saves = await Promise.allSettled(
-          Array.from(deletableNodeIds).map((nodeId) => saveRequest("canvas", { action: "delete_node", node_id: nodeId }))
+          Array.from(deletableNodeIds).map((nodeId) =>
+            saveRequest("canvas", { action: "delete_node", node_id: nodeId }),
+          ),
         );
-        if (saves.some(result => result.status === "rejected")) throw new Error("Some selected items could not be deleted.");
+        if (saves.some((result) => result.status === "rejected"))
+          throw new Error("Some selected items could not be deleted.");
       });
     } catch (e) {
       await reportSaveFailure("Delete Not Fully Saved", e);
     }
-  }, [broadcastEvent, currentUser.id, edges, isOwner, nodes, notify, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure, selectedNodeId, selectedNodeIds]);
+  }, [
+    broadcastEvent,
+    currentUser.id,
+    edges,
+    isOwner,
+    nodes,
+    notify,
+    pushHistorySnapshot,
+    saveRequest,
+    trackSave,
+    reportSaveFailure,
+    selectedNodeId,
+    selectedNodeIds,
+  ]);
 
   // Toggle Checkpoint Checkbox
   const handleToggleCheckpoint = useCallback(
     async (checkpointId: string, nodeId: string, nextCompleted: boolean) => {
-      const toggle = (list: CanvasNode[]) => list.map((n) => {
-        if (n.id !== nodeId) return n;
-        const updatedCps = n.checkpoints.map((cp) =>
-          cp.id === checkpointId ? { ...cp, is_completed: nextCompleted } : cp
-        );
-        const allDone = updatedCps.every((c) => c.is_completed);
-        const anyDone = updatedCps.some((c) => c.is_completed);
-        const nextStatus = allDone ? "completed" : anyDone ? "in_progress" : "draft";
-        return { ...n, checkpoints: updatedCps, status: nextStatus as CanvasNode["status"] };
-      });
+      const toggle = (list: CanvasNode[]) =>
+        list.map((n) => {
+          if (n.id !== nodeId) return n;
+          const updatedCps = n.checkpoints.map((cp) =>
+            cp.id === checkpointId ? { ...cp, is_completed: nextCompleted } : cp,
+          );
+          const allDone = updatedCps.every((c) => c.is_completed);
+          const anyDone = updatedCps.some((c) => c.is_completed);
+          const nextStatus = allDone ? "completed" : anyDone ? "in_progress" : "draft";
+          return { ...n, checkpoints: updatedCps, status: nextStatus as CanvasNode["status"] };
+        });
       pushHistorySnapshot(toggle(nodesRef.current), edgesRef.current);
       setNodes(toggle);
 
@@ -866,27 +1126,34 @@ export default function ProjectCanvasClient({
       });
 
       try {
-        await trackSave(() => saveRequest("canvas/checkpoints", {
-          action: "toggle",
-          node_id: nodeId,
-          checkpoint_id: checkpointId,
-          is_completed: nextCompleted,
-        }));
+        await trackSave(() =>
+          saveRequest("canvas/checkpoints", {
+            action: "toggle",
+            node_id: nodeId,
+            checkpoint_id: checkpointId,
+            is_completed: nextCompleted,
+          }),
+        );
       } catch (e) {
         await reportSaveFailure("Checkpoint Not Saved", e);
       }
     },
-    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure]
+    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure],
   );
 
   // Add Checkpoint (waits for the server so the checkpoint has its real ID)
   const handleAddCheckpoint = useCallback(
     async (nodeId: string, title: string) => {
       try {
-        const data = await trackSave(() => saveRequest("canvas/checkpoints", { action: "add", node_id: nodeId, title }));
+        const data = await trackSave(() =>
+          saveRequest("canvas/checkpoints", { action: "add", node_id: nodeId, title }),
+        );
         const checkpoint = data.checkpoint as CanvasNode["checkpoints"][number] | undefined;
         if (!checkpoint) throw new Error("The checkpoint was not returned by the server.");
-        const add = (list: CanvasNode[]) => list.map((n) => (n.id === nodeId ? { ...n, checkpoints: [...n.checkpoints, checkpoint] } : n));
+        const add = (list: CanvasNode[]) =>
+          list.map((n) =>
+            n.id === nodeId ? { ...n, checkpoints: [...n.checkpoints, checkpoint] } : n,
+          );
         pushHistorySnapshot(add(nodesRef.current), edgesRef.current);
         setNodes(add);
         broadcastEvent("checkpoint:added", { nodeId, checkpoint });
@@ -894,27 +1161,36 @@ export default function ProjectCanvasClient({
         await reportSaveFailure("Checkpoint Not Added", e);
       }
     },
-    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure]
+    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure],
   );
 
   // Delete Checkpoint
   const handleDeleteCheckpoint = useCallback(
     async (checkpointId: string, nodeId: string) => {
-      const remove = (list: CanvasNode[]) => list.map((n) =>
-        n.id === nodeId ? { ...n, checkpoints: n.checkpoints.filter((c) => c.id !== checkpointId) } : n
-      );
+      const remove = (list: CanvasNode[]) =>
+        list.map((n) =>
+          n.id === nodeId
+            ? { ...n, checkpoints: n.checkpoints.filter((c) => c.id !== checkpointId) }
+            : n,
+        );
       pushHistorySnapshot(remove(nodesRef.current), edgesRef.current);
       setNodes(remove);
 
       broadcastEvent("checkpoint:deleted", { nodeId, checkpointId });
 
       try {
-        await trackSave(() => saveRequest("canvas/checkpoints", { action: "delete", node_id: nodeId, checkpoint_id: checkpointId }));
+        await trackSave(() =>
+          saveRequest("canvas/checkpoints", {
+            action: "delete",
+            node_id: nodeId,
+            checkpoint_id: checkpointId,
+          }),
+        );
       } catch (e) {
         await reportSaveFailure("Checkpoint Not Deleted", e);
       }
     },
-    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure]
+    [broadcastEvent, pushHistorySnapshot, saveRequest, trackSave, reportSaveFailure],
   );
 
   // Claim Methods with instant peer broadcast
@@ -938,8 +1214,8 @@ export default function ProjectCanvasClient({
                 claim_holder: myHolder,
                 claim_expires_at: expiresAt,
               }
-            : n
-        )
+            : n,
+        ),
       );
 
       // Peers only hear about the claim once the server has actually granted it.
@@ -959,7 +1235,16 @@ export default function ProjectCanvasClient({
         notify({ tone: "error", title: "Claim Failed", message: friendlySaveError(e) });
       }
     },
-    [broadcastEvent, currentUser.avatarUrl, currentUser.email, currentUser.fullName, currentUser.id, notify, resyncCanvasState, saveRequest]
+    [
+      broadcastEvent,
+      currentUser.avatarUrl,
+      currentUser.email,
+      currentUser.fullName,
+      currentUser.id,
+      notify,
+      resyncCanvasState,
+      saveRequest,
+    ],
   );
 
   const handleReleaseNode = useCallback(
@@ -969,8 +1254,8 @@ export default function ProjectCanvasClient({
         prev.map((n) =>
           n.id === nodeId
             ? { ...n, claimed_by: null, claim_holder: null, claim_expires_at: null }
-            : n
-        )
+            : n,
+        ),
       );
 
       // Instant broadcast to peers
@@ -988,10 +1273,14 @@ export default function ProjectCanvasClient({
       } catch (e) {
         console.error("Failed to release claim:", e);
         await resyncCanvasState({ quiet: true });
-        notify({ tone: "error", title: "Release Failed", message: `${friendlySaveError(e)} The canvas now shows who holds this card.` });
+        notify({
+          tone: "error",
+          title: "Release Failed",
+          message: `${friendlySaveError(e)} The canvas now shows who holds this card.`,
+        });
       }
     },
-    [broadcastEvent, notify, resyncCanvasState, saveRequest]
+    [broadcastEvent, notify, resyncCanvasState, saveRequest],
   );
 
   const handleRequestClaim = useCallback(
@@ -1002,7 +1291,10 @@ export default function ProjectCanvasClient({
       }
 
       try {
-        const data = await saveRequest("canvas/claim", { action: "request_claim", node_id: node.id });
+        const data = await saveRequest("canvas/claim", {
+          action: "request_claim",
+          node_id: node.id,
+        });
         const request = data.request as { id?: string } | undefined;
         broadcastEvent("claim:requested", {
           id: request?.id,
@@ -1022,13 +1314,17 @@ export default function ProjectCanvasClient({
         notify({ tone: "error", title: "Request Failed", message: friendlySaveError(e) });
       }
     },
-    [broadcastEvent, currentUser.fullName, currentUser.id, handleClaimNode, notify, saveRequest]
+    [broadcastEvent, currentUser.fullName, currentUser.id, handleClaimNode, notify, saveRequest],
   );
 
   const handleResolveClaimRequest = useCallback(
     async (requestId: string, accept: boolean) => {
       try {
-        await saveRequest("canvas/claim", { action: "resolve_claim", request_id: requestId, accept });
+        await saveRequest("canvas/claim", {
+          action: "resolve_claim",
+          request_id: requestId,
+          accept,
+        });
         if (accept && incomingClaimModal) {
           const newHolder = {
             id: incomingClaimModal.requester_id,
@@ -1053,8 +1349,8 @@ export default function ProjectCanvasClient({
                     claimed_by: incomingClaimModal.requester_id,
                     claim_holder: newHolder,
                   }
-                : n
-            )
+                : n,
+            ),
           );
         }
 
@@ -1066,10 +1362,14 @@ export default function ProjectCanvasClient({
       } catch (e) {
         console.error("Failed to resolve claim:", e);
         setIncomingClaimModal(null);
-        notify({ tone: "error", title: "Request Not Resolved", message: `${friendlySaveError(e)} The request may have expired.` });
+        notify({
+          tone: "error",
+          title: "Request Not Resolved",
+          message: `${friendlySaveError(e)} The request may have expired.`,
+        });
       }
     },
-    [broadcastEvent, incomingClaimModal, notify, saveRequest]
+    [broadcastEvent, incomingClaimModal, notify, saveRequest],
   );
 
   const handleForceUnlock = useCallback(
@@ -1078,8 +1378,8 @@ export default function ProjectCanvasClient({
         prev.map((n) =>
           n.id === nodeId
             ? { ...n, claimed_by: null, claim_holder: null, claim_expires_at: null }
-            : n
-        )
+            : n,
+        ),
       );
 
       try {
@@ -1098,133 +1398,255 @@ export default function ProjectCanvasClient({
         notify({ tone: "error", title: "Unlock Failed", message: friendlySaveError(e) });
       }
     },
-    [broadcastEvent, notify, resyncCanvasState, saveRequest]
+    [broadcastEvent, notify, resyncCanvasState, saveRequest],
   );
 
   // Sends history operations to the server in order, skipping anything whose target another person already removed.
-  const persistOps = useCallback(async (ops: CanvasOp[], before: CanvasState, after: CanvasState) => {
-    const nodeIn = (state: CanvasState, id: string) => state.nodes.find((node) => node.id === id);
-    // Cards nobody holds (for example, AI-generated ones) must be claimed before they can be edited or deleted.
-    const ensureClaim = async (nodeId: string) => {
-      const node = nodeIn(after, nodeId) ?? nodeIn(before, nodeId);
-      if (node && !node.claimed_by) await saveRequest("canvas/claim", { action: "claim", node_id: nodeId });
-    };
-    for (const op of ops) {
-      switch (op.kind) {
-        case "node:create": {
-          const node = op.node;
-          const data = await saveRequest("canvas", {
-            action: "create_node", id: node.id, title: node.title, description: node.description,
-            position_x: node.position_x, position_y: node.position_y, width: node.width, height: node.height,
-            node_type: node.node_type, aws_metadata: node.aws_metadata, group_metadata: node.group_metadata,
-            annotation_metadata: node.annotation_metadata, parent_group_id: node.parent_group_id,
-            checkpoints: node.checkpoints.map((checkpoint) => checkpoint.title),
-          });
-          const extra: Record<string, unknown> = {};
-          if (node.color && node.color !== "default") extra.color = node.color;
-          if (node.status !== "draft" && !node.checkpoints.length) extra.status = node.status;
-          if (Object.keys(extra).length) await saveRequest("canvas", { action: "update_node", node_id: node.id, updates: extra });
-          const created = (data.node as CanvasNode | null)?.checkpoints ?? [];
-          for (const [index, checkpoint] of node.checkpoints.entries()) {
-            if (checkpoint.is_completed && created[index]) {
-              await saveRequest("canvas/checkpoints", { action: "toggle", node_id: node.id, checkpoint_id: created[index].id, is_completed: true });
+  const persistOps = useCallback(
+    async (ops: CanvasOp[], before: CanvasState, after: CanvasState) => {
+      const nodeIn = (state: CanvasState, id: string) => state.nodes.find((node) => node.id === id);
+      // Cards nobody holds (for example, AI-generated ones) must be claimed before they can be edited or deleted.
+      const ensureClaim = async (nodeId: string) => {
+        const node = nodeIn(after, nodeId) ?? nodeIn(before, nodeId);
+        if (node && !node.claimed_by)
+          await saveRequest("canvas/claim", { action: "claim", node_id: nodeId });
+      };
+      for (const op of ops) {
+        switch (op.kind) {
+          case "node:create": {
+            const node = op.node;
+            const data = await saveRequest("canvas", {
+              action: "create_node",
+              id: node.id,
+              title: node.title,
+              description: node.description,
+              position_x: node.position_x,
+              position_y: node.position_y,
+              width: node.width,
+              height: node.height,
+              node_type: node.node_type,
+              aws_metadata: node.aws_metadata,
+              group_metadata: node.group_metadata,
+              annotation_metadata: node.annotation_metadata,
+              parent_group_id: node.parent_group_id,
+              checkpoints: node.checkpoints.map((checkpoint) => checkpoint.title),
+            });
+            const extra: Record<string, unknown> = {};
+            if (node.color && node.color !== "default") extra.color = node.color;
+            if (node.status !== "draft" && !node.checkpoints.length) extra.status = node.status;
+            if (Object.keys(extra).length)
+              await saveRequest("canvas", {
+                action: "update_node",
+                node_id: node.id,
+                updates: extra,
+              });
+            const created = (data.node as CanvasNode | null)?.checkpoints ?? [];
+            for (const [index, checkpoint] of node.checkpoints.entries()) {
+              if (checkpoint.is_completed && created[index]) {
+                await saveRequest("canvas/checkpoints", {
+                  action: "toggle",
+                  node_id: node.id,
+                  checkpoint_id: created[index].id,
+                  is_completed: true,
+                });
+              }
             }
+            break;
           }
-          break;
-        }
-        case "node:delete":
-          if (!nodeIn(before, op.node.id)) break;
-          await ensureClaim(op.node.id);
-          await saveRequest("canvas", { action: "delete_node", node_id: op.node.id });
-          break;
-        case "node:update":
-          if (!nodeIn(after, op.nodeId)) break;
-          await ensureClaim(op.nodeId);
-          await saveRequest("canvas", { action: "update_node", node_id: op.nodeId, updates: op.to });
-          break;
-        case "checkpoint:add":
-          if (!nodeIn(after, op.nodeId)) break;
-          await ensureClaim(op.nodeId);
-          await saveRequest("canvas/checkpoints", { action: "add", node_id: op.nodeId, title: op.checkpoint.title });
-          break;
-        case "checkpoint:delete": {
-          const target = findCheckpoint(nodeIn(before, op.nodeId), op.checkpoint);
-          if (!target) break;
-          await ensureClaim(op.nodeId);
-          await saveRequest("canvas/checkpoints", { action: "delete", node_id: op.nodeId, checkpoint_id: target.id });
-          break;
-        }
-        case "checkpoint:toggle":
-        case "checkpoint:edit": {
-          const target = findCheckpoint(nodeIn(after, op.nodeId), op.checkpoint);
-          if (!target) break;
-          await ensureClaim(op.nodeId);
-          await saveRequest("canvas/checkpoints", op.kind === "checkpoint:toggle"
-            ? { action: "toggle", node_id: op.nodeId, checkpoint_id: target.id, is_completed: op.to }
-            : { action: "edit", node_id: op.nodeId, checkpoint_id: target.id, title: op.to });
-          break;
-        }
-        case "edge:create": {
-          if (!nodeIn(after, op.edge.source_node_id) || !nodeIn(after, op.edge.target_node_id)) break;
-          const data = await saveRequest("canvas", {
-            action: "create_edge", source_node_id: op.edge.source_node_id, target_node_id: op.edge.target_node_id,
-            source_handle: op.edge.source_handle, target_handle: op.edge.target_handle, edge_type: op.edge.edge_type,
-          });
-          const created = data.edge as CanvasEdge | undefined;
-          if (created && op.edge.label) await saveRequest("canvas", { action: "update_edge", edge_id: created.id, updates: { label: op.edge.label, edge_type: op.edge.edge_type } });
-          break;
-        }
-        case "edge:delete": {
-          const target = findEdge(before.edges, op.edge);
-          if (target) await saveRequest("canvas", { action: "delete_edge", edge_id: target.id });
-          break;
-        }
-        case "edge:update": {
-          const target = findEdge(after.edges, op.edge);
-          if (target) await saveRequest("canvas", { action: "update_edge", edge_id: target.id, updates: { label: op.to.label ?? "", edge_type: op.to.edge_type ?? op.edge.edge_type } });
-          break;
+          case "node:delete":
+            if (!nodeIn(before, op.node.id)) break;
+            await ensureClaim(op.node.id);
+            await saveRequest("canvas", { action: "delete_node", node_id: op.node.id });
+            break;
+          case "node:update":
+            if (!nodeIn(after, op.nodeId)) break;
+            await ensureClaim(op.nodeId);
+            await saveRequest("canvas", {
+              action: "update_node",
+              node_id: op.nodeId,
+              updates: op.to,
+            });
+            break;
+          case "checkpoint:add":
+            if (!nodeIn(after, op.nodeId)) break;
+            await ensureClaim(op.nodeId);
+            await saveRequest("canvas/checkpoints", {
+              action: "add",
+              node_id: op.nodeId,
+              title: op.checkpoint.title,
+            });
+            break;
+          case "checkpoint:delete": {
+            const target = findCheckpoint(nodeIn(before, op.nodeId), op.checkpoint);
+            if (!target) break;
+            await ensureClaim(op.nodeId);
+            await saveRequest("canvas/checkpoints", {
+              action: "delete",
+              node_id: op.nodeId,
+              checkpoint_id: target.id,
+            });
+            break;
+          }
+          case "checkpoint:toggle":
+          case "checkpoint:edit": {
+            const target = findCheckpoint(nodeIn(after, op.nodeId), op.checkpoint);
+            if (!target) break;
+            await ensureClaim(op.nodeId);
+            await saveRequest(
+              "canvas/checkpoints",
+              op.kind === "checkpoint:toggle"
+                ? {
+                    action: "toggle",
+                    node_id: op.nodeId,
+                    checkpoint_id: target.id,
+                    is_completed: op.to,
+                  }
+                : { action: "edit", node_id: op.nodeId, checkpoint_id: target.id, title: op.to },
+            );
+            break;
+          }
+          case "edge:create": {
+            if (!nodeIn(after, op.edge.source_node_id) || !nodeIn(after, op.edge.target_node_id))
+              break;
+            const data = await saveRequest("canvas", {
+              action: "create_edge",
+              source_node_id: op.edge.source_node_id,
+              target_node_id: op.edge.target_node_id,
+              source_handle: op.edge.source_handle,
+              target_handle: op.edge.target_handle,
+              edge_type: op.edge.edge_type,
+            });
+            const created = data.edge as CanvasEdge | undefined;
+            if (created && op.edge.label)
+              await saveRequest("canvas", {
+                action: "update_edge",
+                edge_id: created.id,
+                updates: { label: op.edge.label, edge_type: op.edge.edge_type },
+              });
+            break;
+          }
+          case "edge:delete": {
+            const target = findEdge(before.edges, op.edge);
+            if (target) await saveRequest("canvas", { action: "delete_edge", edge_id: target.id });
+            break;
+          }
+          case "edge:update": {
+            const target = findEdge(after.edges, op.edge);
+            if (target)
+              await saveRequest("canvas", {
+                action: "update_edge",
+                edge_id: target.id,
+                updates: {
+                  label: op.to.label ?? "",
+                  edge_type: op.to.edge_type ?? op.edge.edge_type,
+                },
+              });
+            break;
+          }
         }
       }
+    },
+    [saveRequest],
+  );
+
+  const clearRecovery = () => {
+    setRecoveryDraft(null);
+    try {
+      localStorage.removeItem(storageKey + ":draft");
+    } catch {}
+  };
+  const recoverDraft = async () => {
+    if (!recoveryDraft || isRecovering) return;
+    setIsRecovering(true);
+    try {
+      if (!(await resyncCanvasState({ quiet: true })))
+        throw new Error("Reconnect before restoring your draft.");
+      const before = { nodes: nodesRef.current, edges: edgesRef.current };
+      if (!canRecoverDraft(recoveryDraft, before))
+        throw new Error(
+          "The shared canvas changed. Download your draft to recover it without overwriting other edits.",
+        );
+      const ops = diffCanvas(recoveryDraft.base, recoveryDraft.canvas);
+      await trackSave(() => persistOps(ops, before, recoveryDraft.canvas));
+      pushHistorySnapshot(recoveryDraft.canvas.nodes, recoveryDraft.canvas.edges);
+      await resyncCanvasState({ quiet: true });
+      clearRecovery();
+      broadcastEvent("canvas:resync", { userId: currentUser.id });
+    } catch (error) {
+      notify({ tone: "error", title: "Draft not restored", message: friendlySaveError(error) });
+    } finally {
+      setIsRecovering(false);
     }
-  }, [saveRequest]);
+  };
 
   // Undo / Redo apply the inverse (or the original) of one recorded change locally, then save it.
-  const stepHistory = useCallback((direction: "undo" | "redo") => {
-    if (isAIGenerating) return;
-    // Steps run one at a time so rapid presses stay ordered and a failure can restore the right position.
-    historyQueueRef.current = historyQueueRef.current.then(async () => {
-      const history = historyRef.current;
-      const entryIndex = direction === "undo" ? history.index - 1 : history.index;
-      const entry = history.entries[entryIndex];
-      if (!entry) return;
-      const ops = direction === "undo" ? invertOps(entry) : entry;
-      const before: CanvasState = { nodes: nodesRef.current, edges: edgesRef.current };
-      const after = applyOps(before, ops);
-      historyRef.current = { ...history, index: direction === "undo" ? entryIndex : entryIndex + 1 };
-      syncHistoryFlags();
-      nodesRef.current = after.nodes;
-      edgesRef.current = after.edges;
-      setNodes(after.nodes);
-      setEdges(after.edges);
-      const remaining = new Set(after.nodes.map((node) => node.id));
-      setSelectedNodeId((current) => (current && !remaining.has(current) ? null : current));
-      setSelectedNodeIds((current) => new Set([...current].filter((id) => remaining.has(id))));
-      try {
-        await trackSave(() => persistOps(ops, before, after));
-        // Adopt the server's IDs for anything that was re-created, and tell collaborators to do the same.
-        await resyncCanvasState({ quiet: true });
-        broadcastEvent("canvas:resync", { userId: currentUser.id });
-        notify({
-          title: direction === "undo" ? "Undo Applied" : "Redo Applied",
-          message: direction === "undo" ? "Your last change was reverted and saved." : "Your change was re-applied and saved.",
-        });
-      } catch (error) {
-        historyRef.current = history;
+  const stepHistory = useCallback(
+    (direction: "undo" | "redo") => {
+      if (isAIGenerating) return;
+      // Steps run one at a time so rapid presses stay ordered and a failure can restore the right position.
+      historyQueueRef.current = historyQueueRef.current.then(async () => {
+        const history = historyRef.current;
+        const entryIndex = direction === "undo" ? history.index - 1 : history.index;
+        const entry = history.entries[entryIndex];
+        if (!entry) return;
+        const ops = direction === "undo" ? invertOps(entry) : entry;
+        const before: CanvasState = { nodes: nodesRef.current, edges: edgesRef.current };
+        const after = applyOps(before, ops);
+        if (diffCanvas(before, applyOps(after, invertOps(ops))).length) {
+          notify({
+            tone: "error",
+            title: "History conflicts with newer edits",
+            message:
+              "This change can no longer be safely undone or redone. The shared canvas has been kept.",
+          });
+          return;
+        }
+        historyRef.current = {
+          ...history,
+          index: direction === "undo" ? entryIndex : entryIndex + 1,
+        };
         syncHistoryFlags();
-        await reportSaveFailure(direction === "undo" ? "Undo Not Saved" : "Redo Not Saved", error);
-      }
-    });
-  }, [broadcastEvent, currentUser.id, isAIGenerating, notify, persistOps, reportSaveFailure, resyncCanvasState, syncHistoryFlags, trackSave]);
+        nodesRef.current = after.nodes;
+        edgesRef.current = after.edges;
+        setNodes(after.nodes);
+        setEdges(after.edges);
+        const remaining = new Set(after.nodes.map((node) => node.id));
+        setSelectedNodeId((current) => (current && !remaining.has(current) ? null : current));
+        setSelectedNodeIds((current) => new Set([...current].filter((id) => remaining.has(id))));
+        try {
+          await trackSave(() => persistOps(ops, before, after));
+          // Adopt the server's IDs for anything that was re-created, and tell collaborators to do the same.
+          await resyncCanvasState({ quiet: true });
+          broadcastEvent("canvas:resync", { userId: currentUser.id });
+          notify({
+            title: direction === "undo" ? "Undo Applied" : "Redo Applied",
+            message:
+              direction === "undo"
+                ? "Your last change was reverted and saved."
+                : "Your change was re-applied and saved.",
+          });
+        } catch (error) {
+          historyRef.current = history;
+          syncHistoryFlags();
+          await reportSaveFailure(
+            direction === "undo" ? "Undo Not Saved" : "Redo Not Saved",
+            error,
+          );
+        }
+      });
+    },
+    [
+      broadcastEvent,
+      currentUser.id,
+      isAIGenerating,
+      notify,
+      persistOps,
+      reportSaveFailure,
+      resyncCanvasState,
+      syncHistoryFlags,
+      trackSave,
+    ],
+  );
 
   const handleUndo = useCallback(() => stepHistory("undo"), [stepHistory]);
   const handleRedo = useCallback(() => stepHistory("redo"), [stepHistory]);
@@ -1248,13 +1670,24 @@ export default function ProjectCanvasClient({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: promptText, mode: mode || "workflow", ...(operation ? { operation } : {}) }),
+            body: JSON.stringify({
+              prompt: promptText,
+              mode: mode || "workflow",
+              ...(operation ? { operation } : {}),
+            }),
             signal: AbortSignal.timeout(125_000),
-          }
+          },
         );
 
         const data = await readAIGenerationResponse(res);
 
+        if (data.preview) {
+          setAiPreview({ ...data.preview, summary: data.summary });
+          if (typeof data.requests_remaining === "number")
+            setAiRequestsRemaining(data.requests_remaining);
+          setIsAIAssistantOpen(false);
+          return;
+        }
         if (data.success && data.nodes) {
           const isUpdateIntent = data.intent === "update_pipeline";
           let changeOps: CanvasOp[] = [];
@@ -1278,7 +1711,9 @@ export default function ProjectCanvasClient({
             });
           } else {
             // Merge synchronously from the latest known canvas, so history records exactly what the generation added.
-            const generatedById = new Map<string, CanvasNode>(data.nodes.map((n: CanvasNode) => [n.id, n]));
+            const generatedById = new Map<string, CanvasNode>(
+              data.nodes.map((n: CanvasNode) => [n.id, n]),
+            );
             const knownNodeIds = new Set(nodesRef.current.map((n) => n.id));
             const nextNodes: CanvasNode[] = [
               ...nodesRef.current.map((n) => generatedById.get(n.id) ?? n),
@@ -1313,7 +1748,12 @@ export default function ProjectCanvasClient({
           }
 
           if (changeOps.length) {
-            setAiChange({ text: describeOpsDone(changeOps), index: historyRef.current.index, label: mode === "aws_architecture" ? "AWS architecture generated" : "Workflow generated" });
+            setAiChange({
+              text: describeOpsDone(changeOps),
+              index: historyRef.current.index,
+              label:
+                mode === "aws_architecture" ? "AWS architecture generated" : "Workflow generated",
+            });
           }
 
           if (typeof data.requests_remaining === "number") {
@@ -1330,8 +1770,73 @@ export default function ProjectCanvasClient({
         setIsAuraExiting(true);
       }
     },
-    [broadcastEvent, currentUser.email, currentUser.fullName, currentUser.id, getCanvasArea, notify, project.slug, pushHistorySnapshot, secureFetch]
+    [
+      broadcastEvent,
+      currentUser.email,
+      currentUser.fullName,
+      currentUser.id,
+      getCanvasArea,
+      notify,
+      project.slug,
+      pushHistorySnapshot,
+      secureFetch,
+    ],
   );
+
+  useEffect(() => {
+    let active = true;
+    void fetch(`/api/dashboard/projects/${project.slug}/canvas/ai-generate`, { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (active && data?.preview) setAiPreview(data.preview);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [project.slug]);
+
+  const resolveAIPreview = async (apply: boolean) => {
+    if (!aiPreview) return;
+    const response = await secureFetch(
+      `/api/dashboard/projects/${project.slug}/canvas/ai-generate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: apply ? "apply_preview" : "dismiss_preview",
+          id: aiPreview.id,
+        }),
+      },
+    );
+    const data = await response.json();
+    if (!response.ok || !data.success)
+      throw new Error(data.message || data.error || "Unable to resolve this preview.");
+    if (apply) {
+      const ops = pushHistorySnapshot(data.nodes, data.edges);
+      if (ops.length)
+        setAiChange({
+          text: describeOpsDone(ops),
+          index: historyRef.current.index,
+          label: aiPreview.nodes.some((node) => node.node_type === "aws_service")
+            ? "AWS architecture generated"
+            : "Workflow generated",
+        });
+      setNodes(data.nodes);
+      setEdges(data.edges);
+      versionsRef.current = new Map(
+        (data.nodes as CanvasNode[]).map((node) => [node.id, node.version]),
+      );
+      confirmedCanvasRef.current = { nodes: data.nodes, edges: data.edges };
+      broadcastEvent("canvas:resync", { userId: currentUser.id });
+      setViewport(fitCanvasNodes(data.nodes, getCanvasArea()));
+      notify({
+        title: "AI changes applied",
+        message: aiPreview.summary || "Your reviewed diagram has been saved.",
+      });
+    }
+    setAiPreview(null);
+  };
 
   // ---------------------------------------------------------------------------
   // 1. Supabase Realtime Subscription & Presence
@@ -1350,13 +1855,15 @@ export default function ProjectCanvasClient({
         const activeCollaborators: CollaboratorPresence[] = [];
 
         for (const [key, presences] of Object.entries(state)) {
-          const p = (presences as unknown as Array<{
-            email?: string;
-            fullName?: string;
-            avatarUrl?: string | null;
-            cursor?: { x: number; y: number } | null;
-            selectedNodeId?: string | null;
-          }>)[0];
+          const p = (
+            presences as unknown as Array<{
+              email?: string;
+              fullName?: string;
+              avatarUrl?: string | null;
+              cursor?: { x: number; y: number } | null;
+              selectedNodeId?: string | null;
+            }>
+          )[0];
           if (p) {
             activeCollaborators.push({
               userId: key,
@@ -1375,9 +1882,7 @@ export default function ProjectCanvasClient({
       })
       .on("broadcast", { event: "cursor" }, ({ payload }) => {
         setCollaborators((prev) =>
-          prev.map((c) =>
-            c.userId === payload.userId ? { ...c, cursor: payload.cursor } : c
-          )
+          prev.map((c) => (c.userId === payload.userId ? { ...c, cursor: payload.cursor } : c)),
         );
 
         // If following this user, smoothly update viewport to center on their cursor
@@ -1400,34 +1905,28 @@ export default function ProjectCanvasClient({
                   claim_holder: payload.claimHolder,
                   claim_expires_at: payload.expiresAt,
                 }
-              : n
-          )
+              : n,
+          ),
         );
 
         if (payload.action === "release" && payload.claimedBy === null) {
           setNodes((prev) =>
             prev.map((n) =>
-              n.id === payload.nodeId
-                ? { ...n, claimed_by: null, claim_holder: null }
-                : n
-            )
+              n.id === payload.nodeId ? { ...n, claimed_by: null, claim_holder: null } : n,
+            ),
           );
         }
       })
       .on("broadcast", { event: "node:updated" }, ({ payload }) => {
         setNodes((prev) =>
-          prev.map((n) =>
-            n.id === payload.nodeId ? { ...n, ...payload.updates } : n
-          )
+          prev.map((n) => (n.id === payload.nodeId ? { ...n, ...payload.updates } : n)),
         );
       })
       .on("broadcast", { event: "node:drag" }, ({ payload }) => {
         setNodes((prev) =>
           prev.map((n) =>
-            n.id === payload.nodeId
-              ? { ...n, position_x: payload.x, position_y: payload.y }
-              : n
-          )
+            n.id === payload.nodeId ? { ...n, position_x: payload.x, position_y: payload.y } : n,
+          ),
         );
       })
       .on("broadcast", { event: "checkpoint:toggled" }, ({ payload }) => {
@@ -1435,9 +1934,7 @@ export default function ProjectCanvasClient({
           prev.map((n) => {
             if (n.id !== payload.nodeId) return n;
             const updatedCps = n.checkpoints.map((cp) =>
-              cp.id === payload.checkpointId
-                ? { ...cp, is_completed: payload.isCompleted }
-                : cp
+              cp.id === payload.checkpointId ? { ...cp, is_completed: payload.isCompleted } : cp,
             );
             const allDone = updatedCps.every((c) => c.is_completed);
             const anyDone = updatedCps.some((c) => c.is_completed);
@@ -1448,7 +1945,7 @@ export default function ProjectCanvasClient({
               checkpoints: updatedCps,
               status: nextStatus as CanvasNode["status"],
             };
-          })
+          }),
         );
       })
       .on("broadcast", { event: "claim:requested" }, ({ payload }) => {
@@ -1489,7 +1986,9 @@ export default function ProjectCanvasClient({
         }
         notify({
           title: "AI Workflow Updated",
-          message: payload?.summary || `${payload?.creatorName || "A collaborator"} updated the workflow pipeline with AI.`,
+          message:
+            payload?.summary ||
+            `${payload?.creatorName || "A collaborator"} updated the workflow pipeline with AI.`,
         });
       })
       .on("broadcast", { event: "ai:generating_start" }, ({ payload }) => {
@@ -1514,10 +2013,19 @@ export default function ProjectCanvasClient({
         }
       })
       .on("broadcast", { event: "edge:updated" }, ({ payload }) => {
-        if (payload?.edge) setEdges((previous) => previous.map((edge) => edge.id === payload.edge.id ? payload.edge : edge));
+        if (payload?.edge)
+          setEdges((previous) =>
+            previous.map((edge) => (edge.id === payload.edge.id ? payload.edge : edge)),
+          );
       })
       .on("broadcast", { event: "claim:renewed" }, ({ payload }) => {
-        setNodes((prev) => prev.map((n) => (n.id === payload?.nodeId && n.claimed_by === payload?.userId ? { ...n, claim_expires_at: payload.expiresAt } : n)));
+        setNodes((prev) =>
+          prev.map((n) =>
+            n.id === payload?.nodeId && n.claimed_by === payload?.userId
+              ? { ...n, claim_expires_at: payload.expiresAt }
+              : n,
+          ),
+        );
       })
       .on("broadcast", { event: "edge:confirmed" }, ({ payload }) => {
         // The creator's optimistic edge ID was replaced by the stored one; follow it so later edits target a real row.
@@ -1528,7 +2036,9 @@ export default function ProjectCanvasClient({
       .on("broadcast", { event: "canvas:resync" }, ({ payload }) => {
         if (payload?.userId === currentUser.id) return;
         if (resyncTimerRef.current) clearTimeout(resyncTimerRef.current);
-        resyncTimerRef.current = setTimeout(() => { void resyncCanvasState({ quiet: true }); }, 200);
+        resyncTimerRef.current = setTimeout(() => {
+          void resyncCanvasState({ quiet: true });
+        }, 200);
       })
       .on("broadcast", { event: "edge:deleted" }, ({ payload }) => {
         if (payload?.edgeId) {
@@ -1549,10 +2059,8 @@ export default function ProjectCanvasClient({
           setNodes((prev) => prev.filter((n) => n.id !== payload.nodeId));
           setEdges((prev) =>
             prev.filter(
-              (e) =>
-                e.source_node_id !== payload.nodeId &&
-                e.target_node_id !== payload.nodeId
-            )
+              (e) => e.source_node_id !== payload.nodeId && e.target_node_id !== payload.nodeId,
+            ),
           );
         }
       })
@@ -1567,8 +2075,8 @@ export default function ProjectCanvasClient({
                       ? n.checkpoints
                       : [...n.checkpoints, payload.checkpoint],
                   }
-                : n
-            )
+                : n,
+            ),
           );
         }
       })
@@ -1581,8 +2089,8 @@ export default function ProjectCanvasClient({
                     ...n,
                     checkpoints: n.checkpoints.filter((c) => c.id !== payload.checkpointId),
                   }
-                : n
-            )
+                : n,
+            ),
           );
         }
       });
@@ -1632,7 +2140,16 @@ export default function ProjectCanvasClient({
       }
       supabase.removeChannel(channel);
     };
-  }, [project.id, currentUser.id, currentUser.email, currentUser.fullName, currentUser.avatarUrl, supabase, notify, resyncCanvasState]);
+  }, [
+    project.id,
+    currentUser.id,
+    currentUser.email,
+    currentUser.fullName,
+    currentUser.avatarUrl,
+    supabase,
+    notify,
+    resyncCanvasState,
+  ]);
 
   // Ping probe
   useEffect(() => {
@@ -1704,7 +2221,7 @@ export default function ProjectCanvasClient({
       if (isChecking) return;
       isChecking = true;
       try {
-        const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+        const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas?access=1`, {
           cache: "no-store",
           headers: { pragma: "no-cache", "cache-control": "no-cache" },
         });
@@ -1712,8 +2229,13 @@ export default function ProjectCanvasClient({
           handleEviction();
           return;
         }
+        if (res.status === 204) return;
         const json = await res.json();
-        if (json.error === "Forbidden" || json.error === "Unauthorized" || json.error === "Project not found") {
+        if (
+          json.error === "Forbidden" ||
+          json.error === "Unauthorized" ||
+          json.error === "Project not found"
+        ) {
           handleEviction();
         }
       } catch {
@@ -1771,13 +2293,23 @@ export default function ProjectCanvasClient({
         try {
           const data = await saveRequest("canvas/claim", { action: "heartbeat", node_id: node.id });
           const expiresAt = data.expiresAt as string;
-          setNodes((prev) => prev.map((n) => (n.id === node.id && n.claimed_by === currentUser.id ? { ...n, claim_expires_at: expiresAt } : n)));
+          setNodes((prev) =>
+            prev.map((n) =>
+              n.id === node.id && n.claimed_by === currentUser.id
+                ? { ...n, claim_expires_at: expiresAt }
+                : n,
+            ),
+          );
           broadcastEvent("claim:renewed", { nodeId: node.id, userId: currentUser.id, expiresAt });
         } catch (error) {
           // Network problems are retried next minute; a rejected renewal means the claim is really gone.
           if (error instanceof Error && /no longer hold/i.test(error.message)) {
             await resyncCanvasState({ quiet: true });
-            notify({ tone: "error", title: "Edit access ended", message: `You no longer hold "${node.title}". Claim it again to keep editing.` });
+            notify({
+              tone: "error",
+              title: "Edit access ended",
+              message: `You no longer hold "${node.title}". Claim it again to keep editing.`,
+            });
           }
         }
       }
@@ -1787,11 +2319,9 @@ export default function ProjectCanvasClient({
   }, [broadcastEvent, currentUser.id, notify, resyncCanvasState, saveRequest]);
 
   // Pointer Move (Cursor broadcast + dragging + magnetic handle snapping)
+  const [alignmentGuides, setAlignmentGuides] = useState<{ axis: "x" | "y"; value: number }[]>([]);
   const handlePointerMove = useCallback(
-    (
-      worldPos: { x: number; y: number },
-      screenPos: { x: number; y: number }
-    ) => {
+    (worldPos: { x: number; y: number }, screenPos: { x: number; y: number }) => {
       const now = performance.now();
       const lastTime = lastOutboundCursorTimeRef.current;
       const lastPos = lastOutboundPosRef.current;
@@ -1834,15 +2364,24 @@ export default function ProjectCanvasClient({
 
         if (isBatch) {
           const currentBatchPositions = new Map<string, { x: number; y: number }>();
-          const snappedDx = snapGrid ? snapToGrid(activeDrag.startPos.x + dx, 16) - activeDrag.startPos.x : dx;
-          const snappedDy = snapGrid ? snapToGrid(activeDrag.startPos.y + dy, 16) - activeDrag.startPos.y : dy;
+          const snappedDx = snapGrid
+            ? snapToGrid(activeDrag.startPos.x + dx, 16) - activeDrag.startPos.x
+            : dx;
+          const snappedDy = snapGrid
+            ? snapToGrid(activeDrag.startPos.y + dy, 16) - activeDrag.startPos.y
+            : dy;
           for (const [nodeId, initial] of initMap) {
-            currentBatchPositions.set(nodeId, { x: initial.x + snappedDx, y: initial.y + snappedDy });
+            currentBatchPositions.set(nodeId, {
+              x: initial.x + snappedDx,
+              y: initial.y + snappedDy,
+            });
           }
-          setNodes(prev => prev.map(node => {
-            const position = currentBatchPositions.get(node.id);
-            return position ? { ...node, position_x: position.x, position_y: position.y } : node;
-          }));
+          setNodes((prev) =>
+            prev.map((node) => {
+              const position = currentBatchPositions.get(node.id);
+              return position ? { ...node, position_x: position.x, position_y: position.y } : node;
+            }),
+          );
           draggingNodeRef.current = {
             ...activeDrag,
             lastPosition: currentBatchPositions.get(activeDrag.nodeId) || activeDrag.lastPosition,
@@ -1857,17 +2396,25 @@ export default function ProjectCanvasClient({
           let nextX = activeDrag.startPos.x + dx;
           let nextY = activeDrag.startPos.y + dy;
           if (snapGrid) {
-            nextX = snapToGrid(nextX, 16);
-            nextY = snapToGrid(nextY, 16);
+            const moving = nodes.find((node) => node.id === activeDrag.nodeId);
+            if (moving) {
+              const aligned = alignNodePosition(
+                moving,
+                { x: nextX, y: nextY },
+                nodes,
+                viewport.zoom,
+              );
+              nextX = aligned.x;
+              nextY = aligned.y;
+              setAlignmentGuides(aligned.guides);
+            }
           }
           const lastPosition = { x: nextX, y: nextY };
           draggingNodeRef.current = { ...activeDrag, lastPosition };
           setNodes((prev) =>
             prev.map((n) =>
-              n.id === activeDrag.nodeId
-                ? { ...n, position_x: nextX, position_y: nextY }
-                : n
-            )
+              n.id === activeDrag.nodeId ? { ...n, position_x: nextX, position_y: nextY } : n,
+            ),
           );
 
           canvasChannelRef.current?.send({
@@ -1888,10 +2435,14 @@ export default function ProjectCanvasClient({
         const nearest = findNearestHandle(worldPos, nodes, draftEdgeRef.current.sourceNode.id, 50);
         if (nearest) {
           setSnappedHandle({ node: nearest.node, handle: nearest.handle });
-          const cycle = ![draftEdgeRef.current.sourceNode, nearest.node].every((item) => item.node_type === "aws_service" || item.node_type === "group") && detectCycle(edges, {
-            sourceNodeId: draftEdgeRef.current.sourceNode.id,
-            targetNodeId: nearest.node.id,
-          });
+          const cycle =
+            ![draftEdgeRef.current.sourceNode, nearest.node].every(
+              (item) => item.node_type === "aws_service" || item.node_type === "group",
+            ) &&
+            detectCycle(edges, {
+              sourceNodeId: draftEdgeRef.current.sourceNode.id,
+              targetNodeId: nearest.node.id,
+            });
           setIsCycleDetected(cycle);
           setDraftEdge((prev) => (prev ? { ...prev, currentPos: nearest.position } : null));
         } else {
@@ -1902,17 +2453,21 @@ export default function ProjectCanvasClient({
               worldPos.x >= n.position_x &&
               worldPos.x <= n.position_x + getNodeDimensions(n).width &&
               worldPos.y >= n.position_y &&
-              worldPos.y <= n.position_y + getNodeDimensions(n).height
+              worldPos.y <= n.position_y + getNodeDimensions(n).height,
           );
 
           if (hoveredCandidate) {
             const bestHandle = getClosestHandleToPoint(hoveredCandidate, worldPos);
             const bestPos = getNodeHandlePosition(hoveredCandidate, bestHandle);
             setSnappedHandle({ node: hoveredCandidate, handle: bestHandle });
-            const cycle = ![draftEdgeRef.current.sourceNode, hoveredCandidate].every((item) => item.node_type === "aws_service" || item.node_type === "group") && detectCycle(edges, {
-              sourceNodeId: draftEdgeRef.current.sourceNode.id,
-              targetNodeId: hoveredCandidate.id,
-            });
+            const cycle =
+              ![draftEdgeRef.current.sourceNode, hoveredCandidate].every(
+                (item) => item.node_type === "aws_service" || item.node_type === "group",
+              ) &&
+              detectCycle(edges, {
+                sourceNodeId: draftEdgeRef.current.sourceNode.id,
+                targetNodeId: hoveredCandidate.id,
+              });
             setIsCycleDetected(cycle);
             setDraftEdge((prev) => (prev ? { ...prev, currentPos: bestPos } : null));
           } else {
@@ -1923,7 +2478,7 @@ export default function ProjectCanvasClient({
         }
       }
     },
-    [snapGrid, currentUser.id, viewport.zoom, nodes, edges, broadcastEvent]
+    [snapGrid, currentUser.id, viewport.zoom, nodes, edges, broadcastEvent],
   );
 
   const handleDragEnd = useCallback(async () => {
@@ -1932,28 +2487,43 @@ export default function ProjectCanvasClient({
 
     draggingNodeRef.current = null;
     setDraggingNode(null);
+    setAlignmentGuides([]);
 
-    const positions = completedDrag.lastPositions || new Map([[completedDrag.nodeId, completedDrag.lastPosition]]);
+    const positions =
+      completedDrag.lastPositions || new Map([[completedDrag.nodeId, completedDrag.lastPosition]]);
     const changed = Array.from(positions).filter(([id, position]) => {
       const initial = completedDrag.initialPositions?.get(id) || completedDrag.startPos;
       return initial.x !== position.x || initial.y !== position.y;
     });
     if (!changed.length) return;
-    pushHistorySnapshot(nodes.map(node => {
-      const position = positions.get(node.id);
-      return position ? { ...node, position_x: position.x, position_y: position.y } : node;
-    }), edges);
-    const saves = await Promise.allSettled(changed.map(([nodeId, pos]) => {
-      broadcastEvent("node:drag", { nodeId, x: pos.x, y: pos.y });
-      return trackSave(() => saveRequest("canvas", {
-        action: "update_node",
-        node_id: nodeId,
-        updates: { position_x: pos.x, position_y: pos.y },
-      }));
-    }));
-    const failed = saves.find((result): result is PromiseRejectedResult => result.status === "rejected");
-    if (failed) await reportSaveFailure("Position Not Saved", failed.reason);
-  }, [pushHistorySnapshot, nodes, edges, broadcastEvent, saveRequest, trackSave, reportSaveFailure]);
+    pushHistorySnapshot(
+      nodes.map((node) => {
+        const position = positions.get(node.id);
+        return position ? { ...node, position_x: position.x, position_y: position.y } : node;
+      }),
+      edges,
+    );
+    try {
+      await trackSave(() =>
+        saveRequest("canvas", {
+          action: "apply_layout",
+          nodes: changed.map(([id, pos]) => ({ id, position_x: pos.x, position_y: pos.y })),
+        }),
+      );
+      broadcastEvent("canvas:resync", { userId: currentUser.id });
+    } catch (error) {
+      await reportSaveFailure("Position Not Saved", error);
+    }
+  }, [
+    pushHistorySnapshot,
+    nodes,
+    edges,
+    broadcastEvent,
+    currentUser.id,
+    saveRequest,
+    trackSave,
+    reportSaveFailure,
+  ]);
 
   // Marquee Selection Handlers
   const handleMarqueeStart = (worldPos: { x: number; y: number }) => {
@@ -1989,10 +2559,7 @@ export default function ProjectCanvasClient({
 
       // Check bounding box intersection
       const intersects =
-        node.position_x < maxX &&
-        nodeRight > minX &&
-        node.position_y < maxY &&
-        nodeBottom > minY;
+        node.position_x < maxX && nodeRight > minX && node.position_y < maxY && nodeBottom > minY;
 
       if (intersects) {
         insideIds.add(node.id);
@@ -2015,24 +2582,41 @@ export default function ProjectCanvasClient({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
-        e.defaultPrevented || e.isComposing ||
+        e.defaultPrevented ||
+        e.isComposing ||
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
-        (e.target instanceof HTMLElement && (e.target.isContentEditable || e.target.closest("select, button, [role='dialog']") ||
-          (e.target.closest("[data-canvas-ui]") && !e.target.closest("[data-canvas-navigation]"))))
+        (e.target instanceof HTMLElement &&
+          (e.target.isContentEditable ||
+            e.target.closest("select, button, [role='dialog']") ||
+            (e.target.closest("[data-canvas-ui]") &&
+              !e.target.closest("[data-canvas-navigation]"))))
       ) {
         return;
       }
 
       // Radar focus supports canvas navigation shortcuts without deleting graph items.
-      if (e.target instanceof Element && e.target.closest("[data-canvas-navigation]") &&
-        (e.key === "Delete" || e.key === "Backspace")) return;
+      if (
+        e.target instanceof Element &&
+        e.target.closest("[data-canvas-navigation]") &&
+        (e.key === "Delete" || e.key === "Backspace")
+      )
+        return;
 
       // Holding a shortcut must not fall through to browser zoom or navigation.
       if (e.repeat) {
-        const modifierShortcut = (e.ctrlKey || e.metaKey) && ["k", "z", "y", "a", "+", "=", "-", "0"].includes(e.key.toLowerCase());
-        const selectionShortcut = (e.key === "Delete" || e.key === "Backspace") && (selectedNodeIds.size > 0 || selectedNodeId);
-        if (modifierShortcut || selectionShortcut || (e.shiftKey && ["Digit1", "Digit2"].includes(e.code))) e.preventDefault();
+        const modifierShortcut =
+          (e.ctrlKey || e.metaKey) &&
+          ["k", "z", "y", "a", "+", "=", "-", "0"].includes(e.key.toLowerCase());
+        const selectionShortcut =
+          (e.key === "Delete" || e.key === "Backspace") &&
+          (selectedNodeIds.size > 0 || selectedNodeId);
+        if (
+          modifierShortcut ||
+          selectionShortcut ||
+          (e.shiftKey && ["Digit1", "Digit2"].includes(e.code))
+        )
+          e.preventDefault();
         return;
       }
 
@@ -2050,15 +2634,20 @@ export default function ProjectCanvasClient({
       } else if (isAIGenerating) {
         return;
       } else if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault(); setIsShortcutsOpen(true);
+        e.preventDefault();
+        setIsShortcutsOpen(true);
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault(); setIsNavigatorOpen(open => !open);
+        e.preventDefault();
+        setIsNavigatorOpen((open) => !open);
       } else if (e.shiftKey && e.code === "Digit1") {
-        e.preventDefault(); handleFitView();
+        e.preventDefault();
+        handleFitView();
       } else if (e.shiftKey && e.code === "Digit2") {
-        e.preventDefault(); handleFitView(true);
+        e.preventDefault();
+        handleFitView(true);
       } else if ((e.ctrlKey || e.metaKey) && ["+", "=", "-", "0"].includes(e.key)) {
-        e.preventDefault(); handleZoom(e.key === "0" ? 1 : viewport.zoom * (e.key === "-" ? 1 / 1.2 : 1.2));
+        e.preventDefault();
+        handleZoom(e.key === "0" ? 1 : viewport.zoom * (e.key === "-" ? 1 / 1.2 : 1.2));
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
@@ -2127,12 +2716,7 @@ export default function ProjectCanvasClient({
     const sourceNodeId = activeDraft.sourceNode.id;
     const targetNodeId = node.id;
     const sourceHandle = activeDraft.sourceHandle;
-    const canConnect = canConnectMilestones(
-      activeDraft.sourceNode,
-      node,
-      currentUser.id,
-      isOwner
-    );
+    const canConnect = canConnectMilestones(activeDraft.sourceNode, node, currentUser.id, isOwner);
 
     draftEdgeRef.current = null;
     setDraftEdge(null);
@@ -2148,7 +2732,9 @@ export default function ProjectCanvasClient({
     }
 
     // Check for circular dependency
-    const architectureLink = [activeDraft.sourceNode, node].every((item) => item.node_type === "aws_service" || item.node_type === "group");
+    const architectureLink = [activeDraft.sourceNode, node].every(
+      (item) => item.node_type === "aws_service" || item.node_type === "group",
+    );
     const cycle = !architectureLink && detectCycle(edges, { sourceNodeId, targetNodeId });
     if (cycle) {
       notify({
@@ -2160,10 +2746,13 @@ export default function ProjectCanvasClient({
     }
 
     const exists = edges.some(
-      (edge) => edge.source_node_id === sourceNodeId && edge.target_node_id === targetNodeId
+      (edge) => edge.source_node_id === sourceNodeId && edge.target_node_id === targetNodeId,
     );
     if (exists) {
-      notify({ title: "Already Connected", message: "These milestones already have a dependency wire" });
+      notify({
+        title: "Already Connected",
+        message: "These milestones already have a dependency wire",
+      });
       return;
     }
 
@@ -2171,8 +2760,8 @@ export default function ProjectCanvasClient({
       snappedHandle?.node.id === node.id
         ? snappedHandle.handle
         : handle !== "left"
-        ? handle
-        : getClosestHandleToPoint(node, activeDraft.currentPos);
+          ? handle
+          : getClosestHandleToPoint(node, activeDraft.currentPos);
 
     const sourceNode = nodes.find((n) => n.id === sourceNodeId);
     const isAwsConnection =
@@ -2211,14 +2800,16 @@ export default function ProjectCanvasClient({
     }
 
     // Background persistence with success reconciliation & automatic rollback on error
-    trackSave(() => saveRequest("canvas", {
-      action: "create_edge",
-      source_node_id: sourceNodeId,
-      target_node_id: targetNodeId,
-      source_handle: sourceHandle,
-      target_handle: targetHandle,
-      edge_type: edgeType,
-    }))
+    trackSave(() =>
+      saveRequest("canvas", {
+        action: "create_edge",
+        source_node_id: sourceNodeId,
+        target_node_id: targetNodeId,
+        source_handle: sourceHandle,
+        target_handle: targetHandle,
+        edge_type: edgeType,
+      }),
+    )
       .then((data) => {
         const stored = data.edge as CanvasEdge | undefined;
         if (!stored) throw new Error("Failed to persist dependency wire");
@@ -2228,11 +2819,9 @@ export default function ProjectCanvasClient({
         broadcastEvent("edge:confirmed", { clientId: clientEdgeId, edge: stored });
         try {
           const currentCached = JSON.parse(
-            window.localStorage.getItem(cacheKey) || "[]"
+            window.localStorage.getItem(cacheKey) || "[]",
           ) as CanvasEdge[];
-          const updatedCached = currentCached.map((e) =>
-            e.id === clientEdgeId ? stored : e
-          );
+          const updatedCached = currentCached.map((e) => (e.id === clientEdgeId ? stored : e));
           window.localStorage.setItem(cacheKey, JSON.stringify(updatedCached));
         } catch {}
       })
@@ -2242,7 +2831,7 @@ export default function ProjectCanvasClient({
         edgesRef.current = edgesRef.current.filter((e) => e.id !== clientEdgeId);
         try {
           const currentCached = JSON.parse(
-            window.localStorage.getItem(cacheKey) || "[]"
+            window.localStorage.getItem(cacheKey) || "[]",
           ) as CanvasEdge[];
           const rolledBack = currentCached.filter((e) => e.id !== clientEdgeId);
           window.localStorage.setItem(cacheKey, JSON.stringify(rolledBack));
@@ -2252,21 +2841,22 @@ export default function ProjectCanvasClient({
       });
   };
 
-  const handleStartLink = (
-    node: CanvasNode,
-    handle: HandlePosition,
-    e: React.PointerEvent
-  ) => {
+  const handleStartLink = (node: CanvasNode, handle: HandlePosition, e: React.PointerEvent) => {
     e.preventDefault();
     void handlePortClick(node, handle);
   };
 
-  const handleUpdateEdge = async (edgeId: string, updates: { label: string; edge_type: EdgeType }) => {
+  const handleUpdateEdge = async (
+    edgeId: string,
+    updates: { label: string; edge_type: EdgeType },
+  ) => {
     const previous = edgesRef.current.find((edge) => edge.id === edgeId);
-    const data = await trackSave(() => saveRequest("canvas", { action: "update_edge", edge_id: edgeId, updates }));
+    const data = await trackSave(() =>
+      saveRequest("canvas", { action: "update_edge", edge_id: edgeId, updates }),
+    );
     const stored = data.edge as CanvasEdge | undefined;
     if (!stored) throw new Error("Unable to save connection");
-    const nextEdges = edgesRef.current.map((edge) => edge.id === edgeId ? stored : edge);
+    const nextEdges = edgesRef.current.map((edge) => (edge.id === edgeId ? stored : edge));
     if (previous) pushHistorySnapshot(nodesRef.current, nextEdges);
     setEdges(nextEdges);
     broadcastEvent("edge:updated", { edge: stored });
@@ -2277,9 +2867,14 @@ export default function ProjectCanvasClient({
     if (edge) {
       const src = nodes.find((n) => n.id === edge.source_node_id);
       const tgt = nodes.find((n) => n.id === edge.target_node_id);
-      const canDelete = isOwner || src?.claimed_by === currentUser.id || tgt?.claimed_by === currentUser.id;
+      const canDelete =
+        isOwner || src?.claimed_by === currentUser.id || tgt?.claimed_by === currentUser.id;
       if (!canDelete) {
-        notify({ tone: "error", title: "Action Denied", message: "You must claim a linked milestone box to remove this link" });
+        notify({
+          tone: "error",
+          title: "Action Denied",
+          message: "You must claim a linked milestone box to remove this link",
+        });
         return;
       }
     }
@@ -2308,26 +2903,37 @@ export default function ProjectCanvasClient({
     const tidyNodes = autoLayoutNodes(nodes, edges);
     const changedNodes = tidyNodes.filter((node, index) => {
       const previous = nodes[index];
-      return node.position_x !== previous.position_x || node.position_y !== previous.position_y ||
-        node.width !== previous.width || node.height !== previous.height;
+      return (
+        node.position_x !== previous.position_x ||
+        node.position_y !== previous.position_y ||
+        node.width !== previous.width ||
+        node.height !== previous.height
+      );
     });
     if (!changedNodes.length) return;
     setNodes(tidyNodes);
     pushHistorySnapshot(tidyNodes, edges);
 
-    const saves = await Promise.allSettled(changedNodes.map((node) => {
-      const updates = {
-        position_x: node.position_x, position_y: node.position_y,
-        width: node.width, height: node.height,
-      };
-      broadcastEvent("node:updated", { nodeId: node.id, updates });
-      return trackSave(() => saveRequest("canvas", { action: "update_node", node_id: node.id, updates }));
-    }));
-    const failed = saves.find((result): result is PromiseRejectedResult => result.status === "rejected");
-    if (failed) {
-      await reportSaveFailure("Layout Not Fully Saved", failed.reason);
-    } else {
-      notify({ title: "Auto-Layout Complete", message: "Arranged nodes with space for connections and nested groups" });
+    try {
+      await trackSave(() =>
+        saveRequest("canvas", {
+          action: "apply_layout",
+          nodes: changedNodes.map((node) => ({
+            id: node.id,
+            position_x: node.position_x,
+            position_y: node.position_y,
+            width: node.width,
+            height: node.height,
+          })),
+        }),
+      );
+      broadcastEvent("canvas:resync", { userId: currentUser.id });
+      notify({
+        title: "Auto-Layout Complete",
+        message: "Arranged nodes with space for connections and nested groups",
+      });
+    } catch (error) {
+      await reportSaveFailure("Layout Not Saved", error);
     }
   };
 
@@ -2346,13 +2952,20 @@ export default function ProjectCanvasClient({
   };
 
   // Export handlers
-  const handleExportMermaid = () => {
-    const markdown = exportToMermaid(nodes, edges);
-    navigator.clipboard.writeText(markdown);
-    notify({
-      title: "Mermaid Code Copied",
-      message: "Copied Mermaid.js diagram definition to clipboard",
-    });
+  const handleExportMermaid = async () => {
+    try {
+      const markdown = exportToMermaid(nodes, edges);
+      await navigator.clipboard.writeText(markdown);
+      notify({
+        title: "Mermaid Code Copied",
+        message: "Copied Mermaid.js diagram definition to clipboard",
+      });
+    } catch {
+      notify({
+        title: "Clipboard unavailable",
+        message: "Allow clipboard access or use JSON export to download the canvas.",
+      });
+    }
   };
 
   const handleExportJSON = () => {
@@ -2372,17 +2985,23 @@ export default function ProjectCanvasClient({
     notify({ title: "Roadmap Exported", message: `Downloaded ${project.slug}-roadmap.json` });
   };
 
-  const milestoneNodes = nodes.filter((n) => !n.node_type || n.node_type === "milestone").sort((a, b) => a.sort_order - b.sort_order);
+  const milestoneNodes = nodes
+    .filter((n) => !n.node_type || n.node_type === "milestone")
+    .sort((a, b) => a.sort_order - b.sort_order);
   const milestoneIndex = new Map(milestoneNodes.map((node, index) => [node.id, index]));
   const completedCount = milestoneNodes.filter((n) =>
     n.checkpoints.length > 0
       ? n.checkpoints.every((c) => c.is_completed)
-      : n.status === "completed"
+      : n.status === "completed",
   ).length;
 
   const isGuideVisible =
     (isGuideRequested || (isGuideAutoVisible && nodes.length > 0)) &&
-    !isNavigatorOpen && !isServicePaletteOpen && !isAIAssistantOpen && !isAIGenerating && !(isMobile && selectedNode);
+    !isNavigatorOpen &&
+    !isServicePaletteOpen &&
+    !isAIAssistantOpen &&
+    !isAIGenerating &&
+    !(isMobile && selectedNode);
 
   if (isEvicted) {
     return (
@@ -2393,7 +3012,8 @@ export default function ProjectCanvasClient({
           </div>
           <h2 className="text-lg font-semibold text-neutral-100">Access Revoked</h2>
           <p className="max-w-sm text-xs text-neutral-400">
-            You have been removed from this project by the owner. Redirecting you to your projects workspace...
+            You have been removed from this project by the owner. Redirecting you to your projects
+            workspace...
           </p>
         </div>
       </div>
@@ -2401,7 +3021,56 @@ export default function ProjectCanvasClient({
   }
 
   return (
-    <div ref={setCanvasRootElement} className="canvas-workspace relative h-full w-full overflow-hidden select-none">
+    <div
+      ref={setCanvasRootElement}
+      className="canvas-workspace relative h-full w-full overflow-hidden select-none"
+    >
+      {recoveryDraft && (
+        <section
+          data-canvas-ui
+          role="status"
+          aria-label="Canvas recovery"
+          className="absolute left-1/2 top-20 z-40 w-[min(440px,calc(100%-24px))] -translate-x-1/2 rounded-2xl border border-amber-200 bg-white p-4 text-xs shadow-xl dark:border-amber-800 dark:bg-[#161d27]"
+        >
+          <p className="font-semibold">Unsaved draft available</p>
+          <p className="mt-1 text-neutral-500 dark:text-neutral-300">
+            {recoveryPersistent
+              ? "Kept on this device for 7 days."
+              : "Browser storage is unavailable. Download this draft before closing the tab."}{" "}
+            Restore is available only while the shared canvas matches the draft’s starting point.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={isRecovering}
+              onClick={() => void recoverDraft()}
+              className="font-semibold text-emerald-600"
+            >
+              {isRecovering ? "Restoring…" : "Restore draft"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const url = URL.createObjectURL(
+                  new Blob([JSON.stringify(recoveryDraft.canvas, null, 2)], {
+                    type: "application/json",
+                  }),
+                );
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `${project.slug}-recovered-draft.json`;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              }}
+            >
+              Download draft
+            </button>
+            <button type="button" onClick={clearRecovery}>
+              Dismiss
+            </button>
+          </div>
+        </section>
+      )}
       {/* Top Floating HUD with Follow Mode and Export */}
       <CanvasHud
         projectSlug={project.slug}
@@ -2417,12 +3086,18 @@ export default function ProjectCanvasClient({
         saveIndicator={describeSave(saveState, networkStatus)}
         onSaveAction={(action) => {
           if (action === "dismiss") dispatchSave({ type: "dismissed" });
-          else void resyncCanvasState().then((ok) => { if (!ok) notify({ tone: "error", title: "Still offline", message: "NovaStage couldn't be reached. Try again when your connection returns." }); });
+          else
+            void resyncCanvasState().then((ok) => {
+              if (!ok)
+                notify({
+                  tone: "error",
+                  title: "Still offline",
+                  message: "NovaStage couldn't be reached. Try again when your connection returns.",
+                });
+            });
         }}
         followingUserId={followingUserId}
-        onToggleFollowUser={(uId) =>
-          setFollowingUserId((prev) => (prev === uId ? null : uId))
-        }
+        onToggleFollowUser={(uId) => setFollowingUserId((prev) => (prev === uId ? null : uId))}
         onExportMermaid={handleExportMermaid}
         onExportJSON={handleExportJSON}
         onCopyInvite={async () => {
@@ -2433,22 +3108,92 @@ export default function ProjectCanvasClient({
         }}
       />
 
-      <CanvasNavigator nodes={nodes} isOpen={isNavigatorOpen}
-        onToggle={() => { setIsServicePaletteOpen(false); setIsNavigatorOpen(open => !open); }}
-        onClose={() => setIsNavigatorOpen(false)} onJumpToNode={handleJumpToNode} />
+      <CanvasNavigator
+        nodes={nodes}
+        isOpen={isNavigatorOpen}
+        onToggle={() => {
+          setIsServicePaletteOpen(false);
+          setIsNavigatorOpen((open) => !open);
+        }}
+        onClose={() => setIsNavigatorOpen(false)}
+        onJumpToNode={handleJumpToNode}
+      />
 
       {!nodes.length && !isAIGenerating && !isGuideVisible && (
-        <section data-canvas-ui aria-label="Start your canvas" className="canvas-empty-state absolute inset-0 z-10 flex items-center justify-center px-5 pb-32 pt-28 pointer-events-none">
+        <section
+          data-canvas-ui
+          aria-label="Start your canvas"
+          className="canvas-empty-state absolute inset-0 z-10 flex items-center justify-center px-5 pb-32 pt-28 pointer-events-none"
+        >
           <div className="canvas-empty-card pointer-events-auto w-full max-w-lg rounded-3xl border border-neutral-200/80 bg-linear-to-br from-white via-white/95 to-emerald-50/80 p-6 text-center shadow-xl shadow-emerald-950/5 backdrop-blur-xl sm:p-8 dark:border-[#283548] dark:from-[#161d27] dark:via-[#161d27]/95 dark:to-[#1e2634]">
-            <span className="mx-auto hidden md:grid h-14 w-14 place-items-center rounded-2xl border border-emerald-200/60 bg-emerald-50 shadow-sm dark:border-emerald-500/20 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"><Sparkles className="h-5 w-5" /></span>
-            <h2 className="mt-5 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white"><span className="md:hidden">Start your canvas</span><span className="hidden md:inline">Make room for your next idea</span></h2>
-            <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-300">Plan a milestone, map your cloud architecture, or let AI help you start.</p>
+            <span className="mx-auto hidden md:grid h-14 w-14 place-items-center rounded-2xl border border-emerald-200/60 bg-emerald-50 shadow-sm dark:border-emerald-500/20 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <h2 className="mt-5 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+              <span className="md:hidden">Start your canvas</span>
+              <span className="hidden md:inline">Make room for your next idea</span>
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-300">
+              Plan a milestone, map your cloud architecture, or let AI help you start.
+            </p>
             <div className="mt-5 grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => handleAddNode()} className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-emerald-400 hover:bg-emerald-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100/70 dark:bg-emerald-500/10"><Flag className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /></span>Add Milestone<span className="hidden text-[11px] font-normal leading-4 text-neutral-500 sm:block dark:text-neutral-400">A step with checkpoints to tick off</span></button>
-              <button type="button" onClick={() => setIsServicePaletteOpen(true)} className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-orange-400 hover:bg-orange-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-100/70 dark:bg-orange-500/10"><Box className="h-5 w-5 text-orange-500" /></span>AWS Services<span className="hidden text-[11px] font-normal leading-4 text-neutral-500 sm:block dark:text-neutral-400">Place and connect architecture parts</span></button>
-              <button type="button" onClick={() => setIsAIAssistantOpen(true)} className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-violet-400 hover:bg-violet-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-100/70 dark:bg-violet-500/10"><Sparkles className="h-5 w-5 text-violet-500 dark:text-violet-400" /></span>Ask AI<span className="hidden text-[11px] font-normal leading-4 text-neutral-500 sm:block dark:text-neutral-400">Draft a workflow or AWS diagram</span></button>
+              <button
+                type="button"
+                onClick={() => handleAddNode()}
+                className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-emerald-400 hover:bg-emerald-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100/70 dark:bg-emerald-500/10">
+                  <Flag className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </span>
+                Add Milestone
+                <span className="hidden text-[11px] font-normal leading-4 text-neutral-500 sm:block dark:text-neutral-400">
+                  A step with checkpoints to tick off
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsServicePaletteOpen(true)}
+                className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-orange-400 hover:bg-orange-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-100/70 dark:bg-orange-500/10">
+                  <Box className="h-5 w-5 text-orange-500" />
+                </span>
+                AWS Services
+                <span className="hidden text-[11px] font-normal leading-4 text-neutral-500 sm:block dark:text-neutral-400">
+                  Place and connect architecture parts
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAIAssistantOpen(true)}
+                className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-violet-400 hover:bg-violet-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-100/70 dark:bg-violet-500/10">
+                  <Sparkles className="h-5 w-5 text-violet-500 dark:text-violet-400" />
+                </span>
+                Ask AI
+                <span className="hidden text-[11px] font-normal leading-4 text-neutral-500 sm:block dark:text-neutral-400">
+                  Draft a workflow or AWS diagram
+                </span>
+              </button>
             </div>
-            <p className="mt-6 border-t border-neutral-200/70 pt-4 text-[11px] leading-5 text-neutral-500 dark:border-[#283548] dark:text-neutral-300"><span className="md:hidden">Drag to pan · Pinch to zoom · Tap a card for details</span><span className="hidden md:inline">Drag to select · Space to pan · Ctrl K to find</span> · <button type="button" data-guide-trigger onClick={toggleGuide} className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-400">How it works</button></p>
+            <p className="mt-6 border-t border-neutral-200/70 pt-4 text-[11px] leading-5 text-neutral-500 dark:border-[#283548] dark:text-neutral-300">
+              <span className="md:hidden">
+                Drag to pan · Pinch to zoom · Tap a card for details
+              </span>
+              <span className="hidden md:inline">
+                Drag to select · Space to pan · Ctrl K to find
+              </span>{" "}
+              ·{" "}
+              <button
+                type="button"
+                data-guide-trigger
+                onClick={toggleGuide}
+                className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-emerald-400"
+              >
+                How it works
+              </button>
+            </p>
           </div>
         </section>
       )}
@@ -2456,22 +3201,79 @@ export default function ProjectCanvasClient({
       {isGuideVisible && <CanvasGuide isTouch={isMobile} onClose={closeGuide} />}
 
       {aiChange && historyIndex === aiChange.index && !isAIGenerating && !draftEdge && (
-        <CanvasChangeBanner label={aiChange.label} text={aiChange.text} onUndo={() => { handleUndo(); setAiChange(null); }} onDismiss={() => setAiChange(null)} />
+        <CanvasChangeBanner
+          label={aiChange.label}
+          text={aiChange.text}
+          onUndo={() => {
+            handleUndo();
+            setAiChange(null);
+          }}
+          onDismiss={() => setAiChange(null)}
+        />
       )}
 
       {draftEdge && (
-        <div data-canvas-ui role="status" className="pointer-events-auto absolute left-1/2 top-[7.25rem] z-30 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50/95 py-1.5 pl-3 pr-1.5 text-xs text-emerald-900 shadow-lg backdrop-blur dark:border-emerald-500/40 dark:bg-[#10281f]/95 dark:text-emerald-100 sm:top-[5.5rem]">
-          <span className="min-w-0">Connecting from <strong className="font-semibold">{draftEdge.sourceNode.title}</strong>. Choose a dot on another card<span className="hidden sm:inline"> · Esc to cancel</span></span>
-          <button type="button" onClick={() => { draftEdgeRef.current = null; setDraftEdge(null); setSnappedHandle(null); }} className="h-11 shrink-0 rounded-lg px-3 font-semibold hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:h-8 dark:hover:bg-emerald-500/20">Cancel</button>
+        <div
+          data-canvas-ui
+          role="status"
+          className="pointer-events-auto absolute left-1/2 top-[7.25rem] z-30 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50/95 py-1.5 pl-3 pr-1.5 text-xs text-emerald-900 shadow-lg backdrop-blur dark:border-emerald-500/40 dark:bg-[#10281f]/95 dark:text-emerald-100 sm:top-[5.5rem]"
+        >
+          <span className="min-w-0">
+            Connecting from <strong className="font-semibold">{draftEdge.sourceNode.title}</strong>.
+            Choose a dot on another card<span className="hidden sm:inline"> · Esc to cancel</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              draftEdgeRef.current = null;
+              setDraftEdge(null);
+              setSnappedHandle(null);
+            }}
+            className="h-11 shrink-0 rounded-lg px-3 font-semibold hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:h-8 dark:hover:bg-emerald-500/20"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
       {selectedNodeIds.size > 1 && !isAIGenerating && (
-        <div data-canvas-ui role="toolbar" aria-label="Selected items" className="absolute left-1/2 top-24 z-30 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-neutral-200 bg-white/95 p-1.5 text-neutral-600 shadow-lg backdrop-blur dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-neutral-300">
-          <span className="whitespace-nowrap px-2 text-xs font-semibold">{selectedNodeIds.size} selected</span>
-          <button type="button" aria-label="Fit selected items" title="Fit selection (Shift 2)" onClick={() => handleFitView(true)} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><Scan className="h-4 w-4" /></button>
-          <button type="button" aria-label="Delete selected items" onClick={handleDeleteSelectedNodes} className="grid h-10 w-10 place-items-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></button>
-          <button type="button" aria-label="Deselect all items" onClick={() => { setSelectedNodeId(null); setSelectedNodeIds(new Set()); }} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-[#1e2634]"><X className="h-4 w-4" /></button>
+        <div
+          data-canvas-ui
+          role="toolbar"
+          aria-label="Selected items"
+          className="absolute left-1/2 top-24 z-30 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-neutral-200 bg-white/95 p-1.5 text-neutral-600 shadow-lg backdrop-blur dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-neutral-300"
+        >
+          <span className="whitespace-nowrap px-2 text-xs font-semibold">
+            {selectedNodeIds.size} selected
+          </span>
+          <button
+            type="button"
+            aria-label="Fit selected items"
+            title="Fit selection (Shift 2)"
+            onClick={() => handleFitView(true)}
+            className="grid h-10 w-10 place-items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-[#1e2634]"
+          >
+            <Scan className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Delete selected items"
+            onClick={handleDeleteSelectedNodes}
+            className="grid h-10 w-10 place-items-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Deselect all items"
+            onClick={() => {
+              setSelectedNodeId(null);
+              setSelectedNodeIds(new Set());
+            }}
+            className="grid h-10 w-10 place-items-center rounded-lg hover:bg-neutral-100 dark:hover:bg-[#1e2634]"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
@@ -2540,110 +3342,145 @@ export default function ProjectCanvasClient({
             return getLayer(a) - getLayer(b);
           })
           .map((node) => (
-          <CanvasNodeComponent
-            key={node.id}
-            node={node}
-            stepIndex={milestoneIndex.get(node.id) ?? 0}
-            isSelected={selectedNodeId === node.id}
-            isMultiSelected={selectedNodeIds.has(node.id)}
-            isLinking={Boolean(draftEdge)}
-            currentUserId={currentUser.id}
-            onSelect={(n, isShift) => {
-              if (isAIGenerating) return;
-              setIsAIAssistantOpen(false);
-              setIsReleasePulseOpen(false);
-              setIsServicePaletteOpen(false);
-              const activeField = document.activeElement;
-              if (activeField instanceof HTMLElement && activeField.matches("input, textarea, select") && activeField.closest("[data-canvas-ui]")) {
-                activeField.blur();
-              }
-              if (isShift) {
-                setSelectedNodeId(null);
-                setSelectedNodeIds((prev) => {
-                  const copy = new Set(prev);
-                  if (copy.has(n.id)) copy.delete(n.id);
-                  else copy.add(n.id);
-                  return copy;
-                });
-              } else {
-                if (!selectedNodeIds.has(n.id)) {
-                  setIsNotebookOpen(false);
-                  setSelectedNodeId(n.id);
-                  setSelectedNodeIds(new Set([n.id]));
-                } else {
-                  setSelectedNodeId(n.id);
+            <CanvasNodeComponent
+              key={node.id}
+              node={node}
+              stepIndex={milestoneIndex.get(node.id) ?? 0}
+              isSelected={selectedNodeId === node.id}
+              isMultiSelected={selectedNodeIds.has(node.id)}
+              isLinking={Boolean(draftEdge)}
+              currentUserId={currentUser.id}
+              onSelect={(n, isShift) => {
+                if (isAIGenerating) return;
+                setIsAIAssistantOpen(false);
+                setIsReleasePulseOpen(false);
+                setIsServicePaletteOpen(false);
+                const activeField = document.activeElement;
+                if (
+                  activeField instanceof HTMLElement &&
+                  activeField.matches("input, textarea, select") &&
+                  activeField.closest("[data-canvas-ui]")
+                ) {
+                  activeField.blur();
                 }
-              }
-            }}
-            onDragStart={(n, e) => {
-              if (isAIGenerating) return;
-              if (activeTool === "hand") return;
-
-              // If dragging a node that is part of multi-selection, drag all selected
-              const dragIds = getDragNodeIds(nodes, selectedNodeIds.has(n.id) ? selectedNodeIds : new Set([n.id]));
-              const isBatch = dragIds.size > 1;
-              const initPositions = new Map<string, { x: number; y: number }>();
-
-              if (isBatch) {
-                for (const sId of dragIds) {
-                  const sNode = nodes.find((item) => item.id === sId);
-                  if (sNode) {
-                    initPositions.set(sId, { x: sNode.position_x, y: sNode.position_y });
+                if (isShift) {
+                  setSelectedNodeId(null);
+                  setSelectedNodeIds((prev) => {
+                    const copy = new Set(prev);
+                    if (copy.has(n.id)) copy.delete(n.id);
+                    else copy.add(n.id);
+                    return copy;
+                  });
+                } else {
+                  if (!selectedNodeIds.has(n.id)) {
+                    setIsNotebookOpen(false);
+                    setSelectedNodeId(n.id);
+                    setSelectedNodeIds(new Set([n.id]));
+                  } else {
+                    setSelectedNodeId(n.id);
                   }
                 }
-              }
+              }}
+              onDragStart={(n, e) => {
+                if (isAIGenerating) return;
+                if (activeTool === "hand") return;
 
-              const nextDrag: DragState = {
-                nodeId: n.id,
-                startPos: { x: n.position_x, y: n.position_y },
-                pointerStartScreen: { x: e.clientX, y: e.clientY },
-                lastPosition: { x: n.position_x, y: n.position_y },
-                initialPositions: isBatch ? initPositions : undefined,
-                lastPositions: isBatch ? new Map(initPositions) : undefined,
-              };
-              draggingNodeRef.current = nextDrag;
-              setDraggingNode(nextDrag);
-            }}
-            onDragEnd={handleDragEnd}
-            onStartLink={(n, h, e) => {
-              if (isAIGenerating) return;
-              handleStartLink(n, h, e);
-            }}
-            onToggleCheckpoint={(cpId, nId, val) => {
-              if (isAIGenerating) return;
-              handleToggleCheckpoint(cpId, nId, val);
-            }}
-            onRequestClaim={(n) => {
-              if (isAIGenerating) return;
-              handleRequestClaim(n);
-            }}
-            onClaimNode={(nId) => {
-              if (isAIGenerating) return;
-              handleClaimNode(nId);
-            }}
-            onUpdateTitle={(nId, newTitle) => {
-              void handleUpdateNode(nId, { title: newTitle }).catch(() => {});
-            }}
-            onUpdateAnnotation={(nodeId, content) => { void handleUpdateNode(nodeId, { annotation_metadata: { ...node.annotation_metadata, content } }).catch(() => {}); }}
-            zoom={viewport.zoom}
-            onResize={(nId, width, height) => { if (!isAIGenerating) void handleUpdateNode(nId, { width, height }).catch(() => {}); }}
+                // If dragging a node that is part of multi-selection, drag all selected
+                const dragIds = getDragNodeIds(
+                  nodes,
+                  selectedNodeIds.has(n.id) ? selectedNodeIds : new Set([n.id]),
+                );
+                const isBatch = dragIds.size > 1;
+                const initPositions = new Map<string, { x: number; y: number }>();
+
+                if (isBatch) {
+                  for (const sId of dragIds) {
+                    const sNode = nodes.find((item) => item.id === sId);
+                    if (sNode) {
+                      initPositions.set(sId, { x: sNode.position_x, y: sNode.position_y });
+                    }
+                  }
+                }
+
+                const nextDrag: DragState = {
+                  nodeId: n.id,
+                  startPos: { x: n.position_x, y: n.position_y },
+                  pointerStartScreen: { x: e.clientX, y: e.clientY },
+                  lastPosition: { x: n.position_x, y: n.position_y },
+                  initialPositions: isBatch ? initPositions : undefined,
+                  lastPositions: isBatch ? new Map(initPositions) : undefined,
+                };
+                draggingNodeRef.current = nextDrag;
+                setDraggingNode(nextDrag);
+              }}
+              onDragEnd={handleDragEnd}
+              onStartLink={(n, h, e) => {
+                if (isAIGenerating) return;
+                handleStartLink(n, h, e);
+              }}
+              onToggleCheckpoint={(cpId, nId, val) => {
+                if (isAIGenerating) return;
+                handleToggleCheckpoint(cpId, nId, val);
+              }}
+              onRequestClaim={(n) => {
+                if (isAIGenerating) return;
+                handleRequestClaim(n);
+              }}
+              onClaimNode={(nId) => {
+                if (isAIGenerating) return;
+                handleClaimNode(nId);
+              }}
+              onUpdateTitle={(nId, newTitle) => {
+                void handleUpdateNode(nId, { title: newTitle }).catch(() => {});
+              }}
+              onUpdateAnnotation={(nodeId, content) => {
+                void handleUpdateNode(nodeId, {
+                  annotation_metadata: { ...node.annotation_metadata, content },
+                }).catch(() => {});
+              }}
+              zoom={viewport.zoom}
+              onResize={(nId, width, height) => {
+                if (!isAIGenerating) void handleUpdateNode(nId, { width, height }).catch(() => {});
+              }}
+            />
+          ))}
+
+        {alignmentGuides.map((guide) => (
+          <div
+            key={guide.axis}
+            aria-hidden="true"
+            className="pointer-events-none absolute bg-emerald-500/60"
+            style={
+              guide.axis === "x"
+                ? { left: guide.value, top: -100000, width: 1 / viewport.zoom, height: 200000 }
+                : { top: guide.value, left: -100000, height: 1 / viewport.zoom, width: 200000 }
+            }
           />
         ))}
-
         {/* Multiplayer Live Cursors */}
-        <CanvasCursors
-          collaborators={collaborators}
-          currentUserId={currentUser.id}
-        />
+        <CanvasCursors collaborators={collaborators} currentUserId={currentUser.id} />
       </CanvasViewportContainer>
 
+      {selectedNodeIds.size > 0 && (
+        <button
+          data-canvas-ui
+          type="button"
+          onClick={() => handleFitView(true)}
+          className="absolute left-3 top-[124px] z-20 rounded-xl border border-neutral-200 bg-white/95 px-3 py-2 text-xs font-medium shadow-sm dark:border-[#283548] dark:bg-[#161d27]"
+        >
+          Focus selection
+        </button>
+      )}
       {/* Interactive Radar Minimap Component */}
       <CanvasMinimap
         nodes={nodes}
         viewport={viewport}
-        onViewportChange={(next) => { setFollowingUserId(null); setViewport(next); }}
-        isOpen={isMinimapOpen}
-        rightInset={selectedNode && !isMobile ? 420 : 0}
+        onViewportChange={(next) => {
+          setFollowingUserId(null);
+          setViewport(next);
+        }}
+        isOpen={isMinimapOpen && !isNotebookOpen && !isAIAssistantOpen}
+        rightInset={(selectedNode || isReleasePulseOpen) && !isMobile ? 420 : 0}
         onToggleOpen={() => setIsMinimapOpen((v) => !v)}
       />
 
@@ -2709,13 +3546,21 @@ export default function ProjectCanvasClient({
       )}
 
       {/* Bottom Floating Control Bar (Canvas Tools Dock + AI Assistant) */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-6 z-20 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-2.5 px-3">
-        {/* On mobile: AI Assistant & Notebook stack above toolbar (order-1). On desktop: sit alongside dock (sm:order-2) */}
-          <div className={`order-1 md:order-2 pointer-events-auto ${selectedNode && isMobile ? "hidden" : "flex"} items-center justify-end md:justify-start gap-2 w-full max-w-[340px] md:w-auto md:max-w-none`}>
+      <div
+        style={{ right: (selectedNode || isReleasePulseOpen) && !isMobile ? 420 : 0 }}
+        className="@container/controls pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-6 z-20 px-3"
+      >
+        <div className="flex flex-col @[950px]/controls:flex-row items-center justify-center gap-2">
+          {/* On mobile: AI Assistant & Notebook stack above toolbar (order-1). On desktop: sit alongside dock (sm:order-2) */}
+          <div
+            className={`order-1 @[950px]/controls:order-2 pointer-events-auto ${selectedNode && isMobile ? "hidden" : "flex"} items-center justify-end @[950px]/controls:justify-start gap-2 w-full max-w-[340px] @[950px]/controls:w-auto @[950px]/controls:max-w-none`}
+          >
             <CanvasAIAssistant
               projectId={project.id}
               projectSlug={project.slug}
-              onExternalApplied={() => { void resyncCanvasState(); }}
+              onExternalApplied={() => {
+                void resyncCanvasState();
+              }}
               isOpen={isAIAssistantOpen}
               portalContainer={canvasRootElement}
               onToggle={() => {
@@ -2732,7 +3577,9 @@ export default function ProjectCanvasClient({
               maxRequests={maxAiRequests}
               userPlan={userPlan}
               existingNodes={nodes}
-              onReloadCanvas={() => { void resyncCanvasState(); }}
+              onReloadCanvas={() => {
+                void resyncCanvasState();
+              }}
               onSubmitPrompt={handleGenerateAIWorkflow}
             />
 
@@ -2749,46 +3596,47 @@ export default function ProjectCanvasClient({
             />
           </div>
 
-        {/* Primary Canvas Dock: order-2 on mobile (at bottom), sm:order-1 on desktop (on left) */}
-        <div className="order-2 md:order-1 pointer-events-auto flex items-center justify-center max-w-full">
-          <CanvasDock
-            isBusy={isAIGenerating}
-            activeTool={activeTool}
-            onSelectTool={setActiveTool}
-            viewport={viewport}
-            onZoomIn={() => handleZoom(viewport.zoom * 1.2)}
-            onZoomOut={() => handleZoom(viewport.zoom / 1.2)}
-            onResetZoom={() => handleZoom(1)}
-            onFitView={() => handleFitView()}
-            onAddNode={() => handleAddNode()}
-            onTidyLayout={handleTidyLayout}
-            snapGrid={snapGrid}
-            onToggleSnapGrid={() => setSnapGrid((v) => !v)}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            onOpenShortcuts={() => setIsShortcutsOpen(true)}
-            onOpenGuide={toggleGuide}
-            isGuideOpen={isGuideVisible}
-            isMinimapOpen={isMinimapOpen}
-            onToggleMinimap={() => setIsMinimapOpen((v) => !v)}
-            isReleasePulseOpen={isReleasePulseOpen}
-            onToggleReleasePulse={() => {
-              setSelectedNodeId(null);
-              setIsAIAssistantOpen(false);
-              setIsNotebookOpen(false);
-              setIsReleasePulseOpen((open) => !open);
-            }}
-            onToggleServicePalette={() => {
-              setIsNavigatorOpen(false);
-              setIsAIAssistantOpen(false);
-              setIsNotebookOpen(false);
-              setIsReleasePulseOpen(false);
-              setIsServicePaletteOpen((open) => !open);
-            }}
-            onAddGroup={() => handleAddGroup()}
-          />
+          {/* Primary Canvas Dock: order-2 on mobile (at bottom), sm:order-1 on desktop (on left) */}
+          <div className="order-2 @[950px]/controls:order-1 pointer-events-auto flex items-center justify-center max-w-full">
+            <CanvasDock
+              isBusy={isAIGenerating}
+              activeTool={activeTool}
+              onSelectTool={setActiveTool}
+              viewport={viewport}
+              onZoomIn={() => handleZoom(viewport.zoom * 1.2)}
+              onZoomOut={() => handleZoom(viewport.zoom / 1.2)}
+              onResetZoom={() => handleZoom(1)}
+              onFitView={() => handleFitView()}
+              onAddNode={() => handleAddNode()}
+              onTidyLayout={handleTidyLayout}
+              snapGrid={snapGrid}
+              onToggleSnapGrid={() => setSnapGrid((v) => !v)}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              onOpenShortcuts={() => setIsShortcutsOpen(true)}
+              onOpenGuide={toggleGuide}
+              isGuideOpen={isGuideVisible}
+              isMinimapOpen={isMinimapOpen}
+              onToggleMinimap={() => setIsMinimapOpen((v) => !v)}
+              isReleasePulseOpen={isReleasePulseOpen}
+              onToggleReleasePulse={() => {
+                setSelectedNodeId(null);
+                setIsAIAssistantOpen(false);
+                setIsNotebookOpen(false);
+                setIsReleasePulseOpen((open) => !open);
+              }}
+              onToggleServicePalette={() => {
+                setIsNavigatorOpen(false);
+                setIsAIAssistantOpen(false);
+                setIsNotebookOpen(false);
+                setIsReleasePulseOpen(false);
+                setIsServicePaletteOpen((open) => !open);
+              }}
+              onAddGroup={() => handleAddGroup()}
+            />
+          </div>
         </div>
       </div>
 
@@ -2811,12 +3659,18 @@ export default function ProjectCanvasClient({
         />
       )}
 
+      {aiPreview && (
+        <CanvasAIReview
+          preview={aiPreview}
+          existingNodes={nodes}
+          onApply={() => resolveAIPreview(true)}
+          onDismiss={() => resolveAIPreview(false)}
+        />
+      )}
+
       {/* Realtime Claim Handoff Modal Prompt */}
       {isShortcutsOpen && <CanvasShortcuts onClose={() => setIsShortcutsOpen(false)} />}
-      <CanvasClaimModal
-        pendingRequest={incomingClaimModal}
-        onResolve={handleResolveClaimRequest}
-      />
+      <CanvasClaimModal pendingRequest={incomingClaimModal} onResolve={handleResolveClaimRequest} />
     </div>
   );
 }

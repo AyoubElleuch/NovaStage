@@ -13,14 +13,15 @@ export default async function SignUpPage() {
       redirect("/onboarding");
     }
 
-    const isAdmin =
-      isAdminRole(session.roles) || isAdminRole(session.profile?.role);
+    const isAdmin = isAdminRole(session.roles) || isAdminRole(session.profile?.role);
     redirect(isAdmin ? "/admin" : "/dashboard");
   }
 
   return (
     <AuthPageShell>
-      <Suspense fallback={<div className="text-sm text-neutral-400 dark:text-neutral-500">Loading...</div>}>
+      <Suspense
+        fallback={<div className="text-sm text-neutral-400 dark:text-neutral-500">Loading...</div>}
+      >
         <LoginForm initialMode="signup" />
       </Suspense>
     </AuthPageShell>

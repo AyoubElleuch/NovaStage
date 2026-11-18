@@ -14,9 +14,7 @@ interface LoginFormProps {
   initialWaitlistSuccess?: boolean;
 }
 
-export default function LoginForm({
-  initialMode = "login",
-}: LoginFormProps) {
+export default function LoginForm({ initialMode = "login" }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
@@ -28,7 +26,7 @@ export default function LoginForm({
       : "";
 
   const [mode, setMode] = useState<"login" | "signup">(
-    urlMode === "signup" || initialMode === "signup" ? "signup" : "login"
+    urlMode === "signup" || initialMode === "signup" ? "signup" : "login",
   );
   const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
   const [isForgotSuccess, setIsForgotSuccess] = useState(false);
@@ -116,7 +114,14 @@ export default function LoginForm({
     setMessage("");
     setIsSuccess(false);
 
-    if (nextEmailError || nextPasswordError || nextConfirmPasswordError) return;
+    if (nextEmailError || nextPasswordError || nextConfirmPasswordError) {
+      document
+        .getElementById(
+          nextEmailError ? "email" : nextPasswordError ? "password" : "confirmPassword",
+        )
+        ?.focus();
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -155,7 +160,7 @@ export default function LoginForm({
         setMessage(
           mode === "signup"
             ? "We could not create your account right now. Please try again."
-            : "We could not log you in right now. Please try again."
+            : "We could not log you in right now. Please try again.",
         );
         setIsSuccess(false);
       }
@@ -173,7 +178,10 @@ export default function LoginForm({
     setEmailError(nextEmailError);
     setMessage("");
 
-    if (nextEmailError) return;
+    if (nextEmailError) {
+      document.getElementById("reset-email")?.focus();
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -253,7 +261,9 @@ export default function LoginForm({
                 We&apos;ve sent a password reset link to{" "}
                 <strong className="font-semibold text-neutral-900 dark:text-white">{email}</strong>.
               </p>
-              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">The recovery link is valid for 1 hour.</p>
+              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                The recovery link is valid for 1 hour.
+              </p>
               <button
                 type="button"
                 onClick={() => {
@@ -376,9 +386,7 @@ export default function LoginForm({
               {mode === "login" ? "Log in" : "Create an account"}
             </h1>
             <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-              {mode === "login"
-                ? "Welcome back to NovaStage."
-                : "Get started with NovaStage Beta."}
+              {mode === "login" ? "Welcome back to NovaStage." : "Get started with NovaStage Beta."}
             </p>
 
             <div className="mt-8">
@@ -495,7 +503,9 @@ export default function LoginForm({
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     onClick={() => setShowPassword(!showPassword)}
                     className={`absolute right-1.5 top-1/2 grid h-10 w-10 -translate-y-1/2 cursor-pointer place-items-center rounded-md transition-colors hover:bg-neutral-50 hover:text-neutral-700 dark:hover:bg-[#1e2634] dark:hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      passwordError ? "text-red-500 dark:text-red-400" : "text-neutral-400 dark:text-neutral-500"
+                      passwordError
+                        ? "text-red-500 dark:text-red-400"
+                        : "text-neutral-400 dark:text-neutral-500"
                     }`}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -548,10 +558,16 @@ export default function LoginForm({
                       aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className={`absolute right-1.5 top-1/2 grid h-10 w-10 -translate-y-1/2 cursor-pointer place-items-center rounded-md transition-colors hover:bg-neutral-50 hover:text-neutral-700 dark:hover:bg-[#1e2634] dark:hover:text-neutral-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 ${
-                        confirmPasswordError ? "text-red-500 dark:text-red-400" : "text-neutral-400 dark:text-neutral-500"
+                        confirmPasswordError
+                          ? "text-red-500 dark:text-red-400"
+                          : "text-neutral-400 dark:text-neutral-500"
                       }`}
                     >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                   {confirmPasswordError && (

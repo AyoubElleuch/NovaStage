@@ -29,7 +29,9 @@ export async function sendWaitlistJoinedEmail({
   const { subject, html, text } = renderWaitlistJoinedEmail({ email, name, appUrl });
 
   if (!resendClient) {
-    console.info(`[Email Dev Mode] Waitlist joined email for ${email} (RESEND_API_KEY not configured)`);
+    console.info(
+      `[Email Dev Mode] Waitlist joined email for ${email} (RESEND_API_KEY not configured)`,
+    );
     return { success: true, id: `dev-mock-${Date.now()}` };
   }
 
@@ -76,7 +78,7 @@ export async function sendWaitlistApprovedEmail({
 
   if (!resendClient) {
     console.info(
-      `[Email Dev Mode] Waitlist approved email for ${email} with temporary password "${temporaryPassword}" (RESEND_API_KEY not configured)`
+      `[Email Dev Mode] Waitlist approved email for ${email} with temporary password "${temporaryPassword}" (RESEND_API_KEY not configured)`,
     );
     return { success: true, id: `dev-mock-${Date.now()}` };
   }
@@ -124,7 +126,7 @@ export async function sendPasswordResetEmail({
 
   if (!resendClient) {
     console.info(
-      `[Email Dev Mode] Password reset email for ${email} with link "${resetUrl}" (RESEND_API_KEY not configured)`
+      `[Email Dev Mode] Password reset email for ${email} with link "${resetUrl}" (RESEND_API_KEY not configured)`,
     );
     return { success: true, id: `dev-mock-${Date.now()}` };
   }
@@ -189,4 +191,3 @@ export async function sendWelcomeEmail({
     return { success: false, error: errorMsg };
   }
 }
-

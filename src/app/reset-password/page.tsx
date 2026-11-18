@@ -30,7 +30,9 @@ export default async function ResetPasswordPage() {
         />
       </div>
 
-      <Suspense fallback={<div className="text-sm text-neutral-400 dark:text-neutral-500">Loading...</div>}>
+      <Suspense
+        fallback={<div className="text-sm text-neutral-400 dark:text-neutral-500">Loading...</div>}
+      >
         <ResetPasswordForm />
       </Suspense>
     </main>

@@ -47,16 +47,27 @@ export default function CanvasEdgeLayer({
 }: CanvasEdgeLayerProps) {
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
-  const openEditor = (id: string) => { if (onEditEdge) onEditEdge(id); else setEditingEdgeId(id); };
+  const openEditor = (id: string) => {
+    if (onEditEdge) onEditEdge(id);
+    else setEditingEdgeId(id);
+  };
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const padding = 200;
   const architectureRoutes = useMemo(() => {
-    const byId = new Map(nodes.map(node => [node.id, node]));
-    return new Map(edges.map(edge => {
-      const source = byId.get(edge.source_node_id), target = byId.get(edge.target_node_id);
-      return [edge.id, source && target ? routeArchitectureEdge(source, target, edge.source_handle, edge.target_handle, nodes) : null];
-    }));
+    const byId = new Map(nodes.map((node) => [node.id, node]));
+    return new Map(
+      edges.map((edge) => {
+        const source = byId.get(edge.source_node_id),
+          target = byId.get(edge.target_node_id);
+        return [
+          edge.id,
+          source && target
+            ? routeArchitectureEdge(source, target, edge.source_handle, edge.target_handle, nodes)
+            : null,
+        ];
+      }),
+    );
   }, [nodes, edges]);
 
   const nodeMap = new Map<string, CanvasNode>();
@@ -66,8 +77,10 @@ export default function CanvasEdgeLayer({
 
   const minX = Math.min(...nodes.map((node) => node.position_x), 0) - padding;
   const minY = Math.min(...nodes.map((node) => node.position_y), 0) - padding;
-  const maxX = Math.max(...nodes.map((node) => node.position_x + getNodeDimensions(node).width), 1) + padding;
-  const maxY = Math.max(...nodes.map((node) => node.position_y + getNodeDimensions(node).height), 1) + padding;
+  const maxX =
+    Math.max(...nodes.map((node) => node.position_x + getNodeDimensions(node).width), 1) + padding;
+  const maxY =
+    Math.max(...nodes.map((node) => node.position_y + getNodeDimensions(node).height), 1) + padding;
   const width = maxX - minX;
   const height = maxY - minY;
 
@@ -117,19 +130,51 @@ export default function CanvasEdgeLayer({
         </marker>
 
         {/* Data Flow Arrowhead */}
-        <marker id="arrow-data-flow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <marker
+          id="arrow-data-flow"
+          viewBox="0 0 10 10"
+          refX="6"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
           <path d="M 0 1 L 8 5 L 0 9 z" fill={isDark ? "#60a5fa" : "#3B48CC"} />
         </marker>
         {/* Network Arrowhead */}
-        <marker id="arrow-network" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <marker
+          id="arrow-network"
+          viewBox="0 0 10 10"
+          refX="6"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
           <path d="M 0 1 L 8 5 L 0 9 z" fill={isDark ? "#34d399" : "#3F8624"} />
         </marker>
         {/* Event Arrowhead */}
-        <marker id="arrow-event" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <marker
+          id="arrow-event"
+          viewBox="0 0 10 10"
+          refX="6"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
           <path d="M 0 1 L 8 5 L 0 9 z" fill={isDark ? "#fbbf24" : "#FF9900"} />
         </marker>
         {/* Interlocking Bridge Arrowhead */}
-        <marker id="arrow-interlock" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <marker
+          id="arrow-interlock"
+          viewBox="0 0 10 10"
+          refX="6"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
           <path d="M 0 1 L 8 5 L 0 9 z" fill={isDark ? "#c084fc" : "#8b5cf6"} />
         </marker>
       </defs>
@@ -143,39 +188,41 @@ export default function CanvasEdgeLayer({
         const p1 = getNodeHandlePosition(sourceNode, edge.source_handle);
         const p2 = getNodeHandlePosition(targetNode, edge.target_handle);
         const routed = architectureRoutes.get(edge.id);
-        const pathData = routed?.path || calculateBezierPath(
-          p1.x,
-          p1.y,
-          p2.x,
-          p2.y,
-          edge.source_handle,
-          edge.target_handle
-        );
+        const pathData =
+          routed?.path ||
+          calculateBezierPath(p1.x, p1.y, p2.x, p2.y, edge.source_handle, edge.target_handle);
 
-        const isArchitecture = sourceNode.node_type === "aws_service" || sourceNode.node_type === "group" || targetNode.node_type === "aws_service" || targetNode.node_type === "group";
+        const isArchitecture =
+          sourceNode.node_type === "aws_service" ||
+          sourceNode.node_type === "group" ||
+          targetNode.node_type === "aws_service" ||
+          targetNode.node_type === "group";
         const isNeonActive = !isArchitecture && isNodeFullyComplete(sourceNode);
         const isHovered = hoveredEdgeId === edge.id;
-        const canDelete = !readOnly && (
-          Boolean(isOwner) ||
-          (Boolean(currentUserId) &&
-            (sourceNode.claimed_by === currentUserId ||
-              targetNode.claimed_by === currentUserId)));
+        const canDelete =
+          !readOnly &&
+          (Boolean(isOwner) ||
+            (Boolean(currentUserId) &&
+              (sourceNode.claimed_by === currentUserId ||
+                targetNode.claimed_by === currentUserId)));
 
         // Exact geometric midpoint located on the actual cubic bezier curve path
-        const center = routed?.center || getBezierPoint(
-          0.5,
-          p1.x,
-          p1.y,
-          p2.x,
-          p2.y,
-          edge.source_handle,
-          edge.target_handle
-        );
+        const center =
+          routed?.center ||
+          getBezierPoint(0.5, p1.x, p1.y, p2.x, p2.y, edge.source_handle, edge.target_handle);
 
         const edgeType = edge.edge_type || "dependency";
         const isInterlockingBridge =
-          (sourceNode.node_type === "milestone" && (targetNode.node_type === "aws_service" || targetNode.node_type === "group")) ||
-          Boolean(edge.label && (edge.label.includes("Provisions") || edge.label.includes("Configures") || edge.label.includes("Deploys") || edge.label.includes("Instruments") || edge.label.includes("Runs")));
+          (sourceNode.node_type === "milestone" &&
+            (targetNode.node_type === "aws_service" || targetNode.node_type === "group")) ||
+          Boolean(
+            edge.label &&
+            (edge.label.includes("Provisions") ||
+              edge.label.includes("Configures") ||
+              edge.label.includes("Deploys") ||
+              edge.label.includes("Instruments") ||
+              edge.label.includes("Runs")),
+          );
 
         let strokeColor = isDark ? "#64748b" : "#9ca3af";
         let strokeDasharray: string | undefined;
@@ -193,21 +240,25 @@ export default function CanvasEdgeLayer({
             animationClass = "animate-[dash-flow_1.5s_linear_infinite]";
             markerId = "url(#arrow-neon)";
           }
-        } else if ((edgeType === "data_flow" || edgeType === "sync_http" || edgeType === "storage_mount")) {
+        } else if (
+          edgeType === "data_flow" ||
+          edgeType === "sync_http" ||
+          edgeType === "storage_mount"
+        ) {
           strokeColor = isDark ? "#60a5fa" : "#3B48CC"; // bright electric blue in dark mode
           strokeDasharray = "8 6";
           markerId = "url(#arrow-data-flow)";
           if (isNeonActive) {
             animationClass = "animate-[dash-flow_1.2s_linear_infinite]";
           }
-        } else if ((edgeType === "network" || edgeType === "security_iam")) {
+        } else if (edgeType === "network" || edgeType === "security_iam") {
           strokeColor = isDark ? "#34d399" : "#3F8624"; // bright emerald green in dark mode
           strokeDasharray = "4 4";
           markerId = "url(#arrow-network)";
           if (isNeonActive) {
             animationClass = "animate-[dash-flow_1s_linear_infinite]";
           }
-        } else if ((edgeType === "event" || edgeType === "async_queue")) {
+        } else if (edgeType === "event" || edgeType === "async_queue") {
           strokeColor = isDark ? "#fbbf24" : "#FF9900"; // luminous amber/yellow in dark mode
           strokeDasharray = "8 4 2 4";
           markerId = "url(#arrow-event)";
@@ -224,12 +275,17 @@ export default function CanvasEdgeLayer({
             onBlur={() => setHoveredEdgeId(null)}
             onKeyDown={(event) => {
               if ((event.key === "Enter" || event.key === " ") && onUpdateEdge && canDelete) {
-                event.preventDefault(); event.stopPropagation(); openEditor(edge.id);
+                event.preventDefault();
+                event.stopPropagation();
+                openEditor(edge.id);
               }
             }}
             className="pointer-events-auto cursor-pointer group outline-none focus:outline-none focus-visible:outline-none"
-            onPointerDown={event => event.stopPropagation()}
-            onClick={event => { event.stopPropagation(); if (onUpdateEdge && canDelete) openEditor(edge.id); }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (onUpdateEdge && canDelete) openEditor(edge.id);
+            }}
             onMouseEnter={() => setHoveredEdgeId(edge.id)}
             onMouseLeave={() => setHoveredEdgeId(null)}
           >
@@ -247,7 +303,17 @@ export default function CanvasEdgeLayer({
               <path
                 d={pathData}
                 fill="none"
-                stroke={isInterlockingBridge ? (isDark ? "#c084fc" : "#8b5cf6") : isNeonActive ? "#10b981" : isDark ? "#94a3b8" : "#6b7280"}
+                stroke={
+                  isInterlockingBridge
+                    ? isDark
+                      ? "#c084fc"
+                      : "#8b5cf6"
+                    : isNeonActive
+                      ? "#10b981"
+                      : isDark
+                        ? "#94a3b8"
+                        : "#6b7280"
+                }
                 strokeWidth="4"
                 strokeOpacity="0.45"
                 strokeLinecap="round"
@@ -281,20 +347,31 @@ export default function CanvasEdgeLayer({
                     type="button"
                     disabled={!onUpdateEdge || !canDelete}
                     role={readOnly ? "note" : undefined}
-                    aria-label={readOnly ? `Connection label: ${edge.label}` : `Edit connection: ${edge.label || "Add label"}`}
-                    title={readOnly ? edge.label || edgeType : `${edge.label || "Add label"} — ${canDelete ? "Edit connection label and type" : "Claim a connected resource to edit"}`}
+                    aria-label={
+                      readOnly
+                        ? `Connection label: ${edge.label}`
+                        : `Edit connection: ${edge.label || "Add label"}`
+                    }
+                    title={
+                      readOnly
+                        ? edge.label || edgeType
+                        : `${edge.label || "Add label"} — ${canDelete ? "Edit connection label and type" : "Claim a connected resource to edit"}`
+                    }
                     onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => { event.stopPropagation(); openEditor(edge.id); }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openEditor(edge.id);
+                    }}
                     className={`min-h-8 max-w-full truncate rounded-lg px-3 py-1.5 text-[10px] font-semibold shadow-xs border ${
                       isInterlockingBridge
                         ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800"
                         : edgeType === "data_flow"
-                        ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-800"
-                        : edgeType === "network"
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800"
-                        : edgeType === "event"
-                        ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-800"
-                        : "bg-white/95 text-neutral-600 border-neutral-200 dark:bg-[#161d27]/95 dark:text-neutral-300 dark:border-[#283548]"
+                          ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-800"
+                          : edgeType === "network"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800"
+                            : edgeType === "event"
+                              ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-800"
+                              : "bg-white/95 text-neutral-600 border-neutral-200 dark:bg-[#161d27]/95 dark:text-neutral-300 dark:border-[#283548]"
                     }`}
                   >
                     {edge.label || "Add label"}
@@ -335,10 +412,7 @@ export default function CanvasEdgeLayer({
       {draftEdge && (
         <g>
           {(() => {
-            const p1 = getNodeHandlePosition(
-              draftEdge.sourceNode,
-              draftEdge.sourceHandle
-            );
+            const p1 = getNodeHandlePosition(draftEdge.sourceNode, draftEdge.sourceHandle);
             const p2 = draftEdge.currentPos;
             const targetHandle = snappedHandle?.handle || "left";
             const pathData = calculateBezierPath(
@@ -347,14 +421,10 @@ export default function CanvasEdgeLayer({
               p2.x,
               p2.y,
               draftEdge.sourceHandle,
-              targetHandle
+              targetHandle,
             );
 
-            const strokeColor = isCycleDetected
-              ? "#ef4444"
-              : snappedHandle
-              ? "#10b981"
-              : "#3b82f6";
+            const strokeColor = isCycleDetected ? "#ef4444" : snappedHandle ? "#10b981" : "#3b82f6";
 
             return (
               <>
@@ -383,18 +453,42 @@ export default function CanvasEdgeLayer({
         </g>
       )}
 
-      {editingEdgeId && onUpdateEdge && (() => {
-        const edge = edges.find((item) => item.id === editingEdgeId);
-        const source = edge && nodeMap.get(edge.source_node_id);
-        const target = edge && nodeMap.get(edge.target_node_id);
-        if (!edge || !source || !target) return null;
-        const p1 = getNodeHandlePosition(source, edge.source_handle);
-        const p2 = getNodeHandlePosition(target, edge.target_handle);
-        const center = getBezierPoint(0.5, p1.x, p1.y, p2.x, p2.y, edge.source_handle, edge.target_handle);
-        return <foreignObject x={center.x - 140} y={center.y - 30} width="280" height="260" className="pointer-events-auto overflow-visible" onClick={event => event.stopPropagation()}>
-          <ConnectionEditor key={edge.id} edge={edge} onSave={onUpdateEdge} onClose={() => setEditingEdgeId(null)} />
-        </foreignObject>;
-      })()}
+      {editingEdgeId &&
+        onUpdateEdge &&
+        (() => {
+          const edge = edges.find((item) => item.id === editingEdgeId);
+          const source = edge && nodeMap.get(edge.source_node_id);
+          const target = edge && nodeMap.get(edge.target_node_id);
+          if (!edge || !source || !target) return null;
+          const p1 = getNodeHandlePosition(source, edge.source_handle);
+          const p2 = getNodeHandlePosition(target, edge.target_handle);
+          const center = getBezierPoint(
+            0.5,
+            p1.x,
+            p1.y,
+            p2.x,
+            p2.y,
+            edge.source_handle,
+            edge.target_handle,
+          );
+          return (
+            <foreignObject
+              x={center.x - 140}
+              y={center.y - 30}
+              width="280"
+              height="260"
+              className="pointer-events-auto overflow-visible"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <ConnectionEditor
+                key={edge.id}
+                edge={edge}
+                onSave={onUpdateEdge}
+                onClose={() => setEditingEdgeId(null)}
+              />
+            </foreignObject>
+          );
+        })()}
       {/* SVG Animation Keyframes */}
       <style jsx>{`
         @keyframes dash-flow {

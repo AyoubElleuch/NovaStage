@@ -8,36 +8,53 @@ import { AIWorkflowResult } from "../types";
 
 export const SAAS_FEW_SHOT_EXAMPLE: AIWorkflowResult = {
   intent: "create_pipeline",
-  summary: "B2B SaaS with Stripe billing, RBAC authentication, real-time analytics, and automated deployment",
+  summary:
+    "B2B SaaS with Stripe billing, RBAC authentication, real-time analytics, and automated deployment",
   milestones: [
     {
       tempId: "m_req",
       title: "Discovery & System Architecture",
-      description: "Define multi-tenant isolation model, domain entities, API contracts, and technology stack",
+      description:
+        "Define multi-tenant isolation model, domain entities, API contracts, and technology stack",
       color: "default",
       phase: "planning",
       sortOrder: 0,
       checkpoints: [
-        { title: "Draft technical PRD detailing tenant isolation, quota tiers, and billing lifecycle" },
+        {
+          title:
+            "Draft technical PRD detailing tenant isolation, quota tiers, and billing lifecycle",
+        },
         { title: "Design entity-relationship diagram (ERD) with tenant scoping and audit logs" },
-        { title: "Define OpenAPI 3.0 specification for authentication, workspace, and billing endpoints" },
-        { title: "Establish GitHub Actions CI/CD workflows with automated linting and type checking" },
+        {
+          title:
+            "Define OpenAPI 3.0 specification for authentication, workspace, and billing endpoints",
+        },
+        {
+          title:
+            "Establish GitHub Actions CI/CD workflows with automated linting and type checking",
+        },
         { title: "Configure production and staging environment secrets in cloud secrets manager" },
       ],
     },
     {
       tempId: "m_auth",
       title: "Multi-Tenant Auth & Permission Matrix",
-      description: "Implement OAuth 2.0, session cookies, RBAC route guards, and workspace invite tokens",
+      description:
+        "Implement OAuth 2.0, session cookies, RBAC route guards, and workspace invite tokens",
       color: "amber",
       phase: "implementation",
       parallelGroup: "backend_core",
       sortOrder: 1,
       checkpoints: [
         { title: "Implement Supabase Auth with Google, GitHub, and magic link strategies" },
-        { title: "Build PostgreSQL Row-Level Security (RLS) policies enforcing workspace isolation" },
+        {
+          title: "Build PostgreSQL Row-Level Security (RLS) policies enforcing workspace isolation",
+        },
         { title: "Create RBAC middleware with super_admin, admin, member, and viewer roles" },
-        { title: "Build cryptographic workspace invite tokens with 7-day expiration and accept flow" },
+        {
+          title:
+            "Build cryptographic workspace invite tokens with 7-day expiration and accept flow",
+        },
         { title: "Implement session revocation and concurrent active device session tracking" },
         { title: "Write unit tests for permission guards and unauthorized access rejection" },
       ],
@@ -45,45 +62,73 @@ export const SAAS_FEW_SHOT_EXAMPLE: AIWorkflowResult = {
     {
       tempId: "m_billing",
       title: "Stripe Billing & Subscription Engine",
-      description: "Build pricing tiers, checkout sessions, customer portal, and idempotent webhook processors",
+      description:
+        "Build pricing tiers, checkout sessions, customer portal, and idempotent webhook processors",
       color: "purple",
       phase: "implementation",
       parallelGroup: "backend_core",
       sortOrder: 2,
       checkpoints: [
-        { title: "Configure Stripe product catalog, pricing tiers (Starter/Pro/Enterprise), and metered keys" },
-        { title: "Implement server actions for Stripe Checkout session creation with tenant metadata" },
-        { title: "Build Stripe webhook handler with HMAC signature verification and idempotency locks" },
-        { title: "Implement subscription state machine handling trialing, active, past_due, and canceled" },
+        {
+          title:
+            "Configure Stripe product catalog, pricing tiers (Starter/Pro/Enterprise), and metered keys",
+        },
+        {
+          title:
+            "Implement server actions for Stripe Checkout session creation with tenant metadata",
+        },
+        {
+          title:
+            "Build Stripe webhook handler with HMAC signature verification and idempotency locks",
+        },
+        {
+          title:
+            "Implement subscription state machine handling trialing, active, past_due, and canceled",
+        },
         { title: "Create customer billing portal redirect with payment method management" },
-        { title: "Implement usage entitlement checker middleware blocking gated features on downgrade" },
+        {
+          title:
+            "Implement usage entitlement checker middleware blocking gated features on downgrade",
+        },
       ],
     },
     {
       tempId: "m_api",
       title: "Core Service API & Domain Logic",
-      description: "Build high-throughput CRUD endpoints, search filters, and asynchronous event queues",
+      description:
+        "Build high-throughput CRUD endpoints, search filters, and asynchronous event queues",
       color: "purple",
       phase: "implementation",
       sortOrder: 3,
       checkpoints: [
         { title: "Build validated server action handlers with Zod schema verification" },
         { title: "Implement cursor-based pagination and full-text search across tenant resources" },
-        { title: "Configure Redis connection for distributed caching and sliding-window rate limits" },
+        {
+          title:
+            "Configure Redis connection for distributed caching and sliding-window rate limits",
+        },
         { title: "Build asynchronous event dispatcher for email notifications and audit records" },
-        { title: "Implement optimistic concurrency control on resource updates using version numbers" },
+        {
+          title:
+            "Implement optimistic concurrency control on resource updates using version numbers",
+        },
       ],
     },
     {
       tempId: "m_ui",
       title: "Interactive Client Dashboard & App Shell",
-      description: "Develop responsive sidebar, data tables, metrics cards, and dark mode interface",
+      description:
+        "Develop responsive sidebar, data tables, metrics cards, and dark mode interface",
       color: "amber",
       phase: "implementation",
       sortOrder: 4,
       checkpoints: [
-        { title: "Build responsive AppShell layout with collapsible sidebar and breadcrumb header" },
-        { title: "Develop virtualized data table with sortable columns, filters, and batch actions" },
+        {
+          title: "Build responsive AppShell layout with collapsible sidebar and breadcrumb header",
+        },
+        {
+          title: "Develop virtualized data table with sortable columns, filters, and batch actions",
+        },
         { title: "Implement billing usage meter widgets showing seat and API consumption" },
         { title: "Create reusable notification toast system with auto-dismiss and tone styling" },
         { title: "Build accessible modal dialogs with focus trapping and keyboard navigation" },
@@ -93,14 +138,24 @@ export const SAAS_FEW_SHOT_EXAMPLE: AIWorkflowResult = {
     {
       tempId: "m_analytics",
       title: "Real-Time Telemetry & Admin Analytics",
-      description: "Build aggregation pipelines for MRR, active users, error telemetry, and audit logs",
+      description:
+        "Build aggregation pipelines for MRR, active users, error telemetry, and audit logs",
       color: "amber",
       phase: "implementation",
       sortOrder: 5,
       checkpoints: [
-        { title: "Create database aggregate materialized views for daily active users and retention" },
-        { title: "Implement administrative metrics dashboard displaying MRR, churn, and plan distribution" },
-        { title: "Build structured audit log table with filterable actor, action, and timestamp columns" },
+        {
+          title:
+            "Create database aggregate materialized views for daily active users and retention",
+        },
+        {
+          title:
+            "Implement administrative metrics dashboard displaying MRR, churn, and plan distribution",
+        },
+        {
+          title:
+            "Build structured audit log table with filterable actor, action, and timestamp columns",
+        },
         { title: "Integrate OpenTelemetry tracing and structured JSON error logging" },
         { title: "Create automated daily summary email digest for workspace owners" },
       ],
@@ -108,13 +163,17 @@ export const SAAS_FEW_SHOT_EXAMPLE: AIWorkflowResult = {
     {
       tempId: "m_qa",
       title: "Automated QA & Security Hardening",
-      description: "Execute end-to-end Playwright tests, load testing, and penetration security audit",
+      description:
+        "Execute end-to-end Playwright tests, load testing, and penetration security audit",
       color: "rose",
       phase: "testing",
       sortOrder: 6,
       checkpoints: [
         { title: "Write Playwright E2E test suite covering signup, checkout, and invite flows" },
-        { title: "Execute k6 load testing verifying 1,000 concurrent requests under 150ms p95 latency" },
+        {
+          title:
+            "Execute k6 load testing verifying 1,000 concurrent requests under 150ms p95 latency",
+        },
         { title: "Perform OWASP Top 10 security audit (XSS, CSRF, SQLi, IDOR, SSRF)" },
         { title: "Configure Content Security Policy (CSP) headers and HSTS preload settings" },
         { title: "Verify automated database backup and point-in-time recovery procedures" },
@@ -130,7 +189,9 @@ export const SAAS_FEW_SHOT_EXAMPLE: AIWorkflowResult = {
       checkpoints: [
         { title: "Configure production domain DNS with SSL certificates and edge CDN caching" },
         { title: "Set up automated blue/green deployment pipelines with healthcheck smoke tests" },
-        { title: "Configure PagerDuty / Opsgenie alert triggers for 5xx spikes and high CPU usage" },
+        {
+          title: "Configure PagerDuty / Opsgenie alert triggers for 5xx spikes and high CPU usage",
+        },
         { title: "Conduct staging environment rehearsal and verify database migration dry-run" },
         { title: "Execute production release, verify telemetry feeds, and switch DNS traffic" },
       ],

@@ -8,8 +8,17 @@ export type CanvasTool = "select" | "hand" | "add_node" | "link" | "add_service"
 export type CanvasNodeType = "milestone" | "aws_service" | "group" | "annotation";
 
 /** Edge connection semantics */
-export const EDGE_TYPES = ["dependency", "data_flow", "network", "event", "sync_http", "async_queue", "storage_mount", "security_iam"] as const;
-export type EdgeType = typeof EDGE_TYPES[number];
+export const EDGE_TYPES = [
+  "dependency",
+  "data_flow",
+  "network",
+  "event",
+  "sync_http",
+  "async_queue",
+  "storage_mount",
+  "security_iam",
+] as const;
+export type EdgeType = (typeof EDGE_TYPES)[number];
 
 /** AWS service category for icon coloring and grouping */
 export type AWSServiceCategory =

@@ -1,28 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectBySlug, isProjectMember } from "@/lib/projects";
-import { getAuthenticatedProfile } from "@/lib/auth/session";
+import { requireCanvasAccess, type CanvasRouteContext } from "@/lib/canvas/access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ slug: string }> }
-) {
+export async function POST(request: NextRequest, context: CanvasRouteContext) {
   try {
-    const session = await getAuthenticatedProfile();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { slug } = await context.params;
-    const project = await getProjectBySlug(slug);
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    const isMember = await isProjectMember(project.id, session.user.id);
-    if (!isMember) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const access = await requireCanvasAccess(context);
+    if (access.response) return access.response;
+    const { session, project } = access;
 
     const body = await request.json();
     const { action, node_id, checkpoint_id, title, is_completed } = body;
@@ -43,7 +27,10 @@ export async function POST(
           : NextResponse.json({ error: "Checkpoint not found" }, { status: 404 });
       }
       if (node_id && cp.node_id !== node_id) {
-        return NextResponse.json({ error: "Checkpoint does not belong to this milestone" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Checkpoint does not belong to this milestone" },
+          { status: 400 },
+        );
       }
       targetNodeId = cp.node_id;
     }
@@ -59,12 +46,14 @@ export async function POST(
       .eq("project_id", project.id)
       .maybeSingle();
 
-    const isExpired = Boolean(node?.claim_expires_at && new Date(node.claim_expires_at) < new Date());
+    const isExpired = Boolean(
+      node?.claim_expires_at && new Date(node.claim_expires_at) < new Date(),
+    );
     const isClaimedByMe = node?.claimed_by === session.user.id && !isExpired;
     if (!isClaimedByMe) {
       return NextResponse.json(
         { error: "You must claim this milestone box to alter or check its steps" },
-        { status: 423 }
+        { status: 423 },
       );
     }
 

@@ -10,10 +10,17 @@ export function desktopAssistantLink(provider: DesktopAssistant, prompt: string)
 }
 
 /** Short-lived access to one queued request avoids installing a local MCP server. */
-export function desktopHandoffPrompt(endpoint: string, token: string, requestId: string, expiresAt: string, mode: AIGenerationMode) {
-  const modeInstructions = mode === "aws_architecture"
-    ? 'Create AWS Architecture only: AWS service nodes, optional architecture groups, and dataFlowEdges. Set mode="aws_architecture", milestones=[], and edges=[]. Do not generate task nodes, checkpoints, delivery phases, or a workflow roadmap.'
-    : 'Create a Workflow only: task milestones with checkpoints and dependency edges. Set mode="workflow", serviceNodes=[], groups=[], and dataFlowEdges=[]. Do not generate AWS service nodes or architecture groups.';
+export function desktopHandoffPrompt(
+  endpoint: string,
+  token: string,
+  requestId: string,
+  expiresAt: string,
+  mode: AIGenerationMode,
+) {
+  const modeInstructions =
+    mode === "aws_architecture"
+      ? 'Create AWS Architecture only: AWS service nodes, optional architecture groups, and dataFlowEdges. Set mode="aws_architecture", milestones=[], and edges=[]. Do not generate task nodes, checkpoints, delivery phases, or a workflow roadmap.'
+      : 'Create a Workflow only: task milestones with checkpoints and dependency edges. Set mode="workflow", serviceNodes=[], groups=[], and dataFlowEdges=[]. Do not generate AWS service nodes or architecture groups.';
   return `Generate my queued NovaStage diagram using your current model, then return a draft for me to review in NovaStage.
 
 Selected mode: ${mode}. ${modeInstructions}

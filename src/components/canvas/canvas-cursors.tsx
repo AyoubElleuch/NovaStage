@@ -19,13 +19,8 @@ interface CursorPhysicsState {
   opacity: number;
 }
 
-export default function CanvasCursors({
-  collaborators,
-  currentUserId,
-}: CanvasCursorsProps) {
-  const otherUsers = collaborators.filter(
-    (c) => c.userId !== currentUserId
-  );
+export default function CanvasCursors({ collaborators, currentUserId }: CanvasCursorsProps) {
+  const otherUsers = collaborators.filter((c) => c.userId !== currentUserId);
 
   // Store physics / interpolation state per user without triggering React re-renders
   const physicsMapRef = useRef<Map<string, CursorPhysicsState>>(new Map());
@@ -118,7 +113,7 @@ export default function CanvasCursors({
 
         // 3. Dead-reckoning for delayed packets (jitter buffer between 45ms and 160ms)
         if (timeSincePacket > 45 && timeSincePacket < 160) {
-          const decay = Math.exp(-12 * (timeSincePacket - 45) / 1000);
+          const decay = Math.exp((-12 * (timeSincePacket - 45)) / 1000);
           state.currX += state.vx * dt * 0.35 * decay;
           state.currY += state.vy * dt * 0.35 * decay;
         }
@@ -156,9 +151,7 @@ export default function CanvasCursors({
           className="absolute top-0 left-0 will-change-transform"
           style={{
             display: c.cursor ? "block" : "none",
-            transform: c.cursor
-              ? `translate3d(${c.cursor.x}px, ${c.cursor.y}px, 0)`
-              : undefined,
+            transform: c.cursor ? `translate3d(${c.cursor.x}px, ${c.cursor.y}px, 0)` : undefined,
           }}
         >
           {/* Custom Pointer SVG with User Glow */}

@@ -1,15 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  ArrowUpRight,
-  CheckCircle2,
-  Circle,
-  Lock,
-  Scan,
-  Unlock,
-  X,
-} from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Circle, Lock, Scan, Unlock, X } from "lucide-react";
 import { CanvasNode } from "@/lib/canvas/types";
 import {
   calculateCompletionPercentage,
@@ -54,8 +46,23 @@ export default function CanvasMobileNodeBar({
 
   const nextUnfinishedCheckpoint = node.checkpoints.find((c) => !c.is_completed);
   const isMilestone = !node.node_type || node.node_type === "milestone";
-  const kind = node.node_type === "aws_service" ? "AWS resource" : node.node_type === "group" ? "group" : node.node_type === "annotation" ? "note" : "milestone";
-  const statusLabel = isComplete ? node.node_type === "aws_service" ? "Ready" : "Complete" : node.status === "blocked" ? "Blocked" : node.status === "in_progress" ? "In progress" : "Planned";
+  const kind =
+    node.node_type === "aws_service"
+      ? "AWS resource"
+      : node.node_type === "group"
+        ? "group"
+        : node.node_type === "annotation"
+          ? "note"
+          : "milestone";
+  const statusLabel = isComplete
+    ? node.node_type === "aws_service"
+      ? "Ready"
+      : "Complete"
+    : node.status === "blocked"
+      ? "Blocked"
+      : node.status === "in_progress"
+        ? "In progress"
+        : "Planned";
 
   return (
     <div
@@ -65,7 +72,13 @@ export default function CanvasMobileNodeBar({
       className="dash-pop pointer-events-auto fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] inset-x-3 z-10 mx-auto max-w-md rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-xl md:hidden dark:border-[#283548] dark:bg-[#161d27]/95"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
-      onKeyDown={(event) => { event.stopPropagation(); if (event.key === "Escape") { event.preventDefault(); onDeselect(); } }}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onDeselect();
+        }
+      }}
     >
       {/* Top row: step badge, title, and close button */}
       <div className="flex items-center justify-between gap-2">
@@ -77,7 +90,13 @@ export default function CanvasMobileNodeBar({
                 : "bg-neutral-100 text-neutral-600 border border-neutral-200 dark:bg-[#1e2634] dark:text-neutral-300 dark:border-[#283548]"
             }`}
           >
-            {isMilestone ? isComplete ? "DONE" : `STEP ${String(stepIndex + 1).padStart(2, "0")}` : node.node_type === "aws_service" ? "AWS" : kind.toUpperCase()}
+            {isMilestone
+              ? isComplete
+                ? "DONE"
+                : `STEP ${String(stepIndex + 1).padStart(2, "0")}`
+              : node.node_type === "aws_service"
+                ? "AWS"
+                : kind.toUpperCase()}
           </span>
           <h3 className="truncate text-sm font-semibold text-neutral-900 dark:text-white">
             {node.title}
@@ -132,21 +151,35 @@ export default function CanvasMobileNodeBar({
           </span>
         </div>
       )}
-      {(!isMilestone || node.checkpoints.length === 0) && <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">{statusLabel}{node.node_type === "aws_service" && ` · ${node.aws_metadata?.region || "Region unspecified"}`}{isMilestone && " · No checkpoints yet"}</p>}
+      {(!isMilestone || node.checkpoints.length === 0) && (
+        <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+          {statusLabel}
+          {node.node_type === "aws_service" &&
+            ` · ${node.aws_metadata?.region || "Region unspecified"}`}
+          {isMilestone && " · No checkpoints yet"}
+        </p>
+      )}
 
       {/* Action buttons row: Claim / Release / Request Lock & View Details */}
       <div className="mt-3 flex items-center gap-2 pt-1 border-t border-neutral-100 dark:border-[#283548]">
-        {onFocusNode && <button type="button" aria-label="Focus selected item" title="Zoom to this item" onClick={onFocusNode} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-100 dark:border-[#283548] dark:text-neutral-300 dark:hover:bg-[#1e2634]"><Scan className="h-4 w-4" /></button>}
+        {onFocusNode && (
+          <button
+            type="button"
+            aria-label="Focus selected item"
+            title="Zoom to this item"
+            onClick={onFocusNode}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-100 dark:border-[#283548] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
+          >
+            <Scan className="h-4 w-4" />
+          </button>
+        )}
         {isClaimedByMe ? (
           <button
             type="button"
             onClick={() => onReleaseNode(node.id)}
             className="flex-1 inline-flex h-11 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300 dark:hover:bg-[#283548]"
           >
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: claimColor }}
-            />
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: claimColor }} />
             <span>Release Edit Lock</span>
           </button>
         ) : isClaimedByOther ? (

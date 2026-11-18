@@ -55,7 +55,13 @@ export default function UpdatesLoading() {
                   <div className="skeleton mt-0.5 h-3.5 w-3.5 shrink-0 rounded-sm" />
                   <div
                     className={`skeleton h-4 ${
-                      bullet === 1 ? "w-3/4 max-w-md" : bullet === 2 ? "w-4/5 max-w-lg" : bullet === 3 ? "w-2/3 max-w-sm" : "w-1/2 max-w-xs"
+                      bullet === 1
+                        ? "w-3/4 max-w-md"
+                        : bullet === 2
+                          ? "w-4/5 max-w-lg"
+                          : bullet === 3
+                            ? "w-2/3 max-w-sm"
+                            : "w-1/2 max-w-xs"
                     }`}
                   />
                 </div>

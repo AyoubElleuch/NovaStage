@@ -14,34 +14,40 @@ export interface SettingsActionResult {
 
 export async function updateProfile(
   _previousState: SettingsActionResult,
-  formData: FormData
+  formData: FormData,
 ): Promise<SettingsActionResult> {
   const user = await getAuthenticatedUser();
   if (!user) return { error: "Your session has expired. Please sign in again." };
 
   const fullName = String(formData.get("fullName") || "").trim();
-  const username = String(formData.get("username") || "").trim().toLowerCase();
+  const username = String(formData.get("username") || "")
+    .trim()
+    .toLowerCase();
   const avatarUrl = String(formData.get("avatarUrl") || "").trim();
-  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const email = String(formData.get("email") || "")
+    .trim()
+    .toLowerCase();
 
   if (!fullName) return { error: "Enter your name." };
-  if (username && !/^[a-z0-9_-]{3,24}$/.test(username)) return { error: "Username must be 3-24 characters using letters, numbers, underscores, or hyphens." };
-  if (avatarUrl && !/^https?:\/\//i.test(avatarUrl)) return { error: "Avatar URL must start with http:// or https://." };
+  if (username && !/^[a-z0-9_-]{3,24}$/.test(username))
+    return {
+      error: "Username must be 3-24 characters using letters, numbers, underscores, or hyphens.",
+    };
+  if (avatarUrl && !/^https?:\/\//i.test(avatarUrl))
+    return { error: "Avatar URL must start with http:// or https://." };
 
   const supabase = await createClient();
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .upsert(
-      {
-        id: user.id,
-        email: user.email || email,
-        full_name: fullName,
-        username: username || null,
-        avatar_url: avatarUrl || null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: user.id,
+      email: user.email || email,
+      full_name: fullName,
+      username: username || null,
+      avatar_url: avatarUrl || null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  );
 
   if (profileError) {
     if (profileError.code === "23505") return { error: "That username is already taken." };
@@ -60,7 +66,10 @@ export async function updateProfile(
   return { success: true, message: "Profile saved." };
 }
 
-export async function updatePassword(_previousState: SettingsActionResult, formData: FormData): Promise<SettingsActionResult> {
+export async function updatePassword(
+  _previousState: SettingsActionResult,
+  formData: FormData,
+): Promise<SettingsActionResult> {
   const user = await getAuthenticatedUser();
   if (!user) return { error: "Your session has expired. Please sign in again." };
   const password = String(formData.get("password") || "");
@@ -75,7 +84,10 @@ export async function updatePassword(_previousState: SettingsActionResult, formD
   return { success: true, message: "Password updated." };
 }
 
-export async function deleteAccount(_previousState: SettingsActionResult, formData: FormData): Promise<SettingsActionResult> {
+export async function deleteAccount(
+  _previousState: SettingsActionResult,
+  formData: FormData,
+): Promise<SettingsActionResult> {
   const user = await getAuthenticatedUser();
   if (!user) return { error: "Your session has expired. Please sign in again." };
 

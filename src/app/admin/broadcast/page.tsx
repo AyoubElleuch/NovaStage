@@ -31,9 +31,14 @@ export default async function AdminBroadcastPage() {
 
       {error ? (
         <div className="dash-enter flex items-start gap-3 rounded-xl border border-red-200 bg-red-50/50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
+          <AlertCircle
+            className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400"
+            aria-hidden="true"
+          />
           <div>
-            <p className="font-semibold text-red-900 dark:text-red-200">Could not load platform announcement</p>
+            <p className="font-semibold text-red-900 dark:text-red-200">
+              Could not load platform announcement
+            </p>
             <p className="mt-0.5 text-xs text-red-700 dark:text-red-400">{error}</p>
           </div>
         </div>

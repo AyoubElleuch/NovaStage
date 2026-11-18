@@ -3,14 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import {
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  FileText,
-  Loader2,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Check, FileText, Loader2 } from "lucide-react";
 import { completeOnboarding } from "./actions";
 import { TermsOfServiceContent } from "@/components/terms/terms-of-service-content";
 import { ThemeToggle } from "@/lib/theme-context";
@@ -44,13 +37,7 @@ export default function OnboardingFlow({
 
   // Progress percentage calculation for 3 steps:
   // Step 1: 0% -> Step 2: 35% -> Step 3: 70% -> Complete: 100%
-  const progressPercent = isCompleted
-    ? 100
-    : step === 3
-      ? 70
-      : step === 2
-        ? 35
-        : 0;
+  const progressPercent = isCompleted ? 100 : step === 3 ? 70 : step === 2 ? 35 : 0;
 
   const handleStep1Submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -96,10 +83,7 @@ export default function OnboardingFlow({
 
     startTransition(async () => {
       try {
-        const result = await completeOnboarding(
-          fullName,
-          username
-        );
+        const result = await completeOnboarding(fullName, username);
         if (result.error) {
           setServerError(result.error);
           return;
@@ -316,7 +300,8 @@ export default function OnboardingFlow({
                   </div>
                   {!hasScrolledToBottom ? (
                     <p className="mt-2 text-[11.5px] text-neutral-400 dark:text-neutral-500">
-                      &darr; Please scroll to the bottom of the terms to enable the agreement checkbox.
+                      &darr; Please scroll to the bottom of the terms to enable the agreement
+                      checkbox.
                     </p>
                   ) : (
                     <p className="mt-2 flex items-center gap-1 text-[11.5px] font-medium text-emerald-600 dark:text-emerald-400">

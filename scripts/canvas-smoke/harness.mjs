@@ -10,14 +10,29 @@ const mocks = resolve(root, "scripts/canvas-smoke/mocks.jsx");
 
 export async function startHarness({ port = 0, extraPlugins = [] } = {}) {
   const server = await createServer({
-    root, configFile: false, plugins: [react(), ...extraPlugins],
-    resolve: { alias: [
-      ...["@/lib/supabase/client", "@/components/notifications/notification-provider", "@/lib/canvas/sound-effects", "next/link", "next/navigation"].map(find => ({ find, replacement: mocks })),
-      { find: "@", replacement: resolve(root, "src") },
-    ] },
+    root,
+    configFile: false,
+    plugins: [react(), ...extraPlugins],
+    resolve: {
+      alias: [
+        ...[
+          "@/lib/supabase/client",
+          "@/components/notifications/notification-provider",
+          "@/lib/canvas/sound-effects",
+          "next/link",
+          "next/navigation",
+        ].map((find) => ({ find, replacement: mocks })),
+        { find: "@", replacement: resolve(root, "src") },
+      ],
+    },
     optimizeDeps: { entries: ["scripts/canvas-smoke/main.jsx"] },
     logLevel: "warn",
-    server: { host: "127.0.0.1", port, strictPort: port !== 0, watch: { ignored: ["**/.next/**", "**/.tmp/**"] } },
+    server: {
+      host: "127.0.0.1",
+      port,
+      strictPort: port !== 0,
+      watch: { ignored: ["**/.next/**", "**/.tmp/**"] },
+    },
   });
   await server.listen();
   const origin = server.resolvedUrls.local[0].replace(/\/$/, "");

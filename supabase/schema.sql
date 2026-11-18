@@ -2,11 +2,9 @@
 -- Run this one file on a fresh Supabase project.
 -- For an existing project that already uses Supabase migrations, run:
 --   supabase db push
-
 -- -----------------------------------------------------------------------------
 -- Core tables
 -- -----------------------------------------------------------------------------
-
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   email text not null,
@@ -22,16 +20,23 @@ create table if not exists public.waitlist (
   email text primary key,
   provider text not null default 'email',
   status text not null default 'pending',
-  auth_user_id uuid references auth.users(id) on delete set null,
+  auth_user_id uuid references auth.users (id) on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   approved_at timestamp with time zone,
   disapproved_at timestamp with time zone
 );
 
-alter table public.waitlist add column if not exists status text not null default 'pending';
-alter table public.waitlist add column if not exists auth_user_id uuid references auth.users(id) on delete set null;
-alter table public.waitlist add column if not exists approved_at timestamp with time zone;
-alter table public.waitlist add column if not exists disapproved_at timestamp with time zone;
+alter table public.waitlist
+  add column if not exists status text not null default 'pending';
+
+alter table public.waitlist
+  add column if not exists auth_user_id uuid references auth.users (id) on delete set null;
+
+alter table public.waitlist
+  add column if not exists approved_at timestamp with time zone;
+
+alter table public.waitlist
+  add column if not exists disapproved_at timestamp with time zone;
 
 create table if not exists public.platform_announcements (
   id text primary key default 'platform',
@@ -39,28 +44,31 @@ create table if not exists public.platform_announcements (
   severity text not null default 'low',
   is_active boolean not null default false,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_by uuid references auth.users(id) on delete set null,
+  updated_by uuid references auth.users (id) on delete set null,
   constraint platform_announcements_id_check check (id = 'platform'),
-  constraint platform_announcements_message_check check (
-    char_length(message) <= 280 and (not is_active or char_length(btrim(message)) > 0)
-  ),
+  constraint platform_announcements_message_check check (char_length(message) <= 280 and (not is_active or char_length(btrim(message)) > 0)),
   constraint platform_announcements_severity_check check (severity in ('low', 'medium', 'high'))
 );
 
 insert into public.platform_announcements (id)
-values ('platform')
-on conflict (id) do nothing;
+  values ('platform')
+on conflict (id)
+  do nothing;
 
 do $$
 begin
   if not exists (
-    select 1 from pg_constraint where conname = 'waitlist_status_check'
-  ) then
-    alter table public.waitlist
-      add constraint waitlist_status_check
-      check (status in ('pending', 'approved', 'disapproved'));
-  end if;
-end $$;
+    select
+      1
+    from
+      pg_constraint
+    where
+      conname = 'waitlist_status_check') then
+  alter table public.waitlist
+    add constraint waitlist_status_check check (status in ('pending', 'approved', 'disapproved'));
+end if;
+end
+$$;
 
 create table if not exists public.permissions (
   id text primary key,
@@ -79,16 +87,16 @@ create table if not exists public.roles (
 );
 
 create table if not exists public.role_permissions (
-  role_id text references public.roles(id) on delete cascade not null,
-  permission_id text references public.permissions(id) on delete cascade not null,
+  role_id text references public.roles (id) on delete cascade not null,
+  permission_id text references public.permissions (id) on delete cascade not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   primary key (role_id, permission_id)
 );
 
 create table if not exists public.user_roles (
-  user_id uuid references auth.users(id) on delete cascade not null,
-  role_id text references public.roles(id) on delete cascade not null,
-  assigned_by uuid references auth.users(id) on delete set null,
+  user_id uuid references auth.users (id) on delete cascade not null,
+  role_id text references public.roles (id) on delete cascade not null,
+  assigned_by uuid references auth.users (id) on delete set null,
   assigned_at timestamp with time zone default timezone('utc'::text, now()) not null,
   primary key (user_id, role_id)
 );
@@ -96,181 +104,211 @@ create table if not exists public.user_roles (
 -- -----------------------------------------------------------------------------
 -- Authorization functions
 -- -----------------------------------------------------------------------------
-
-create or replace function public.has_permission(p_user_id uuid, p_permission text)
-returns boolean
-security definer
-set search_path = public
-as $$
+create or replace function public.has_permission (p_user_id uuid, p_permission text)
+  returns boolean
+  security definer
+  set search_path = public
+  as $$
 declare
   v_has boolean;
 begin
   if exists (
-    select 1 from public.user_roles
-    where user_id = p_user_id and role_id = 'super_admin'
-  ) then
-    return true;
-  end if;
-
-  select exists (
-    select 1
-    from public.user_roles ur
-    join public.role_permissions rp on ur.role_id = rp.role_id
-    where ur.user_id = p_user_id
-      and rp.permission_id = p_permission
-  ) into v_has;
-
+    select
+      1
+    from
+      public.user_roles
+    where
+      user_id = p_user_id
+      and role_id = 'super_admin') then
+  return true;
+end if;
+  select
+    exists (
+      select
+        1
+      from
+        public.user_roles ur
+        join public.role_permissions rp on ur.role_id = rp.role_id
+      where
+        ur.user_id = p_user_id
+        and rp.permission_id = p_permission)
+  into
+    v_has;
   return v_has;
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create or replace function public.has_role(p_user_id uuid, p_role text)
-returns boolean
-security definer
-set search_path = public
-as $$
+create or replace function public.has_role (p_user_id uuid, p_role text)
+  returns boolean
+  security definer
+  set search_path = public
+  as $$
 begin
   if p_role = 'admin' then
     return exists (
-      select 1 from public.user_roles
-      where user_id = p_user_id and role_id in ('admin', 'super_admin')
-    );
+      select
+        1
+      from
+        public.user_roles
+      where
+        user_id = p_user_id
+        and role_id in ('admin', 'super_admin'));
   end if;
-
   return exists (
-    select 1 from public.user_roles
-    where user_id = p_user_id and role_id = p_role
-  );
+    select
+      1
+    from
+      public.user_roles
+    where
+      user_id = p_user_id
+      and role_id = p_role);
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create or replace function public.get_user_permissions(p_user_id uuid)
-returns table (permission_id text, name text, category text)
-security definer
-set search_path = public
-as $$
+create or replace function public.get_user_permissions (p_user_id uuid)
+  returns table (
+    permission_id text,
+    name text,
+    category text)
+  security definer
+  set search_path = public
+  as $$
 begin
   if exists (
-    select 1 from public.user_roles
-    where user_id = p_user_id and role_id = 'super_admin'
-  ) then
-    return query
-      select p.id, p.name, p.category from public.permissions p;
-  else
-    return query
-      select distinct p.id, p.name, p.category
-      from public.user_roles ur
-      join public.role_permissions rp on ur.role_id = rp.role_id
-      join public.permissions p on rp.permission_id = p.id
-      where ur.user_id = p_user_id;
-  end if;
+    select
+      1
+    from
+      public.user_roles
+    where
+      user_id = p_user_id
+      and role_id = 'super_admin') then
+  return query
+  select
+    p.id,
+    p.name,
+    p.category
+  from
+    public.permissions p;
+else
+  return query select distinct
+    p.id,
+    p.name,
+    p.category
+  from
+    public.user_roles ur
+    join public.role_permissions rp on ur.role_id = rp.role_id
+    join public.permissions p on rp.permission_id = p.id
+  where
+    ur.user_id = p_user_id;
+end if;
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 -- -----------------------------------------------------------------------------
 -- Profile and Auth synchronization
 -- -----------------------------------------------------------------------------
-
-create or replace function public.set_profile_updated_at()
-returns trigger
-security definer
-set search_path = public
-as $$
+create or replace function public.set_profile_updated_at ()
+  returns trigger
+  security definer
+  set search_path = public
+  as $$
 begin
   new.updated_at = timezone('utc'::text, now());
   return new;
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 drop trigger if exists set_profiles_updated_at on public.profiles;
 
 create trigger set_profiles_updated_at
-  before update on public.profiles
-  for each row execute function public.set_profile_updated_at();
+  before update on public.profiles for each row
+  execute function public.set_profile_updated_at ();
 
-create or replace function public.handle_new_user()
-returns trigger
-security definer
-set search_path = public
-as $$
+create or replace function public.handle_new_user ()
+  returns trigger
+  security definer
+  set search_path = public
+  as $$
 declare
   v_role text;
 begin
-  v_role := coalesce(new.raw_user_meta_data->>'role', 'developer');
-
+  v_role := coalesce(new.raw_user_meta_data ->> 'role', 'developer');
   insert into public.profiles (id, email, full_name, avatar_url, role)
-  values (
-    new.id,
-    new.email,
-    new.raw_user_meta_data->>'full_name',
-    new.raw_user_meta_data->>'avatar_url',
-    v_role
-  )
-  on conflict (id) do update set
-    email = excluded.email,
-    full_name = coalesce(excluded.full_name, public.profiles.full_name),
-    avatar_url = coalesce(excluded.avatar_url, public.profiles.avatar_url),
-    role = coalesce(excluded.role, public.profiles.role),
-    updated_at = timezone('utc'::text, now());
-
+    values (new.id, new.email, new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'avatar_url', v_role)
+  on conflict (id)
+    do update set
+      email = excluded.email,
+      full_name = coalesce(excluded.full_name, public.profiles.full_name),
+      avatar_url = coalesce(excluded.avatar_url, public.profiles.avatar_url),
+      role = coalesce(excluded.role, public.profiles.role),
+      updated_at = timezone('utc'::text, now());
   insert into public.user_roles (user_id, role_id)
-  values (new.id, v_role)
-  on conflict (user_id, role_id) do nothing;
-
+    values (new.id, v_role)
+  on conflict (user_id, role_id)
+    do nothing;
   return new;
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 drop trigger if exists on_auth_user_created on auth.users;
 
 create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+  after insert on auth.users for each row
+  execute function public.handle_new_user ();
 
-create or replace function public.sync_profile_email_from_auth()
-returns trigger
-security definer
-set search_path = public
-as $$
+create or replace function public.sync_profile_email_from_auth ()
+  returns trigger
+  security definer
+  set search_path = public
+  as $$
 begin
   if new.email is distinct from old.email then
-    update public.profiles
-    set email = new.email,
-        updated_at = timezone('utc'::text, now())
-    where id = new.id;
+    update
+      public.profiles
+    set
+      email = new.email,
+      updated_at = timezone('utc'::text, now())
+    where
+      id = new.id;
   end if;
-
   return new;
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 drop trigger if exists sync_profile_email_from_auth on auth.users;
 
 create trigger sync_profile_email_from_auth
-  after update of email on auth.users
-  for each row execute function public.sync_profile_email_from_auth();
+  after update of email on auth.users for each row
+  execute function public.sync_profile_email_from_auth ();
 
-create or replace function public.cleanup_deleted_user_data()
-returns trigger
-security definer
-set search_path = public
-as $$
+create or replace function public.cleanup_deleted_user_data ()
+  returns trigger
+  security definer
+  set search_path = public
+  as $$
 begin
-  delete from public.waitlist where auth_user_id = old.id;
+  delete from public.waitlist
+  where auth_user_id = old.id;
   return old;
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 drop trigger if exists cleanup_deleted_user_data on auth.users;
 
 create trigger cleanup_deleted_user_data
-  before delete on auth.users
-  for each row execute function public.cleanup_deleted_user_data();
+  before delete on auth.users for each row
+  execute function public.cleanup_deleted_user_data ();
 
 -- -----------------------------------------------------------------------------
 -- Seed roles and permissions
 -- -----------------------------------------------------------------------------
-
 insert into public.permissions (id, name, description, category)
 values
   ('admin:access', 'Access Admin Console', 'Allows accessing the /admin administrative dashboard', 'admin'),
@@ -280,10 +318,11 @@ values
   ('users:read', 'View User Profiles', 'Allows viewing member profiles and details', 'users'),
   ('users:manage', 'Manage User Roles', 'Allows assigning and modifying user roles', 'users'),
   ('roles:manage', 'Manage Roles & Permissions', 'Allows modifying roles and granting permissions', 'system')
-on conflict (id) do update set
-  name = excluded.name,
-  description = excluded.description,
-  category = excluded.category;
+on conflict (id)
+  do update set
+    name = excluded.name,
+    description = excluded.description,
+    category = excluded.category;
 
 insert into public.roles (id, name, description, is_system)
 values
@@ -291,14 +330,20 @@ values
   ('admin', 'Administrator', 'Administrative access to manage waitlists and review platform users', true),
   ('developer', 'Developer', 'Standard developer account with workspace and API sandbox access', true),
   ('viewer', 'Viewer', 'Read-only observer access to permitted resources', true)
-on conflict (id) do update set
-  name = excluded.name,
-  description = excluded.description,
-  is_system = excluded.is_system;
+on conflict (id)
+  do update set
+    name = excluded.name,
+    description = excluded.description,
+    is_system = excluded.is_system;
 
 insert into public.role_permissions (role_id, permission_id)
-select 'super_admin', id from public.permissions
-on conflict do nothing;
+select
+  'super_admin',
+  id
+from
+  public.permissions
+on conflict
+  do nothing;
 
 insert into public.role_permissions (role_id, permission_id)
 values
@@ -309,393 +354,428 @@ values
   ('admin', 'users:read'),
   ('viewer', 'waitlist:read'),
   ('viewer', 'users:read')
-on conflict do nothing;
+on conflict
+  do nothing;
 
 -- -----------------------------------------------------------------------------
 -- Row-level security policies
 -- -----------------------------------------------------------------------------
-
 alter table public.profiles enable row level security;
+
 alter table public.waitlist enable row level security;
+
 alter table public.permissions enable row level security;
+
 alter table public.roles enable row level security;
+
 alter table public.role_permissions enable row level security;
+
 alter table public.user_roles enable row level security;
+
 alter table public.platform_announcements enable row level security;
 
 drop policy if exists "Public profiles are viewable by everyone." on public.profiles;
+
 drop policy if exists "Admins can view all profiles." on public.profiles;
+
 drop policy if exists "Users can view their own profile or permitted profiles." on public.profiles;
+
 drop policy if exists "Users can insert their own profile." on public.profiles;
+
 drop policy if exists "Users can update their own profile." on public.profiles;
 
-create policy "Users can view their own profile or permitted profiles."
-  on public.profiles for select
-  to authenticated
-  using (auth.uid() = id or public.has_permission(auth.uid(), 'users:read'));
+create policy "Users can view their own profile or permitted profiles." on public.profiles
+  for select to authenticated
+  using (auth.uid () = id
+    or public.has_permission (auth.uid (), 'users:read'));
 
-create policy "Users can insert their own profile."
-  on public.profiles for insert
-  to authenticated
-  with check (auth.uid() = id);
+create policy "Users can insert their own profile." on public.profiles
+  for insert to authenticated
+  with check (auth.uid () = id);
 
-create policy "Users can update their own profile."
-  on public.profiles for update
-  to authenticated
-  using (auth.uid() = id)
-  with check (auth.uid() = id);
+create policy "Users can update their own profile." on public.profiles
+  for update to authenticated
+  using (auth.uid () = id)
+  with check (auth.uid () = id);
 
 drop policy if exists "Anyone can join the waitlist." on public.waitlist;
+
 drop policy if exists "Admins can view waitlist entries." on public.waitlist;
+
 drop policy if exists "Admins can update waitlist entries." on public.waitlist;
+
 drop policy if exists "Admins can delete waitlist entries." on public.waitlist;
+
 drop policy if exists "Users with waitlist:read can view waitlist." on public.waitlist;
+
 drop policy if exists "Users with waitlist:approve or waitlist:disapprove can update waitlist." on public.waitlist;
+
 drop policy if exists "Users with waitlist:approve or waitlist:disapprove can delete waitlist." on public.waitlist;
 
-create policy "Anyone can join the waitlist."
-  on public.waitlist for insert
+create policy "Anyone can join the waitlist." on public.waitlist
+  for insert
   with check (true);
 
 drop policy if exists "Anyone can view the active platform announcement." on public.platform_announcements;
 
-create policy "Anyone can view the active platform announcement."
-  on public.platform_announcements for select
-  to anon, authenticated
+create policy "Anyone can view the active platform announcement." on public.platform_announcements
+  for select to anon, authenticated
   using (is_active = true);
 
 grant select on public.platform_announcements to anon, authenticated;
 
 do $$
 begin
-  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    alter publication supabase_realtime add table public.platform_announcements;
-  end if;
+  if exists (
+    select
+      1
+    from
+      pg_publication
+    where
+      pubname = 'supabase_realtime') then
+  alter publication supabase_realtime
+    add table public.platform_announcements;
+end if;
 exception
-  when duplicate_object then null;
-end $$;
+  when duplicate_object then
+    null;
+end
+$$;
 
-create policy "Users with waitlist:read can view waitlist."
-  on public.waitlist for select
-  to authenticated
-  using (public.has_permission(auth.uid(), 'waitlist:read'));
+create policy "Users with waitlist:read can view waitlist." on public.waitlist
+  for select to authenticated
+  using (public.has_permission (auth.uid (), 'waitlist:read'));
 
-create policy "Users with waitlist:approve or waitlist:disapprove can update waitlist."
-  on public.waitlist for update
-  to authenticated
-  using (
-    public.has_permission(auth.uid(), 'waitlist:approve')
-    or public.has_permission(auth.uid(), 'waitlist:disapprove')
-  );
+create policy "Users with waitlist:approve or waitlist:disapprove can update waitlist." on public.waitlist
+  for update to authenticated
+  using (public.has_permission (auth.uid (), 'waitlist:approve')
+    or public.has_permission (auth.uid (), 'waitlist:disapprove'));
 
-create policy "Users with waitlist:approve or waitlist:disapprove can delete waitlist."
-  on public.waitlist for delete
-  to authenticated
-  using (
-    public.has_permission(auth.uid(), 'waitlist:approve')
-    or public.has_permission(auth.uid(), 'waitlist:disapprove')
-  );
+create policy "Users with waitlist:approve or waitlist:disapprove can delete waitlist." on public.waitlist
+  for delete to authenticated
+  using (public.has_permission (auth.uid (), 'waitlist:approve')
+    or public.has_permission (auth.uid (), 'waitlist:disapprove'));
 
 drop policy if exists "Authenticated users can view permissions." on public.permissions;
+
 drop policy if exists "Authenticated users can view roles." on public.roles;
+
 drop policy if exists "Authenticated users can view role permissions." on public.role_permissions;
+
 drop policy if exists "Users can view their own roles or admins can view all." on public.user_roles;
+
 drop policy if exists "Admins can manage user roles." on public.user_roles;
 
-create policy "Authenticated users can view permissions."
-  on public.permissions for select
-  to authenticated
+create policy "Authenticated users can view permissions." on public.permissions
+  for select to authenticated
   using (true);
 
-create policy "Authenticated users can view roles."
-  on public.roles for select
-  to authenticated
+create policy "Authenticated users can view roles." on public.roles
+  for select to authenticated
   using (true);
 
-create policy "Authenticated users can view role permissions."
-  on public.role_permissions for select
-  to authenticated
+create policy "Authenticated users can view role permissions." on public.role_permissions
+  for select to authenticated
   using (true);
 
-create policy "Users can view their own roles or admins can view all."
-  on public.user_roles for select
-  to authenticated
-  using (auth.uid() = user_id or public.has_permission(auth.uid(), 'users:read'));
+create policy "Users can view their own roles or admins can view all." on public.user_roles
+  for select to authenticated
+  using (auth.uid () = user_id
+    or public.has_permission (auth.uid (), 'users:read'));
 
-create policy "Admins can manage user roles."
-  on public.user_roles for all
-  to authenticated
-  using (public.has_permission(auth.uid(), 'users:manage'))
-  with check (public.has_permission(auth.uid(), 'users:manage'));
+create policy "Admins can manage user roles." on public.user_roles
+  for all to authenticated
+  using (public.has_permission (auth.uid (), 'users:manage'))
+  with check (public.has_permission (auth.uid (), 'users:manage'));
 
 -- -----------------------------------------------------------------------------
 -- Projects and Project Members
 -- -----------------------------------------------------------------------------
-
 create table if not exists public.projects (
-  id uuid default gen_random_uuid() primary key,
+  id uuid default gen_random_uuid () primary key,
   slug text not null unique,
   name text not null,
   description text,
   invite_code text not null unique,
-  created_by uuid references auth.users(id) on delete set null,
+  created_by uuid references auth.users (id) on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 create table if not exists public.project_members (
-  project_id uuid references public.projects(id) on delete cascade not null,
-  user_id uuid references auth.users(id) on delete cascade not null,
+  project_id uuid references public.projects (id) on delete cascade not null,
+  user_id uuid references auth.users (id) on delete cascade not null,
   role text not null default 'collaborator' check (role in ('owner', 'collaborator')),
   joined_at timestamp with time zone default timezone('utc'::text, now()) not null,
   primary key (project_id, user_id)
 );
 
-create index if not exists idx_projects_slug on public.projects(slug);
-create index if not exists idx_projects_invite_code on public.projects(invite_code);
-create index if not exists idx_projects_created_by on public.projects(created_by);
-create index if not exists idx_project_members_user_id on public.project_members(user_id);
-create index if not exists idx_project_members_joined_at on public.project_members(joined_at asc);
+create index if not exists idx_projects_slug on public.projects (slug);
 
-create or replace function public.is_project_member(p_project_id uuid, p_user_id uuid)
-returns boolean
-security definer
-set search_path = public
-as $$
+create index if not exists idx_projects_invite_code on public.projects (invite_code);
+
+create index if not exists idx_projects_created_by on public.projects (created_by);
+
+create index if not exists idx_project_members_user_id on public.project_members (user_id);
+
+create index if not exists idx_project_members_joined_at on public.project_members (joined_at asc);
+
+create or replace function public.is_project_member (p_project_id uuid, p_user_id uuid)
+  returns boolean
+  security definer
+  set search_path = public
+  as $$
 begin
   return exists (
-    select 1 from public.project_members
-    where project_id = p_project_id and user_id = p_user_id
-  );
+    select
+      1
+    from
+      public.project_members
+    where
+      project_id = p_project_id
+      and user_id = p_user_id);
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create or replace function public.is_project_owner(p_project_id uuid, p_user_id uuid)
-returns boolean
-security definer
-set search_path = public
-as $$
+create or replace function public.is_project_owner (p_project_id uuid, p_user_id uuid)
+  returns boolean
+  security definer
+  set search_path = public
+  as $$
 begin
   return exists (
-    select 1 from public.project_members
-    where project_id = p_project_id and user_id = p_user_id and role = 'owner'
-  );
+    select
+      1
+    from
+      public.project_members
+    where
+      project_id = p_project_id
+      and user_id = p_user_id
+      and role = 'owner');
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create or replace function public.set_project_updated_at()
-returns trigger
-security definer
-set search_path = public
-as $$
+create or replace function public.set_project_updated_at ()
+  returns trigger
+  security definer
+  set search_path = public
+  as $$
 begin
   new.updated_at = timezone('utc'::text, now());
   return new;
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 drop trigger if exists set_projects_updated_at on public.projects;
 
 create trigger set_projects_updated_at
-  before update on public.projects
-  for each row execute function public.set_project_updated_at();
+  before update on public.projects for each row
+  execute function public.set_project_updated_at ();
 
-create or replace function public.promote_next_project_owner()
-returns trigger
-security definer
-set search_path = public
-as $$
+create or replace function public.promote_next_project_owner ()
+  returns trigger
+  security definer
+  set search_path = public
+  as $$
 declare
   v_project record;
   v_next_user uuid;
 begin
   for v_project in
-    select project_id from public.project_members
-    where user_id = old.id and role = 'owner'
-  loop
-    select user_id into v_next_user
-    from public.project_members
-    where project_id = v_project.project_id
-      and user_id != old.id
-    order by joined_at asc
-    limit 1;
-
-    if v_next_user is not null then
-      update public.project_members
-      set role = 'owner'
-      where project_id = v_project.project_id
-        and user_id = v_next_user;
-
-      update public.projects
-      set created_by = v_next_user
-      where id = v_project.project_id;
-    else
-      delete from public.projects
-      where id = v_project.project_id;
-    end if;
-  end loop;
-
+  select
+    project_id
+  from
+    public.project_members
+  where
+    user_id = old.id
+    and role = 'owner' loop
+      select
+        user_id
+      into
+        v_next_user
+      from
+        public.project_members
+      where
+        project_id = v_project.project_id
+        and user_id != old.id
+      order by
+        joined_at asc
+      limit 1;
+      if v_next_user is not null then
+        update
+          public.project_members
+        set
+          role = 'owner'
+        where
+          project_id = v_project.project_id
+          and user_id = v_next_user;
+        update
+          public.projects
+        set
+          created_by = v_next_user
+        where
+          id = v_project.project_id;
+      else
+        delete from public.projects
+        where id = v_project.project_id;
+      end if;
+    end loop;
   return old;
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
 drop trigger if exists promote_next_project_owner on auth.users;
 
 create trigger promote_next_project_owner
-  before delete on auth.users
-  for each row execute function public.promote_next_project_owner();
+  before delete on auth.users for each row
+  execute function public.promote_next_project_owner ();
 
 alter table public.projects enable row level security;
+
 alter table public.project_members enable row level security;
 
-create policy "Members can view their projects."
-  on public.projects for select
-  to authenticated
-  using (created_by = auth.uid() or public.is_project_member(id, auth.uid()));
+create policy "Members can view their projects." on public.projects
+  for select to authenticated
+  using (created_by = auth.uid ()
+    or public.is_project_member (id, auth.uid ()));
 
-create policy "Authenticated users can create projects."
-  on public.projects for insert
-  to authenticated
-  with check (auth.uid() = created_by);
+create policy "Authenticated users can create projects." on public.projects
+  for insert to authenticated
+  with check (auth.uid () = created_by);
 
-create policy "Owners can update their projects."
-  on public.projects for update
-  to authenticated
-  using (public.is_project_owner(id, auth.uid()))
-  with check (public.is_project_owner(id, auth.uid()));
+create policy "Owners can update their projects." on public.projects
+  for update to authenticated
+  using (public.is_project_owner (id, auth.uid ()))
+  with check (public.is_project_owner (id, auth.uid ()));
 
-create policy "Owners can delete their projects."
-  on public.projects for delete
-  to authenticated
-  using (public.is_project_owner(id, auth.uid()));
+create policy "Owners can delete their projects." on public.projects
+  for delete to authenticated
+  using (public.is_project_owner (id, auth.uid ()));
 
-create policy "Members can view project members."
-  on public.project_members for select
-  to authenticated
-  using (public.is_project_member(project_id, auth.uid()));
+create policy "Members can view project members." on public.project_members
+  for select to authenticated
+  using (public.is_project_member (project_id, auth.uid ()));
 
-create policy "Users can join projects."
-  on public.project_members for insert
-  to authenticated
-  with check (user_id = auth.uid());
+create policy "Users can join projects." on public.project_members
+  for insert to authenticated
+  with check (user_id = auth.uid ());
 
-create policy "Owners can update member roles."
-  on public.project_members for update
-  to authenticated
-  using (public.is_project_owner(project_id, auth.uid()))
-  with check (public.is_project_owner(project_id, auth.uid()));
+create policy "Owners can update member roles." on public.project_members
+  for update to authenticated
+  using (public.is_project_owner (project_id, auth.uid ()))
+  with check (public.is_project_owner (project_id, auth.uid ()));
 
-create policy "Owners can remove members or members can leave."
-  on public.project_members for delete
-  to authenticated
-  using (
-    user_id = auth.uid()
-    or public.is_project_owner(project_id, auth.uid())
-  );
+create policy "Owners can remove members or members can leave." on public.project_members
+  for delete to authenticated
+  using (user_id = auth.uid ()
+    or public.is_project_owner (project_id, auth.uid ()));
 
 -- ==============================================================================
 -- AI Workflow Generation & Collision Locking
 -- ==============================================================================
-
 alter table public.profiles
-  add column if not exists ai_requests_count int not null default 0 check (ai_requests_count >= 0 and ai_requests_count <= 10);
+  add column if not exists ai_requests_count int not null default 0 check (ai_requests_count >= 0
+    and ai_requests_count <= 10);
 
 alter table public.projects
-  add column if not exists ai_generating_by uuid references auth.users(id) on delete set null,
+  add column if not exists ai_generating_by uuid references auth.users (id) on delete set null,
   add column if not exists ai_generating_at timestamp with time zone;
 
 -- Drop previous signatures that accepted caller-supplied user IDs
-drop function if exists public.consume_user_ai_quota(uuid);
-drop function if exists public.restore_user_ai_quota(uuid);
-drop function if exists public.acquire_project_ai_lock(uuid, uuid);
-drop function if exists public.release_project_ai_lock(uuid, uuid);
+drop function if exists public.consume_user_ai_quota (uuid);
 
-create or replace function public.consume_user_ai_quota()
-returns jsonb
-security definer
-set search_path = public
-as $$
+drop function if exists public.restore_user_ai_quota (uuid);
+
+drop function if exists public.acquire_project_ai_lock (uuid, uuid);
+
+drop function if exists public.release_project_ai_lock (uuid, uuid);
+
+create or replace function public.consume_user_ai_quota ()
+  returns jsonb
+  security definer
+  set search_path = public
+  as $$
 declare
-  v_user_id uuid := auth.uid();
+  v_user_id uuid := auth.uid ();
   v_count int;
 begin
   if v_user_id is null then
     return jsonb_build_object('success', false, 'error', 'Unauthorized');
   end if;
-
-  select ai_requests_count into v_count
-  from public.profiles
-  where id = v_user_id
+  select
+    ai_requests_count
+  into
+    v_count
+  from
+    public.profiles
+  where
+    id = v_user_id
   for update;
-
   if not found then
     return jsonb_build_object('success', false, 'error', 'User profile not found');
   end if;
-
   if v_count >= 10 then
-    return jsonb_build_object(
-      'success', false,
-      'error', 'You have reached the limit of 10 AI generation requests.',
-      'requests_used', v_count,
-      'requests_remaining', 0
-    );
+    return jsonb_build_object('success', false, 'error', 'You have reached the limit of 10 AI generation requests.', 'requests_used', v_count, 'requests_remaining', 0);
   end if;
-
-  update public.profiles
-  set ai_requests_count = v_count + 1,
-      updated_at = timezone('utc'::text, now())
-  where id = v_user_id;
-
-  return jsonb_build_object(
-    'success', true,
-    'requests_used', v_count + 1,
-    'requests_remaining', 10 - (v_count + 1)
-  );
+  update
+    public.profiles
+  set
+    ai_requests_count = v_count + 1,
+    updated_at = timezone('utc'::text, now())
+  where
+    id = v_user_id;
+  return jsonb_build_object('success', true, 'requests_used', v_count + 1, 'requests_remaining', 10 - (v_count + 1));
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create or replace function public.restore_user_ai_quota()
-returns jsonb
-security definer
-set search_path = public
-as $$
+create or replace function public.restore_user_ai_quota ()
+  returns jsonb
+  security definer
+  set search_path = public
+  as $$
 declare
-  v_user_id uuid := auth.uid();
+  v_user_id uuid := auth.uid ();
   v_count int;
 begin
   if v_user_id is null then
     return jsonb_build_object('success', false, 'error', 'Unauthorized');
   end if;
-
-  select ai_requests_count into v_count
-  from public.profiles
-  where id = v_user_id
+  select
+    ai_requests_count
+  into
+    v_count
+  from
+    public.profiles
+  where
+    id = v_user_id
   for update;
-
   if found and v_count > 0 then
-    update public.profiles
-    set ai_requests_count = v_count - 1,
-        updated_at = timezone('utc'::text, now())
-    where id = v_user_id;
-
-    return jsonb_build_object(
-      'success', true,
-      'requests_used', v_count - 1,
-      'requests_remaining', 10 - (v_count - 1)
-    );
+    update
+      public.profiles
+    set
+      ai_requests_count = v_count - 1,
+      updated_at = timezone('utc'::text, now())
+    where
+      id = v_user_id;
+    return jsonb_build_object('success', true, 'requests_used', v_count - 1, 'requests_remaining', 10 - (v_count - 1));
   end if;
-
   return jsonb_build_object('success', true);
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create or replace function public.acquire_project_ai_lock(p_project_id uuid)
-returns jsonb
-security definer
-set search_path = public
-as $$
+create or replace function public.acquire_project_ai_lock (p_project_id uuid)
+  returns jsonb
+  security definer
+  set search_path = public
+  as $$
 declare
-  v_user_id uuid := auth.uid();
+  v_user_id uuid := auth.uid ();
   v_project record;
   v_now timestamp with time zone := timezone('utc'::text, now());
   v_active_user record;
@@ -703,111 +783,110 @@ begin
   if v_user_id is null then
     return jsonb_build_object('success', false, 'error', 'Unauthorized');
   end if;
-
-  select * into v_project
-  from public.projects
-  where id = p_project_id
+  select
+    *
+  into
+    v_project
+  from
+    public.projects
+  where
+    id = p_project_id
   for update;
-
   if not found then
     return jsonb_build_object('success', false, 'error', 'Project not found');
   end if;
-
-  if v_project.ai_generating_by is not null
-     and v_project.ai_generating_by != v_user_id
-     and v_project.ai_generating_at is not null
-     and v_project.ai_generating_at > (v_now - interval '45 seconds') then
-    
-    select full_name, username, email into v_active_user
-    from public.profiles
-    where id = v_project.ai_generating_by;
-
-    return jsonb_build_object(
-      'success', false,
-      'error', coalesce(v_active_user.username, v_active_user.full_name, 'Another collaborator') || ' is currently generating a workflow with AI for this project. Please wait to prevent collisions.',
-      'generating_user', coalesce(v_active_user.username, v_active_user.full_name, 'A collaborator')
-    );
+  if v_project.ai_generating_by is not null and v_project.ai_generating_by != v_user_id and v_project.ai_generating_at is not null and v_project.ai_generating_at > (v_now - interval '45 seconds') then
+    select
+      full_name,
+      username,
+      email
+    into
+      v_active_user
+    from
+      public.profiles
+    where
+      id = v_project.ai_generating_by;
+    return jsonb_build_object('success', false, 'error', coalesce(v_active_user.username, v_active_user.full_name, 'Another collaborator') || ' is currently generating a workflow with AI for this project. Please wait to prevent collisions.', 'generating_user', coalesce(v_active_user.username, v_active_user.full_name, 'A collaborator'));
   end if;
-
-  update public.projects
-  set ai_generating_by = v_user_id,
-      ai_generating_at = v_now
-  where id = p_project_id;
-
+  update
+    public.projects
+  set
+    ai_generating_by = v_user_id,
+    ai_generating_at = v_now
+  where
+    id = p_project_id;
   return jsonb_build_object('success', true);
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create or replace function public.release_project_ai_lock(p_project_id uuid)
-returns jsonb
-security definer
-set search_path = public
-as $$
+create or replace function public.release_project_ai_lock (p_project_id uuid)
+  returns jsonb
+  security definer
+  set search_path = public
+  as $$
 declare
-  v_user_id uuid := auth.uid();
+  v_user_id uuid := auth.uid ();
 begin
   if v_user_id is null then
     return jsonb_build_object('success', false, 'error', 'Unauthorized');
   end if;
-
-  update public.projects
-  set ai_generating_by = null,
-      ai_generating_at = null
-  where id = p_project_id and (ai_generating_by = v_user_id or created_by = v_user_id);
-
+  update
+    public.projects
+  set
+    ai_generating_by = null,
+    ai_generating_at = null
+  where
+    id = p_project_id
+    and (ai_generating_by = v_user_id
+      or created_by = v_user_id);
   return jsonb_build_object('success', true);
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create or replace function public.reset_user_ai_quota(p_user_id uuid)
-returns jsonb
-security definer
-set search_path = public
-as $$
+create or replace function public.reset_user_ai_quota (p_user_id uuid)
+  returns jsonb
+  security definer
+  set search_path = public
+  as $$
 begin
-  if auth.uid() is null or not public.has_permission(auth.uid(), 'roles:manage') then
+  if auth.uid () is null or not public.has_permission (auth.uid (), 'roles:manage') then
     return jsonb_build_object('success', false, 'error', 'Forbidden: Insufficient permissions');
   end if;
-
-  update public.profiles
-  set ai_requests_count = 0,
-      updated_at = timezone('utc'::text, now())
-  where id = p_user_id;
-
+  update
+    public.profiles
+  set
+    ai_requests_count = 0,
+    updated_at = timezone('utc'::text, now())
+  where
+    id = p_user_id;
   if not found then
     return jsonb_build_object('success', false, 'error', 'User profile not found');
   end if;
-
-  return jsonb_build_object(
-    'success', true,
-    'user_id', p_user_id,
-    'requests_used', 0,
-    'requests_remaining', 10
-  );
+  return jsonb_build_object('success', true, 'user_id', p_user_id, 'requests_used', 0, 'requests_remaining', 10);
 end;
-$$ language plpgsql;
+$$
+language plpgsql;
 
-create or replace function public.reset_all_users_ai_quota()
-returns jsonb
-security definer
-set search_path = public
-as $$
+create or replace function public.reset_all_users_ai_quota ()
+  returns jsonb
+  security definer
+  set search_path = public
+  as $$
 declare
   v_updated_count int;
 begin
-  if auth.uid() is null or not public.has_permission(auth.uid(), 'roles:manage') then
+  if auth.uid () is null or not public.has_permission (auth.uid (), 'roles:manage') then
     return jsonb_build_object('success', false, 'error', 'Forbidden: Insufficient permissions');
   end if;
-
-  update public.profiles
-  set ai_requests_count = 0,
-      updated_at = timezone('utc'::text, now());
-  
+  update
+    public.profiles
+  set
+    ai_requests_count = 0,
+    updated_at = timezone('utc'::text, now());
   get diagnostics v_updated_count = row_count;
-
-  return jsonb_build_object(
-    'success', true,
-    'users_reset', v_updated_count
-  );
+  return jsonb_build_object('success', true, 'users_reset', v_updated_count);
 end;
-$$ language plpgsql;
+$$
+language plpgsql;

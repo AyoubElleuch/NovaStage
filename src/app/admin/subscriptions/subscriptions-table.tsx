@@ -3,22 +3,9 @@
 import Dropdown from "@/components/ui/dropdown";
 
 import { useState, useMemo, useTransition } from "react";
-import {
-  AdminSubscriptionUser,
-  SubscriptionPlan,
-  updateUserSubscriptionPlan,
-} from "../actions";
+import { AdminSubscriptionUser, SubscriptionPlan, updateUserSubscriptionPlan } from "../actions";
 import UserAvatar from "@/components/ui/user-avatar";
-import {
-  Search,
-  Users,
-  Sparkles,
-  Shield,
-  Check,
-  Loader2,
-  AlertCircle,
-  Crown,
-} from "lucide-react";
+import { Search, Users, Sparkles, Shield, Check, Loader2, AlertCircle, Crown } from "lucide-react";
 
 interface SubscriptionsTableProps {
   initialData: AdminSubscriptionUser[];
@@ -104,9 +91,7 @@ export default function SubscriptionsTable({ initialData }: SubscriptionsTablePr
       if (result.error) {
         setNotification({ type: "error", message: result.error });
       } else {
-        setUsers((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, plan: newPlan } : u))
-        );
+        setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, plan: newPlan } : u)));
         setNotification({
           type: "success",
           message: result.message || "Plan updated successfully.",
@@ -115,7 +100,7 @@ export default function SubscriptionsTable({ initialData }: SubscriptionsTablePr
 
       setTimeout(() => {
         setNotification((current) =>
-          current?.message === (result.message || result.error) ? null : current
+          current?.message === (result.message || result.error) ? null : current,
         );
       }, 4000);
     });
@@ -130,9 +115,7 @@ export default function SubscriptionsTable({ initialData }: SubscriptionsTablePr
             <Users className="h-4 w-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Total Users</span>
           </div>
-          <p className="mt-2 text-2xl font-bold text-neutral-900 dark:text-white">
-            {counts.total}
-          </p>
+          <p className="mt-2 text-2xl font-bold text-neutral-900 dark:text-white">{counts.total}</p>
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs dark:border-[#283548] dark:bg-[#161d27]">
@@ -140,9 +123,7 @@ export default function SubscriptionsTable({ initialData }: SubscriptionsTablePr
             <span className="h-2 w-2 rounded-full bg-neutral-400" />
             <span className="text-xs font-medium uppercase tracking-wider">Free Tier</span>
           </div>
-          <p className="mt-2 text-2xl font-bold text-neutral-900 dark:text-white">
-            {counts.free}
-          </p>
+          <p className="mt-2 text-2xl font-bold text-neutral-900 dark:text-white">{counts.free}</p>
         </div>
 
         <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 shadow-xs dark:border-blue-900/50 dark:bg-blue-950/20">
@@ -150,9 +131,7 @@ export default function SubscriptionsTable({ initialData }: SubscriptionsTablePr
             <Sparkles className="h-4 w-4" />
             <span className="text-xs font-medium uppercase tracking-wider">Plus ($1.99)</span>
           </div>
-          <p className="mt-2 text-2xl font-bold text-blue-950 dark:text-blue-100">
-            {counts.plus}
-          </p>
+          <p className="mt-2 text-2xl font-bold text-blue-950 dark:text-blue-100">{counts.plus}</p>
         </div>
 
         <div className="rounded-xl border border-purple-200 bg-purple-50/40 p-4 shadow-xs dark:border-purple-900/50 dark:bg-purple-950/20">
@@ -296,8 +275,12 @@ export default function SubscriptionsTable({ initialData }: SubscriptionsTablePr
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${currentPlanConfig.badgeClass}`}
                         >
-                          {user.plan === "pro" && <Crown className="h-3 w-3 text-purple-600 dark:text-purple-400" />}
-                          {user.plan === "plus" && <Sparkles className="h-3 w-3 text-blue-600 dark:text-blue-400" />}
+                          {user.plan === "pro" && (
+                            <Crown className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                          )}
+                          {user.plan === "plus" && (
+                            <Sparkles className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                          )}
                           {user.plan.toUpperCase()}
                         </span>
                       </td>
@@ -305,7 +288,8 @@ export default function SubscriptionsTable({ initialData }: SubscriptionsTablePr
                       {/* AI Quota Usage */}
                       <td className="px-4 py-3.5">
                         <span className="font-mono text-[11px]">
-                          {user.ai_requests_count} / {currentPlanConfig.maxAi === 999 ? "∞" : currentPlanConfig.maxAi}
+                          {user.ai_requests_count} /{" "}
+                          {currentPlanConfig.maxAi === 999 ? "∞" : currentPlanConfig.maxAi}
                         </span>
                       </td>
 
@@ -324,7 +308,20 @@ export default function SubscriptionsTable({ initialData }: SubscriptionsTablePr
                           {isUpdating && (
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
                           )}
-                          <Dropdown disabled={isUpdating} value={user.plan} onChange={value => handlePlanChange(user.id, value as SubscriptionPlan)} aria-label={`Change plan for ${user.email}`} options={[{ value: "free", label: "Free ($0)" }, { value: "plus", label: "Plus ($1.99)" }, { value: "pro", label: "Pro ($4.99)" }, { value: "enterprise", label: "Enterprise (Custom)" }]} />
+                          <Dropdown
+                            disabled={isUpdating}
+                            value={user.plan}
+                            onChange={(value) =>
+                              handlePlanChange(user.id, value as SubscriptionPlan)
+                            }
+                            aria-label={`Change plan for ${user.email}`}
+                            options={[
+                              { value: "free", label: "Free ($0)" },
+                              { value: "plus", label: "Plus ($1.99)" },
+                              { value: "pro", label: "Pro ($4.99)" },
+                              { value: "enterprise", label: "Enterprise (Custom)" },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

@@ -48,7 +48,7 @@ export default function ProjectsWorkspace() {
 
   const { data, isLoading } = useSWR<DashboardProjectsData>(
     "/api/dashboard/projects",
-    fetcher<DashboardProjectsData>
+    fetcher<DashboardProjectsData>,
   );
 
   const projects = data?.projects || [];
@@ -89,10 +89,7 @@ export default function ProjectsWorkspace() {
   const activePendingSlug = pendingSlug && !pathname.includes(pendingSlug) ? pendingSlug : null;
   const isDialogInteractionLocked = useEffectEvent(
     () =>
-      isSubmitting ||
-      isKickingMember ||
-      Boolean(resolvingRequestId) ||
-      Boolean(unbanningUserId)
+      isSubmitting || isKickingMember || Boolean(resolvingRequestId) || Boolean(unbanningUserId),
   );
 
   // Close three-dots dropdown when clicking outside
@@ -117,7 +114,7 @@ export default function ProjectsWorkspace() {
       const dialog = dialogRef.current;
       const autofocusTarget = dialog?.querySelector<HTMLElement>("[autofocus]");
       const firstFocusable = dialog?.querySelector<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
       );
       (autofocusTarget || firstFocusable || dialog)?.focus();
     });
@@ -134,8 +131,8 @@ export default function ProjectsWorkspace() {
 
       const focusable = Array.from(
         dialogRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
-        )
+          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        ),
       );
       if (focusable.length === 0) {
         event.preventDefault();
@@ -167,7 +164,7 @@ export default function ProjectsWorkspace() {
   // Fetch members, requests, and banned lists when members modal opens
   const openMembersModal = async (
     project: DashboardProject,
-    initialTab: "members" | "requests" | "banned" = "members"
+    initialTab: "members" | "requests" | "banned" = "members",
   ) => {
     setSelectedProject(project);
     setActiveModal("members");
@@ -699,7 +696,10 @@ export default function ProjectsWorkspace() {
         style={{ "--dash-delay": "90ms" } as React.CSSProperties}
       >
         <div className="mb-4 flex items-end justify-between">
-          <h2 id="project-list-title" className="text-sm font-semibold text-neutral-900 dark:text-white">
+          <h2
+            id="project-list-title"
+            className="text-sm font-semibold text-neutral-900 dark:text-white"
+          >
             Your projects
           </h2>
           <span className="text-xs text-neutral-400 dark:text-neutral-500">
@@ -758,7 +758,8 @@ export default function ProjectsWorkspace() {
                               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
                             </span>
                             <span>
-                              {project.pendingRequestsCount} {project.pendingRequestsCount === 1 ? "request" : "requests"}
+                              {project.pendingRequestsCount}{" "}
+                              {project.pendingRequestsCount === 1 ? "request" : "requests"}
                             </span>
                           </button>
                         )}
@@ -813,7 +814,10 @@ export default function ProjectsWorkspace() {
                                       className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-xs font-semibold text-neutral-900 transition-colors hover:bg-neutral-50 dark:text-white dark:hover:bg-[#1e2634]"
                                     >
                                       <div className="flex items-center gap-2.5">
-                                        <Clock className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400" aria-hidden="true" />
+                                        <Clock
+                                          className="h-3.5 w-3.5 text-neutral-600 dark:text-neutral-400"
+                                          aria-hidden="true"
+                                        />
                                         <span>Review requests</span>
                                       </div>
                                       <span className="grid h-4.5 min-w-4.5 place-items-center rounded-full bg-neutral-900 dark:bg-emerald-600 px-1 text-[10px] font-bold text-white">
@@ -827,7 +831,10 @@ export default function ProjectsWorkspace() {
                                     onClick={() => openMembersModal(project, "members")}
                                     className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"
                                   >
-                                    <Users className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
+                                    <Users
+                                      className="h-3.5 w-3.5 text-neutral-400"
+                                      aria-hidden="true"
+                                    />
                                     <span>See all members</span>
                                   </button>
                                   <div className="my-1 border-t border-neutral-100 dark:border-[#283548]" />
@@ -841,7 +848,10 @@ export default function ProjectsWorkspace() {
                                     }}
                                     className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                                   >
-                                    <Trash2 className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" />
+                                    <Trash2
+                                      className="h-3.5 w-3.5 text-rose-500"
+                                      aria-hidden="true"
+                                    />
                                     <span>Delete project</span>
                                   </button>
                                 </>
@@ -856,7 +866,10 @@ export default function ProjectsWorkspace() {
                                   }}
                                   className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                                 >
-                                  <LogOut className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" />
+                                  <LogOut
+                                    className="h-3.5 w-3.5 text-rose-500"
+                                    aria-hidden="true"
+                                  />
                                   <span>Leave project</span>
                                 </button>
                               )}
@@ -899,7 +912,10 @@ export default function ProjectsWorkspace() {
                         >
                           {isCopied ? (
                             <>
-                              <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                              <Check
+                                className="h-3 w-3 text-emerald-600 dark:text-emerald-400"
+                                aria-hidden="true"
+                              />
                               <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
                             </>
                           ) : (
@@ -916,8 +932,8 @@ export default function ProjectsWorkspace() {
                       <span className="inline-flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
                         <Users className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
                         <span>
-                          {project.members}/5 members
-                          {project.members >= 5 && (
+                          {project.members}/{project.maxMembers || 5} members
+                          {project.members >= (project.maxMembers || 5) && (
                             <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                               (Full)
                             </span>
@@ -1046,7 +1062,10 @@ export default function ProjectsWorkspace() {
                     htmlFor="project-description"
                     className="mb-1.5 block cursor-pointer text-sm font-medium text-neutral-700 dark:text-neutral-300"
                   >
-                    Description <span className="text-neutral-400 dark:text-neutral-500 font-normal">(optional)</span>
+                    Description{" "}
+                    <span className="text-neutral-400 dark:text-neutral-500 font-normal">
+                      (optional)
+                    </span>
                   </label>
                   <textarea
                     id="project-description"
@@ -1074,13 +1093,21 @@ export default function ProjectsWorkspace() {
               <div className="mt-6 space-y-5 dash-fade">
                 <div className="rounded-2xl border border-neutral-200/80 bg-neutral-50/70 p-5 text-center shadow-xs dark:border-[#283548] dark:bg-[#121721]">
                   <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white border border-neutral-200/80 text-neutral-800 shadow-2xs dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-200">
-                    <Clock className="h-5 w-5 text-neutral-700 dark:text-neutral-300" aria-hidden="true" />
+                    <Clock
+                      className="h-5 w-5 text-neutral-700 dark:text-neutral-300"
+                      aria-hidden="true"
+                    />
                   </div>
                   <h3 className="mt-3.5 text-sm font-semibold text-neutral-900 dark:text-white">
                     Request Sent — Waiting for Owner Approval
                   </h3>
                   <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-xs mx-auto">
-                    Your request to join <span className="font-semibold text-neutral-800 dark:text-neutral-200">{joinPendingProject.name}</span> has been submitted to the project owner. You will gain access as soon as they accept.
+                    Your request to join{" "}
+                    <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+                      {joinPendingProject.name}
+                    </span>{" "}
+                    has been submitted to the project owner. You will gain access as soon as they
+                    accept.
                   </p>
                 </div>
 
@@ -1111,19 +1138,26 @@ export default function ProjectsWorkspace() {
                     autoFocus
                     required
                     value={inviteCode}
+                    pattern="NS-[A-Z0-9]{5}"
+                    maxLength={8}
+                    aria-describedby="invite-code-help"
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                     disabled={isSubmitting}
                     placeholder="e.g. NS-8A3F1"
                     className="h-11 w-full font-mono uppercase tracking-wider rounded-lg border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 shadow-xs transition-colors duration-150 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100 focus:outline-none disabled:opacity-50 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:placeholder:text-neutral-500 dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
                   />
-                  <p className="mt-1.5 text-xs text-neutral-400 dark:text-neutral-500">
-                    Invite codes begin with <span className="font-mono font-medium">NS-</span> followed by 5 characters.
+                  <p
+                    id="invite-code-help"
+                    className="mt-1.5 text-xs text-neutral-400 dark:text-neutral-500"
+                  >
+                    Invite codes begin with <span className="font-mono font-medium">NS-</span>{" "}
+                    followed by 5 characters.
                   </p>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || !inviteCode.trim()}
+                  disabled={isSubmitting || !/^NS-[A-Z0-9]{5}$/.test(inviteCode.trim())}
                   className={`${primaryButton} h-11 w-full`}
                 >
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
@@ -1147,11 +1181,7 @@ export default function ProjectsWorkspace() {
           className="dash-fade fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/30 p-4 backdrop-blur-sm dark:bg-black/60"
           role="presentation"
           onMouseDown={() => {
-            if (
-              !isKickingMember &&
-              !resolvingRequestId &&
-              !unbanningUserId
-            ) {
+            if (!isKickingMember && !resolvingRequestId && !unbanningUserId) {
               setActiveModal(null);
               setConfirmKickTarget(null);
             }
@@ -1202,10 +1232,22 @@ export default function ProjectsWorkspace() {
                       id="members-dialog-title"
                       className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-white"
                     >
-                      Remove {confirmKickTarget.fullName || confirmKickTarget.email?.split("@")[0] || "collaborator"}?
+                      Remove{" "}
+                      {confirmKickTarget.fullName ||
+                        confirmKickTarget.email?.split("@")[0] ||
+                        "collaborator"}
+                      ?
                     </h2>
                     <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                      Are you sure you want to remove this collaborator from <span className="font-medium text-neutral-800 dark:text-neutral-200">{selectedProject.name}</span>? They will immediately lose access and be <span className="font-semibold text-rose-700 dark:text-rose-400">blocked from rejoining with the invite code</span>.
+                      Are you sure you want to remove this collaborator from{" "}
+                      <span className="font-medium text-neutral-800 dark:text-neutral-200">
+                        {selectedProject.name}
+                      </span>
+                      ? They will immediately lose access and be{" "}
+                      <span className="font-semibold text-rose-700 dark:text-rose-400">
+                        blocked from rejoining with the invite code
+                      </span>
+                      .
                     </p>
                   </div>
                 </div>
@@ -1218,10 +1260,13 @@ export default function ProjectsWorkspace() {
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-neutral-900 dark:text-white truncate">
-                        {confirmKickTarget.fullName || confirmKickTarget.email?.split("@")[0] || "Collaborator"}
+                        {confirmKickTarget.fullName ||
+                          confirmKickTarget.email?.split("@")[0] ||
+                          "Collaborator"}
                       </p>
                       <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
-                        {confirmKickTarget.email || (confirmKickTarget.username ? `@${confirmKickTarget.username}` : "")}
+                        {confirmKickTarget.email ||
+                          (confirmKickTarget.username ? `@${confirmKickTarget.username}` : "")}
                       </p>
                     </div>
                   </div>
@@ -1247,7 +1292,9 @@ export default function ProjectsWorkspace() {
                     onClick={handleConfirmKickMember}
                     className={`${dangerButton} h-9 text-xs px-4 whitespace-nowrap`}
                   >
-                    {isKickingMember && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                    {isKickingMember && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    )}
                     {isKickingMember ? "Removing & blocking…" : "Confirm removal"}
                   </button>
                 </div>
@@ -1267,7 +1314,11 @@ export default function ProjectsWorkspace() {
                       Team & Collaborators
                     </h2>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      Manage who has access to <span className="font-semibold text-neutral-800 dark:text-neutral-200">{selectedProject.name}</span>.
+                      Manage who has access to{" "}
+                      <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+                        {selectedProject.name}
+                      </span>
+                      .
                     </p>
                   </div>
                 </div>
@@ -1285,7 +1336,9 @@ export default function ProjectsWorkspace() {
                       }`}
                     >
                       <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>Members ({projectMembers.length}/5)</span>
+                      <span>
+                        Members ({projectMembers.length}/{selectedProject.maxMembers || 5})
+                      </span>
                     </button>
 
                     <button
@@ -1334,7 +1387,9 @@ export default function ProjectsWorkspace() {
                     {selectedProject.inviteCode && (
                       <div className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-neutral-50 p-3.5 dark:border-[#283548] dark:bg-[#121721]">
                         <div>
-                          <p className="text-xs font-medium text-neutral-700 dark:text-neutral-300">Invite new teammate</p>
+                          <p className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                            Invite new teammate
+                          </p>
                           <p className="font-mono text-xs font-semibold tracking-wider text-neutral-900 dark:text-white mt-0.5">
                             {selectedProject.inviteCode}
                           </p>
@@ -1346,12 +1401,18 @@ export default function ProjectsWorkspace() {
                         >
                           {copiedCode === selectedProject.inviteCode ? (
                             <>
-                              <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                              <Check
+                                className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400"
+                                aria-hidden="true"
+                              />
                               <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
                             </>
                           ) : (
                             <>
-                              <Copy className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" aria-hidden="true" />
+                              <Copy
+                                className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400"
+                                aria-hidden="true"
+                              />
                               <span>Copy code</span>
                             </>
                           )}
@@ -1362,14 +1423,19 @@ export default function ProjectsWorkspace() {
                     {/* Members List */}
                     <div>
                       <div className="mb-2.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                        <span>Members ({projectMembers.length}/{selectedProject.maxMembers || 5})</span>
+                        <span>
+                          Members ({projectMembers.length}/{selectedProject.maxMembers || 5})
+                        </span>
                         <span>Role</span>
                       </div>
 
                       {isLoadingMembers ? (
                         <div className="space-y-2 py-4">
                           {[1, 2].map((i) => (
-                            <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50 dark:bg-[#121721]">
+                            <div
+                              key={i}
+                              className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50 dark:bg-[#121721]"
+                            >
                               <div className="flex items-center gap-3">
                                 <div className="h-9 w-9 rounded-full bg-neutral-200 dark:bg-[#283548]" />
                                 <div className="space-y-1.5">
@@ -1385,8 +1451,10 @@ export default function ProjectsWorkspace() {
                         <div className="max-h-64 overflow-y-auto space-y-1 divide-y divide-neutral-100 dark:divide-[#283548] pr-1">
                           {projectMembers.map((member) => {
                             const isMemberOwner = member.role === "owner";
-                            const displayName = member.fullName || member.email?.split("@")[0] || "User";
-                            const displaySub = member.email || (member.username ? `@${member.username}` : "");
+                            const displayName =
+                              member.fullName || member.email?.split("@")[0] || "User";
+                            const displaySub =
+                              member.email || (member.username ? `@${member.username}` : "");
 
                             return (
                               <div
@@ -1418,7 +1486,9 @@ export default function ProjectsWorkspace() {
                                         : "bg-neutral-100 text-neutral-600 border border-neutral-200/60 dark:bg-[#1e2634] dark:text-neutral-300 dark:border-[#283548]"
                                     }`}
                                   >
-                                    {isMemberOwner && <Crown className="h-3 w-3" aria-hidden="true" />}
+                                    {isMemberOwner && (
+                                      <Crown className="h-3 w-3" aria-hidden="true" />
+                                    )}
                                     {isMemberOwner ? "Owner" : "Collaborator"}
                                   </span>
 
@@ -1459,10 +1529,14 @@ export default function ProjectsWorkspace() {
                     {/* Capacity limit warning banner if project full */}
                     {projectMembers.length >= (selectedProject.maxMembers || 5) && (
                       <div className="flex items-center gap-2.5 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 text-xs text-neutral-600 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-300">
-                        <ShieldAlert className="h-4 w-4 shrink-0 text-neutral-700 dark:text-neutral-400" aria-hidden="true" />
+                        <ShieldAlert
+                          className="h-4 w-4 shrink-0 text-neutral-700 dark:text-neutral-400"
+                          aria-hidden="true"
+                        />
                         <p>
                           <span className="font-semibold text-neutral-900 dark:text-white">
-                            Project capacity reached ({selectedProject.maxMembers || 5}/{selectedProject.maxMembers || 5} members).
+                            Project capacity reached ({selectedProject.maxMembers || 5}/
+                            {selectedProject.maxMembers || 5} members).
                           </span>{" "}
                           Remove an existing member before accepting new requests.
                         </p>
@@ -1472,7 +1546,10 @@ export default function ProjectsWorkspace() {
                     {isLoadingRequests ? (
                       <div className="space-y-2 py-4">
                         {[1, 2].map((i) => (
-                          <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50 dark:bg-[#121721]">
+                          <div
+                            key={i}
+                            className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50 dark:bg-[#121721]"
+                          >
                             <div className="flex items-center gap-3">
                               <div className="h-9 w-9 rounded-full bg-neutral-200 dark:bg-[#283548]" />
                               <div className="space-y-1.5">
@@ -1490,7 +1567,8 @@ export default function ProjectsWorkspace() {
                           const displayName = req.fullName || req.email?.split("@")[0] || "User";
                           const displaySub = req.email || (req.username ? `@${req.username}` : "");
                           const isBusy = resolvingRequestId === req.id;
-                          const isProjectFull = projectMembers.length >= 5;
+                          const isProjectFull =
+                            projectMembers.length >= (selectedProject.maxMembers || 5);
 
                           return (
                             <div
@@ -1519,13 +1597,20 @@ export default function ProjectsWorkspace() {
                                   type="button"
                                   disabled={isBusy || isProjectFull}
                                   onClick={() => handleResolveRequest(req.id, "approve")}
-                                  title={isProjectFull ? "Project is at maximum capacity (5/5 members)" : "Approve join request"}
+                                  title={
+                                    isProjectFull
+                                      ? `Project is at maximum capacity (${selectedProject.maxMembers || 5} members)`
+                                      : "Approve join request"
+                                  }
                                   className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-2xs transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                                 >
                                   {isBusy ? (
                                     <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                                   ) : (
-                                    <UserCheck className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
+                                    <UserCheck
+                                      className="h-3.5 w-3.5 text-emerald-400"
+                                      aria-hidden="true"
+                                    />
                                   )}
                                   <span>Approve</span>
                                 </button>
@@ -1545,9 +1630,16 @@ export default function ProjectsWorkspace() {
                       </div>
                     ) : (
                       <div className="py-8 text-center">
-                        <CheckCircle2 className="mx-auto h-7 w-7 text-neutral-300 dark:text-neutral-600" aria-hidden="true" />
-                        <p className="mt-2 text-xs font-medium text-neutral-600 dark:text-neutral-300">No pending join requests</p>
-                        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">When someone uses your invite code, their request will appear here.</p>
+                        <CheckCircle2
+                          className="mx-auto h-7 w-7 text-neutral-300 dark:text-neutral-600"
+                          aria-hidden="true"
+                        />
+                        <p className="mt-2 text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                          No pending join requests
+                        </p>
+                        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+                          When someone uses your invite code, their request will appear here.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1564,7 +1656,10 @@ export default function ProjectsWorkspace() {
                     {isLoadingBanned ? (
                       <div className="space-y-2 py-4">
                         {[1, 2].map((i) => (
-                          <div key={i} className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50 dark:bg-[#121721]">
+                          <div
+                            key={i}
+                            className="flex items-center justify-between rounded-lg p-2.5 animate-pulse bg-neutral-50 dark:bg-[#121721]"
+                          >
                             <div className="flex items-center gap-3">
                               <div className="h-9 w-9 rounded-full bg-neutral-200 dark:bg-[#283548]" />
                               <div className="space-y-1.5">
@@ -1579,8 +1674,10 @@ export default function ProjectsWorkspace() {
                     ) : projectBanned.length > 0 ? (
                       <div className="max-h-64 overflow-y-auto space-y-2 divide-y divide-neutral-100 dark:divide-[#283548] pr-1">
                         {projectBanned.map((banned) => {
-                          const displayName = banned.fullName || banned.email?.split("@")[0] || "User";
-                          const displaySub = banned.email || (banned.username ? `@${banned.username}` : "");
+                          const displayName =
+                            banned.fullName || banned.email?.split("@")[0] || "User";
+                          const displaySub =
+                            banned.email || (banned.username ? `@${banned.username}` : "");
                           const isBusy = unbanningUserId === banned.userId;
 
                           return (
@@ -1615,7 +1712,10 @@ export default function ProjectsWorkspace() {
                                   {isBusy ? (
                                     <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                                   ) : (
-                                    <Check className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" aria-hidden="true" />
+                                    <Check
+                                      className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400"
+                                      aria-hidden="true"
+                                    />
                                   )}
                                   <span>Unblock</span>
                                 </button>
@@ -1626,9 +1726,16 @@ export default function ProjectsWorkspace() {
                       </div>
                     ) : (
                       <div className="py-8 text-center">
-                        <ShieldAlert className="mx-auto h-7 w-7 text-neutral-300 dark:text-neutral-600" aria-hidden="true" />
-                        <p className="mt-2 text-xs font-medium text-neutral-600 dark:text-neutral-300">No blocked collaborators</p>
-                        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">Collaborators you remove from this project will appear here.</p>
+                        <ShieldAlert
+                          className="mx-auto h-7 w-7 text-neutral-300 dark:text-neutral-600"
+                          aria-hidden="true"
+                        />
+                        <p className="mt-2 text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                          No blocked collaborators
+                        </p>
+                        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+                          Collaborators you remove from this project will appear here.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1638,7 +1745,9 @@ export default function ProjectsWorkspace() {
                   <button
                     type="button"
                     onClick={() => setActiveModal(null)}
-                    disabled={isKickingMember || Boolean(resolvingRequestId) || Boolean(unbanningUserId)}
+                    disabled={
+                      isKickingMember || Boolean(resolvingRequestId) || Boolean(unbanningUserId)
+                    }
                     className={`${secondaryButton} h-9 text-xs px-4`}
                   >
                     Done
@@ -1689,7 +1798,8 @@ export default function ProjectsWorkspace() {
               Leave {selectedProject.name}?
             </h2>
             <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-              Are you sure you want to leave this project? You will no longer have access to the planning canvas unless you are invited back.
+              Are you sure you want to leave this project? You will no longer have access to the
+              planning canvas unless you are invited back.
             </p>
 
             <div className="mt-7 flex items-center justify-end gap-2.5">
@@ -1754,7 +1864,8 @@ export default function ProjectsWorkspace() {
               Delete {selectedProject.name}?
             </h2>
             <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-              This will permanently remove this project and revoke access for all collaborators. This action cannot be undone.
+              This will permanently remove this project and revoke access for all collaborators.
+              This action cannot be undone.
             </p>
 
             <div className="mt-7 flex items-center justify-end gap-2.5">

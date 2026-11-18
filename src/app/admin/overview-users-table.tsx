@@ -295,10 +295,7 @@ export default function OverviewUsersTable({ initialData }: OverviewUsersTablePr
                     {/* Last Signed In Column */}
                     <td className="px-5 py-4 whitespace-nowrap">
                       {hasSignedIn ? (
-                        <div
-                          className="flex flex-col"
-                          title={fullLastSeen || undefined}
-                        >
+                        <div className="flex flex-col" title={fullLastSeen || undefined}>
                           <div className="flex items-center gap-1.5">
                             <span
                               className={`h-2 w-2 rounded-full shrink-0 ${

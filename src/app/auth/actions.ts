@@ -1,11 +1,17 @@
 "use server";
 
+import { signInErrorMessage } from "@/lib/auth/errors";
+
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimitAsync, resetRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { sendWaitlistJoinedEmail, sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email/resend";
+import {
+  sendWaitlistJoinedEmail,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+} from "@/lib/email/resend";
 
 export interface AuthActionResult {
   success?: boolean;
@@ -117,7 +123,7 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
   });
 
   if (error) {
-    return { error: "The email or password you entered is incorrect." };
+    return { error: signInErrorMessage(error) };
   }
 
   // Reset rate limit key on successful login
@@ -254,7 +260,7 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
           email,
           role: "developer",
         },
-        { onConflict: "id" }
+        { onConflict: "id" },
       );
     }
   } catch (adminFallbackErr) {
@@ -271,7 +277,9 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
     });
 
     if (fallbackErr) {
-      return { error: fallbackErr.message || "We could not create your account. Please try again." };
+      return {
+        error: fallbackErr.message || "We could not create your account. Please try again.",
+      };
     }
     userId = fallbackData?.user?.id;
   }
@@ -309,7 +317,7 @@ export async function signOut() {
 export async function signInWithOAuth(
   provider: "github" | "google",
   mode: "signup" | "login" | "waitlist" = "login",
-  redirectTo = "/dashboard"
+  redirectTo = "/dashboard",
 ) {
   const clientIp = await getClientIp();
   const rateLimitKey = `oauth:${mode}:ip:${clientIp}`;
@@ -424,7 +432,9 @@ export async function requestPasswordReset(formData: FormData): Promise<AuthActi
   });
 
   if (!emailResult.success) {
-    return { error: emailResult.error || "We could not send the recovery email. Please try again." };
+    return {
+      error: emailResult.error || "We could not send the recovery email. Please try again.",
+    };
   }
 
   return {
@@ -457,4 +467,3 @@ export async function resetPassword(formData: FormData): Promise<AuthActionResul
 
   redirect("/dashboard");
 }
-

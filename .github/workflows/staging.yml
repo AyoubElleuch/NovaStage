@@ -1,0 +1,32 @@
+name: Staging release gate
+on:
+  workflow_dispatch:
+    inputs:
+      test_ai:
+        description: Run live AI preview (uses one staging account request)
+        type: boolean
+        default: true
+permissions:
+  contents: read
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 10
+    env:
+      STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+      STAGING_PROJECT_SLUG: ${{ vars.STAGING_PROJECT_SLUG }}
+      STAGING_OWNER_EMAIL: ${{ secrets.STAGING_OWNER_EMAIL }}
+      STAGING_OWNER_PASSWORD: ${{ secrets.STAGING_OWNER_PASSWORD }}
+      STAGING_MEMBER_EMAIL: ${{ secrets.STAGING_MEMBER_EMAIL }}
+      STAGING_MEMBER_PASSWORD: ${{ secrets.STAGING_MEMBER_PASSWORD }}
+      STAGING_TEST_AI: ${{ inputs.test_ai }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/test-staging.mjs

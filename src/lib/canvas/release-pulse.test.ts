@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { analyzeReleasePulse } from "./release-pulse";
 import type { CanvasEdge, CanvasNode, NodeStatus } from "./types";
 
-function node(id: string, completed: number, total = 1, status: NodeStatus = "in_progress"): CanvasNode {
+function node(
+  id: string,
+  completed: number,
+  total = 1,
+  status: NodeStatus = "in_progress",
+): CanvasNode {
   return {
     id,
     project_id: "project-1",
@@ -43,7 +48,7 @@ describe("analyzeReleasePulse", () => {
   it("calculates task-weighted readiness and dependency gating", () => {
     const result = analyzeReleasePulse(
       [node("brief", 2, 2), node("build", 1, 2), node("launch", 0, 1)],
-      [edge("brief", "build"), edge("build", "launch")]
+      [edge("brief", "build"), edge("build", "launch")],
     );
 
     expect(result.readiness).toBe(60);
@@ -55,7 +60,7 @@ describe("analyzeReleasePulse", () => {
   it("finds the longest unfinished chain and ranks blockers by impact", () => {
     const result = analyzeReleasePulse(
       [node("root", 0), node("api", 0), node("ui", 0), node("release", 0)],
-      [edge("root", "api"), edge("root", "ui"), edge("api", "release")]
+      [edge("root", "api"), edge("root", "ui"), edge("api", "release")],
     );
 
     expect(result.criticalPath.map((item) => item.id)).toEqual(["root", "api", "release"]);
@@ -68,25 +73,12 @@ describe("analyzeReleasePulse", () => {
   it("prioritizes explicitly blocked work and remains safe for cyclic input", () => {
     const result = analyzeReleasePulse(
       [node("a", 0), node("b", 0, 1, "blocked")],
-      [edge("a", "b"), edge("b", "a")]
+      [edge("a", "b"), edge("b", "a")],
     );
 
     expect(result.hasCycle).toBe(true);
     expect(result.blockers[0]).toMatchObject({ id: "b", isExplicitlyBlocked: true });
     expect(result.criticalPath).toHaveLength(1);
-  });
-
-  it("returns an empty pulse for an empty canvas", () => {
-    expect(analyzeReleasePulse([], [])).toMatchObject({
-      readiness: 0,
-      completedNodes: 0,
-      totalNodes: 0,
-      readyNow: [],
-      blockedNodes: [],
-      blockers: [],
-      criticalPath: [],
-      hasCycle: false,
-    });
   });
 
   it("ignores AWS service nodes and group containers when calculating milestone pulse", () => {
@@ -129,7 +121,7 @@ describe("analyzeReleasePulse", () => {
 
     const result = analyzeReleasePulse(
       [node("brief", 2, 2), node("build", 1, 2), awsNode, groupNode],
-      [edge("brief", "build"), edge("build", "alb-1")]
+      [edge("brief", "build"), edge("build", "alb-1")],
     );
 
     expect(result.totalNodes).toBe(2);

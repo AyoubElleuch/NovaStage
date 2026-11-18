@@ -1,30 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectBySlug, isProjectMember, isProjectOwner } from "@/lib/projects";
-import { getAuthenticatedProfile } from "@/lib/auth/session";
+import { isProjectOwner } from "@/lib/projects";
+import { requireCanvasAccess, type CanvasRouteContext } from "@/lib/canvas/access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { claimCanvasNodeDirect, releaseCanvasNodeDirect } from "@/lib/canvas/server";
 import { safeRedisSet, safeRedisDel, safeRedisExpire } from "@/lib/redis/client";
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ slug: string }> }
-) {
+export async function POST(request: NextRequest, context: CanvasRouteContext) {
   try {
-    const session = await getAuthenticatedProfile();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { slug } = await context.params;
-    const project = await getProjectBySlug(slug);
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    const isMember = await isProjectMember(project.id, session.user.id);
-    if (!isMember) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const access = await requireCanvasAccess(context);
+    if (access.response) return access.response;
+    const { session, project } = access;
 
     const body = await request.json();
     const { action, node_id, request_id, accept } = body;
@@ -63,7 +48,9 @@ export async function POST(
       }
 
       return NextResponse.json(
-        isRenewed ? { success: true, expiresAt } : { success: false, error: "You no longer hold this claim" }
+        isRenewed
+          ? { success: true, expiresAt }
+          : { success: false, error: "You no longer hold this claim" },
       );
     }
 
@@ -126,7 +113,10 @@ export async function POST(
 
       const isOwner = await isProjectOwner(project.id, session.user.id);
       if (claimReq.current_holder_id !== session.user.id && !isOwner) {
-        return NextResponse.json({ error: "Not authorized to resolve this request" }, { status: 403 });
+        return NextResponse.json(
+          { error: "Not authorized to resolve this request" },
+          { status: 403 },
+        );
       }
 
       const now = new Date();
@@ -153,9 +143,15 @@ export async function POST(
           .eq("id", request_id);
 
         // Update Redis lock holder
-        await safeRedisSet(`canvas:lock:${project.id}:${claimReq.node_id}`, claimReq.requester_id, { ex: 300 });
+        await safeRedisSet(`canvas:lock:${project.id}:${claimReq.node_id}`, claimReq.requester_id, {
+          ex: 300,
+        });
 
-        return NextResponse.json({ success: true, status: "granted", new_holder_id: claimReq.requester_id });
+        return NextResponse.json({
+          success: true,
+          status: "granted",
+          new_holder_id: claimReq.requester_id,
+        });
       } else {
         await adminClient
           .from("canvas_claim_requests")
@@ -173,7 +169,10 @@ export async function POST(
     if (action === "force_unlock") {
       const isOwner = await isProjectOwner(project.id, session.user.id);
       if (!isOwner) {
-        return NextResponse.json({ error: "Only project owners can force unlock nodes" }, { status: 403 });
+        return NextResponse.json(
+          { error: "Only project owners can force unlock nodes" },
+          { status: 403 },
+        );
       }
 
       await adminClient

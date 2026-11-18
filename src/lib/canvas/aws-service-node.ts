@@ -7,7 +7,7 @@ export const AWS_SERVICE_NODE_SIZE = { width: 200, height: 220 };
 export function createAWSServiceNodeData(
   serviceId: string,
   region?: string,
-  config?: Record<string, string>
+  config?: Record<string, string>,
 ) {
   const canonicalId = normalizeAWSServiceId(serviceId);
   const service = getAWSServiceDefinition(canonicalId);

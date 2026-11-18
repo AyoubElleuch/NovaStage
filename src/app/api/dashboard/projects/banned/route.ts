@@ -29,7 +29,10 @@ export async function GET(request: Request) {
     });
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || "Failed to fetch removed members." }, { status: 403 });
+      return NextResponse.json(
+        { error: result.error || "Failed to fetch removed members." },
+        { status: 403 },
+      );
     }
 
     return NextResponse.json({ success: true, bannedMembers: result.bannedMembers || [] });
@@ -55,7 +58,10 @@ export async function POST(request: Request) {
     const { projectId, targetUserId } = body;
 
     if (!projectId || !targetUserId) {
-      return NextResponse.json({ error: "Project ID and target user ID are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Project ID and target user ID are required." },
+        { status: 400 },
+      );
     }
 
     const result = await unbanProjectMember({
@@ -65,7 +71,10 @@ export async function POST(request: Request) {
     });
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || "Failed to unblock collaborator." }, { status: 400 });
+      return NextResponse.json(
+        { error: result.error || "Failed to unblock collaborator." },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json({ success: true });

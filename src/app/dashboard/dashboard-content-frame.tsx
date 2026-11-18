@@ -7,11 +7,7 @@ import Link from "next/link";
 import { Menu } from "lucide-react";
 import { useMobileNav } from "@/lib/mobile-nav-context";
 
-export default function DashboardContentFrame({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardContentFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { toggle } = useMobileNav();
   const isProjectCanvas = pathname?.startsWith("/dashboard/projects/");
@@ -28,12 +24,12 @@ export default function DashboardContentFrame({
     pathname === "/dashboard"
       ? "Projects"
       : pathname === "/dashboard/updates"
-      ? "Updates"
-      : pathname === "/dashboard/subscription"
-      ? "Subscription"
-      : pathname === "/dashboard/settings"
-      ? "Settings"
-      : "Workspace";
+        ? "Updates"
+        : pathname === "/dashboard/subscription"
+          ? "Subscription"
+          : pathname === "/dashboard/settings"
+            ? "Settings"
+            : "Workspace";
 
   return (
     <main className="min-h-0 min-w-0 flex-1 overflow-y-auto flex flex-col">
@@ -69,9 +65,7 @@ export default function DashboardContentFrame({
         </span>
       </header>
 
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-10 sm:py-12 flex-1">
-        {children}
-      </div>
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-10 sm:py-12 flex-1">{children}</div>
     </main>
   );
 }

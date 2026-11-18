@@ -83,11 +83,15 @@ async function runBenchmark() {
     console.log("\n🔒 Testing Atomic Claim Lock Simulation...");
     const lockKey = `canvas:lock:benchmark-project:node-42`;
     const lockAcquired = await redis.set(lockKey, "user_demo_123", { ex: 300, nx: true });
-    console.log(`   - Lock Acquisition (SET NX EX 300): ${lockAcquired === "OK" ? "SUCCESS (Lock Acquired)" : "FAILED"}`);
+    console.log(
+      `   - Lock Acquisition (SET NX EX 300): ${lockAcquired === "OK" ? "SUCCESS (Lock Acquired)" : "FAILED"}`,
+    );
 
     // Try acquiring already locked key (should fail collision)
     const lockCollision = await redis.set(lockKey, "user_second_456", { ex: 300, nx: true });
-    console.log(`   - Collision Guard (Second user blocked): ${lockCollision === null ? "PASSED (Collision Prevented)" : "FAILED"}`);
+    console.log(
+      `   - Collision Guard (Second user blocked): ${lockCollision === null ? "PASSED (Collision Prevented)" : "FAILED"}`,
+    );
     await redis.del(lockKey);
 
     // 5. Compare with Direct Database Query Latency (if Supabase configured)
@@ -110,7 +114,9 @@ async function runBenchmark() {
       console.log(`   - SQL SELECT : Avg ${avgDb} ms  (Min: ${minDb} ms, Max: ${maxDb} ms)`);
 
       const speedup = (parseFloat(avgDb) / parseFloat(avgRead)).toFixed(1);
-      console.log(`\n🔥 Performance Result: Redis cache is ~${speedup}x FASTER than direct SQL roundtrips!`);
+      console.log(
+        `\n🔥 Performance Result: Redis cache is ~${speedup}x FASTER than direct SQL roundtrips!`,
+      );
     }
 
     console.log("\n=======================================================");

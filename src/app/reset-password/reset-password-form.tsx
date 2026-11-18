@@ -1,56 +1,11 @@
 "use client";
 
+import PasswordStrength from "@/components/ui/password-strength";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Eye, EyeOff, Loader2, LockKeyhole } from "lucide-react";
 import { resetPassword } from "@/app/auth/actions";
-
-const passwordRequirements = [
-  { label: "8+ characters", test: (password: string) => password.length >= 8 },
-  { label: "Capital letter", test: (password: string) => /[A-Z]/.test(password) },
-  { label: "Small letter", test: (password: string) => /[a-z]/.test(password) },
-  { label: "Number", test: (password: string) => /\d/.test(password) },
-  { label: "Special character", test: (password: string) => /[^A-Za-z0-9]/.test(password) },
-];
-
-function PasswordStrength({ password }: { password: string }) {
-  const passedRequirements = passwordRequirements.filter(({ test }) => test(password)).length;
-  const strength = passedRequirements <= 2 ? "Weak" : passedRequirements <= 4 ? "Medium" : "Strong";
-  const strengthTone =
-    strength === "Strong"
-      ? "text-emerald-600"
-      : strength === "Medium"
-        ? "text-amber-600"
-        : "text-red-600";
-  const barTone =
-    strength === "Strong" ? "bg-emerald-500" : strength === "Medium" ? "bg-amber-500" : "bg-red-500";
-
-  return (
-    <div className="mt-2.5 border-t border-neutral-100 dark:border-[#283548] pt-2.5" aria-live="polite">
-      <div className="flex items-center justify-between gap-3 text-xs">
-        <span className="text-neutral-400 dark:text-neutral-500">Password strength</span>
-        <span className={`font-semibold ${password ? strengthTone : "text-neutral-400 dark:text-neutral-500"}`}>
-          {password ? strength : "Not set"}
-        </span>
-      </div>
-      <div className="mt-2 grid grid-cols-5 gap-1" aria-hidden="true">
-        {passwordRequirements.map(({ label, test }) => (
-          <span
-            key={label}
-            className={`h-1 rounded-full ${password && test(password) ? barTone : "bg-neutral-200 dark:bg-[#283548]"}`}
-          />
-        ))}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-neutral-400 dark:text-neutral-500">
-        {passwordRequirements.map(({ label, test }) => (
-          <span key={label} className={password && test(password) ? "text-neutral-700 dark:text-neutral-200" : undefined}>
-            {label}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -177,7 +132,7 @@ export default function ResetPasswordForm() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <PasswordStrength password={password} />
+            <PasswordStrength variant="detailed" password={password} />
           </div>
 
           <div>

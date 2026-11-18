@@ -1,13 +1,10 @@
+import { formatDecompositionContext } from "../prompts/decomposition-context";
 /**
  * Phase 2: Deep Workflow Generation
  * Generates comprehensive branching DAG pipelines with domain-aware checkpoints and parallel groupings.
  */
 
-import {
-  CanvasAIContext,
-  AIWorkflowResult,
-  PromptDecomposition,
-} from "../types";
+import { CanvasAIContext, AIWorkflowResult, PromptDecomposition } from "../types";
 import { buildGenerationSystemInstruction } from "../prompts/system-generate";
 import { callGemini } from "../gemini";
 
@@ -36,7 +33,14 @@ const WORKFLOW_SCHEMA = {
           },
           phase: {
             type: "STRING",
-            enum: ["planning", "architecture", "implementation", "testing", "deployment", "operations"],
+            enum: [
+              "planning",
+              "architecture",
+              "implementation",
+              "testing",
+              "deployment",
+              "operations",
+            ],
           },
           parallelGroup: { type: "STRING" },
           sortOrder: { type: "INTEGER" },
@@ -81,12 +85,13 @@ const WORKFLOW_SCHEMA = {
 export async function generateDeepWorkflow(
   prompt: string,
   decomposition?: PromptDecomposition,
-  context?: CanvasAIContext
+  context?: CanvasAIContext,
 ): Promise<AIWorkflowResult> {
   const systemInstruction = buildGenerationSystemInstruction(prompt, decomposition);
 
   // Format existing canvas context into clear text
-  let contextDescription = "The canvas is currently empty. Generate a brand-new comprehensive pipeline.";
+  let contextDescription =
+    "The canvas is currently empty. Generate a brand-new comprehensive pipeline.";
   if (context?.existingMilestones && context.existingMilestones.length > 0) {
     const simplifiedMilestones = context.existingMilestones.map((m, idx) => ({
       id: m.id,
@@ -114,48 +119,42 @@ export async function generateDeepWorkflow(
         existingEdges: simplifiedEdges,
       },
       null,
-      2
+      2,
     )}`;
   }
 
-  let decompositionContext = "";
-  if (decomposition) {
-    decompositionContext = `\n\nPhase 1 Architectural Decomposition:\n${JSON.stringify(
-      {
-        projectType: decomposition.projectType,
-        complexityTier: decomposition.complexityTier,
-        domainTags: decomposition.domainTags,
-        targetMilestones: decomposition.targetMilestoneCount,
-        suggestedParallelTracks: decomposition.suggestedParallelTracks,
-        concernAreas: decomposition.concernAreas.map((c) => ({
-          name: c.name,
-          category: c.category,
-          priority: c.priority,
-          dependencies: c.dependencies,
-        })),
-        techStackHints: decomposition.techStackHints,
-        riskFactors: decomposition.riskFactors,
-      },
-      null,
-      2
-    )}`;
-  }
+  const decompositionContext = formatDecompositionContext(decomposition);
 
   const userPromptText = `Selected mode: Workflow. Operation: ${context?.operation || "create"}. ${context?.operation === "update" ? "Return the complete desired workflow, retaining existing milestone and checkpoint IDs." : "Create a distinct new workflow using new tempIds only. Existing work is context; do not modify or delete it."}\n${contextDescription}${decompositionContext}\n\nUser Request: "${prompt}"`;
 
   let feedback = "";
   for (let attempt = 0; attempt < 2; attempt++) {
     const result = await callGemini<AIWorkflowResult>(userPromptText + feedback, WORKFLOW_SCHEMA, {
-      systemInstruction, temperature: 0.2,
+      systemInstruction,
+      temperature: 0.2,
     });
     try {
       if (!result) throw new Error("No structured workflow was returned.");
-      const workflow = { ...result, intent: context?.operation === "update" ? "update_pipeline" as const : "create_pipeline" as const, mode: "workflow" as const, decomposition };
+      const workflow = {
+        ...result,
+        intent:
+          context?.operation === "update"
+            ? ("update_pipeline" as const)
+            : ("create_pipeline" as const),
+        mode: "workflow" as const,
+        decomposition,
+      };
       assertSemanticGraph(workflow, "workflow");
       return workflow;
     } catch (error) {
-      feedback = "\nPrevious draft rejected: " + (error instanceof Error ? error.message : "Invalid workflow") + ". Return the complete corrected graph. Do not invent missing tasks or dependencies.";
+      feedback =
+        "\nPrevious draft rejected: " +
+        (error instanceof Error ? error.message : "Invalid workflow") +
+        ". Return the complete corrected graph. Do not invent missing tasks or dependencies.";
     }
   }
-  throw new Error("The AI provider did not return a valid workflow. No canvas changes were applied; please retry." + feedback);
+  throw new Error(
+    "The AI provider did not return a valid workflow. No canvas changes were applied; please retry." +
+      feedback,
+  );
 }

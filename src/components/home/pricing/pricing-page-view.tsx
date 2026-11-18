@@ -29,10 +29,14 @@ export default function PricingPageView() {
             <Link href="/#live-canvas">Live canvas</Link>
             <Link href="/#how-it-works">How it works</Link>
             <Link href="/#capabilities">Capabilities</Link>
-            <Link href="/pricing" aria-current="page" className="text-white">Pricing</Link>
+            <Link href="/pricing" aria-current="page" className="text-white">
+              Pricing
+            </Link>
           </nav>
           <div className="landing-header-actions">
-            <AuthTransitionLink href="/login" className="landing-login">Log in</AuthTransitionLink>
+            <AuthTransitionLink href="/login" className="landing-login">
+              Log in
+            </AuthTransitionLink>
             <AuthTransitionLink href="/signup" className="landing-button light">
               Get started <ArrowUpRight size={15} />
             </AuthTransitionLink>
@@ -55,7 +59,9 @@ export default function PricingPageView() {
               <Link href="/#live-canvas">Live canvas</Link>
               <Link href="/#how-it-works">How it works</Link>
               <Link href="/#capabilities">Capabilities</Link>
-              <Link href="/pricing" aria-current="page">Pricing</Link>
+              <Link href="/pricing" aria-current="page">
+                Pricing
+              </Link>
               <AuthTransitionLink href="/login">Log in</AuthTransitionLink>
             </nav>
           )}
@@ -96,16 +102,30 @@ export default function PricingPageView() {
           <nav aria-label="Footer navigation">
             <Link href="/#capabilities">Capabilities</Link>
             <Link href="/#live-canvas">Live canvas</Link>
-            <a href="https://github.com/AyoubElleuch/NovaStage" target="_blank" rel="noreferrer">GitHub</a>
-            <button type="button" onClick={() => setLegal("privacy")}>Privacy</button>
-            <button type="button" onClick={() => setLegal("terms")}>Terms</button>
+            <a href="https://github.com/AyoubElleuch/NovaStage" target="_blank" rel="noreferrer">
+              GitHub
+            </a>
+            <button type="button" onClick={() => setLegal("privacy")}>
+              Privacy
+            </button>
+            <button type="button" onClick={() => setLegal("terms")}>
+              Terms
+            </button>
           </nav>
           <p>BUILT FOR PEOPLE WHO BUILD SYSTEMS.</p>
         </div>
       </footer>
 
-      <PrivacyPolicyModal variant="landing" isOpen={legal === "privacy"} onClose={() => setLegal(null)} />
-      <TermsOfServiceModal variant="landing" isOpen={legal === "terms"} onClose={() => setLegal(null)} />
+      <PrivacyPolicyModal
+        variant="landing"
+        isOpen={legal === "privacy"}
+        onClose={() => setLegal(null)}
+      />
+      <TermsOfServiceModal
+        variant="landing"
+        isOpen={legal === "terms"}
+        onClose={() => setLegal(null)}
+      />
     </div>
   );
 }

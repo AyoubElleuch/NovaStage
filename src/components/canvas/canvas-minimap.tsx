@@ -3,7 +3,11 @@
 import React, { useRef, useState, useEffect, useId } from "react";
 import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { CanvasNode, CanvasViewport } from "@/lib/canvas/types";
-import { getCanvasBoundingBox, getNodeDimensions, isNodeFullyComplete } from "@/lib/canvas/coordinate-math";
+import {
+  getCanvasBoundingBox,
+  getNodeDimensions,
+  isNodeFullyComplete,
+} from "@/lib/canvas/coordinate-math";
 
 interface CanvasMinimapProps {
   nodes: CanvasNode[];
@@ -28,15 +32,21 @@ export default function CanvasMinimap({
   const mapRef = useRef<HTMLDivElement>(null);
   const asideRef = useRef<HTMLElement>(null);
   const mapId = useId();
-  const [dragBounds, setDragBounds] = useState<ReturnType<typeof getCanvasBoundingBox> | null>(null);
+  const [dragBounds, setDragBounds] = useState<ReturnType<typeof getCanvasBoundingBox> | null>(
+    null,
+  );
   const activePointerRef = useRef<number | null>(null);
   const grabOffsetRef = useRef({ x: 0, y: 0 });
   const [canvasSize, setCanvasSize] = useState({ width: 1280, height: 800 });
 
   useEffect(() => {
-    const canvas = asideRef.current?.parentElement?.querySelector<HTMLElement>("[data-canvas-viewport]");
+    const canvas =
+      asideRef.current?.parentElement?.querySelector<HTMLElement>("[data-canvas-viewport]");
     const updateSize = () => {
-      setCanvasSize({ width: canvas?.clientWidth || window.innerWidth, height: canvas?.clientHeight || window.innerHeight });
+      setCanvasSize({
+        width: canvas?.clientWidth || window.innerWidth,
+        height: canvas?.clientHeight || window.innerHeight,
+      });
     };
     updateSize();
     const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateSize) : null;
@@ -54,7 +64,9 @@ export default function CanvasMinimap({
       activePointerRef.current = null;
       setDragBounds(null);
       if (pointerId !== null) {
-        try { mapRef.current?.releasePointerCapture?.(pointerId); } catch {}
+        try {
+          mapRef.current?.releasePointerCapture?.(pointerId);
+        } catch {}
       }
     };
     window.addEventListener("blur", cancelDrag);
@@ -77,7 +89,12 @@ export default function CanvasMinimap({
   const maxY = Math.max(graphBounds.maxY, viewWorldY + viewWorldH);
   // Freeze the map projection while dragging to prevent the target drifting under the pointer.
   const bounds = dragBounds || {
-    minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY,
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: maxX - minX,
+    height: maxY - minY,
   };
   const scaleX = MINIMAP_WIDTH / bounds.width;
   const scaleY = MINIMAP_HEIGHT / bounds.height;
@@ -110,8 +127,20 @@ export default function CanvasMinimap({
   const pointerToWorld = (e: React.PointerEvent) => {
     if (!mapRef.current) return;
     const rect = mapRef.current.getBoundingClientRect();
-    const mapX = Math.max(0, Math.min(MINIMAP_WIDTH, (e.clientX - rect.left) * MINIMAP_WIDTH / (rect.width || MINIMAP_WIDTH)));
-    const mapY = Math.max(0, Math.min(MINIMAP_HEIGHT, (e.clientY - rect.top) * MINIMAP_HEIGHT / (rect.height || MINIMAP_HEIGHT)));
+    const mapX = Math.max(
+      0,
+      Math.min(
+        MINIMAP_WIDTH,
+        ((e.clientX - rect.left) * MINIMAP_WIDTH) / (rect.width || MINIMAP_WIDTH),
+      ),
+    );
+    const mapY = Math.max(
+      0,
+      Math.min(
+        MINIMAP_HEIGHT,
+        ((e.clientY - rect.top) * MINIMAP_HEIGHT) / (rect.height || MINIMAP_HEIGHT),
+      ),
+    );
 
     return mapToWorld(mapX, mapY);
   };
@@ -121,8 +150,10 @@ export default function CanvasMinimap({
     if (!worldTarget) return;
 
     // Center screen on clicked world point
-    const newViewportX = visibleCanvasWidth / 2 - (worldTarget.x - grabOffsetRef.current.x) * viewport.zoom;
-    const newViewportY = canvasSize.height / 2 - (worldTarget.y - grabOffsetRef.current.y) * viewport.zoom;
+    const newViewportX =
+      visibleCanvasWidth / 2 - (worldTarget.x - grabOffsetRef.current.x) * viewport.zoom;
+    const newViewportY =
+      canvasSize.height / 2 - (worldTarget.y - grabOffsetRef.current.y) * viewport.zoom;
 
     onViewportChange({
       ...viewport,
@@ -140,10 +171,16 @@ export default function CanvasMinimap({
     const worldTarget = pointerToWorld(e);
     if (!worldTarget) return;
     // Grabbing the viewport window should keep the point under the pointer fixed.
-    const isInsideViewport = worldTarget.x >= viewWorldX && worldTarget.x <= viewWorldX + viewWorldW &&
-      worldTarget.y >= viewWorldY && worldTarget.y <= viewWorldY + viewWorldH;
+    const isInsideViewport =
+      worldTarget.x >= viewWorldX &&
+      worldTarget.x <= viewWorldX + viewWorldW &&
+      worldTarget.y >= viewWorldY &&
+      worldTarget.y <= viewWorldY + viewWorldH;
     grabOffsetRef.current = isInsideViewport
-      ? { x: worldTarget.x - (viewWorldX + viewWorldW / 2), y: worldTarget.y - (viewWorldY + viewWorldH / 2) }
+      ? {
+          x: worldTarget.x - (viewWorldX + viewWorldW / 2),
+          y: worldTarget.y - (viewWorldY + viewWorldH / 2),
+        }
       : { x: 0, y: 0 };
     activePointerRef.current = e.pointerId;
     setDragBounds(bounds);
@@ -217,26 +254,32 @@ export default function CanvasMinimap({
           onKeyDown={(e) => {
             const step = e.shiftKey ? 160 : 48;
             const delta: Record<string, { x: number; y: number }> = {
-              ArrowLeft: { x: step, y: 0 }, ArrowRight: { x: -step, y: 0 },
-              ArrowUp: { x: 0, y: step }, ArrowDown: { x: 0, y: -step },
+              ArrowLeft: { x: step, y: 0 },
+              ArrowRight: { x: -step, y: 0 },
+              ArrowUp: { x: 0, y: step },
+              ArrowDown: { x: 0, y: -step },
             };
             if (!delta[e.key] || e.ctrlKey || e.metaKey || e.altKey) return;
             e.preventDefault();
             e.stopPropagation();
-            onViewportChange({ ...viewport, x: viewport.x + delta[e.key].x, y: viewport.y + delta[e.key].y });
+            onViewportChange({
+              ...viewport,
+              x: viewport.x + delta[e.key].x,
+              y: viewport.y + delta[e.key].y,
+            });
           }}
           style={{ width: `${MINIMAP_WIDTH}px`, height: `${MINIMAP_HEIGHT}px` }}
           className="relative overflow-hidden rounded-2xl border border-neutral-200/90 bg-white/95 shadow-xl backdrop-blur-xl select-none touch-none cursor-crosshair focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-[#283548] dark:bg-[#161d27]/95"
         >
           <span id={`${mapId}-help`} className="sr-only pointer-events-none">
-            Click to center the canvas, or drag the viewport window to pan. Use arrow keys to pan the canvas. Hold Shift to pan further.
+            Click to center the canvas, or drag the viewport window to pan. Use arrow keys to pan
+            the canvas. Hold Shift to pan further.
           </span>
           {/* Subtle grid background */}
           <div
             className="absolute inset-0 opacity-20 pointer-events-none"
             style={{
-              backgroundImage:
-                "radial-gradient(circle, #737373 1px, transparent 1px)",
+              backgroundImage: "radial-gradient(circle, #737373 1px, transparent 1px)",
               backgroundSize: "12px 12px",
             }}
           />
@@ -264,12 +307,12 @@ export default function CanvasMinimap({
                   node.node_type === "group"
                     ? "border border-dashed border-blue-400/80 bg-blue-400/10"
                     : node.node_type === "annotation"
-                    ? "bg-yellow-300 ring-1 ring-yellow-500/50"
-                    : isDone
-                    ? "bg-emerald-500 ring-1 ring-emerald-600/50"
-                    : isClaimed
-                    ? "bg-amber-400 ring-1 ring-amber-500/50"
-                    : "bg-neutral-800 ring-1 ring-neutral-900/30 dark:bg-slate-400 dark:ring-slate-500/30"
+                      ? "bg-yellow-300 ring-1 ring-yellow-500/50"
+                      : isDone
+                        ? "bg-emerald-500 ring-1 ring-emerald-600/50"
+                        : isClaimed
+                          ? "bg-amber-400 ring-1 ring-amber-500/50"
+                          : "bg-neutral-800 ring-1 ring-neutral-900/30 dark:bg-slate-400 dark:ring-slate-500/30"
                 }`}
               />
             );

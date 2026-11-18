@@ -61,7 +61,7 @@ export async function safeRedisGet<T>(key: string): Promise<T | null> {
 export async function safeRedisSet(
   key: string,
   value: unknown,
-  options?: { ex?: number; px?: number; nx?: boolean }
+  options?: { ex?: number; px?: number; nx?: boolean },
 ): Promise<boolean> {
   const redis = getRedis();
   if (!redis) return false;

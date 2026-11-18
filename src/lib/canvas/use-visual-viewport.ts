@@ -10,7 +10,10 @@ export function useCanvasVisualViewport() {
     const top = root.style.getPropertyValue("--canvas-visible-top");
     const viewport = window.visualViewport;
     const update = () => {
-      root.style.setProperty("--canvas-visible-height", `${viewport?.height ?? window.innerHeight}px`);
+      root.style.setProperty(
+        "--canvas-visible-height",
+        `${viewport?.height ?? window.innerHeight}px`,
+      );
       root.style.setProperty("--canvas-visible-top", `${viewport?.offsetTop ?? 0}px`);
     };
     update();
@@ -21,8 +24,12 @@ export function useCanvasVisualViewport() {
       viewport?.removeEventListener("resize", update);
       viewport?.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
-      for (const [key, value] of [["--canvas-visible-height", height], ["--canvas-visible-top", top]]) {
-        if (value) root.style.setProperty(key, value); else root.style.removeProperty(key);
+      for (const [key, value] of [
+        ["--canvas-visible-height", height],
+        ["--canvas-visible-top", top],
+      ]) {
+        if (value) root.style.setProperty(key, value);
+        else root.style.removeProperty(key);
       }
     };
   }, []);

@@ -4,10 +4,7 @@ import { useState, useTransition } from "react";
 import { CheckCircle2, Info, Loader2, Megaphone, OctagonAlert, Save } from "lucide-react";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { savePlatformAnnouncement } from "../actions";
-import {
-  AnnouncementSeverity,
-  PlatformAnnouncement,
-} from "@/lib/announcements/types";
+import { AnnouncementSeverity, PlatformAnnouncement } from "@/lib/announcements/types";
 
 interface AnnouncementEditorProps {
   initialAnnouncement: PlatformAnnouncement;
@@ -25,21 +22,24 @@ const severityOptions: Array<{
     label: "Low",
     description: "General information",
     Icon: Info,
-    activeClasses: "border-sky-500 bg-sky-50 text-sky-950 dark:border-sky-400 dark:bg-sky-950/40 dark:text-sky-100",
+    activeClasses:
+      "border-sky-500 bg-sky-50 text-sky-950 dark:border-sky-400 dark:bg-sky-950/40 dark:text-sky-100",
   },
   {
     value: "medium",
     label: "Medium",
     description: "Needs attention",
     Icon: Megaphone,
-    activeClasses: "border-amber-500 bg-amber-50 text-amber-950 dark:border-amber-400 dark:bg-amber-950/40 dark:text-amber-100",
+    activeClasses:
+      "border-amber-500 bg-amber-50 text-amber-950 dark:border-amber-400 dark:bg-amber-950/40 dark:text-amber-100",
   },
   {
     value: "high",
     label: "High",
     description: "Important disruption",
     Icon: OctagonAlert,
-    activeClasses: "border-red-500 bg-red-50 text-red-950 dark:border-red-400 dark:bg-red-950/40 dark:text-red-100",
+    activeClasses:
+      "border-red-500 bg-red-50 text-red-950 dark:border-red-400 dark:bg-red-950/40 dark:text-red-100",
   },
 ];
 
@@ -78,7 +78,8 @@ export default function AnnouncementEditor({ initialAnnouncement }: Announcement
     });
   };
 
-  const selectedSeverity = severityOptions.find((option) => option.value === severity) || severityOptions[0];
+  const selectedSeverity =
+    severityOptions.find((option) => option.value === severity) || severityOptions[0];
   const PreviewIcon = selectedSeverity.Icon;
 
   return (
@@ -87,7 +88,9 @@ export default function AnnouncementEditor({ initialAnnouncement }: Announcement
         <div className="border-b border-neutral-100 px-5 py-4 dark:border-[#283548] sm:px-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">Announcement message</h2>
+              <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                Announcement message
+              </h2>
               <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                 This message is visible across the entire platform when activated.
               </p>
@@ -99,7 +102,9 @@ export default function AnnouncementEditor({ initialAnnouncement }: Announcement
                   : "bg-neutral-100 text-neutral-500 dark:bg-[#1e2634] dark:text-neutral-400"
               }`}
             >
-              <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-neutral-400"}`} />
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-neutral-400"}`}
+              />
               {isActive ? "Active" : "Disabled"}
             </span>
           </div>
@@ -108,10 +113,15 @@ export default function AnnouncementEditor({ initialAnnouncement }: Announcement
         <div className="space-y-6 p-5 sm:p-6">
           <div>
             <div className="flex items-center justify-between gap-3">
-              <label htmlFor="platform-announcement-message" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+              <label
+                htmlFor="platform-announcement-message"
+                className="text-xs font-semibold text-neutral-700 dark:text-neutral-300"
+              >
                 Message
               </label>
-              <span className={`text-[11px] ${message.length > 280 ? "text-red-600 dark:text-red-400" : "text-neutral-400 dark:text-neutral-500"}`}>
+              <span
+                className={`text-[11px] ${message.length > 280 ? "text-red-600 dark:text-red-400" : "text-neutral-400 dark:text-neutral-500"}`}
+              >
                 {message.length}/280
               </span>
             </div>
@@ -127,7 +137,9 @@ export default function AnnouncementEditor({ initialAnnouncement }: Announcement
           </div>
 
           <fieldset>
-            <legend className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Severity</legend>
+            <legend className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+              Severity
+            </legend>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               {severityOptions.map(({ value, label, description, Icon, activeClasses }) => {
                 const isSelected = severity === value;
@@ -166,8 +178,8 @@ export default function AnnouncementEditor({ initialAnnouncement }: Announcement
                 severity === "low"
                   ? "border-sky-200 bg-sky-50 text-sky-950 dark:border-sky-900/70 dark:bg-sky-950/45 dark:text-sky-100"
                   : severity === "medium"
-                  ? "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/45 dark:text-amber-100"
-                  : "border-red-200 bg-red-50 text-red-950 dark:border-red-900/70 dark:bg-red-950/45 dark:text-red-100"
+                    ? "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/45 dark:text-amber-100"
+                    : "border-red-200 bg-red-50 text-red-950 dark:border-red-900/70 dark:bg-red-950/45 dark:text-red-100"
               }`}
               role="status"
             >
@@ -185,7 +197,9 @@ export default function AnnouncementEditor({ initialAnnouncement }: Announcement
               disabled={isPending}
               className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3.5 text-xs font-medium text-neutral-700 shadow-xs transition-colors hover:border-neutral-300 hover:bg-neutral-50 disabled:cursor-wait disabled:opacity-60 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-300 dark:hover:border-[#384961] dark:hover:bg-[#1e2634]"
             >
-              {isPending && pendingAction === "disable" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
+              {isPending && pendingAction === "disable" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : null}
               Disable announcement
             </button>
             <button
@@ -194,7 +208,11 @@ export default function AnnouncementEditor({ initialAnnouncement }: Announcement
               disabled={isPending || message.trim().length === 0}
               className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3.5 text-xs font-medium text-neutral-800 shadow-xs transition-colors hover:border-neutral-300 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-200 dark:hover:border-[#384961] dark:hover:bg-[#1e2634]"
             >
-              {isPending && pendingAction === "draft" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Save className="h-3.5 w-3.5" aria-hidden="true" />}
+              {isPending && pendingAction === "draft" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Save className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
               Save draft
             </button>
             <button
@@ -203,7 +221,11 @@ export default function AnnouncementEditor({ initialAnnouncement }: Announcement
               disabled={isPending || message.trim().length === 0}
               className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg bg-neutral-900 px-3.5 text-xs font-medium text-white shadow-xs transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
             >
-              {isPending && pendingAction === "activate" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}
+              {isPending && pendingAction === "activate" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
               Activate for everyone
             </button>
           </div>

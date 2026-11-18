@@ -1,41 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectBySlug, isProjectMember } from "@/lib/projects";
-import { getAuthenticatedProfile } from "@/lib/auth/session";
+import { requireCanvasAccess, type CanvasRouteContext } from "@/lib/canvas/access";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { executeAIPipeline } from "@/lib/ai/pipeline";
 import { CanvasAIContext, isAIGenerationMode } from "@/lib/ai/types";
 import { resolveGenerationOperation } from "@/lib/ai/orchestration";
-import { getProjectCanvasData, applyAIWorkflowResult, applyAWSServiceNodes } from "@/lib/canvas/server";
+import { getProjectCanvasData } from "@/lib/canvas/server";
+import { canvasFingerprint, createCanvasPreview } from "@/lib/canvas/ai-preview";
 import { getAiRequestLimit } from "@/lib/plans";
 
 export const maxDuration = 120;
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ slug: string }> }
-) {
+export async function POST(request: NextRequest, context: CanvasRouteContext) {
   let projectToUnlock: string | null = null;
   let quotaConsumed = false;
 
   try {
-    const session = await getAuthenticatedProfile();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { slug } = await context.params;
-    const project = await getProjectBySlug(slug);
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    const isMember = await isProjectMember(project.id, session.user.id);
-    if (!isMember) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const access = await requireCanvasAccess(context);
+    if (access.response) return access.response;
+    const { session, project } = access;
 
     const body = await request.json().catch(() => ({}));
+    if (body.action === "apply_preview") {
+      const supabase = await createClient();
+      const { data: lock, error: lockError } = await supabase.rpc("acquire_project_ai_lock", {
+        p_project_id: project.id,
+      });
+      if (lockError || !lock?.success)
+        return NextResponse.json(
+          {
+            error: "COLLISION_LOCKED",
+            message: "Another generation is active. Try applying this preview again shortly.",
+          },
+          { status: 409 },
+        );
+      projectToUnlock = project.id;
+      const { error } = await createAdminClient().rpc("accept_canvas_ai_preview", {
+        p_preview_id: body.id,
+        p_project_id: project.id,
+        p_user_id: session.user.id,
+      });
+      if (error)
+        return NextResponse.json(
+          {
+            error: "PREVIEW_STALE",
+            message:
+              "This preview expired or the canvas changed. Generate a new preview; nothing was applied.",
+          },
+          { status: 409 },
+        );
+      const saved = await getProjectCanvasData(project.id);
+      return NextResponse.json({ success: true, ...saved });
+    }
+    if (body.action === "dismiss_preview") {
+      const { error } = await createAdminClient()
+        .from("canvas_ai_previews")
+        .delete()
+        .eq("id", body.id)
+        .eq("project_id", project.id)
+        .eq("user_id", session.user.id);
+      return NextResponse.json({ success: !error }, { status: error ? 500 : 200 });
+    }
     const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
     const mode = body?.mode ?? "workflow";
     if (!isAIGenerationMode(mode)) {
@@ -45,25 +70,22 @@ export async function POST(
     if (!prompt) {
       return NextResponse.json(
         { error: "Prompt is required to generate or update a workflow" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const supabase = await createClient();
 
     // 1. Acquire Project AI Generation Collision Lock
-    const { data: lockResult, error: lockErr } = await supabase.rpc(
-      "acquire_project_ai_lock",
-      {
-        p_project_id: project.id,
-      }
-    );
+    const { data: lockResult, error: lockErr } = await supabase.rpc("acquire_project_ai_lock", {
+      p_project_id: project.id,
+    });
 
     if (lockErr) {
       console.error("Lock RPC error:", lockErr);
       return NextResponse.json(
         { error: "Failed to verify project AI availability" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -76,7 +98,7 @@ export async function POST(
             "Another collaborator is currently using AI for this project. Please wait.",
           generatingUser: lockResult.generating_user || "A collaborator",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -85,9 +107,7 @@ export async function POST(
 
     // 2. Resolve user's subscription tier and dynamic quota limit
     const userPlan =
-      (session.profile?.plan as string) ||
-      (session.user.user_metadata?.plan as string) ||
-      "free";
+      (session.profile?.plan as string) || (session.user.user_metadata?.plan as string) || "free";
 
     const maxAiRequests = getAiRequestLimit(userPlan);
 
@@ -98,13 +118,16 @@ export async function POST(
       requests_remaining?: number;
     } | null = null;
 
-    const { data: rpcData, error: quotaErr } = await supabase.rpc(
-      "consume_user_ai_quota"
-    );
+    const { data: rpcData, error: quotaErr } = await supabase.rpc("consume_user_ai_quota");
 
     if (!quotaErr && rpcData?.success) {
       quotaResult = rpcData;
-    } else if (!quotaErr && rpcData && !rpcData.success && (rpcData.requests_used ?? 10) >= maxAiRequests) {
+    } else if (
+      !quotaErr &&
+      rpcData &&
+      !rpcData.success &&
+      (rpcData.requests_used ?? 10) >= maxAiRequests
+    ) {
       return NextResponse.json(
         {
           error: "QUOTA_EXCEEDED",
@@ -115,7 +138,7 @@ export async function POST(
           requests_remaining: 0,
           max_requests: maxAiRequests,
         },
-        { status: 403 }
+        { status: 403 },
       );
     } else {
       // Robust tier-aware quota check: check profiles count directly
@@ -137,7 +160,7 @@ export async function POST(
               requests_remaining: 0,
               max_requests: maxAiRequests,
             },
-            { status: 403 }
+            { status: 403 },
           );
         }
 
@@ -166,7 +189,7 @@ export async function POST(
               requests_remaining: 0,
               max_requests: maxAiRequests,
             },
-            { status: 403 }
+            { status: 403 },
           );
         }
         throw adminErr;
@@ -184,54 +207,57 @@ export async function POST(
           requests_remaining: quotaResult.requests_remaining ?? 0,
           max_requests: maxAiRequests,
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     quotaConsumed = true;
 
     // 3. Load current canvas graph state to provide as context
+    const baseline = await canvasFingerprint(project.id);
     const currentCanvasData = await getProjectCanvasData(project.id);
     const operation = resolveGenerationOperation(
       mode,
       prompt,
       currentCanvasData.nodes,
-      body?.operation
+      body?.operation,
     );
     const architectureNodeIds = new Set(
       currentCanvasData.nodes
         .filter((node) => node.node_type === "aws_service" || node.node_type === "group")
-        .map((node) => node.id)
+        .map((node) => node.id),
     );
     const aiContext: CanvasAIContext = {
       existingMilestones: currentCanvasData.nodes
         .filter((node) => !node.node_type || node.node_type === "milestone")
         .map((n, idx) => ({
-        id: n.id,
-        order: n.sort_order ?? idx,
-        title: n.title,
-        description: n.description,
-        color: n.color,
-        status: n.status,
-        checkpoints: (n.checkpoints || []).map((cp) => ({
-          id: cp.id,
-          title: cp.title,
-          is_completed: cp.is_completed,
-          sort_order: cp.sort_order,
+          id: n.id,
+          order: n.sort_order ?? idx,
+          title: n.title,
+          description: n.description,
+          color: n.color,
+          status: n.status,
+          checkpoints: (n.checkpoints || []).map((cp) => ({
+            id: cp.id,
+            title: cp.title,
+            is_completed: cp.is_completed,
+            sort_order: cp.sort_order,
+          })),
         })),
-      })),
       existingEdges: currentCanvasData.edges
         .filter((edge) => {
           const source = currentCanvasData.nodes.find((node) => node.id === edge.source_node_id);
           const target = currentCanvasData.nodes.find((node) => node.id === edge.target_node_id);
-          return (!source?.node_type || source.node_type === "milestone") &&
-            (!target?.node_type || target.node_type === "milestone");
+          return (
+            (!source?.node_type || source.node_type === "milestone") &&
+            (!target?.node_type || target.node_type === "milestone")
+          );
         })
         .map((e) => ({
-        id: e.id,
-        sourceId: e.source_node_id,
-        targetId: e.target_node_id,
-      })),
+          id: e.id,
+          sourceId: e.source_node_id,
+          targetId: e.target_node_id,
+        })),
       existingServiceNodes: currentCanvasData.nodes
         .filter((node) => node.node_type === "aws_service" && node.aws_metadata)
         .map((node) => ({
@@ -253,7 +279,11 @@ export async function POST(
           parentGroupId: node.parent_group_id,
         })),
       existingDataFlowEdges: currentCanvasData.edges
-        .filter((edge) => architectureNodeIds.has(edge.source_node_id) || architectureNodeIds.has(edge.target_node_id))
+        .filter(
+          (edge) =>
+            architectureNodeIds.has(edge.source_node_id) ||
+            architectureNodeIds.has(edge.target_node_id),
+        )
         .map((edge) => ({
           id: edge.id,
           sourceId: edge.source_node_id,
@@ -280,47 +310,18 @@ export async function POST(
         quotaConsumed = false;
       }
 
-      const errMsg =
-        aiErr instanceof Error
-          ? aiErr.message
-          : "Failed to process workflow with AI";
-      return NextResponse.json(
-        { error: "AI_GENERATION_FAILED", message: errMsg },
-        { status: 502 }
-      );
+      const errMsg = aiErr instanceof Error ? aiErr.message : "Failed to process workflow with AI";
+      return NextResponse.json({ error: "AI_GENERATION_FAILED", message: errMsg }, { status: 502 });
     }
 
-    // 5. Apply graph mutations, insertions, rewiring, or parallel generation
-    let finalNodes = currentCanvasData.nodes;
-    let finalEdges = currentCanvasData.edges;
-
-    // Apply milestone changes if present
-    if (mode === "workflow" && workflowResult.milestones.length > 0) {
-      const reconciled = await applyAIWorkflowResult(
-        project.id,
-        workflowResult,
-        currentCanvasData,
-        session.user.id
-      );
-      finalNodes = reconciled.nodes;
-      finalEdges = reconciled.edges;
-    }
-
-    // Apply AWS architecture nodes if present
-    const hasAWSContent =
-      (workflowResult.serviceNodes && workflowResult.serviceNodes.length > 0) ||
-      (workflowResult.groups && workflowResult.groups.length > 0);
-
-    if (mode === "aws_architecture" && hasAWSContent) {
-      const awsReconciled = await applyAWSServiceNodes(
-        project.id,
-        workflowResult,
-        { nodes: finalNodes, edges: finalEdges },
-        session.user.id
-      );
-      finalNodes = awsReconciled.nodes;
-      finalEdges = awsReconciled.edges;
-    }
+    const preview = await createCanvasPreview(
+      project.id,
+      session.user.id,
+      mode,
+      workflowResult,
+      currentCanvasData.nodes,
+      baseline,
+    );
 
     return NextResponse.json({
       success: true,
@@ -328,14 +329,14 @@ export async function POST(
       mode: workflowResult.mode,
       operation,
       summary: workflowResult.summary,
-      nodes: finalNodes,
-      edges: finalEdges,
+      preview,
+      nodes: currentCanvasData.nodes,
+      edges: currentCanvasData.edges,
       requests_used: quotaResult?.requests_used ?? 1,
       requests_remaining: quotaResult?.requests_remaining ?? 0,
     });
   } catch (err: unknown) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Internal Server Error";
+    const errorMsg = err instanceof Error ? err.message : "Internal Server Error";
     console.error("AI Workflow route error:", err);
 
     // Rollback quota if error happened after consumption
@@ -362,4 +363,29 @@ export async function POST(
       }
     }
   }
+}
+
+export async function GET(_request: NextRequest, context: CanvasRouteContext) {
+  const access = await requireCanvasAccess(context, 403);
+  if (access.response) return access.response;
+  const { session, project } = access;
+  const { data, error } = await createAdminClient()
+    .from("canvas_ai_previews")
+    .select("id,graph,summary,expires_at")
+    .eq("project_id", project.id)
+    .eq("user_id", session.user.id)
+    .is("applied_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return NextResponse.json({ error: "Unable to load AI preview" }, { status: 503 });
+  return NextResponse.json(
+    {
+      preview: data
+        ? { id: data.id, ...data.graph, expiresAt: data.expires_at, summary: data.summary }
+        : null,
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

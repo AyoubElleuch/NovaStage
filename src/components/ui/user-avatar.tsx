@@ -35,7 +35,11 @@ export default function UserAvatar({
   const sizeClasses = typeof size === "string" ? SIZE_MAP[size] || SIZE_MAP.md : "";
   const customDimensions =
     typeof size === "number"
-      ? { width: `${size}px`, height: `${size}px`, fontSize: `${Math.max(10, Math.floor(size * 0.4))}px` }
+      ? {
+          width: `${size}px`,
+          height: `${size}px`,
+          fontSize: `${Math.max(10, Math.floor(size * 0.4))}px`,
+        }
       : undefined;
 
   const showImage = Boolean(trimmedSrc && failedSrc !== trimmedSrc);

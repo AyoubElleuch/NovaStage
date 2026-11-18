@@ -26,7 +26,7 @@ export function getUserColor(userId: string): string {
 export function screenToWorld(
   screenX: number,
   screenY: number,
-  viewport: CanvasViewport
+  viewport: CanvasViewport,
 ): { x: number; y: number } {
   return {
     x: (screenX - viewport.x) / viewport.zoom,
@@ -37,7 +37,7 @@ export function screenToWorld(
 export function worldToScreen(
   worldX: number,
   worldY: number,
-  viewport: CanvasViewport
+  viewport: CanvasViewport,
 ): { x: number; y: number } {
   return {
     x: worldX * viewport.zoom + viewport.x,
@@ -45,7 +45,9 @@ export function worldToScreen(
   };
 }
 
-export function snapToGrid(value: number, gridSize = 16): number {
+export const CANVAS_GRID_SIZE = 16;
+
+export function snapToGrid(value: number, gridSize = CANVAS_GRID_SIZE): number {
   return Math.round(value / gridSize) * gridSize;
 }
 
@@ -59,50 +61,66 @@ export function isNodeFullyComplete(node: CanvasNode): boolean {
   if (!node.checkpoints || node.checkpoints.length === 0) {
     return node.status === "completed";
   }
-  return (
-    node.checkpoints.length > 0 &&
-    node.checkpoints.every((cp) => cp.is_completed)
-  );
+  return node.checkpoints.length > 0 && node.checkpoints.every((cp) => cp.is_completed);
 }
 
 /** Conservative, deterministic text wrapping for the clamped previews used by cards. */
 export function previewLines(text: string, width: number, fontSize: number, maximum: number) {
   const columns = Math.max(1, Math.floor(width / (fontSize * 0.62)));
-  let lines = 1, used = 0;
+  let lines = 1,
+    used = 0;
   for (const word of text.split(/\s+/)) {
-    if (used && used + word.length + 1 > columns) { lines++; used = 0; }
+    if (used && used + word.length + 1 > columns) {
+      lines++;
+      used = 0;
+    }
     lines += Math.floor(Math.max(0, word.length - 1) / columns);
     used += (used ? 1 : 0) + (word.length % columns || columns);
   }
   return Math.min(maximum, lines);
 }
 
-type DimensionNode = Pick<CanvasNode, "width" | "height"> & Partial<Pick<CanvasNode, "title" | "node_type" | "checkpoints" | "aws_metadata">>;
+type DimensionNode = Pick<CanvasNode, "width" | "height"> &
+  Partial<Pick<CanvasNode, "title" | "node_type" | "checkpoints" | "aws_metadata">>;
 /** Shared sizes keep layout, handles, fitting and the radar aligned with rendered cards. */
 export function getNodeDimensions(node: DimensionNode): { width: number; height: number } {
-  const fallback = node.node_type === "aws_service"
-    ? { width: 200, height: 220 }
-    : node.node_type === "group"
-    ? { width: 400, height: 300 }
-    : node.node_type === "annotation"
-    ? { width: 200, height: 150 }
-    : { width: 280, height: 180 };
+  const fallback =
+    node.node_type === "aws_service"
+      ? { width: 200, height: 220 }
+      : node.node_type === "group"
+        ? { width: 400, height: 300 }
+        : node.node_type === "annotation"
+          ? { width: 200, height: 150 }
+          : { width: 280, height: 180 };
   const milestone = !node.node_type || node.node_type === "milestone";
   const width = node.width > 0 ? node.width : fallback.width;
   const titleHeight = previewLines(node.title || "", width - 64, 14, 3) * 18;
   const checklistHeight = node.checkpoints?.length
-    ? 112 + titleHeight + node.checkpoints.slice(0, 5).reduce((sum, cp) => sum + Math.max(24, previewLines(cp.title, width - 100, 11, 2) * 16 + 4), 0)
+    ? 112 +
+      titleHeight +
+      node.checkpoints
+        .slice(0, 5)
+        .reduce(
+          (sum, cp) => sum + Math.max(24, previewLines(cp.title, width - 100, 11, 2) * 16 + 4),
+          0,
+        )
     : 144 + titleHeight;
-  const serviceHeight = 148 + previewLines(node.title || "", width - 52, 14, 3) * 20 + (Object.keys(node.aws_metadata?.config || {}).length ? 48 : 0);
+  const serviceHeight =
+    148 +
+    previewLines(node.title || "", width - 52, 14, 3) * 20 +
+    (Object.keys(node.aws_metadata?.config || {}).length ? 48 : 0);
   return {
     width,
-    height: Math.max(node.height || fallback.height, milestone ? checklistHeight : node.node_type === "aws_service" ? serviceHeight : 0),
+    height: Math.max(
+      node.height || fallback.height,
+      milestone ? checklistHeight : node.node_type === "aws_service" ? serviceHeight : 0,
+    ),
   };
 }
 
 export function getNodeHandlePosition(
   node: CanvasNode,
-  handle: HandlePosition
+  handle: HandlePosition,
 ): { x: number; y: number } {
   const { width, height } = getNodeDimensions(node);
   const { position_x, position_y } = node;
@@ -127,7 +145,7 @@ export function getBezierControlPoints(
   x2: number,
   y2: number,
   sourceHandle: HandlePosition = "right",
-  targetHandle: HandlePosition = "left"
+  targetHandle: HandlePosition = "left",
 ): { cx1: number; cy1: number; cx2: number; cy2: number } {
   const dx = Math.abs(x2 - x1);
   const dy = Math.abs(y2 - y1);
@@ -178,16 +196,9 @@ export function calculateBezierPath(
   x2: number,
   y2: number,
   sourceHandle: HandlePosition = "right",
-  targetHandle: HandlePosition = "left"
+  targetHandle: HandlePosition = "left",
 ): string {
-  const { cx1, cy1, cx2, cy2 } = getBezierControlPoints(
-    x1,
-    y1,
-    x2,
-    y2,
-    sourceHandle,
-    targetHandle
-  );
+  const { cx1, cy1, cx2, cy2 } = getBezierControlPoints(x1, y1, x2, y2, sourceHandle, targetHandle);
   return `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
 }
 
@@ -198,16 +209,9 @@ export function getBezierPoint(
   x2: number,
   y2: number,
   sourceHandle: HandlePosition = "right",
-  targetHandle: HandlePosition = "left"
+  targetHandle: HandlePosition = "left",
 ): { x: number; y: number } {
-  const { cx1, cy1, cx2, cy2 } = getBezierControlPoints(
-    x1,
-    y1,
-    x2,
-    y2,
-    sourceHandle,
-    targetHandle
-  );
+  const { cx1, cy1, cx2, cy2 } = getBezierControlPoints(x1, y1, x2, y2, sourceHandle, targetHandle);
 
   const mt = 1 - t;
   const mt2 = mt * mt;
@@ -225,7 +229,7 @@ export function canConnectMilestones(
   nodeA: { claimed_by: string | null; claim_expires_at?: string | null; node_type?: string },
   nodeB: { claimed_by: string | null; claim_expires_at?: string | null; node_type?: string },
   userId?: string,
-  isOwner?: boolean
+  isOwner?: boolean,
 ): boolean {
   if (isOwner) return true;
   if (!userId) return false;
@@ -249,7 +253,7 @@ export function canConnectMilestones(
  */
 export function getClosestHandleToPoint(
   node: CanvasNode,
-  point: { x: number; y: number }
+  point: { x: number; y: number },
 ): HandlePosition {
   const handles: HandlePosition[] = ["top", "right", "bottom", "left"];
   let bestHandle: HandlePosition = "left";
@@ -274,7 +278,7 @@ export function getClosestHandleToPoint(
  */
 export function detectCycle(
   edges: CanvasEdge[],
-  proposedEdge: { sourceNodeId: string; targetNodeId: string }
+  proposedEdge: { sourceNodeId: string; targetNodeId: string },
 ): boolean {
   if (proposedEdge.sourceNodeId === proposedEdge.targetNodeId) {
     return true; // Self-loop is an immediate cycle
@@ -331,7 +335,7 @@ export function findNearestHandle(
   worldPos: { x: number; y: number },
   nodes: CanvasNode[],
   excludeNodeId?: string,
-  threshold = 28
+  threshold = 28,
 ): { node: CanvasNode; handle: HandlePosition; position: { x: number; y: number } } | null {
   const handles: HandlePosition[] = ["top", "right", "bottom", "left"];
   let closest: {
@@ -360,7 +364,9 @@ export function findNearestHandle(
     }
   }
 
-  return closest ? { node: closest.node, handle: closest.handle, position: closest.position } : null;
+  return closest
+    ? { node: closest.node, handle: closest.handle, position: closest.position }
+    : null;
 }
 
 /**
@@ -368,7 +374,7 @@ export function findNearestHandle(
  */
 export function getCanvasBoundingBox(
   nodes: CanvasNode[],
-  padding = 60
+  padding = 60,
 ): {
   minX: number;
   minY: number;
@@ -413,33 +419,62 @@ export function getCanvasBoundingBox(
  * Exports the current roadmap graph to Mermaid.js diagram format.
  */
 export function exportToMermaid(nodes: CanvasNode[], edges: CanvasEdge[]): string {
-  const lines: string[] = ["graph LR"];
-
-  const sanitize = (str: string) =>
-    str.replace(/["\n\r]/g, " ").trim();
-
-  // Nodes definition
-  for (const node of nodes) {
-    const safeTitle = sanitize(node.title || "Milestone");
-    if (node.node_type === "aws_service") {
-      lines.push(`  ${node.id}["AWS: ${safeTitle}"]`);
-    } else if (node.node_type === "group") {
-      lines.push(`  ${node.id}[["Group: ${safeTitle}"]]`);
+  const lines = ["graph LR"];
+  const ids = new Map(nodes.map((node, index) => [node.id, `n${index + 1}`]));
+  const escape = (text: string) =>
+    text.replace(/[#&"<>|\[\]{}]/g, (char) => `#${char.charCodeAt(0)};`).replace(/[\r\n]/g, " ");
+  const emitted = new Set<string>();
+  const emit = (node: CanvasNode, indent: string) => {
+    if (emitted.has(node.id)) return;
+    emitted.add(node.id);
+    const id = ids.get(node.id);
+    const title = escape(node.title || "Untitled");
+    if (node.node_type === "group") {
+      lines.push(`${indent}subgraph ${id}["${title}"]`);
+      nodes
+        .filter(
+          (child) =>
+            child.parent_group_id === node.id ||
+            node.group_metadata?.childNodeIds.includes(child.id),
+        )
+        .forEach((child) => emit(child, indent + "  "));
+      lines.push(`${indent}end`);
     } else {
-      const completion = calculateCompletionPercentage(node.checkpoints);
-      const label = `${safeTitle} (${completion}%)`;
-      lines.push(`  ${node.id}["${label}"]`);
+      const label =
+        node.node_type === "aws_service"
+          ? `AWS: ${title}`
+          : node.node_type === "annotation"
+            ? title
+            : `${title} (${calculateCompletionPercentage(node.checkpoints)}%)`;
+      lines.push(`${indent}${id}["${label}"]`);
     }
-  }
-
-  // Edges definition
+  };
+  nodes.filter((node) => !node.parent_group_id).forEach((node) => emit(node, "  "));
+  nodes.forEach((node) => emit(node, "  ")); // Retain orphaned or cyclic legacy groups.
   for (const edge of edges) {
-    if (edge.label) {
-      lines.push(`  ${edge.source_node_id} -->|${sanitize(edge.label)}| ${edge.target_node_id}`);
-    } else {
-      lines.push(`  ${edge.source_node_id} --> ${edge.target_node_id}`);
-    }
+    if (!ids.has(edge.source_node_id) || !ids.has(edge.target_node_id)) continue;
+    const type = edge.edge_type || "dependency";
+    const arrow = ["event", "async_queue", "security_iam"].includes(type)
+      ? "-.->"
+      : type === "network"
+        ? "<-->"
+        : "-->";
+    const label = [edge.label, type === "dependency" ? "" : type.replaceAll("_", " ")]
+      .filter(Boolean)
+      .join(" · ");
+    lines.push(
+      `  ${ids.get(edge.source_node_id)} ${arrow}${label ? `|"${escape(label)}"|` : ""} ${ids.get(edge.target_node_id)}`,
+    );
   }
-
   return lines.join("\n");
+}
+
+export function getNodeStatusLabel(node: CanvasNode): string {
+  return isNodeFullyComplete(node)
+    ? "Complete"
+    : node.status === "blocked"
+      ? "Blocked"
+      : calculateCompletionPercentage(node.checkpoints) > 0 || node.status === "in_progress"
+        ? "In progress"
+        : "Planned";
 }

@@ -169,9 +169,7 @@
       "defaultConfig": {},
       "category": "networking",
       "iconPath": "/aws-icons/Amazon-Application-Recovery-Controller.svg",
-      "aliases": [
-        "ARC"
-      ]
+      "aliases": ["ARC"]
     },
     {
       "id": "athena",
@@ -191,9 +189,7 @@
       "defaultConfig": {},
       "category": "ml",
       "iconPath": "/aws-icons/Amazon-Augmented-AI-A2I.svg",
-      "aliases": [
-        "A2I"
-      ]
+      "aliases": ["A2I"]
     },
     {
       "id": "aurora",
@@ -453,9 +449,7 @@
         "billingMode": "PAY_PER_REQUEST"
       },
       "iconPath": "/aws-icons/Amazon-DynamoDB.svg",
-      "aliases": [
-        "DDB"
-      ]
+      "aliases": ["DDB"]
     },
     {
       "id": "ec2autoscaling",
@@ -465,9 +459,7 @@
       "defaultConfig": {},
       "category": "compute",
       "iconPath": "/aws-icons/Amazon-EC2-Auto-Scaling.svg",
-      "aliases": [
-        "ASG"
-      ]
+      "aliases": ["ASG"]
     },
     {
       "id": "ec2imagebuilder",
@@ -532,9 +524,7 @@
         "instanceType": "t3.micro"
       },
       "iconPath": "/aws-icons/Amazon-EC2.svg",
-      "aliases": [
-        "EC2"
-      ]
+      "aliases": ["EC2"]
     },
     {
       "id": "elasticcontainerregistry",
@@ -544,9 +534,7 @@
       "defaultConfig": {},
       "category": "containers",
       "iconPath": "/aws-icons/Amazon-Elastic-Container-Registry.svg",
-      "aliases": [
-        "ECR"
-      ]
+      "aliases": ["ECR"]
     },
     {
       "id": "ecs",
@@ -558,9 +546,7 @@
         "launchType": "FARGATE"
       },
       "iconPath": "/aws-icons/Amazon-Elastic-Container-Service.svg",
-      "aliases": [
-        "ECS"
-      ]
+      "aliases": ["ECS"]
     },
     {
       "id": "efs",
@@ -594,9 +580,7 @@
         "version": "1.29"
       },
       "iconPath": "/aws-icons/Amazon-Elastic-Kubernetes-Service.svg",
-      "aliases": [
-        "EKS"
-      ]
+      "aliases": ["EKS"]
     },
     {
       "id": "elasticvmwareservice",
@@ -628,9 +612,7 @@
       "defaultConfig": {},
       "category": "analytics",
       "iconPath": "/aws-icons/Amazon-EMR.svg",
-      "aliases": [
-        "elastic mapreduce"
-      ]
+      "aliases": ["elastic mapreduce"]
     },
     {
       "id": "eventbridge",
@@ -780,9 +762,7 @@
       "defaultConfig": {},
       "category": "media-services",
       "iconPath": "/aws-icons/Amazon-Interactive-Video-Service.svg",
-      "aliases": [
-        "IVS"
-      ]
+      "aliases": ["IVS"]
     },
     {
       "id": "kendra",
@@ -942,9 +922,7 @@
       "defaultConfig": {},
       "category": "management",
       "iconPath": "/aws-icons/Amazon-Managed-Service-for-Prometheus.svg",
-      "aliases": [
-        "AMP"
-      ]
+      "aliases": ["AMP"]
     },
     {
       "id": "managedstreamingforapachekafka",
@@ -954,9 +932,7 @@
       "defaultConfig": {},
       "category": "analytics",
       "iconPath": "/aws-icons/Amazon-Managed-Streaming-for-Apache-Kafka.svg",
-      "aliases": [
-        "MSK"
-      ]
+      "aliases": ["MSK"]
     },
     {
       "id": "managedworkflowsforapacheairflow",
@@ -966,9 +942,7 @@
       "defaultConfig": {},
       "category": "integration",
       "iconPath": "/aws-icons/Amazon-Managed-Workflows-for-Apache-Airflow.svg",
-      "aliases": [
-        "MWAA"
-      ]
+      "aliases": ["MWAA"]
     },
     {
       "id": "memorydb",
@@ -1030,10 +1004,7 @@
       "defaultConfig": {},
       "category": "analytics",
       "iconPath": "/aws-icons/Amazon-OpenSearch-Service.svg",
-      "aliases": [
-        "OpenSearch",
-        "ES"
-      ]
+      "aliases": ["OpenSearch", "ES"]
     },
     {
       "id": "personalize",
@@ -1128,9 +1099,7 @@
         "instanceClass": "db.t3.micro"
       },
       "iconPath": "/aws-icons/Amazon-RDS.svg",
-      "aliases": [
-        "RDS"
-      ]
+      "aliases": ["RDS"]
     },
     {
       "id": "route53",
@@ -1224,9 +1193,7 @@
       "defaultConfig": {},
       "category": "business-applications",
       "iconPath": "/aws-icons/Amazon-Simple-Email-Service.svg",
-      "aliases": [
-        "SES"
-      ]
+      "aliases": ["SES"]
     },
     {
       "id": "sns",
@@ -1238,9 +1205,7 @@
         "type": "standard"
       },
       "iconPath": "/aws-icons/Amazon-Simple-Notification-Service.svg",
-      "aliases": [
-        "SNS"
-      ]
+      "aliases": ["SNS"]
     },
     {
       "id": "sqs",
@@ -1252,9 +1217,7 @@
         "type": "standard"
       },
       "iconPath": "/aws-icons/Amazon-Simple-Queue-Service.svg",
-      "aliases": [
-        "SQS"
-      ]
+      "aliases": ["SQS"]
     },
     {
       "id": "s3",
@@ -1267,9 +1230,7 @@
         "encryption": "AES256"
       },
       "iconPath": "/aws-icons/Amazon-Simple-Storage-Service.svg",
-      "aliases": [
-        "S3"
-      ]
+      "aliases": ["S3"]
     },
     {
       "id": "textract",
@@ -1491,9 +1452,7 @@
       "defaultConfig": {},
       "category": "migration-modernization",
       "iconPath": "/aws-icons/AWS-Application-Migration-Service.svg",
-      "aliases": [
-        "MGN"
-      ]
+      "aliases": ["MGN"]
     },
     {
       "id": "appsync",
@@ -1605,9 +1564,7 @@
         "validationMethod": "DNS"
       },
       "iconPath": "/aws-icons/AWS-Certificate-Manager.svg",
-      "aliases": [
-        "ACM"
-      ]
+      "aliases": ["ACM"]
     },
     {
       "id": "chatbot",
@@ -1657,9 +1614,7 @@
       "defaultConfig": {},
       "category": "developer-tools",
       "iconPath": "/aws-icons/AWS-Cloud-Development-Kit.svg",
-      "aliases": [
-        "CDK"
-      ]
+      "aliases": ["CDK"]
     },
     {
       "id": "cloudmap",
@@ -1791,9 +1746,7 @@
       "defaultConfig": {},
       "category": "developer-tools",
       "iconPath": "/aws-icons/AWS-Command-Line-Interface.svg",
-      "aliases": [
-        "CLI"
-      ]
+      "aliases": ["CLI"]
     },
     {
       "id": "computeoptimizer",
@@ -1843,9 +1796,7 @@
       "defaultConfig": {},
       "category": "cloud-financial-management",
       "iconPath": "/aws-icons/AWS-Cost-and-Usage-Report.svg",
-      "aliases": [
-        "CUR"
-      ]
+      "aliases": ["CUR"]
     },
     {
       "id": "costexplorer",
@@ -1885,9 +1836,7 @@
       "defaultConfig": {},
       "category": "database",
       "iconPath": "/aws-icons/AWS-Database-Migration-Service.svg",
-      "aliases": [
-        "DMS"
-      ]
+      "aliases": ["DMS"]
     },
     {
       "id": "datasync",
@@ -1969,9 +1918,7 @@
         "bandwidth": "1Gbps"
       },
       "iconPath": "/aws-icons/AWS-Direct-Connect.svg",
-      "aliases": [
-        "DX"
-      ]
+      "aliases": ["DX"]
     },
     {
       "id": "directoryservice",
@@ -1991,9 +1938,7 @@
       "defaultConfig": {},
       "category": "management",
       "iconPath": "/aws-icons/AWS-Distro-for-OpenTelemetry.svg",
-      "aliases": [
-        "ADOT"
-      ]
+      "aliases": ["ADOT"]
     },
     {
       "id": "elasticbeanstalk",
@@ -2015,9 +1960,7 @@
       "defaultConfig": {},
       "category": "storage",
       "iconPath": "/aws-icons/AWS-Elastic-Disaster-Recovery.svg",
-      "aliases": [
-        "DRS"
-      ]
+      "aliases": ["DRS"]
     },
     {
       "id": "elementalappliancessoftware",
@@ -2200,9 +2143,7 @@
       "defaultConfig": {},
       "category": "developer-tools",
       "iconPath": "/aws-icons/AWS-Fault-Injection-Service.svg",
-      "aliases": [
-        "FIS"
-      ]
+      "aliases": ["FIS"]
     },
     {
       "id": "finopsagent",
@@ -2322,9 +2263,7 @@
       "defaultConfig": {},
       "category": "security",
       "iconPath": "/aws-icons/AWS-IAM-Identity-Center.svg",
-      "aliases": [
-        "SSO"
-      ]
+      "aliases": ["SSO"]
     },
     {
       "id": "iam",
@@ -2679,9 +2618,7 @@
       "defaultConfig": {},
       "category": "compute",
       "iconPath": "/aws-icons/AWS-Parallel-Computing-Service.svg",
-      "aliases": [
-        "PCS"
-      ]
+      "aliases": ["PCS"]
     },
     {
       "id": "partnercentral",
@@ -2711,10 +2648,7 @@
       "defaultConfig": {},
       "category": "security",
       "iconPath": "/aws-icons/AWS-Private-Certificate-Authority.svg",
-      "aliases": [
-        "ACM PCA",
-        "PCA"
-      ]
+      "aliases": ["ACM PCA", "PCA"]
     },
     {
       "id": "privatelink",
@@ -2784,9 +2718,7 @@
       "defaultConfig": {},
       "category": "security",
       "iconPath": "/aws-icons/AWS-Resource-Access-Manager.svg",
-      "aliases": [
-        "RAM"
-      ]
+      "aliases": ["RAM"]
     },
     {
       "id": "resourceexplorer",
@@ -2856,9 +2788,7 @@
       "defaultConfig": {},
       "category": "compute",
       "iconPath": "/aws-icons/AWS-Serverless-Application-Repository.svg",
-      "aliases": [
-        "SAR"
-      ]
+      "aliases": ["SAR"]
     },
     {
       "id": "servicecatalog",
@@ -2952,9 +2882,7 @@
         "type": "STANDARD"
       },
       "iconPath": "/aws-icons/AWS-Step-Functions.svg",
-      "aliases": [
-        "SFN"
-      ]
+      "aliases": ["SFN"]
     },
     {
       "id": "storagegateway",
@@ -3004,9 +2932,7 @@
       "description": "Gain operational insights and take action",
       "defaultConfig": {},
       "iconPath": "/aws-icons/AWS-Systems-Manager.svg",
-      "aliases": [
-        "SSM"
-      ]
+      "aliases": ["SSM"]
     },
     {
       "id": "telconetworkbuilder",
@@ -3116,9 +3042,7 @@
       "defaultConfig": {},
       "category": "networking",
       "iconPath": "/aws-icons/AWS-Transit-Gateway.svg",
-      "aliases": [
-        "TGW"
-      ]
+      "aliases": ["TGW"]
     },
     {
       "id": "trustedadvisor",
@@ -3160,9 +3084,7 @@
         "scope": "REGIONAL"
       },
       "iconPath": "/aws-icons/AWS-WAF.svg",
-      "aliases": [
-        "web application firewall"
-      ]
+      "aliases": ["web application firewall"]
     },
     {
       "id": "wavelength",
@@ -3222,9 +3144,7 @@
       "defaultConfig": {},
       "category": "compute",
       "iconPath": "/aws-icons/Elastic-Fabric-Adapter.svg",
-      "aliases": [
-        "EFA"
-      ]
+      "aliases": ["EFA"]
     },
     {
       "id": "elb",
@@ -3293,9 +3213,7 @@
       "defaultConfig": {},
       "category": "containers",
       "iconPath": "/aws-icons/Red-Hat-OpenShift-Service-on-AWS.svg",
-      "aliases": [
-        "ROSA"
-      ]
+      "aliases": ["ROSA"]
     },
     {
       "id": "reservedinstancereporting",

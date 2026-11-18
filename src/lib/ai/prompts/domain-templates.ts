@@ -19,11 +19,22 @@ export interface DomainGuidance {
 export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
   saas: {
     domain: "SaaS & Subscription Platforms",
-    keywords: ["saas", "subscription", "stripe", "billing", "tenant", "multitenant", "tier", "plan", "b2b"],
+    keywords: [
+      "saas",
+      "subscription",
+      "stripe",
+      "billing",
+      "tenant",
+      "multitenant",
+      "tier",
+      "plan",
+      "b2b",
+    ],
     recommendedMilestones: [
       {
         title: "Multi-Tenant Architecture & Data Isolation",
-        description: "Configure tenant scoping, row-level security (RLS), schema migrations, and organization schemas",
+        description:
+          "Configure tenant scoping, row-level security (RLS), schema migrations, and organization schemas",
         color: "default",
         phase: "architecture",
         checkpoints: [
@@ -37,7 +48,8 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
       },
       {
         title: "Authentication, RBAC & Session Security",
-        description: "Implement modern authentication, invitation flows, permission matrix, and role guards",
+        description:
+          "Implement modern authentication, invitation flows, permission matrix, and role guards",
         color: "amber",
         phase: "implementation",
         checkpoints: [
@@ -51,7 +63,8 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
       },
       {
         title: "Stripe Billing & Subscription Lifecycle Engine",
-        description: "Build pricing tier management, checkout sessions, webhook handlers, and meter tracking",
+        description:
+          "Build pricing tier management, checkout sessions, webhook handlers, and meter tracking",
         color: "purple",
         phase: "implementation",
         checkpoints: [
@@ -65,7 +78,8 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
       },
       {
         title: "Admin Analytics & Operations Dashboard",
-        description: "Develop metrics aggregation, user management, feature flags, and telemetry feeds",
+        description:
+          "Develop metrics aggregation, user management, feature flags, and telemetry feeds",
         color: "amber",
         phase: "implementation",
         checkpoints: [
@@ -86,11 +100,23 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
 
   ecommerce: {
     domain: "E-Commerce & Digital Marketplaces",
-    keywords: ["ecommerce", "e-commerce", "shop", "store", "cart", "checkout", "inventory", "product", "order", "catalog"],
+    keywords: [
+      "ecommerce",
+      "e-commerce",
+      "shop",
+      "store",
+      "cart",
+      "checkout",
+      "inventory",
+      "product",
+      "order",
+      "catalog",
+    ],
     recommendedMilestones: [
       {
         title: "Product Catalog & Search Engine",
-        description: "Build hierarchical catalog schema, variant matrices, image CDN pipelines, and full-text search",
+        description:
+          "Build hierarchical catalog schema, variant matrices, image CDN pipelines, and full-text search",
         color: "default",
         phase: "architecture",
         checkpoints: [
@@ -104,7 +130,8 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
       },
       {
         title: "Shopping Cart & Checkout Funnel",
-        description: "Implement persistent carts, coupon engines, tax calculation, and payment gateway integration",
+        description:
+          "Implement persistent carts, coupon engines, tax calculation, and payment gateway integration",
         color: "purple",
         phase: "implementation",
         checkpoints: [
@@ -118,7 +145,8 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
       },
       {
         title: "Order Management & Fulfillment Pipeline",
-        description: "Develop order state machines, invoice generation, webhook tracking, and notifications",
+        description:
+          "Develop order state machines, invoice generation, webhook tracking, and notifications",
         color: "rose",
         phase: "implementation",
         checkpoints: [
@@ -138,11 +166,23 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
 
   realtime: {
     domain: "Realtime Collaboration & Multiplayer",
-    keywords: ["realtime", "real-time", "collaboration", "multiplayer", "canvas", "chat", "cursor", "websocket", "sync", "presence"],
+    keywords: [
+      "realtime",
+      "real-time",
+      "collaboration",
+      "multiplayer",
+      "canvas",
+      "chat",
+      "cursor",
+      "websocket",
+      "sync",
+      "presence",
+    ],
     recommendedMilestones: [
       {
         title: "WebSocket Connection & Presence Hub",
-        description: "Configure distributed WebSocket channels, heartbeat health, and peer presence tracking",
+        description:
+          "Configure distributed WebSocket channels, heartbeat health, and peer presence tracking",
         color: "default",
         phase: "architecture",
         checkpoints: [
@@ -155,7 +195,8 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
       },
       {
         title: "Multiplayer Physics, Cursors & State Interpolation",
-        description: "Implement high-frequency cursor transmission, spring-lerp interpolation, and dead reckoning",
+        description:
+          "Implement high-frequency cursor transmission, spring-lerp interpolation, and dead reckoning",
         color: "amber",
         phase: "implementation",
         checkpoints: [
@@ -168,7 +209,8 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
       },
       {
         title: "Zero-Collision Distributed Locking & Mutation Queue",
-        description: "Implement lease-based exclusive edit locks, conflict resolution, and optimistic UI updates",
+        description:
+          "Implement lease-based exclusive edit locks, conflict resolution, and optimistic UI updates",
         color: "purple",
         phase: "implementation",
         checkpoints: [
@@ -188,11 +230,24 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
 
   api_backend: {
     domain: "High-Throughput API & Microservices",
-    keywords: ["api", "microservice", "backend", "graphql", "rest", "queue", "worker", "redis", "kafka", "grpc", "cache"],
+    keywords: [
+      "api",
+      "microservice",
+      "backend",
+      "graphql",
+      "rest",
+      "queue",
+      "worker",
+      "redis",
+      "kafka",
+      "grpc",
+      "cache",
+    ],
     recommendedMilestones: [
       {
         title: "Data Layer, Partitioning & Connection Pooling",
-        description: "Configure PostgreSQL schema, Prisma/Drizzle ORM, read replicas, and connection pooling",
+        description:
+          "Configure PostgreSQL schema, Prisma/Drizzle ORM, read replicas, and connection pooling",
         color: "default",
         phase: "architecture",
         checkpoints: [
@@ -205,7 +260,8 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
       },
       {
         title: "API Gateway, Rate Limiting & Middleware Pipeline",
-        description: "Implement token bucket rate limiting, CORS policies, request validation, and telemetry",
+        description:
+          "Implement token bucket rate limiting, CORS policies, request validation, and telemetry",
         color: "purple",
         phase: "implementation",
         checkpoints: [
@@ -238,11 +294,21 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
 
   mobile_cloud: {
     domain: "Mobile Apps & Cross-Platform Systems",
-    keywords: ["mobile", "ios", "android", "react native", "flutter", "expo", "offline", "push notifications"],
+    keywords: [
+      "mobile",
+      "ios",
+      "android",
+      "react native",
+      "flutter",
+      "expo",
+      "offline",
+      "push notifications",
+    ],
     recommendedMilestones: [
       {
         title: "Offline-First State & Local Sync Engine",
-        description: "Build local SQLite/WatermelonDB storage, conflict resolution, and background sync",
+        description:
+          "Build local SQLite/WatermelonDB storage, conflict resolution, and background sync",
         color: "default",
         phase: "architecture",
         checkpoints: [
@@ -255,7 +321,8 @@ export const DOMAIN_TEMPLATES: Record<string, DomainGuidance> = {
       },
       {
         title: "Push Notifications & Deep Linking Architecture",
-        description: "Implement APNs/FCM tokens, notification grouping, and universal universal link routing",
+        description:
+          "Implement APNs/FCM tokens, notification grouping, and universal universal link routing",
         color: "purple",
         phase: "implementation",
         checkpoints: [
@@ -283,7 +350,7 @@ export function getDomainGuidance(domainTags: string[], promptText: string): Dom
 
   for (const [, template] of Object.entries(DOMAIN_TEMPLATES)) {
     const isKeywordMatch = template.keywords.some(
-      (kw) => lowerPrompt.includes(kw) || domainTags.some((tag) => tag.toLowerCase().includes(kw))
+      (kw) => lowerPrompt.includes(kw) || domainTags.some((tag) => tag.toLowerCase().includes(kw)),
     );
     if (isKeywordMatch) {
       matched.push(template);

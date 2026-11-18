@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: NovaStage API
-  version: 1.1.6
+  version: 1.2.0
   description: >-
     NovaStage HTTP API. Protected operations use Supabase SSR session cookies. Setup and endpoint inventory:
     docs/api-sdk.md.
@@ -36,7 +36,7 @@ paths:
       summary: Check reachability
       security: []
       responses:
-        '204':
+        "204":
           description: Reachable. No response body; does not check database or upstream service health.
     head:
       operationId: headPing
@@ -45,7 +45,7 @@ paths:
       summary: Check reachability without a body
       security: []
       responses:
-        '204':
+        "204":
           description: Reachable. No response body; does not check database or upstream service health.
   /api/dashboard/settings:
     get:
@@ -54,14 +54,14 @@ paths:
         - Account
       summary: Read current account settings
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AccountSettings'
-        '401':
-          $ref: '#/components/responses/Error401'
+                $ref: "#/components/schemas/AccountSettings"
+        "401":
+          $ref: "#/components/responses/Error401"
   /api/dashboard/projects:
     get:
       operationId: listProjects
@@ -69,39 +69,39 @@ paths:
         - Projects
       summary: List projects owned by or shared with the current user
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectList'
-        '401':
-          $ref: '#/components/responses/Error401'
+                $ref: "#/components/schemas/ProjectList"
+        "401":
+          $ref: "#/components/responses/Error401"
     post:
       operationId: createProject
       tags:
         - Projects
       summary: Create a project owned by the current user
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectResult'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/ProjectResult"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "500":
+          $ref: "#/components/responses/Error500"
       description: Name is trimmed before validation. Malformed JSON returns 500.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateProjectInput'
+              $ref: "#/components/schemas/CreateProjectInput"
   /api/dashboard/projects/members:
     get:
       operationId: listProjectMembers
@@ -109,19 +109,19 @@ paths:
         - Projects
       summary: List collaborators of a project
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MemberList'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '500':
-          $ref: '#/components/responses/Error500'
-      description: 'Project membership or ownership required; access failures return 400. Query alias: id.'
+                $ref: "#/components/schemas/MemberList"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "500":
+          $ref: "#/components/responses/Error500"
+      description: "Project membership or ownership required; access failures return 400. Query alias: id."
       parameters:
         - name: projectId
           in: query
@@ -136,18 +136,18 @@ paths:
         - Projects
       summary: Request to join a project by invite code
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JoinProjectResult'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/JoinProjectResult"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "500":
+          $ref: "#/components/responses/Error500"
       description: >-
         Requires owner approval. Existing pending requests return success; invalid codes, existing membership,
         bans and full capacity return 400. Body alias: code. Malformed JSON returns 500.
@@ -156,7 +156,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/JoinProjectInput'
+              $ref: "#/components/schemas/JoinProjectInput"
   /api/dashboard/projects/leave:
     post:
       operationId: leaveProject
@@ -164,77 +164,77 @@ paths:
         - Projects
       summary: Leave a project as a collaborator
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResult'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '500':
-          $ref: '#/components/responses/Error500'
-      description: 'Collaborators only; owners and nonmembers receive 400. Body alias: id. Malformed JSON returns 500.'
+                $ref: "#/components/schemas/MessageResult"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "500":
+          $ref: "#/components/responses/Error500"
+      description: "Collaborators only; owners and nonmembers receive 400. Body alias: id. Malformed JSON returns 500."
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectIdInput'
+              $ref: "#/components/schemas/ProjectIdInput"
   /api/dashboard/projects/delete:
     post:
       operationId: deleteProject
       tags:
         - Project administration
       summary: Delete a project and its associated data
-      description: 'Owner only. Body alias: id. Malformed JSON returns 500.'
+      description: "Owner only. Body alias: id. Malformed JSON returns 500."
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResult'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/MessageResult"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "500":
+          $ref: "#/components/responses/Error500"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectIdInput'
+              $ref: "#/components/schemas/ProjectIdInput"
   /api/dashboard/projects/kick:
     post:
       operationId: kickProjectMember
       tags:
         - Project administration
       summary: Remove and ban a collaborator
-      description: 'Owner only; cannot remove yourself. Body alias for memberId: targetUserId. Malformed JSON returns 500.'
+      description: "Owner only; cannot remove yourself. Body alias for memberId: targetUserId. Malformed JSON returns 500."
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResult'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/MessageResult"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "500":
+          $ref: "#/components/responses/Error500"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/KickMemberInput'
+              $ref: "#/components/schemas/KickMemberInput"
   /api/dashboard/projects/requests:
     get:
       operationId: listJoinRequests
@@ -243,20 +243,20 @@ paths:
       summary: List pending project join requests
       description: Owner only; access and database helper failures return 403.
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JoinRequestList'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/JoinRequestList"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "500":
+          $ref: "#/components/responses/Error500"
       parameters:
         - name: projectId
           in: query
@@ -273,24 +273,24 @@ paths:
         Owner only. Invalid or resolved requests, capacity and permission failures return 400. Malformed JSON
         returns 500.
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResolveJoinRequestResult'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/ResolveJoinRequestResult"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "500":
+          $ref: "#/components/responses/Error500"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ResolveJoinRequestInput'
+              $ref: "#/components/schemas/ResolveJoinRequestInput"
   /api/dashboard/projects/banned:
     get:
       operationId: listBannedMembers
@@ -299,20 +299,20 @@ paths:
       summary: List removed project members
       description: Owner only; access and database helper failures return 403.
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BannedMemberList'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/BannedMemberList"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "500":
+          $ref: "#/components/responses/Error500"
       parameters:
         - name: projectId
           in: query
@@ -329,24 +329,24 @@ paths:
         Owner only. Removes the ban without restoring membership. Rule failures return 400; malformed JSON
         returns 500.
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResult'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/SuccessResult"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "500":
+          $ref: "#/components/responses/Error500"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UnbanMemberInput'
+              $ref: "#/components/schemas/UnbanMemberInput"
   /api/dashboard/projects/{slug}/canvas:
     parameters:
       - name: slug
@@ -360,41 +360,50 @@ paths:
       tags:
         - Canvas
       summary: Read the complete project graph and active claim requests
-      description: Project member required. A caught node-loading error returns an empty graph with 200.
+      description: Project member required. Any graph-table read failure returns 500 rather than an incomplete graph.
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CanvasData'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/CanvasData"
+        "204":
+          description: Membership verified when access=1; no response body.
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "500":
+          $ref: "#/components/responses/Error500"
+      parameters:
+        - name: access
+          in: query
+          schema:
+            type: string
+            enum:
+              - "1"
+          description: Check membership without loading the graph.
     post:
       operationId: mutateProjectCanvas
       tags:
         - Canvas
       summary: Create, update, or delete a node or edge
       description: >-
-        Project member required. Content edits require a current node claim; owners bypass some deletion and
-        edge rules. Most mutation failures return 200 with success false; create_node may return success true
-        with node null. update_edge failures return 400. Invalid actions return 400; malformed JSON or invalid
-        create_edge types return 500.
+        Project member required. Content edits require a current node claim; owners bypass some deletion
+        and edge rules. Inspect success even on HTTP 200. Node updates compare versions; apply_layout
+        commits the entire batch atomically. Invalid or stale node updates and layout batches return 409.
       responses:
-        '200':
+        "200":
           description: Operation result; inspect success even when HTTP status is 200.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CanvasMutationResult'
-        '400':
-          description: 'Invalid action, or update_edge validation/claim failure (may include success: false).'
+                $ref: "#/components/schemas/CanvasMutationResult"
+        "400":
+          description: "Invalid action, or update_edge validation/claim failure (may include success: false)."
           content:
             application/json:
               schema:
@@ -406,20 +415,26 @@ paths:
                     type: boolean
                 required:
                   - error
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '500':
-          $ref: '#/components/responses/Error500'
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          description: Node update or layout validation/conflict failure; success is false.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanvasMutationResult"
+        "500":
+          $ref: "#/components/responses/Error500"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CanvasMutationInput'
+              $ref: "#/components/schemas/CanvasMutationInput"
   /api/dashboard/projects/{slug}/canvas/share:
     parameters:
       - name: slug
@@ -432,7 +447,7 @@ paths:
       tags: [Canvas]
       summary: Read the owner's canvas sharing settings without enabling a link
       responses: &canvasShareResponses
-        '200':
+        "200":
           description: Sharing settings. Token is null when disabled; otherwise the view-only URL is /share/{token}.
           content:
             application/json:
@@ -443,12 +458,12 @@ paths:
                   token:
                     type: string
                     nullable: true
-                    pattern: '^[a-f0-9]{64}$'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '503':
+                    pattern: "^[a-f0-9]{64}$"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "503":
           description: Sharing unavailable; retry later.
     post:
       operationId: enableCanvasShare
@@ -480,30 +495,30 @@ paths:
         from checkpoint_id unless node_id is supplied. Toggle returns checkpoint and newStatus; add/edit
         return checkpoint; delete returns success only. Malformed JSON returns 500.
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CheckpointMutationResult'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '423':
-          $ref: '#/components/responses/Error423'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/CheckpointMutationResult"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "423":
+          $ref: "#/components/responses/Error423"
+        "500":
+          $ref: "#/components/responses/Error500"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CheckpointMutationInput'
+              $ref: "#/components/schemas/CheckpointMutationInput"
   /api/dashboard/projects/{slug}/canvas/claim:
     parameters:
       - name: slug
@@ -523,28 +538,28 @@ paths:
         handoff request or claims an unheld node. resolve_claim requires holder or owner; force_unlock
         requires owner. Malformed JSON returns 500.
       responses:
-        '200':
+        "200":
           description: Operation result; inspect success even when HTTP status is 200.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClaimResult'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
-          $ref: '#/components/responses/Error403'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '500':
-          $ref: '#/components/responses/Error500'
+                $ref: "#/components/schemas/ClaimResult"
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "500":
+          $ref: "#/components/responses/Error500"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ClaimInput'
+              $ref: "#/components/schemas/ClaimInput"
   /api/dashboard/projects/{slug}/canvas/ai-generate:
     parameters:
       - name: slug
@@ -557,50 +572,96 @@ paths:
       operationId: generateProjectCanvas
       tags:
         - AI
-      summary: Generate or update workflow and AWS architecture nodes
+      summary: Generate, apply, or discard a private canvas preview
       description: >-
-        Project member, server AI configuration and available subscription quota required. Concurrent
-        generation returns 409; quota exhaustion returns 403; upstream AI failure returns 502. Invalid modes
-        use workflow. Malformed JSON returns 400. Maximum duration: 120 seconds.
+        Project membership is required. Generation also requires server AI configuration and quota.
+        Completed generation consumes one request and leaves the saved graph unchanged. Previews expire
+        after 15 minutes. Apply checks membership, claims and the unchanged starting graph, commits
+        atomically, and is idempotent without extra quota. Concurrent generation and stale previews return
+        409; quota exhaustion returns 403; provider failure returns 502. Invalid modes and malformed JSON
+        return 400. Maximum duration: 120 seconds.
       responses:
-        '200':
+        "200":
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AIGenerationResult'
-        '400':
-          $ref: '#/components/responses/Error400'
-        '401':
-          $ref: '#/components/responses/Error401'
-        '403':
+                anyOf:
+                  - $ref: "#/components/schemas/AIGenerationResult"
+                  - type: object
+                    required:
+                      - success
+                    properties:
+                      success:
+                        type: boolean
+                      nodes:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CanvasNode"
+                      edges:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CanvasEdge"
+                    description: Apply returns the saved graph; discard returns success only.
+        "400":
+          $ref: "#/components/responses/Error400"
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
           description: Project access denied or AI quota exceeded (QUOTA_EXCEEDED).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AIError'
-        '404':
-          $ref: '#/components/responses/Error404'
-        '409':
-          description: Another collaborator is generating (COLLISION_LOCKED).
+                $ref: "#/components/schemas/AIError"
+        "404":
+          $ref: "#/components/responses/Error404"
+        "409":
+          description: Generation collision (COLLISION_LOCKED) or expired/changed preview (PREVIEW_STALE).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AIError'
-        '500':
-          $ref: '#/components/responses/Error500'
-        '502':
+                $ref: "#/components/schemas/AIError"
+        "500":
+          $ref: "#/components/responses/Error500"
+        "502":
           description: AI provider/pipeline failed (AI_GENERATION_FAILED).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AIError'
+                $ref: "#/components/schemas/AIError"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AIGenerationInput'
+              oneOf:
+                - $ref: "#/components/schemas/AIGenerationInput"
+                - $ref: "#/components/schemas/ResolveAIPreviewInput"
+    get:
+      operationId: getProjectCanvasPreview
+      tags:
+        - AI
+      summary: Recover the current user’s latest unexpired, unapplied preview
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - preview
+                properties:
+                  preview:
+                    allOf:
+                      - $ref: "#/components/schemas/AIPreview"
+                    nullable: true
+        "401":
+          $ref: "#/components/responses/Error401"
+        "403":
+          $ref: "#/components/responses/Error403"
+        "503":
+          description: Unable to read stored previews.
   /auth/callback:
     get:
       operationId: completeAuthCallback
@@ -629,7 +690,7 @@ paths:
             type: string
           description: Safe relative destination beginning with / and not //; defaults to /dashboard.
       responses:
-        '307':
+        "307":
           description: Redirect after authentication or to login on failure.
           headers:
             Location:
@@ -656,37 +717,37 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     Error401:
       description: Missing, expired, or invalid login session
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     Error500:
       description: Unexpected server error.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     Error403:
       description: Project access or owner permission denied.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     Error404:
       description: Project not found
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
     Error423:
       description: Milestone must be claimed by the current user
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
   schemas:
     Error:
       type: object
@@ -759,7 +820,7 @@ components:
         memberList:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectMember'
+            $ref: "#/components/schemas/ProjectMember"
         pendingRequestsCount:
           type: integer
       required:
@@ -774,7 +835,7 @@ components:
         projects:
           type: array
           items:
-            $ref: '#/components/schemas/Project'
+            $ref: "#/components/schemas/Project"
         userName:
           type: string
       required:
@@ -788,7 +849,7 @@ components:
           enum:
             - true
         project:
-          $ref: '#/components/schemas/Project'
+          $ref: "#/components/schemas/Project"
       required:
         - success
         - project
@@ -802,7 +863,7 @@ components:
         members:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectMember'
+            $ref: "#/components/schemas/ProjectMember"
       required:
         - success
         - members
@@ -839,7 +900,7 @@ components:
         pendingApproval:
           type: boolean
         project:
-          $ref: '#/components/schemas/Project'
+          $ref: "#/components/schemas/Project"
         message:
           type: string
       required:
@@ -865,7 +926,7 @@ components:
         email:
           type: string
         profile:
-          $ref: '#/components/schemas/AccountProfile'
+          $ref: "#/components/schemas/AccountProfile"
       required:
         - email
         - profile
@@ -1033,7 +1094,7 @@ components:
         requests:
           type: array
           items:
-            $ref: '#/components/schemas/JoinRequest'
+            $ref: "#/components/schemas/JoinRequest"
       required:
         - success
         - requests
@@ -1047,7 +1108,7 @@ components:
         bannedMembers:
           type: array
           items:
-            $ref: '#/components/schemas/BannedMember'
+            $ref: "#/components/schemas/BannedMember"
       required:
         - success
         - bannedMembers
@@ -1238,7 +1299,7 @@ components:
         description:
           type: string
         status:
-          $ref: '#/components/schemas/NodeStatus'
+          $ref: "#/components/schemas/NodeStatus"
         position_x:
           type: number
         position_y:
@@ -1250,13 +1311,13 @@ components:
         color:
           type: string
         node_type:
-          $ref: '#/components/schemas/NodeType'
+          $ref: "#/components/schemas/NodeType"
         aws_metadata:
-          $ref: '#/components/schemas/AWSServiceMetadata'
+          $ref: "#/components/schemas/AWSServiceMetadata"
         group_metadata:
-          $ref: '#/components/schemas/GroupMetadata'
+          $ref: "#/components/schemas/GroupMetadata"
         annotation_metadata:
-          $ref: '#/components/schemas/AnnotationMetadata'
+          $ref: "#/components/schemas/AnnotationMetadata"
         parent_group_id:
           type: string
           format: uuid
@@ -1276,13 +1337,13 @@ components:
           format: date-time
           nullable: true
         claim_holder:
-          $ref: '#/components/schemas/ClaimHolder'
+          $ref: "#/components/schemas/ClaimHolder"
         version:
           type: integer
         checkpoints:
           type: array
           items:
-            $ref: '#/components/schemas/Checkpoint'
+            $ref: "#/components/schemas/Checkpoint"
         created_at:
           type: string
           format: date-time
@@ -1320,11 +1381,11 @@ components:
           type: string
           format: uuid
         source_handle:
-          $ref: '#/components/schemas/HandlePosition'
+          $ref: "#/components/schemas/HandlePosition"
         target_handle:
-          $ref: '#/components/schemas/HandlePosition'
+          $ref: "#/components/schemas/HandlePosition"
         edge_type:
-          $ref: '#/components/schemas/EdgeType'
+          $ref: "#/components/schemas/EdgeType"
         label:
           type: string
           nullable: true
@@ -1398,15 +1459,15 @@ components:
         nodes:
           type: array
           items:
-            $ref: '#/components/schemas/CanvasNode'
+            $ref: "#/components/schemas/CanvasNode"
         edges:
           type: array
           items:
-            $ref: '#/components/schemas/CanvasEdge'
+            $ref: "#/components/schemas/CanvasEdge"
         claimRequests:
           type: array
           items:
-            $ref: '#/components/schemas/ClaimRequest'
+            $ref: "#/components/schemas/ClaimRequest"
       required:
         - project
         - nodes
@@ -1427,7 +1488,7 @@ components:
           default: New Milestone
         description:
           type: string
-          default: ''
+          default: ""
         position_x:
           type: number
           default: 100
@@ -1443,13 +1504,13 @@ components:
           items:
             type: string
         node_type:
-          $ref: '#/components/schemas/NodeType'
+          $ref: "#/components/schemas/NodeType"
         aws_metadata:
-          $ref: '#/components/schemas/AWSServiceMetadata'
+          $ref: "#/components/schemas/AWSServiceMetadata"
         group_metadata:
-          $ref: '#/components/schemas/GroupMetadata'
+          $ref: "#/components/schemas/GroupMetadata"
         annotation_metadata:
-          $ref: '#/components/schemas/AnnotationMetadata'
+          $ref: "#/components/schemas/AnnotationMetadata"
         parent_group_id:
           type: string
           format: uuid
@@ -1474,7 +1535,7 @@ components:
             description:
               type: string
             status:
-              $ref: '#/components/schemas/NodeStatus'
+              $ref: "#/components/schemas/NodeStatus"
             position_x:
               type: number
             position_y:
@@ -1486,17 +1547,21 @@ components:
             color:
               type: string
             node_type:
-              $ref: '#/components/schemas/NodeType'
+              $ref: "#/components/schemas/NodeType"
             aws_metadata:
-              $ref: '#/components/schemas/AWSServiceMetadata'
+              $ref: "#/components/schemas/AWSServiceMetadata"
             group_metadata:
-              $ref: '#/components/schemas/GroupMetadata'
+              $ref: "#/components/schemas/GroupMetadata"
             annotation_metadata:
-              $ref: '#/components/schemas/AnnotationMetadata'
+              $ref: "#/components/schemas/AnnotationMetadata"
             parent_group_id:
               type: string
               format: uuid
               nullable: true
+        expected_version:
+          type: integer
+          minimum: 1
+          description: Send the last confirmed node version to reject stale edits.
       required:
         - action
         - node_id
@@ -1543,7 +1608,7 @@ components:
             - left
           default: left
         edge_type:
-          $ref: '#/components/schemas/EdgeType'
+          $ref: "#/components/schemas/EdgeType"
       required:
         - action
         - source_node_id
@@ -1565,7 +1630,7 @@ components:
               type: string
               maxLength: 120
             edge_type:
-              $ref: '#/components/schemas/EdgeType'
+              $ref: "#/components/schemas/EdgeType"
           required:
             - label
             - edge_type
@@ -1588,21 +1653,23 @@ components:
         - edge_id
     CanvasMutationInput:
       oneOf:
-        - $ref: '#/components/schemas/CreateNodeInput'
-        - $ref: '#/components/schemas/UpdateNodeInput'
-        - $ref: '#/components/schemas/DeleteNodeInput'
-        - $ref: '#/components/schemas/CreateEdgeInput'
-        - $ref: '#/components/schemas/UpdateEdgeInput'
-        - $ref: '#/components/schemas/DeleteEdgeInput'
+        - $ref: "#/components/schemas/CreateNodeInput"
+        - $ref: "#/components/schemas/UpdateNodeInput"
+        - $ref: "#/components/schemas/DeleteNodeInput"
+        - $ref: "#/components/schemas/CreateEdgeInput"
+        - $ref: "#/components/schemas/UpdateEdgeInput"
+        - $ref: "#/components/schemas/DeleteEdgeInput"
+        - $ref: "#/components/schemas/ApplyLayoutInput"
       discriminator:
         propertyName: action
         mapping:
-          create_node: '#/components/schemas/CreateNodeInput'
-          update_node: '#/components/schemas/UpdateNodeInput'
-          delete_node: '#/components/schemas/DeleteNodeInput'
-          create_edge: '#/components/schemas/CreateEdgeInput'
-          update_edge: '#/components/schemas/UpdateEdgeInput'
-          delete_edge: '#/components/schemas/DeleteEdgeInput'
+          create_node: "#/components/schemas/CreateNodeInput"
+          update_node: "#/components/schemas/UpdateNodeInput"
+          delete_node: "#/components/schemas/DeleteNodeInput"
+          create_edge: "#/components/schemas/CreateEdgeInput"
+          update_edge: "#/components/schemas/UpdateEdgeInput"
+          delete_edge: "#/components/schemas/DeleteEdgeInput"
+          apply_layout: "#/components/schemas/ApplyLayoutInput"
     CanvasMutationResult:
       type: object
       properties:
@@ -1611,9 +1678,16 @@ components:
         error:
           type: string
         node:
-          $ref: '#/components/schemas/NullableCanvasNode'
+          $ref: "#/components/schemas/NullableCanvasNode"
         edge:
-          $ref: '#/components/schemas/NullableCanvasEdge'
+          $ref: "#/components/schemas/NullableCanvasEdge"
+        version:
+          type: integer
+        versions:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Confirmed versions keyed by node ID after an atomic layout.
       required:
         - success
     ToggleCheckpointInput:
@@ -1688,17 +1762,17 @@ components:
         - checkpoint_id
     CheckpointMutationInput:
       oneOf:
-        - $ref: '#/components/schemas/ToggleCheckpointInput'
-        - $ref: '#/components/schemas/AddCheckpointInput'
-        - $ref: '#/components/schemas/EditCheckpointInput'
-        - $ref: '#/components/schemas/DeleteCheckpointInput'
+        - $ref: "#/components/schemas/ToggleCheckpointInput"
+        - $ref: "#/components/schemas/AddCheckpointInput"
+        - $ref: "#/components/schemas/EditCheckpointInput"
+        - $ref: "#/components/schemas/DeleteCheckpointInput"
       discriminator:
         propertyName: action
         mapping:
-          toggle: '#/components/schemas/ToggleCheckpointInput'
-          add: '#/components/schemas/AddCheckpointInput'
-          edit: '#/components/schemas/EditCheckpointInput'
-          delete: '#/components/schemas/DeleteCheckpointInput'
+          toggle: "#/components/schemas/ToggleCheckpointInput"
+          add: "#/components/schemas/AddCheckpointInput"
+          edit: "#/components/schemas/EditCheckpointInput"
+          delete: "#/components/schemas/DeleteCheckpointInput"
     CheckpointMutationResult:
       type: object
       properties:
@@ -1707,9 +1781,9 @@ components:
           enum:
             - true
         checkpoint:
-          $ref: '#/components/schemas/Checkpoint'
+          $ref: "#/components/schemas/Checkpoint"
         newStatus:
-          $ref: '#/components/schemas/NodeStatus'
+          $ref: "#/components/schemas/NodeStatus"
       required:
         - success
     ClaimNodeInput:
@@ -1795,21 +1869,21 @@ components:
         - accept
     ClaimInput:
       oneOf:
-        - $ref: '#/components/schemas/ClaimNodeInput'
-        - $ref: '#/components/schemas/ReleaseNodeInput'
-        - $ref: '#/components/schemas/HeartbeatInput'
-        - $ref: '#/components/schemas/RequestClaimInput'
-        - $ref: '#/components/schemas/ResolveClaimInput'
-        - $ref: '#/components/schemas/ForceUnlockInput'
+        - $ref: "#/components/schemas/ClaimNodeInput"
+        - $ref: "#/components/schemas/ReleaseNodeInput"
+        - $ref: "#/components/schemas/HeartbeatInput"
+        - $ref: "#/components/schemas/RequestClaimInput"
+        - $ref: "#/components/schemas/ResolveClaimInput"
+        - $ref: "#/components/schemas/ForceUnlockInput"
       discriminator:
         propertyName: action
         mapping:
-          claim: '#/components/schemas/ClaimNodeInput'
-          release: '#/components/schemas/ReleaseNodeInput'
-          heartbeat: '#/components/schemas/HeartbeatInput'
-          request_claim: '#/components/schemas/RequestClaimInput'
-          resolve_claim: '#/components/schemas/ResolveClaimInput'
-          force_unlock: '#/components/schemas/ForceUnlockInput'
+          claim: "#/components/schemas/ClaimNodeInput"
+          release: "#/components/schemas/ReleaseNodeInput"
+          heartbeat: "#/components/schemas/HeartbeatInput"
+          request_claim: "#/components/schemas/RequestClaimInput"
+          resolve_claim: "#/components/schemas/ResolveClaimInput"
+          force_unlock: "#/components/schemas/ForceUnlockInput"
     ClaimResult:
       type: object
       properties:
@@ -1825,7 +1899,7 @@ components:
         message:
           type: string
         request:
-          $ref: '#/components/schemas/ClaimRequest'
+          $ref: "#/components/schemas/ClaimRequest"
         current_holder_id:
           type: string
           format: uuid
@@ -1891,15 +1965,17 @@ components:
         nodes:
           type: array
           items:
-            $ref: '#/components/schemas/CanvasNode'
+            $ref: "#/components/schemas/CanvasNode"
         edges:
           type: array
           items:
-            $ref: '#/components/schemas/CanvasEdge'
+            $ref: "#/components/schemas/CanvasEdge"
         requests_used:
           type: integer
         requests_remaining:
           type: integer
+        preview:
+          $ref: "#/components/schemas/AIPreview"
       required:
         - success
         - intent
@@ -1910,6 +1986,7 @@ components:
         - edges
         - requests_used
         - requests_remaining
+        - preview
     AIError:
       type: object
       properties:
@@ -1974,7 +2051,7 @@ components:
         description:
           type: string
         status:
-          $ref: '#/components/schemas/NodeStatus'
+          $ref: "#/components/schemas/NodeStatus"
         position_x:
           type: number
         position_y:
@@ -1986,13 +2063,13 @@ components:
         color:
           type: string
         node_type:
-          $ref: '#/components/schemas/NodeType'
+          $ref: "#/components/schemas/NodeType"
         aws_metadata:
-          $ref: '#/components/schemas/AWSServiceMetadata'
+          $ref: "#/components/schemas/AWSServiceMetadata"
         group_metadata:
-          $ref: '#/components/schemas/GroupMetadata'
+          $ref: "#/components/schemas/GroupMetadata"
         annotation_metadata:
-          $ref: '#/components/schemas/AnnotationMetadata'
+          $ref: "#/components/schemas/AnnotationMetadata"
         parent_group_id:
           type: string
           format: uuid
@@ -2012,13 +2089,13 @@ components:
           format: date-time
           nullable: true
         claim_holder:
-          $ref: '#/components/schemas/ClaimHolder'
+          $ref: "#/components/schemas/ClaimHolder"
         version:
           type: integer
         checkpoints:
           type: array
           items:
-            $ref: '#/components/schemas/Checkpoint'
+            $ref: "#/components/schemas/Checkpoint"
         created_at:
           type: string
           format: date-time
@@ -2057,11 +2134,11 @@ components:
           type: string
           format: uuid
         source_handle:
-          $ref: '#/components/schemas/HandlePosition'
+          $ref: "#/components/schemas/HandlePosition"
         target_handle:
-          $ref: '#/components/schemas/HandlePosition'
+          $ref: "#/components/schemas/HandlePosition"
         edge_type:
-          $ref: '#/components/schemas/EdgeType'
+          $ref: "#/components/schemas/EdgeType"
         label:
           type: string
           nullable: true
@@ -2076,3 +2153,87 @@ components:
         - source_handle
         - target_handle
       nullable: true
+    ApplyLayoutInput:
+      type: object
+      required:
+        - action
+        - nodes
+      properties:
+        action:
+          type: string
+          enum:
+            - apply_layout
+        nodes:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: object
+            required:
+              - id
+              - version
+              - position_x
+              - position_y
+            properties:
+              id:
+                type: string
+                format: uuid
+              version:
+                type: integer
+                minimum: 1
+              position_x:
+                type: number
+              position_y:
+                type: number
+              width:
+                type: number
+                minimum: 1
+                maximum: 100000
+              height:
+                type: number
+                minimum: 1
+                maximum: 100000
+    ResolveAIPreviewInput:
+      type: object
+      required:
+        - action
+        - id
+      properties:
+        action:
+          type: string
+          enum:
+            - apply_preview
+            - dismiss_preview
+        id:
+          type: string
+          format: uuid
+    AIPreview:
+      type: object
+      required:
+        - id
+        - expiresAt
+        - nodes
+        - edges
+        - deletedIds
+      properties:
+        id:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CanvasNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/CanvasEdge"
+        deletedIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        summary:
+          type: string

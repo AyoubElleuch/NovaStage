@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.tmp/
+out/
+build/
+coverage/
+package-lock.json
+next-env.d.ts
+public/aws-icons/*.svg

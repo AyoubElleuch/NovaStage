@@ -9,7 +9,7 @@ export interface ArchitectureQualityResult {
 }
 
 export function normalizeArchitectureResult(
-  result: AIWorkflowResult | null
+  result: AIWorkflowResult | null,
 ): AIWorkflowResult | null {
   if (!result) return null;
   const normalized: AIWorkflowResult = {
@@ -19,11 +19,9 @@ export function normalizeArchitectureResult(
         ? service.configEntries.filter((entry) => entry?.key?.trim())
         : [];
       const entryConfig = Object.fromEntries(
-        entries.map((entry) => [entry.key.trim(), String(entry.value ?? "")])
+        entries.map((entry) => [entry.key.trim(), String(entry.value ?? "")]),
       );
-      const existingConfig = service.config && !Array.isArray(service.config)
-        ? service.config
-        : {};
+      const existingConfig = service.config && !Array.isArray(service.config) ? service.config : {};
       return {
         ...service,
         serviceId: normalizeAWSServiceId(service.serviceId),
@@ -33,21 +31,25 @@ export function normalizeArchitectureResult(
     }),
   };
   // Preserve invalid topology for the bounded correction attempt; never erase evidence.
-  return architectureTopologyIssues(normalized).length ? normalized : normalizeArchitectureTopology(normalized);
+  return architectureTopologyIssues(normalized).length
+    ? normalized
+    : normalizeArchitectureTopology(normalized);
 }
 
 /** Rejects shallow/generic topology drafts before they can mutate the canvas. */
 export function evaluateArchitectureQuality(
   result: AIWorkflowResult | null,
   prompt: string,
-  decomposition?: PromptDecomposition
+  decomposition?: PromptDecomposition,
 ): ArchitectureQualityResult {
   if (!result) return { ok: false, issues: ["No structured topology was returned"] };
 
   const services = result.serviceNodes || [];
   const groups = result.groups || [];
   const edges = result.dataFlowEdges || [];
-  const explicitlySmall = /\b(minimal|tiny|simple|static|proof of concept|poc|prototype)\b/i.test(prompt);
+  const explicitlySmall = /\b(minimal|tiny|simple|static|proof of concept|poc|prototype)\b/i.test(
+    prompt,
+  );
   const minimumServices = explicitlySmall
     ? 1
     : decomposition?.complexityTier === "enterprise"
@@ -56,26 +58,41 @@ export function evaluateArchitectureQuality(
         ? 7
         : 6;
   const issues: string[] = architectureTopologyIssues(result);
-  try { assertSemanticGraph({ ...result, mode: result.mode || "aws_architecture" }, "aws_architecture"); }
-  catch (error) { issues.push(error instanceof Error ? error.message : "Invalid architecture"); }
+  try {
+    assertSemanticGraph({ ...result, mode: result.mode || "aws_architecture" }, "aws_architecture");
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : "Invalid architecture");
+  }
 
   if (services.length < minimumServices) {
-    issues.push(`Only ${services.length} services were provided; at least ${minimumServices} purposeful services are required`);
+    issues.push(
+      `Only ${services.length} services were provided; at least ${minimumServices} purposeful services are required`,
+    );
   }
-  const unknownServices = services.filter((service) => !getAWSServiceDefinition(normalizeAWSServiceId(service.serviceId)));
+  const unknownServices = services.filter(
+    (service) => !getAWSServiceDefinition(normalizeAWSServiceId(service.serviceId)),
+  );
   if (unknownServices.length > 0) {
-    issues.push(`Unknown AWS service IDs: ${unknownServices.map((service) => service.serviceId).join(", ")}`);
+    issues.push(
+      `Unknown AWS service IDs: ${unknownServices.map((service) => service.serviceId).join(", ")}`,
+    );
   }
   const minimumEdges = Math.max(services.length - 1, 0);
   if (edges.length < minimumEdges) {
-    issues.push(`Only ${edges.length} connections were provided; the service data paths are incomplete`);
+    issues.push(
+      `Only ${edges.length} connections were provided; the service data paths are incomplete`,
+    );
   }
-  const configured = services.filter((service) => service.config && Object.keys(service.config).length >= 2).length;
+  const configured = services.filter(
+    (service) => service.config && Object.keys(service.config).length >= 2,
+  ).length;
   if (services.length > 0 && configured / services.length < 0.5) {
     issues.push("Fewer than half of the services include concrete operational configuration");
   }
   const vpcHosted = services.some((service) =>
-    ["ec2", "ecs", "eks", "fargate", "rds", "aurora", "elasticache", "elb"].includes(normalizeAWSServiceId(service.serviceId))
+    ["ec2", "ecs", "eks", "fargate", "rds", "aurora", "elasticache", "elb"].includes(
+      normalizeAWSServiceId(service.serviceId),
+    ),
   );
   if (vpcHosted && !groups.some((group) => group.style === "vpc")) {
     issues.push("VPC-hosted services were returned without a VPC boundary");
@@ -86,19 +103,35 @@ export function evaluateArchitectureQuality(
 
 /** Minimum safety bar after the quality-improvement retry. */
 export function hasUsableArchitecture(result: AIWorkflowResult | null): result is AIWorkflowResult {
-  if (!result || !Array.isArray(result.serviceNodes) || !Array.isArray(result.groups) || !Array.isArray(result.dataFlowEdges)) {
+  if (
+    !result ||
+    !Array.isArray(result.serviceNodes) ||
+    !Array.isArray(result.groups) ||
+    !Array.isArray(result.dataFlowEdges)
+  ) {
     return false;
   }
-  try { assertSemanticGraph({ ...result, mode: "aws_architecture" }); } catch { return false; }
+  try {
+    assertSemanticGraph({ ...result, mode: "aws_architecture" });
+  } catch {
+    return false;
+  }
   const serviceIds = new Set(result.serviceNodes.map((service) => service.tempId).filter(Boolean));
   const groupIds = new Set(result.groups.map((group) => group.tempId).filter(Boolean));
   const resourceIds = new Set([...serviceIds, ...groupIds]);
-  const validEdges = result.dataFlowEdges.filter((edge) =>
-    edge.fromId && edge.toId && edge.fromId !== edge.toId &&
-    resourceIds.has(edge.fromId) && resourceIds.has(edge.toId)
+  const validEdges = result.dataFlowEdges.filter(
+    (edge) =>
+      edge.fromId &&
+      edge.toId &&
+      edge.fromId !== edge.toId &&
+      resourceIds.has(edge.fromId) &&
+      resourceIds.has(edge.toId),
   );
 
-  return serviceIds.size >= 1 && architectureTopologyIssues(result).length === 0 &&
-    result.serviceNodes.every(service => Boolean(getAWSServiceDefinition(service.serviceId))) &&
-    (serviceIds.size === 1 || validEdges.length >= Math.min(2, serviceIds.size - 1));
+  return (
+    serviceIds.size >= 1 &&
+    architectureTopologyIssues(result).length === 0 &&
+    result.serviceNodes.every((service) => Boolean(getAWSServiceDefinition(service.serviceId))) &&
+    (serviceIds.size === 1 || validEdges.length >= Math.min(2, serviceIds.size - 1))
+  );
 }

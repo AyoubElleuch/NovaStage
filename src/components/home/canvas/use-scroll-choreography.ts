@@ -21,7 +21,10 @@ export function useScrollChoreography() {
       return;
     }
     if (phaseRef.current === "forward") return;
-    if (revealedRef.current) { after?.(); return; }
+    if (revealedRef.current) {
+      after?.();
+      return;
+    }
     if (document.querySelector(".loading-screen, [aria-modal='true']")) return;
     phaseRef.current = direction;
     setPhase(direction);
@@ -58,7 +61,10 @@ export function useScrollChoreography() {
         surface.style.setProperty("--assembly", String(frame.assembly));
         surface.dataset.revealed = String(frame.revealed);
       }
-      if (elapsed < 1) { frameRef.current = requestAnimationFrame(tick); return; }
+      if (elapsed < 1) {
+        frameRef.current = requestAnimationFrame(tick);
+        return;
+      }
       phaseRef.current = "canvas";
       revealedRef.current = true;
       setPhase("canvas");
@@ -89,34 +95,63 @@ export function useScrollChoreography() {
     let touchY = 0;
     const wheel = (event: WheelEvent) => {
       if ((event.ctrlKey || event.metaKey) && phaseRef.current === "canvas") return;
-      if (phaseRef.current === "canvas" && (event.target as Element)?.closest?.(".home-canvas-viewport[data-tool='hand']")) return;
+      if (
+        phaseRef.current === "canvas" &&
+        (event.target as Element)?.closest?.(".home-canvas-viewport[data-tool='hand']")
+      )
+        return;
       onInput(event, event.deltaY);
     };
-    const touchStart = (event: TouchEvent) => { touchY = event.touches[0]?.clientY ?? 0; };
+    const touchStart = (event: TouchEvent) => {
+      touchY = event.touches[0]?.clientY ?? 0;
+    };
     const touchMove = (event: TouchEvent) => {
       if (event.touches.length !== 1 && phaseRef.current === "canvas") return;
-      if (phaseRef.current === "canvas" && (event.target as Element)?.closest?.(".home-canvas-viewport")) return;
+      if (
+        phaseRef.current === "canvas" &&
+        (event.target as Element)?.closest?.(".home-canvas-viewport")
+      )
+        return;
       const currentY = event.touches[0]?.clientY ?? touchY;
       onInput(event, touchY - currentY);
       touchY = currentY;
     };
     const key = (event: KeyboardEvent) => {
       if (phaseRef.current === "forward") {
-        event.preventDefault(); event.stopImmediatePropagation(); return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
       }
-      if ((event.target as HTMLElement)?.closest("input, textarea, select, button, a, [contenteditable='true']")) return;
-      const delta = ["ArrowDown", "PageDown", "End"].includes(event.key) || (event.code === "Space" && !event.shiftKey) ? 10
-        : ["ArrowUp", "PageUp", "Home"].includes(event.key) || (event.code === "Space" && event.shiftKey) ? -10 : 0;
+      if (
+        (event.target as HTMLElement)?.closest(
+          "input, textarea, select, button, a, [contenteditable='true']",
+        )
+      )
+        return;
+      const delta =
+        ["ArrowDown", "PageDown", "End"].includes(event.key) ||
+        (event.code === "Space" && !event.shiftKey)
+          ? 10
+          : ["ArrowUp", "PageUp", "Home"].includes(event.key) ||
+              (event.code === "Space" && event.shiftKey)
+            ? -10
+            : 0;
       onInput(event, delta);
     };
     const scroll = () => {
       if (!revealedRef.current) return;
       const stage = document.getElementById("live-systems");
-      const stageTop = stage ? stage.getBoundingClientRect().top + window.scrollY : window.innerHeight;
+      const stageTop = stage
+        ? stage.getBoundingClientRect().top + window.scrollY
+        : window.innerHeight;
       setAtHero(window.scrollY < stageTop - 1);
     };
     const resize = () => {
-      if (phaseRef.current === "canvas") surfaceRef.current?.style.setProperty("--frame-scale", String(Math.min(0.88, 1280 / window.innerWidth)));
+      if (phaseRef.current === "canvas")
+        surfaceRef.current?.style.setProperty(
+          "--frame-scale",
+          String(Math.min(0.88, 1280 / window.innerWidth)),
+        );
     };
     window.addEventListener("wheel", wheel, { passive: false, capture: true });
     window.addEventListener("touchstart", touchStart, { passive: true });

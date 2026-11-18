@@ -24,7 +24,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "NovaStage — Collaborative System Architecture & Stack Designer",
-  description: "Design, configure, and collaborate on modern software architecture diagrams and infrastructure in real time.",
+  description:
+    "Design, configure, and collaborate on modern software architecture diagrams and infrastructure in real time.",
   icons: {
     icon: "/images/icon.svg",
     shortcut: "/images/icon.svg",
@@ -61,8 +62,12 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen bg-[#fafafa] text-neutral-900 dark:bg-[#0f141c] dark:text-[#f1f5f9] antialiased transition-colors duration-200">
         <ThemeProvider>
-          <EmbedChromeBoundary><PlatformAnnouncementBanner initialAnnouncement={activeAnnouncement} /></EmbedChromeBoundary>
-          <NotificationProvider><AuthTransitionProvider>{children}</AuthTransitionProvider></NotificationProvider>
+          <EmbedChromeBoundary>
+            <PlatformAnnouncementBanner initialAnnouncement={activeAnnouncement} />
+          </EmbedChromeBoundary>
+          <NotificationProvider>
+            <AuthTransitionProvider>{children}</AuthTransitionProvider>
+          </NotificationProvider>
           <LoadingScreen />
         </ThemeProvider>
       </body>

@@ -6,11 +6,7 @@ import { getProjectCanvasData } from "@/lib/canvas/server";
 import { getAiRequestLimit } from "@/lib/plans";
 import ProjectCanvasClient from "./project-canvas-client";
 
-export default async function ProjectPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const user = await requireAuth("/login");
   const session = await getAuthenticatedProfile();
   const { slug } = await params;
@@ -34,7 +30,11 @@ export default async function ProjectPage({
   const [canvasData, { data: memberRows }, { data: profile }] = await Promise.all([
     getProjectCanvasData(project.id),
     adminClient.from("project_members").select("user_id, role").eq("project_id", project.id),
-    adminClient.from("profiles").select("ai_requests_count, full_name, avatar_url, plan").eq("id", user.id).maybeSingle(),
+    adminClient
+      .from("profiles")
+      .select("ai_requests_count, full_name, avatar_url, plan")
+      .eq("id", user.id)
+      .maybeSingle(),
   ]);
 
   const myMembership = (memberRows || []).find((m) => m.user_id === user.id);
@@ -53,7 +53,8 @@ export default async function ProjectPage({
   const currentUser = {
     id: user.id,
     email: user.email || "",
-    fullName: profile?.full_name || session?.profile?.full_name || user.email?.split("@")[0] || "Developer",
+    fullName:
+      profile?.full_name || session?.profile?.full_name || user.email?.split("@")[0] || "Developer",
     avatarUrl: profile?.avatar_url || session?.profile?.avatar_url || null,
   };
 

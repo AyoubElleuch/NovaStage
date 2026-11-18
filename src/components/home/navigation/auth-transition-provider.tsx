@@ -26,13 +26,13 @@ export default function AuthTransitionProvider({ children }: { children: ReactNo
   }, []);
 
   const hasNavigated = Boolean(
-    transition && (pathname === transition.destination || pathname !== transition.fromPathname)
+    transition && (pathname === transition.destination || pathname !== transition.fromPathname),
   );
   const redirectedAwayFromAuth = Boolean(
     transition &&
-      pathname !== transition.fromPathname &&
-      pathname !== "/login" &&
-      pathname !== "/signup"
+    pathname !== transition.fromPathname &&
+    pathname !== "/login" &&
+    pathname !== "/signup",
   );
 
   useEffect(() => {

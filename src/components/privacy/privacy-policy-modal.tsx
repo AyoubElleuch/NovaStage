@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useModalLifecycle } from "@/lib/use-modal-lifecycle";
 import { createPortal } from "react-dom";
 import { Shield, X } from "lucide-react";
 
@@ -10,33 +11,12 @@ interface PrivacyPolicyModalProps {
   variant?: "landing" | "default";
 }
 
-const emptySubscribe = () => () => {};
-
-export function PrivacyPolicyModal({ isOpen, onClose, variant = "default" }: PrivacyPolicyModalProps) {
-  const isMounted = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [isOpen, onClose]);
+export function PrivacyPolicyModal({
+  isOpen,
+  onClose,
+  variant = "default",
+}: PrivacyPolicyModalProps) {
+  const isMounted = useModalLifecycle(isOpen, onClose);
 
   if (!isOpen || !isMounted) return null;
 
@@ -92,114 +72,203 @@ export function PrivacyPolicyModal({ isOpen, onClose, variant = "default" }: Pri
               Our Core Privacy Principles
             </h3>
             <p className="mt-1.5 text-xs text-neutral-600 dark:text-neutral-300 leading-normal">
-              We do not sell your personal or project data. We do not track your behavior across the web, we do not record session replays, and we collect only the minimum data required to deliver NovaStage.
+              We do not sell your personal or project data. We do not track your behavior across the
+              web, we do not record session replays, and we collect only the minimum data required
+              to deliver NovaStage.
             </p>
           </div>
 
           {/* Section 1: Data We Collect */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">1. Information We Collect</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+              1. Information We Collect
+            </h3>
             <p>
-              We only collect data that you voluntarily provide to us when creating an account, joining our waitlist, or collaborating on projects:
+              We only collect data that you voluntarily provide to us when creating an account,
+              joining our waitlist, or collaborating on projects:
             </p>
             <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600 dark:text-neutral-300">
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">Account &amp; Identity:</strong> Email address, username, full name, and optional avatar image (supplied directly or via GitHub OAuth).
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  Account &amp; Identity:
+                </strong>{" "}
+                Email address, username, full name, and optional avatar image (supplied directly or
+                via GitHub OAuth).
               </li>
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">Waitlist Information:</strong> Email address and authentication provider when applying for access.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  Waitlist Information:
+                </strong>{" "}
+                Email address and authentication provider when applying for access.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">Workspace &amp; Project Data:</strong> Project titles, descriptions, milestone nodes, checklist items, and workflow dependency links that you create or edit.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  Workspace &amp; Project Data:
+                </strong>{" "}
+                Project titles, descriptions, milestone nodes, checklist items, and workflow
+                dependency links that you create or edit.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">AI Usage Quotas:</strong> An aggregate counter tracking the number of AI workflow requests used per account (<code className="rounded bg-neutral-100 px-1 py-0.5 font-mono text-[11px] text-neutral-700 dark:bg-[#121721] dark:text-neutral-300">ai_requests_count</code>) to enforce generation limits.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  AI Usage Quotas:
+                </strong>{" "}
+                An aggregate counter tracking the number of AI workflow requests used per account (
+                <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono text-[11px] text-neutral-700 dark:bg-[#121721] dark:text-neutral-300">
+                  ai_requests_count
+                </code>
+                ) to enforce generation limits.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">Transactional Communications:</strong> Operational emails necessary for waitlist confirmations, invitation notices, and password resets.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  Transactional Communications:
+                </strong>{" "}
+                Operational emails necessary for waitlist confirmations, invitation notices, and
+                password resets.
               </li>
             </ul>
           </section>
 
           {/* Section 2: Artificial Intelligence & Workflow Generation */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">2. Artificial Intelligence &amp; Workflow Generation</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+              2. Artificial Intelligence &amp; Workflow Generation
+            </h3>
             <p>
-              NovaStage includes an integrated Canvas AI Assistant that transforms natural language descriptions and voice input into structured Directed Acyclic Graph (DAG) workflows containing milestone boxes, checkpoint tasks, and dependency links.
+              NovaStage includes an integrated Canvas AI Assistant that transforms natural language
+              descriptions and voice input into structured Directed Acyclic Graph (DAG) workflows
+              containing milestone boxes, checkpoint tasks, and dependency links.
             </p>
             <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600 dark:text-neutral-300">
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">Platform-Managed AI &amp; API Keys:</strong> AI workflow generation is powered by Google Gemini generative AI models through NovaStage&apos;s own platform-managed API infrastructure. Users do not need to provide, manage, or expose personal API keys.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  Platform-Managed AI &amp; API Keys:
+                </strong>{" "}
+                AI workflow generation is powered by Google Gemini generative AI models through
+                NovaStage&apos;s own platform-managed API infrastructure. Users do not need to
+                provide, manage, or expose personal API keys.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">Voice Dictation (Web Speech API):</strong> When voice dictation is used, speech-to-text conversion is handled locally via your browser&apos;s native Web Speech API. NovaStage never records, stores, or transmits your microphone audio streams to our backend servers.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  Voice Dictation (Web Speech API):
+                </strong>{" "}
+                When voice dictation is used, speech-to-text conversion is handled locally via your
+                browser&apos;s native Web Speech API. NovaStage never records, stores, or transmits
+                your microphone audio streams to our backend servers.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">Zero Prompt Logging or Storage:</strong> When you submit a prompt to generate a workflow, the prompt text and schema requirements are sent via secure TLS encryption directly to the Google Gemini API solely to compute the milestone structure. NovaStage <strong>does not log, archive, or retain your raw prompts or conversational interactions</strong> in our database or server logs.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  Zero Prompt Logging or Storage:
+                </strong>{" "}
+                When you submit a prompt to generate a workflow, the prompt text and schema
+                requirements are sent via secure TLS encryption directly to the Google Gemini API
+                solely to compute the milestone structure. NovaStage{" "}
+                <strong>
+                  does not log, archive, or retain your raw prompts or conversational interactions
+                </strong>{" "}
+                in our database or server logs.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">Canvas Artifact Storage:</strong> Only the structured project elements that you generate and place onto the canvas (milestone nodes, checkpoints, and edge connections) are stored in our PostgreSQL database, exactly like manually created nodes.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  Canvas Artifact Storage:
+                </strong>{" "}
+                Only the structured project elements that you generate and place onto the canvas
+                (milestone nodes, checkpoints, and edge connections) are stored in our PostgreSQL
+                database, exactly like manually created nodes.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">No AI Model Training:</strong> Neither NovaStage nor Google uses your private prompts or project canvas data to train public foundation AI models.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  No AI Model Training:
+                </strong>{" "}
+                Neither NovaStage nor Google uses your private prompts or project canvas data to
+                train public foundation AI models.
               </li>
             </ul>
           </section>
 
           {/* Section 3: Ephemeral Real-Time Collaboration */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">3. Ephemeral Real-Time Collaboration</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+              3. Ephemeral Real-Time Collaboration
+            </h3>
             <p>
-              NovaStage features interactive multi-user canvas collaboration. Real-time events — such as active milestone edit locks, AI generation collision locks, and live multiplayer cursor positions — are streamed ephemerally over secure WebSocket channels between connected project collaborators. This transient collaboration state is held in-memory and is <strong>never recorded or stored permanently</strong>.
+              NovaStage features interactive multi-user canvas collaboration. Real-time events —
+              such as active milestone edit locks, AI generation collision locks, and live
+              multiplayer cursor positions — are streamed ephemerally over secure WebSocket channels
+              between connected project collaborators. This transient collaboration state is held
+              in-memory and is <strong>never recorded or stored permanently</strong>.
             </p>
           </section>
 
           {/* Section 4: What We Never Do */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">4. Zero Selling &amp; Zero Behavioral Tracking</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+              4. Zero Selling &amp; Zero Behavioral Tracking
+            </h3>
             <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600 dark:text-neutral-300">
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">No Data Selling:</strong> We never sell, monetize, rent, or trade your personal information, AI prompts, or workspace content with third parties or data brokers.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  No Data Selling:
+                </strong>{" "}
+                We never sell, monetize, rent, or trade your personal information, AI prompts, or
+                workspace content with third parties or data brokers.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">No Telemetry or Tracking:</strong> We do not deploy third-party advertising cookies, session replay recording software, or cross-site tracking scripts.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  No Telemetry or Tracking:
+                </strong>{" "}
+                We do not deploy third-party advertising cookies, session replay recording software,
+                or cross-site tracking scripts.
               </li>
               <li>
-                <strong className="font-medium text-neutral-800 dark:text-white">No Third-Party Analytics:</strong> Your keystrokes, sessions, and workflows remain completely private to your authorized workspace members.
+                <strong className="font-medium text-neutral-800 dark:text-white">
+                  No Third-Party Analytics:
+                </strong>{" "}
+                Your keystrokes, sessions, and workflows remain completely private to your
+                authorized workspace members.
               </li>
             </ul>
           </section>
 
           {/* Section 5: Account Deletion */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">5. Account Deletion &amp; Total Data Purge</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+              5. Account Deletion &amp; Total Data Purge
+            </h3>
             <p>
-              You maintain full ownership of your data and have an absolute right to be forgotten. When you choose to delete your account from your Account Settings:
+              You maintain full ownership of your data and have an absolute right to be forgotten.
+              When you choose to delete your account from your Account Settings:
             </p>
             <ul className="list-inside list-disc space-y-1.5 pl-1 text-neutral-600 dark:text-neutral-300">
+              <li>Your authentication record is permanently purged from our identity service.</li>
               <li>
-                Your authentication record is permanently purged from our identity service.
+                Our database immediately cascades and removes your user profile, AI quota history,
+                role permissions, waitlist history, and join requests.
               </li>
               <li>
-                Our database immediately cascades and removes your user profile, AI quota history, role permissions, waitlist history, and join requests.
+                Projects owned solely by you — including all milestone nodes, checkpoints, and
+                dependency links — are completely and irreversibly deleted.
               </li>
               <li>
-                Projects owned solely by you — including all milestone nodes, checkpoints, and dependency links — are completely and irreversibly deleted.
-              </li>
-              <li>
-                For shared projects with other active team members, ownership is safely transferred to remaining collaborators while your personal association is completely erased.
+                For shared projects with other active team members, ownership is safely transferred
+                to remaining collaborators while your personal association is completely erased.
               </li>
             </ul>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              Once deleted, no shadow profiles, retained backups of your credentials, or lingering records remain.
+              Once deleted, no shadow profiles, retained backups of your credentials, or lingering
+              records remain.
             </p>
           </section>
 
           {/* Section 6: Security */}
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">6. Data Security &amp; Isolation</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+              6. Data Security &amp; Isolation
+            </h3>
             <p>
-              Your data is protected with PostgreSQL Row-Level Security (RLS) policies and Role-Based Access Controls (RBAC), ensuring that only verified project members can access project resources. Passwords and credentials are encrypted using industry-standard hashing algorithms.
+              Your data is protected with PostgreSQL Row-Level Security (RLS) policies and
+              Role-Based Access Controls (RBAC), ensuring that only verified project members can
+              access project resources. Passwords and credentials are encrypted using
+              industry-standard hashing algorithms.
             </p>
           </section>
         </div>

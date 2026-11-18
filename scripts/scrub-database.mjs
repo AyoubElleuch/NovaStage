@@ -18,9 +18,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error(
-    "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY."
-  );
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
 }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
@@ -48,10 +46,7 @@ const tables = [
 ];
 
 for (const table of tables) {
-  const { error } = await supabase
-    .from(table.name)
-    .delete()
-    .not(table.requiredColumn, "is", null);
+  const { error } = await supabase.from(table.name).delete().not(table.requiredColumn, "is", null);
 
   if (error) {
     throw new Error(`Failed to scrub ${table.name}: ${error.message}`);

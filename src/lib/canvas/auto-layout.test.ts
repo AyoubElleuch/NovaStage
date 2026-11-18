@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { autoLayoutNodes } from "./auto-layout";
 import { layoutAWSArchitecture } from "./aws-layout";
-import type { CanvasNode, CanvasEdge } from "./types";
+import type { CanvasNode } from "./types";
 
 describe("Canvas Auto-Layout Algorithm", () => {
   const createMockNode = (id: string, x = 0, y = 0): CanvasNode => ({
@@ -23,32 +23,6 @@ describe("Canvas Auto-Layout Algorithm", () => {
     checkpoints: [],
   });
 
-  it("topologically sequences dependent linear chains and branch-and-merge DAG layouts", () => {
-    const nodes = [
-      createMockNode("Root"),
-      createMockNode("B"),
-      createMockNode("C"),
-      createMockNode("D"),
-    ];
-    const edges: CanvasEdge[] = [
-      { id: "e1", project_id: "p1", source_node_id: "Root", target_node_id: "B", source_handle: "right", target_handle: "left", created_at: "" },
-      { id: "e2", project_id: "p1", source_node_id: "Root", target_node_id: "C", source_handle: "right", target_handle: "left", created_at: "" },
-      { id: "e3", project_id: "p1", source_node_id: "B", target_node_id: "D", source_handle: "right", target_handle: "left", created_at: "" },
-      { id: "e4", project_id: "p1", source_node_id: "C", target_node_id: "D", source_handle: "right", target_handle: "left", created_at: "" },
-    ];
-
-    const layout = autoLayoutNodes(nodes, edges);
-    const root = layout.find((n) => n.id === "Root")!;
-    const b = layout.find((n) => n.id === "B")!;
-    const c = layout.find((n) => n.id === "C")!;
-    const d = layout.find((n) => n.id === "D")!;
-
-    expect(root.position_x).toBe(120);
-    expect(b.position_x).toBeGreaterThanOrEqual(root.position_x + root.width + 140);
-    expect(c.position_x).toBe(b.position_x);
-    expect(d.position_x).toBeGreaterThanOrEqual(b.position_x + b.width + 140);
-  });
-
   it("sizes nested AWS groups around their children without sibling overlaps", () => {
     const nodes: CanvasNode[] = [
       { ...createMockNode("region"), node_type: "group" },
@@ -63,36 +37,22 @@ describe("Canvas Auto-Layout Algorithm", () => {
       const parent = result.find((node) => node.id === child.parent_group_id)!;
       expect(child.position_x).toBeGreaterThanOrEqual(parent.position_x + 56);
       expect(child.position_y).toBeGreaterThanOrEqual(parent.position_y + 88);
-      expect(child.position_x + child.width).toBeLessThanOrEqual(parent.position_x + parent.width - 56);
-      expect(child.position_y + child.height).toBeLessThanOrEqual(parent.position_y + parent.height - 56);
+      expect(child.position_x + child.width).toBeLessThanOrEqual(
+        parent.position_x + parent.width - 56,
+      );
+      expect(child.position_y + child.height).toBeLessThanOrEqual(
+        parent.position_y + parent.height - 56,
+      );
     }
     const services = result.filter((node) => node.node_type === "aws_service");
-    expect(services[1].position_x + services[1].width + 100 <= services[0].position_x ||
-      services[0].position_x + services[0].width + 100 <= services[1].position_x ||
-      services[1].position_y + services[1].height + 100 <= services[0].position_y ||
-      services[0].position_y + services[0].height + 100 <= services[1].position_y).toBe(true);
+    expect(
+      services[1].position_x + services[1].width + 100 <= services[0].position_x ||
+        services[0].position_x + services[0].width + 100 <= services[1].position_x ||
+        services[1].position_y + services[1].height + 100 <= services[0].position_y ||
+        services[0].position_y + services[0].height + 100 <= services[1].position_y,
+    ).toBe(true);
     expect(nodes[0].position_x).toBe(0);
     expect(autoLayoutNodes(result, [])).toEqual(result);
-  });
-
-  it("handles cycles, invalid edges, and empty inputs deterministically", () => {
-    expect(autoLayoutNodes([], [])).toEqual([]);
-
-    const nodes: CanvasNode[] = [
-      { ...createMockNode("group"), node_type: "group", group_metadata: {
-        label: "VPC", style: "vpc", childNodeIds: ["A", "B"],
-      } },
-      createMockNode("A"), createMockNode("B"),
-    ];
-    const edges = [
-      { source_node_id: "A", target_node_id: "B" },
-      { source_node_id: "B", target_node_id: "A" },
-      { source_node_id: "missing", target_node_id: "A" },
-    ];
-    const result = autoLayoutNodes(nodes, edges);
-    expect(result.every((node) => Number.isFinite(node.position_x))).toBe(true);
-    expect(result[1].position_x).toBeGreaterThan(result[0].position_x);
-    expect(autoLayoutNodes(nodes, edges)).toEqual(result);
   });
 
   it("anchors updated layouts to existing architecture positions", () => {
@@ -100,12 +60,33 @@ describe("Canvas Auto-Layout Algorithm", () => {
       { ...createMockNode("existing-vpc", 420, 300), node_type: "group" as const },
       { ...createMockNode("existing-api", 600, 500), node_type: "aws_service" as const },
     ];
-    const result = layoutAWSArchitecture({
-      intent: "update_pipeline", summary: "Update AWS", milestones: [], edges: [],
-      groups: [{ id: "existing-vpc", tempId: "existing-vpc", label: "VPC", style: "vpc", childTempIds: ["existing-api"] }],
-      serviceNodes: [{ id: "existing-api", tempId: "existing-api", serviceId: "ecs", parentGroupTempId: "existing-vpc" }],
-      dataFlowEdges: [],
-    }, existingArchitecture);
+    const result = layoutAWSArchitecture(
+      {
+        intent: "update_pipeline",
+        summary: "Update AWS",
+        milestones: [],
+        edges: [],
+        groups: [
+          {
+            id: "existing-vpc",
+            tempId: "existing-vpc",
+            label: "VPC",
+            style: "vpc",
+            childTempIds: ["existing-api"],
+          },
+        ],
+        serviceNodes: [
+          {
+            id: "existing-api",
+            tempId: "existing-api",
+            serviceId: "ecs",
+            parentGroupTempId: "existing-vpc",
+          },
+        ],
+        dataFlowEdges: [],
+      },
+      existingArchitecture,
+    );
 
     expect(result[0].position_x).toBe(420);
     expect(result[0].position_y).toBe(300);

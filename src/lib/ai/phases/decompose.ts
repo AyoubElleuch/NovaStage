@@ -99,7 +99,11 @@ export function buildFallbackDecomposition(prompt: string): PromptDecomposition 
   let projectType = "Web Application";
   const domainTags: string[] = [];
   const techStackHints: string[] = ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"];
-  const riskFactors: string[] = ["Data consistency", "Latency under load", "Permission enforcement"];
+  const riskFactors: string[] = [
+    "Data consistency",
+    "Latency under load",
+    "Permission enforcement",
+  ];
 
   if (lower.includes("saas") || lower.includes("stripe") || lower.includes("subscript")) {
     projectType = "B2B SaaS Platform";
@@ -110,22 +114,61 @@ export function buildFallbackDecomposition(prompt: string): PromptDecomposition 
     projectType = "E-Commerce Platform";
     domainTags.push("ecommerce", "catalog", "checkout", "inventory");
     techStackHints.push("Redis", "Stripe Checkout", "PostgreSQL");
-    riskFactors.push("Flash sale inventory contention", "Abandoned checkout recovery", "Payment gateway timeouts");
-  } else if (lower.includes("realtime") || lower.includes("chat") || lower.includes("canvas") || lower.includes("multiplayer")) {
+    riskFactors.push(
+      "Flash sale inventory contention",
+      "Abandoned checkout recovery",
+      "Payment gateway timeouts",
+    );
+  } else if (
+    lower.includes("realtime") ||
+    lower.includes("chat") ||
+    lower.includes("canvas") ||
+    lower.includes("multiplayer")
+  ) {
     projectType = "Realtime Collaborative Platform";
     domainTags.push("realtime", "websocket", "multiplayer", "presence");
     techStackHints.push("WebSockets", "Redis Pub/Sub", "Exponential Spring-Lerp");
-    riskFactors.push("Broadcast bandwidth saturation", "State desync on network reconnection", "Concurrent edit collisions");
+    riskFactors.push(
+      "Broadcast bandwidth saturation",
+      "State desync on network reconnection",
+      "Concurrent edit collisions",
+    );
   } else if (lower.includes("api") || lower.includes("microservice") || lower.includes("backend")) {
     projectType = "High-Throughput Microservice API";
     domainTags.push("api", "microservice", "queue", "cache");
     techStackHints.push("Fastify/Express", "BullMQ", "Redis", "OpenTelemetry");
-    riskFactors.push("Rate-limit evasion", "Database connection pool exhaustion", "Dead letter queue accumulation");
-  } else if (lower.includes("aws") || lower.includes("ec2") || lower.includes("lambda") || lower.includes("s3") || lower.includes("cloud") || lower.includes("infrastructure") || lower.includes("vpc") || lower.includes("serverless")) {
+    riskFactors.push(
+      "Rate-limit evasion",
+      "Database connection pool exhaustion",
+      "Dead letter queue accumulation",
+    );
+  } else if (
+    lower.includes("aws") ||
+    lower.includes("ec2") ||
+    lower.includes("lambda") ||
+    lower.includes("s3") ||
+    lower.includes("cloud") ||
+    lower.includes("infrastructure") ||
+    lower.includes("vpc") ||
+    lower.includes("serverless")
+  ) {
     projectType = "AWS Cloud Infrastructure";
     domainTags.push("aws", "cloud-infrastructure", "vpc", "iam");
-    techStackHints.push("AWS VPC", "EC2/ECS/Lambda", "RDS/DynamoDB", "S3", "CloudWatch", "IAM", "CloudFormation");
-    riskFactors.push("IAM permission over-granting", "Cross-AZ latency", "Cost overrun from unmonitored resources", "Security group misconfiguration");
+    techStackHints.push(
+      "AWS VPC",
+      "EC2/ECS/Lambda",
+      "RDS/DynamoDB",
+      "S3",
+      "CloudWatch",
+      "IAM",
+      "CloudFormation",
+    );
+    riskFactors.push(
+      "IAM permission over-granting",
+      "Cross-AZ latency",
+      "Cost overrun from unmonitored resources",
+      "Security group misconfiguration",
+    );
   } else {
     domainTags.push("web-app", "database", "ui", "testing");
   }
@@ -187,14 +230,17 @@ export function buildFallbackDecomposition(prompt: string): PromptDecomposition 
 /**
  * Execute Phase 1: Decompose user prompt into structured architectural spec
  */
-export async function decomposePrompt(prompt: string, mode: AIGenerationMode = "workflow"): Promise<PromptDecomposition> {
+export async function decomposePrompt(
+  prompt: string,
+  mode: AIGenerationMode = "workflow",
+): Promise<PromptDecomposition> {
   const result = await callGemini<PromptDecomposition>(
     `Selected mode: ${mode}. ${mode === "aws_architecture" ? "Analyze infrastructure requirements, service roles, containment and data flow only. Do not produce implementation phases or milestones." : "Analyze delivery milestones, checkpoints and explicit dependencies only. Do not design AWS resources."}\nAnalyze this request:\n\n"${prompt}"`,
     DECOMPOSITION_SCHEMA,
     {
       systemInstruction: DECOMPOSE_SYSTEM_INSTRUCTION,
       temperature: 0.1,
-    }
+    },
   );
 
   if (result && result.projectType && result.concernAreas && result.concernAreas.length > 0) {
