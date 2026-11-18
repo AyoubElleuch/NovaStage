@@ -27,7 +27,7 @@ export default function GeneratedDiagramPreview({ workflow, graph: suppliedGraph
       const height = Math.max(...graph.nodes.map(node => node.position_y + node.height)) - minY + 24;
       return { graph, width, height, minX, minY, error: null };
     } catch (error) { return { error: error instanceof Error ? error.message : "Invalid diagram" }; }
-  }, [workflow]);
+  }, [workflow, suppliedGraph]);
   if (!preview.graph) return <p role="alert" className="text-xs text-amber-700 dark:text-amber-300">{preview.error}</p>;
   const scale = Math.min(Math.max(1, frameWidth) / preview.width, 240 / preview.height);
   const x = (frameWidth - preview.width * scale) / 2 - preview.minX * scale;

@@ -21,7 +21,7 @@ export default function SubscriptionWorkspace() {
   const [interval, setInterval] = useState<"monthly" | "annual">("monthly");
   const [selectedTier, setSelectedTier] = useState<PlanId | null>(null);
   if (isLoading && !data) return <SubscriptionLoading />;
-  if (error && !data) return <div role="alert" className="space-y-3 p-6"><p>We couldn't load your plan.</p><button type="button" onClick={() => void mutate()} className="rounded-lg border px-4 py-2">Try again</button></div>;
+  if (error && !data) return <div role="alert" className="space-y-3 p-6"><p>We couldn’t load your plan.</p><button type="button" onClick={() => void mutate()} className="rounded-lg border px-4 py-2">Try again</button></div>;
   const plan = normalizePlan(data?.profile?.plan);
   const ActiveIcon = tiers.find(tier => tier.id === plan)!.icon;
 
@@ -60,7 +60,7 @@ export default function SubscriptionWorkspace() {
     <section className="space-y-3">
       <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Plan limits</h2>
       <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-[#283548]"><table className="w-full text-left text-xs"><caption className="sr-only">Currently enforced plan limits</caption><thead><tr><th scope="col" className="p-4">Capability</th>{tiers.map(tier => <th key={tier.id} scope="col" className="p-4">{tier.name}</th>)}</tr></thead><tbody>{(["aiRequests", "members"] as const).map(limit => <tr key={limit} className="border-t border-neutral-200 dark:border-[#283548]"><th scope="row" className="p-4 font-medium">{limit === "aiRequests" ? "AI requests" : "Members per project"}</th>{tiers.map(tier => <td key={tier.id} className="p-4">{tier.id === "enterprise" ? "Unlimited" : PLAN_LIMITS[tier.id][limit]}</td>)}</tr>)}</tbody></table></div>
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">A successful generation uses one request. Failed generations restore the allowance. Project capacity follows the owner's plan and includes the owner.</p>
+      <p className="text-xs text-neutral-500 dark:text-neutral-400">A successful generation uses one request. Failed generations restore the allowance. Project capacity follows the owner’s plan and includes the owner.</p>
     </section>
     <BillingComingSoonModal isOpen={selectedTier !== null} selectedPlan={selectedTier} onClose={() => setSelectedTier(null)} />
   </div>;

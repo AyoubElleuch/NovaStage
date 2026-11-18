@@ -100,7 +100,7 @@ export function diffCanvas(before: CanvasState, after: CanvasState): CanvasOp[] 
   for (const [key, edge] of afterEdges) {
     const old = beforeEdges.get(key);
     if (!old) edgeOps.push({ kind: "edge:create", edge });
-    else if (old.label !== edge.label || (old.edge_type || "dependency") !== (edge.edge_type || "dependency")) {
+    else if ((old.label ?? null) !== (edge.label ?? null) || (old.edge_type || "dependency") !== (edge.edge_type || "dependency")) {
       edgeOps.push({ kind: "edge:update", edge, from: { label: old.label ?? null, edge_type: old.edge_type }, to: { label: edge.label ?? null, edge_type: edge.edge_type } });
     }
   }

@@ -474,7 +474,7 @@ export default function CanvasAIAssistant({
             </button>)}
           </div>}
           {projectId && projectSlug && <p className="mt-1.5 px-0.5 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
-            {provider === "builtin" ? "Built-in AI adds its result to the canvas right away. Undo is available." : "Your AI (Codex or Claude) prepares a draft that you review before anything is added."}
+            {provider === "builtin" ? "Built-in AI prepares a preview. Review and apply it before your canvas changes." : "Your AI (Codex or Claude) prepares a draft that you review before anything is added."}
           </p>}
           {provider === "external" && projectId && projectSlug && <CanvasMcpAssistant projectId={projectId} projectSlug={projectSlug} onApplied={onExternalApplied} />}
           {/* Form & Input Area */}

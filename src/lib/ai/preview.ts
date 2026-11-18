@@ -67,7 +67,7 @@ export function previewGeneration(input: {
     headline = `Adds a separate new ${diagram}`;
     details.push(`Your ${existingCount} existing ${noun} ${existingCount === 1 ? "is" : "are"} left as ${existingCount === 1 ? "it is" : "they are"}.`);
   }
-  details.push("It's applied right away for everyone on this canvas, and you can undo it afterwards.");
+  details.push("Review the generated preview before applying it. You can undo accepted changes afterwards.");
 
   return {
     mode: input.mode,

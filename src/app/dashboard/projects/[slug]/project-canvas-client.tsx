@@ -295,6 +295,7 @@ export default function ProjectCanvasClient({
   }, [storageKey]);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
     try {
       const saved = readRecovery(localStorage, storageKey);
       const draft = readRecovery(localStorage, storageKey + ":draft");
@@ -305,6 +306,8 @@ export default function ProjectCanvasClient({
       } else if (saved && diffCanvas(saved.base, saved.canvas).length) setRecoveryDraft(saved);
       if (draft) setRecoveryDraft(draft);
     } catch { /* Storage can be disabled by the browser. */ }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [storageKey]);
 
   useEffect(() => {
@@ -315,6 +318,14 @@ export default function ProjectCanvasClient({
     }, 100);
     return () => clearTimeout(timer);
   }, [nodes, edges, saveState, storageKey, historyIndex]);
+
+  useEffect(() => {
+    const flush = () => {
+      try { writeRecovery(localStorage, storageKey, { savedAt: Date.now(), base: confirmedCanvasRef.current, canvas: { nodes: nodesRef.current, edges: edgesRef.current }, history: historyRef.current }); } catch {}
+    };
+    window.addEventListener("pagehide", flush);
+    return () => window.removeEventListener("pagehide", flush);
+  }, [storageKey]);
 
   const syncHistoryFlags = useCallback(() => {
     setCanUndo(historyCanUndo(historyRef.current));
@@ -458,12 +469,15 @@ export default function ProjectCanvasClient({
   // Resync full canvas state on reconnection or after a failed save.
   const resyncCanvasState = useCallback(async (options: { quiet?: boolean } = {}) => {
     try {
-      await saveQueueRef.current;
+      const pending = saveQueueRef.current;
+      await pending;
+      if (pending !== saveQueueRef.current) return false;
       if (saveStateRef.current.diverged) preserveDraft();
       const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, { cache: "no-store" });
       if (res.ok) {
         const hadUnsavedEdits = saveStateRef.current.diverged;
         const data = await res.json();
+        if (pending !== saveQueueRef.current) return false;
         if (data.nodes) { versionsRef.current = new Map((data.nodes as CanvasNode[]).map(node => [node.id, node.version])); nodesRef.current = data.nodes; setNodes(data.nodes); }
         if (data.edges) { edgesRef.current = data.edges; setEdges(data.edges); }
         confirmedCanvasRef.current = { nodes: data.nodes, edges: data.edges };
@@ -1273,6 +1287,10 @@ export default function ProjectCanvasClient({
       const ops = direction === "undo" ? invertOps(entry) : entry;
       const before: CanvasState = { nodes: nodesRef.current, edges: edgesRef.current };
       const after = applyOps(before, ops);
+      if (diffCanvas(before, applyOps(after, invertOps(ops))).length) {
+        notify({ tone: "error", title: "History conflicts with newer edits", message: "This change can no longer be safely undone or redone. The shared canvas has been kept." });
+        return;
+      }
       historyRef.current = { ...history, index: direction === "undo" ? entryIndex : entryIndex + 1 };
       syncHistoryFlags();
       nodesRef.current = after.nodes;
@@ -1414,9 +1432,9 @@ export default function ProjectCanvasClient({
 
   useEffect(() => {
     let active = true;
-    void secureFetch(`/api/dashboard/projects/${project.slug}/canvas/ai-generate`, { cache: "no-store" }).then(response => response.ok ? response.json() : null).then(data => { if (active && data?.preview) setAiPreview(data.preview); }).catch(() => {});
+    void fetch(`/api/dashboard/projects/${project.slug}/canvas/ai-generate`, { cache: "no-store" }).then(response => response.ok ? response.json() : null).then(data => { if (active && data?.preview) setAiPreview(data.preview); }).catch(() => {});
     return () => { active = false; };
-  }, [project.slug, secureFetch]);
+  }, [project.slug]);
 
   const resolveAIPreview = async (apply: boolean) => {
     if (!aiPreview) return;
@@ -1426,7 +1444,8 @@ export default function ProjectCanvasClient({
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.message || data.error || "Unable to resolve this preview.");
     if (apply) {
-      pushHistorySnapshot(data.nodes, data.edges);
+      const ops = pushHistorySnapshot(data.nodes, data.edges);
+      if (ops.length) setAiChange({ text: describeOpsDone(ops), index: historyRef.current.index, label: aiPreview.nodes.some(node => node.node_type === "aws_service") ? "AWS architecture generated" : "Workflow generated" });
       setNodes(data.nodes); setEdges(data.edges);
       versionsRef.current = new Map((data.nodes as CanvasNode[]).map(node => [node.id, node.version]));
       confirmedCanvasRef.current = { nodes: data.nodes, edges: data.edges };
@@ -2058,7 +2077,7 @@ export default function ProjectCanvasClient({
       await trackSave(() => saveRequest("canvas", { action: "apply_layout", nodes: changed.map(([id, pos]) => ({ id, position_x: pos.x, position_y: pos.y })) }));
       broadcastEvent("canvas:resync", { userId: currentUser.id });
     } catch (error) { await reportSaveFailure("Position Not Saved", error); }
-  }, [pushHistorySnapshot, nodes, edges, broadcastEvent, saveRequest, trackSave, reportSaveFailure]);
+  }, [pushHistorySnapshot, nodes, edges, broadcastEvent, currentUser.id, saveRequest, trackSave, reportSaveFailure]);
 
   // Marquee Selection Handlers
   const handleMarqueeStart = (worldPos: { x: number; y: number }) => {
