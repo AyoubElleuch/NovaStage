@@ -29,7 +29,7 @@ Record the deployment revision and results before production promotion. The repo
 
 ## Runtime behavior and limits
 
-- Tidy and multi-card moves commit one transaction. Node updates compare versions; conflicts preserve a local draft and refresh the shared state.
+- Multi-card moves commit one transaction. Node updates compare versions; conflicts preserve a local draft and refresh the shared state.
 - Failed/offline edits are not silently replayed. Drafts and up to 50 undo steps are scoped to user/project in browser storage, expire after seven days, and are limited to 4 MB. If storage is unavailable, the UI offers an in-tab draft to download before leaving. Clearing browser data removes local history.
 - Restoring a draft requires its starting canvas to match the current shared canvas. Otherwise download it for manual reconciliation. Undo rejects conflicting newer edits.
 - Built-in AI previews expire after 15 minutes. Accepting is idempotent and uses no extra quota; completed generation consumes a request even if discarded. Expired rows are cleaned on that user's next generation; a scheduled database purge can remove expired rows for inactive accounts.

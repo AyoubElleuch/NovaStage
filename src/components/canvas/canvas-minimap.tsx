@@ -209,7 +209,7 @@ export default function CanvasMinimap({
   return (
     <aside
       data-canvas-ui
-      style={rightInset ? { right: rightInset + 16, bottom: 96 } : undefined}
+      style={rightInset ? { right: rightInset + 24 } : undefined}
       ref={asideRef}
       aria-label="Canvas Minimap Radar"
       className={`absolute bottom-24 right-3 sm:bottom-6 sm:right-6 z-20 flex flex-col items-end pointer-events-auto ${

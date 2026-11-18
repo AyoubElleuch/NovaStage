@@ -12,9 +12,17 @@ interface Props {
   onToggle: () => void;
   onClose: () => void;
   onJumpToNode: (id: string) => void;
+  onFocusSelection?: () => void;
 }
 
-export default function CanvasNavigator({ nodes, isOpen, onToggle, onClose, onJumpToNode }: Props) {
+export default function CanvasNavigator({
+  nodes,
+  isOpen,
+  onToggle,
+  onClose,
+  onJumpToNode,
+  onFocusSelection,
+}: Props) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -115,6 +123,15 @@ export default function CanvasNavigator({ nodes, isOpen, onToggle, onClose, onJu
           ⌘ / Ctrl K
         </kbd>
       </button>
+      {!isOpen && onFocusSelection && (
+        <button
+          type="button"
+          onClick={onFocusSelection}
+          className="mt-2 shrink-0 self-start rounded-xl border border-neutral-200 bg-white/95 px-3 py-2 text-xs font-medium text-neutral-700 shadow-sm backdrop-blur dark:border-[#283548] dark:bg-[#161d27]/95 dark:text-white"
+        >
+          Focus selection
+        </button>
+      )}
       {isOpen && (
         <section
           aria-label="Canvas navigator"

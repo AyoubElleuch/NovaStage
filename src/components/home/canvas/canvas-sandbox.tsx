@@ -10,7 +10,6 @@ import {
   type PointerEvent,
 } from "react";
 import { Maximize2, Minimize2, RotateCcw, Trash2 } from "lucide-react";
-import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
 import { DropdownBoundary } from "@/components/ui/dropdown";
 import CanvasViewportContainer from "@/components/canvas/canvas-viewport";
 import CanvasNodeComponent from "@/components/canvas/canvas-node";
@@ -373,44 +372,6 @@ export default function CanvasSandbox({
     updateNode(id, { claimed_by: null, claim_holder: null });
   }
 
-  function tidy() {
-    const nodes = autoLayoutNodes(graph.nodes, graph.edges, { rankSep: 150, nodeSep: 130 });
-    const byId = new Map(nodes.map((node) => [node.id, node]));
-    const edges = graph.edges.map((edge) => {
-      const source = byId.get(edge.source_node_id),
-        target = byId.get(edge.target_node_id);
-      if (!source || !target) return edge;
-      const sourceSize = getNodeDimensions(source),
-        targetSize = getNodeDimensions(target);
-      const dx =
-        target.position_x + targetSize.width / 2 - source.position_x - sourceSize.width / 2;
-      const dy =
-        target.position_y + targetSize.height / 2 - source.position_y - sourceSize.height / 2;
-      const horizontal = Math.abs(dx) >= Math.abs(dy);
-      return {
-        ...edge,
-        source_handle: horizontal
-          ? dx >= 0
-            ? ("right" as const)
-            : ("left" as const)
-          : dy >= 0
-            ? ("bottom" as const)
-            : ("top" as const),
-        target_handle: horizontal
-          ? dx >= 0
-            ? ("left" as const)
-            : ("right" as const)
-          : dy >= 0
-            ? ("top" as const)
-            : ("bottom" as const),
-      };
-    });
-    const next = { ...graph, nodes, edges };
-    graphRef.current = next;
-    dispatch({ type: "commit", graph: next });
-    fitView();
-  }
-
   function zoomBy(factor: number) {
     const host = hostRef.current;
     if (!host) return;
@@ -712,7 +673,6 @@ export default function CanvasSandbox({
               onFitView={() => fitView()}
               onAddNode={addMilestone}
               onAddGroup={addGroup}
-              onTidyLayout={tidy}
               snapGrid={snap}
               onToggleSnapGrid={() => setSnap(!snap)}
               canUndo={history.past.length > 0}

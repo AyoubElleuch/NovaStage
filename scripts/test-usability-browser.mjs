@@ -158,14 +158,10 @@ try {
         0,
         "dismissal persists after reload",
       );
+      await page.getByRole("button", { name: "Canvas tools", exact: true }).click();
       await page.getByRole("button", { name: "Canvas guide", exact: true }).click();
       await page.locator(".canvas-guide").waitFor();
-      assert.equal(
-        await page
-          .getByRole("button", { name: "Canvas guide", exact: true })
-          .getAttribute("aria-pressed"),
-        "true",
-      );
+      assert.equal(await page.locator(".canvas-guide").isVisible(), true);
       await page.keyboard.press("Escape");
       await page.close();
       await context.close();

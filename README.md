@@ -35,7 +35,7 @@ See the [release notes](docs/releases/v1.2.0-pr.md), [technical report and befor
 
 The Next.js App Router serves authenticated project APIs and the React canvas. Built-in generation uses the application's provider credentials and quota; external assistants use scoped MCP access and their own accounts. Both supply semantic graphs. Shared application code validates graph meaning, computes dimensions and layout, checks final geometry, and constructs the persistence payload.
 
-Built-in previews use `accept_canvas_ai_preview` and the transactional `apply_canvas_ai_graph` RPC. Tidy and group dragging use `apply_canvas_layout`; content edits compare node versions. MCP acceptance uses `apply_canvas_mcp_draft`, which commits the diagram and acceptance status together and rejects duplicate acceptance. Ownership, membership, claims and generation guards are checked at protected boundaries.
+Built-in previews use `accept_canvas_ai_preview` and the transactional `apply_canvas_ai_graph` RPC. Group dragging and multi-card moves use `apply_canvas_layout`; content edits compare node versions. MCP acceptance uses `apply_canvas_mcp_draft`, which commits the diagram and acceptance status together and rejects duplicate acceptance. Ownership, membership, claims and generation guards are checked at protected boundaries.
 
 | Area                     | Implementation                                                                 |
 | ------------------------ | ------------------------------------------------------------------------------ |

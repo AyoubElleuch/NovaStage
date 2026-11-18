@@ -34,7 +34,6 @@ import {
   exportToMermaid,
   getNodeDimensions,
 } from "@/lib/canvas/coordinate-math";
-import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
 import {
   readRecovery,
   writeRecovery,
@@ -2898,45 +2897,6 @@ export default function ProjectCanvasClient({
     }
   };
 
-  const handleTidyLayout = async () => {
-    if (!nodes.length || isAIGenerating) return;
-    const tidyNodes = autoLayoutNodes(nodes, edges);
-    const changedNodes = tidyNodes.filter((node, index) => {
-      const previous = nodes[index];
-      return (
-        node.position_x !== previous.position_x ||
-        node.position_y !== previous.position_y ||
-        node.width !== previous.width ||
-        node.height !== previous.height
-      );
-    });
-    if (!changedNodes.length) return;
-    setNodes(tidyNodes);
-    pushHistorySnapshot(tidyNodes, edges);
-
-    try {
-      await trackSave(() =>
-        saveRequest("canvas", {
-          action: "apply_layout",
-          nodes: changedNodes.map((node) => ({
-            id: node.id,
-            position_x: node.position_x,
-            position_y: node.position_y,
-            width: node.width,
-            height: node.height,
-          })),
-        }),
-      );
-      broadcastEvent("canvas:resync", { userId: currentUser.id });
-      notify({
-        title: "Auto-Layout Complete",
-        message: "Arranged nodes with space for connections and nested groups",
-      });
-    } catch (error) {
-      await reportSaveFailure("Layout Not Saved", error);
-    }
-  };
-
   const handleJumpToNode = (targetNodeId: string) => {
     const target = nodes.find((n) => n.id === targetNodeId);
     if (!target) return;
@@ -3109,6 +3069,7 @@ export default function ProjectCanvasClient({
       />
 
       <CanvasNavigator
+        onFocusSelection={selectedNodeIds.size > 0 ? () => handleFitView(true) : undefined}
         nodes={nodes}
         isOpen={isNavigatorOpen}
         onToggle={() => {
@@ -3461,17 +3422,6 @@ export default function ProjectCanvasClient({
         <CanvasCursors collaborators={collaborators} currentUserId={currentUser.id} />
       </CanvasViewportContainer>
 
-      {selectedNodeIds.size > 0 && (
-        <button
-          data-canvas-ui
-          type="button"
-          onClick={() => handleFitView(true)}
-          className="absolute left-3 top-[124px] z-20 rounded-xl border border-neutral-200 bg-white/95 px-3 py-2 text-xs font-medium shadow-sm dark:border-[#283548] dark:bg-[#161d27]"
-        >
-          Focus selection
-        </button>
-      )}
-      {/* Interactive Radar Minimap Component */}
       <CanvasMinimap
         nodes={nodes}
         viewport={viewport}
@@ -3547,10 +3497,14 @@ export default function ProjectCanvasClient({
 
       {/* Bottom Floating Control Bar (Canvas Tools Dock + AI Assistant) */}
       <div
-        style={{ right: (selectedNode || isReleasePulseOpen) && !isMobile ? 420 : 0 }}
+        style={{
+          right: (selectedNode || isReleasePulseOpen) && !isMobile ? 420 : 0,
+        }}
         className="@container/controls pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-6 z-20 px-3"
       >
-        <div className="flex flex-col @[950px]/controls:flex-row items-center justify-center gap-2">
+        <div
+          className={`flex flex-col @[950px]/controls:flex-row items-center justify-center gap-2 ${isMinimapOpen && !isMobile ? "mb-44 @[600px]/controls:mb-0 @[600px]/controls:mr-[216px]" : ""}`}
+        >
           {/* On mobile: AI Assistant & Notebook stack above toolbar (order-1). On desktop: sit alongside dock (sm:order-2) */}
           <div
             className={`order-1 @[950px]/controls:order-2 pointer-events-auto ${selectedNode && isMobile ? "hidden" : "flex"} items-center justify-end @[950px]/controls:justify-start gap-2 w-full max-w-[340px] @[950px]/controls:w-auto @[950px]/controls:max-w-none`}
@@ -3608,7 +3562,6 @@ export default function ProjectCanvasClient({
               onResetZoom={() => handleZoom(1)}
               onFitView={() => handleFitView()}
               onAddNode={() => handleAddNode()}
-              onTidyLayout={handleTidyLayout}
               snapGrid={snapGrid}
               onToggleSnapGrid={() => setSnapGrid((v) => !v)}
               canUndo={canUndo}

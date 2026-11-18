@@ -30,7 +30,7 @@ There is no automatic offline replay. Failed edits are retained as a local recov
 ## Conflicts
 
 - **Claims** are the conflict mechanism. Content edits, checkpoint changes and deletions require a live claim (five-minute lease, renewed every minute while the card is held). A rejected edit reverts on screen with the reason.
-- Positions and sizes remain movable without a claim, but saves compare node versions. Tidy and multi-card moves use one transaction; one stale or invalid node rolls back the whole batch. Content updates also compare versions.
+- Positions and sizes remain movable without a claim, but saves compare node versions. Multi-card moves use one transaction; one stale or invalid node rolls back the whole batch. Content updates also compare versions.
 - Peers only hear about a claim after the server grants it. A lost race shows "Claim Failed" and the real holder.
 - A granted handoff locks the previous editor's open card immediately.
 - Claim handoff requests are delivered live over Realtime. A holder who was offline when the request was made does not see it later; the requester can ask again.
