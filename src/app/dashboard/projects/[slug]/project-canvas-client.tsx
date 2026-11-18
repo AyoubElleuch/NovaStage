@@ -27,6 +27,7 @@ import {
   getNodeDimensions,
 } from "@/lib/canvas/coordinate-math";
 import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
+import { readRecovery, writeRecovery, recoveryKey, canRecoverDraft, type CanvasRecovery } from "@/lib/canvas/recovery";
 import { alignNodePosition, fitCanvasNodes, getDragNodeIds, getOpenNodePosition, zoomAroundCenter, getCanvasNodeAtPoint } from "@/lib/canvas/workspace";
 import { useCanvasVisualViewport } from "@/lib/canvas/use-visual-viewport";
 import { AIGenerationOperation } from "@/lib/ai/types";
@@ -279,6 +280,39 @@ export default function ProjectCanvasClient({
     saveStateRef.current = saveState;
   }, [saveState]);
 
+  const storageKey = recoveryKey(project.id, currentUser.id);
+  const confirmedCanvasRef = useRef<CanvasState>({ nodes: initialNodes, edges: initialEdges });
+  const [recoveryDraft, setRecoveryDraft] = useState<CanvasRecovery | null>(null);
+  const [isRecovering, setIsRecovering] = useState(false);
+  const preserveDraft = useCallback(() => {
+    const draft = { savedAt: Date.now(), base: confirmedCanvasRef.current, canvas: { nodes: nodesRef.current, edges: edgesRef.current }, history: historyRef.current };
+    if (!diffCanvas(draft.base, draft.canvas).length) return;
+    setRecoveryDraft(draft);
+    try { writeRecovery(localStorage, storageKey + ":draft", draft); } catch {}
+  }, [storageKey]);
+
+  useEffect(() => {
+    try {
+      const saved = readRecovery(localStorage, storageKey);
+      const draft = readRecovery(localStorage, storageKey + ":draft");
+      const current = confirmedCanvasRef.current;
+      if (saved && !diffCanvas(saved.canvas, current).length) {
+        historyRef.current = saved.history;
+        setCanUndo(historyCanUndo(saved.history)); setCanRedo(historyCanRedo(saved.history)); setHistoryIndex(saved.history.index);
+      } else if (saved && diffCanvas(saved.base, saved.canvas).length) setRecoveryDraft(saved);
+      if (draft) setRecoveryDraft(draft);
+    } catch { /* Storage can be disabled by the browser. */ }
+  }, [storageKey]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const canvas = { nodes: nodesRef.current, edges: edgesRef.current };
+      if (!saveState.pending && !saveState.diverged) confirmedCanvasRef.current = canvas;
+      try { writeRecovery(localStorage, storageKey, { savedAt: Date.now(), base: confirmedCanvasRef.current, canvas, history: historyRef.current }); } catch {}
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [nodes, edges, saveState, storageKey, historyIndex]);
+
   const syncHistoryFlags = useCallback(() => {
     setCanUndo(historyCanUndo(historyRef.current));
     setCanRedo(historyCanRedo(historyRef.current));
@@ -306,10 +340,11 @@ export default function ProjectCanvasClient({
       dispatchSave({ type: "succeeded" });
       return result;
     } catch (error) {
+      preserveDraft();
       dispatchSave({ type: "failed", message: friendlySaveError(error) });
       throw error;
     }
-  }, []);
+  }, [preserveDraft]);
 
   // Warn before leaving while a save is in flight or the canvas is known to be out of sync.
   useEffect(() => {
@@ -326,7 +361,7 @@ export default function ProjectCanvasClient({
     return { width: element?.clientWidth || window.innerWidth, height: element?.clientHeight || window.innerHeight,
       rightInset: (selectedNodeId || isReleasePulseOpen) && !isMobile ? 420 : 0,
       bottomInset: selectedNodeId && isMobile ? 280 : 0 };
-  }, [canvasRootElement, selectedNodeId, isMobile]);
+  }, [canvasRootElement, selectedNodeId, isMobile, isReleasePulseOpen]);
 
   const handleFitView = useCallback((selectionOnly = false) => {
     const targets = selectionOnly ? nodes.filter(node => selectedNodeIds.has(node.id) || selectedNodeId === node.id) : nodes;
@@ -420,16 +455,19 @@ export default function ProjectCanvasClient({
   // Resync full canvas state on reconnection or after a failed save.
   const resyncCanvasState = useCallback(async (options: { quiet?: boolean } = {}) => {
     try {
+      await saveQueueRef.current;
+      if (saveStateRef.current.diverged) preserveDraft();
       const res = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas`, { cache: "no-store" });
       if (res.ok) {
         const hadUnsavedEdits = saveStateRef.current.diverged;
         const data = await res.json();
         if (data.nodes) { versionsRef.current = new Map((data.nodes as CanvasNode[]).map(node => [node.id, node.version])); nodesRef.current = data.nodes; setNodes(data.nodes); }
         if (data.edges) { edgesRef.current = data.edges; setEdges(data.edges); }
+        confirmedCanvasRef.current = { nodes: data.nodes, edges: data.edges };
         dispatchSave({ type: "synced" });
         if (!options.quiet) {
           notify(hadUnsavedEdits
-            ? { tone: "error", title: "Unsaved edits discarded", message: "Changes made while disconnected could not be saved, so the canvas now shows the saved version. Please repeat them." }
+            ? { tone: "error", title: "Draft preserved", message: "Your unsaved edits are kept on this device. Review or download the draft before restoring it." }
             : { title: "Canvas Synced", message: "Refreshed latest roadmap changes" });
         }
         return true;
@@ -438,7 +476,7 @@ export default function ProjectCanvasClient({
       console.warn("Failed to resync canvas state:", e);
     }
     return false;
-  }, [notify, project.slug, secureFetch]);
+  }, [notify, preserveDraft, project.slug, secureFetch]);
 
   // A failed save leaves the screen showing the saved version; say what happened and how to recover.
   const reportSaveFailure = useCallback(async (title: string, error: unknown) => {
@@ -1201,6 +1239,24 @@ export default function ProjectCanvasClient({
       }
     }
   }, [saveRequest]);
+
+  const clearRecovery = () => { setRecoveryDraft(null); try { localStorage.removeItem(storageKey + ":draft"); } catch {} };
+  const recoverDraft = async () => {
+    if (!recoveryDraft || isRecovering) return;
+    setIsRecovering(true);
+    try {
+      if (!await resyncCanvasState({ quiet: true })) throw new Error("Reconnect before restoring your draft.");
+      const before = { nodes: nodesRef.current, edges: edgesRef.current };
+      if (!canRecoverDraft(recoveryDraft, before)) throw new Error("The shared canvas changed. Download your draft to recover it without overwriting other edits.");
+      const ops = diffCanvas(recoveryDraft.base, recoveryDraft.canvas);
+      await trackSave(() => persistOps(ops, before, recoveryDraft.canvas));
+      pushHistorySnapshot(recoveryDraft.canvas.nodes, recoveryDraft.canvas.edges);
+      await resyncCanvasState({ quiet: true });
+      clearRecovery();
+      broadcastEvent("canvas:resync", { userId: currentUser.id });
+    } catch (error) { notify({ tone: "error", title: "Draft not restored", message: friendlySaveError(error) }); }
+    finally { setIsRecovering(false); }
+  };
 
   // Undo / Redo apply the inverse (or the original) of one recorded change locally, then save it.
   const stepHistory = useCallback((direction: "undo" | "redo") => {
@@ -2410,6 +2466,10 @@ export default function ProjectCanvasClient({
 
   return (
     <div ref={setCanvasRootElement} className="canvas-workspace relative h-full w-full overflow-hidden select-none">
+      {recoveryDraft && <section data-canvas-ui role="status" aria-label="Canvas recovery" className="absolute left-1/2 top-20 z-40 w-[min(440px,calc(100%-24px))] -translate-x-1/2 rounded-2xl border border-amber-200 bg-white p-4 text-xs shadow-xl dark:border-amber-800 dark:bg-[#161d27]">
+        <p className="font-semibold">Unsaved draft available</p><p className="mt-1 text-neutral-500 dark:text-neutral-300">Kept on this device for 7 days. Restore is available only while the shared canvas matches the draft’s starting point.</p>
+        <div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={isRecovering} onClick={() => void recoverDraft()} className="font-semibold text-emerald-600">{isRecovering ? "Restoring…" : "Restore draft"}</button><button type="button" onClick={() => { const url = URL.createObjectURL(new Blob([JSON.stringify(recoveryDraft.canvas, null, 2)], { type: "application/json" })); const link = document.createElement("a"); link.href = url; link.download = `${project.slug}-recovered-draft.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }}>Download draft</button><button type="button" onClick={clearRecovery}>Dismiss</button></div>
+      </section>}
       {/* Top Floating HUD with Follow Mode and Export */}
       <CanvasHud
         projectSlug={project.slug}
