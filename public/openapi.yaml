@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: NovaStage API
-  version: 1.1.6
+  version: 1.2.0
   description: >-
     NovaStage HTTP API. Protected operations use Supabase SSR session cookies. Setup and endpoint inventory:
     docs/api-sdk.md.
@@ -360,7 +360,7 @@ paths:
       tags:
         - Canvas
       summary: Read the complete project graph and active claim requests
-      description: Project member required. A caught node-loading error returns an empty graph with 200.
+      description: Project member required. Any graph-table read failure returns 500 rather than an incomplete graph.
       responses:
         '200':
           description: Success.
@@ -368,6 +368,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CanvasData'
+        '204':
+          description: Membership verified when access=1; no response body.
         '401':
           $ref: '#/components/responses/Error401'
         '403':
@@ -376,16 +378,23 @@ paths:
           $ref: '#/components/responses/Error404'
         '500':
           $ref: '#/components/responses/Error500'
+      parameters:
+        - name: access
+          in: query
+          schema:
+            type: string
+            enum:
+              - '1'
+          description: Check membership without loading the graph.
     post:
       operationId: mutateProjectCanvas
       tags:
         - Canvas
       summary: Create, update, or delete a node or edge
       description: >-
-        Project member required. Content edits require a current node claim; owners bypass some deletion and
-        edge rules. Most mutation failures return 200 with success false; create_node may return success true
-        with node null. update_edge failures return 400. Invalid actions return 400; malformed JSON or invalid
-        create_edge types return 500.
+        Project member required. Content edits require a current node claim; owners bypass some deletion
+        and edge rules. Inspect success even on HTTP 200. Node updates compare versions; apply_layout
+        commits the entire batch atomically. Invalid or stale node updates and layout batches return 409.
       responses:
         '200':
           description: Operation result; inspect success even when HTTP status is 200.
@@ -412,6 +421,12 @@ paths:
           $ref: '#/components/responses/Error403'
         '404':
           $ref: '#/components/responses/Error404'
+        '409':
+          description: Node update or layout validation/conflict failure; success is false.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CanvasMutationResult'
         '500':
           $ref: '#/components/responses/Error500'
       requestBody:
@@ -557,18 +572,37 @@ paths:
       operationId: generateProjectCanvas
       tags:
         - AI
-      summary: Generate or update workflow and AWS architecture nodes
+      summary: Generate, apply, or discard a private canvas preview
       description: >-
-        Project member, server AI configuration and available subscription quota required. Concurrent
-        generation returns 409; quota exhaustion returns 403; upstream AI failure returns 502. Invalid modes
-        use workflow. Malformed JSON returns 400. Maximum duration: 120 seconds.
+        Project membership is required. Generation also requires server AI configuration and quota.
+        Completed generation consumes one request and leaves the saved graph unchanged. Previews expire
+        after 15 minutes. Apply checks membership, claims and the unchanged starting graph, commits
+        atomically, and is idempotent without extra quota. Concurrent generation and stale previews return
+        409; quota exhaustion returns 403; provider failure returns 502. Invalid modes and malformed JSON
+        return 400. Maximum duration: 120 seconds.
       responses:
         '200':
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AIGenerationResult'
+                anyOf:
+                  - $ref: '#/components/schemas/AIGenerationResult'
+                  - type: object
+                    required:
+                      - success
+                    properties:
+                      success:
+                        type: boolean
+                      nodes:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CanvasNode'
+                      edges:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CanvasEdge'
+                    description: Apply returns the saved graph; discard returns success only.
         '400':
           $ref: '#/components/responses/Error400'
         '401':
@@ -582,7 +616,7 @@ paths:
         '404':
           $ref: '#/components/responses/Error404'
         '409':
-          description: Another collaborator is generating (COLLISION_LOCKED).
+          description: Generation collision (COLLISION_LOCKED) or expired/changed preview (PREVIEW_STALE).
           content:
             application/json:
               schema:
@@ -600,7 +634,34 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AIGenerationInput'
+              oneOf:
+                - $ref: '#/components/schemas/AIGenerationInput'
+                - $ref: '#/components/schemas/ResolveAIPreviewInput'
+    get:
+      operationId: getProjectCanvasPreview
+      tags:
+        - AI
+      summary: Recover the current user’s latest unexpired, unapplied preview
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - preview
+                properties:
+                  preview:
+                    allOf:
+                      - $ref: '#/components/schemas/AIPreview'
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '503':
+          description: Unable to read stored previews.
   /auth/callback:
     get:
       operationId: completeAuthCallback
@@ -1497,6 +1558,10 @@ components:
               type: string
               format: uuid
               nullable: true
+        expected_version:
+          type: integer
+          minimum: 1
+          description: Send the last confirmed node version to reject stale edits.
       required:
         - action
         - node_id
@@ -1594,6 +1659,7 @@ components:
         - $ref: '#/components/schemas/CreateEdgeInput'
         - $ref: '#/components/schemas/UpdateEdgeInput'
         - $ref: '#/components/schemas/DeleteEdgeInput'
+        - $ref: '#/components/schemas/ApplyLayoutInput'
       discriminator:
         propertyName: action
         mapping:
@@ -1603,6 +1669,7 @@ components:
           create_edge: '#/components/schemas/CreateEdgeInput'
           update_edge: '#/components/schemas/UpdateEdgeInput'
           delete_edge: '#/components/schemas/DeleteEdgeInput'
+          apply_layout: '#/components/schemas/ApplyLayoutInput'
     CanvasMutationResult:
       type: object
       properties:
@@ -1614,6 +1681,13 @@ components:
           $ref: '#/components/schemas/NullableCanvasNode'
         edge:
           $ref: '#/components/schemas/NullableCanvasEdge'
+        version:
+          type: integer
+        versions:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Confirmed versions keyed by node ID after an atomic layout.
       required:
         - success
     ToggleCheckpointInput:
@@ -1900,6 +1974,8 @@ components:
           type: integer
         requests_remaining:
           type: integer
+        preview:
+          $ref: '#/components/schemas/AIPreview'
       required:
         - success
         - intent
@@ -1910,6 +1986,7 @@ components:
         - edges
         - requests_used
         - requests_remaining
+        - preview
     AIError:
       type: object
       properties:
@@ -2076,3 +2153,87 @@ components:
         - source_handle
         - target_handle
       nullable: true
+    ApplyLayoutInput:
+      type: object
+      required:
+        - action
+        - nodes
+      properties:
+        action:
+          type: string
+          enum:
+            - apply_layout
+        nodes:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: object
+            required:
+              - id
+              - version
+              - position_x
+              - position_y
+            properties:
+              id:
+                type: string
+                format: uuid
+              version:
+                type: integer
+                minimum: 1
+              position_x:
+                type: number
+              position_y:
+                type: number
+              width:
+                type: number
+                minimum: 1
+                maximum: 100000
+              height:
+                type: number
+                minimum: 1
+                maximum: 100000
+    ResolveAIPreviewInput:
+      type: object
+      required:
+        - action
+        - id
+      properties:
+        action:
+          type: string
+          enum:
+            - apply_preview
+            - dismiss_preview
+        id:
+          type: string
+          format: uuid
+    AIPreview:
+      type: object
+      required:
+        - id
+        - expiresAt
+        - nodes
+        - edges
+        - deletedIds
+      properties:
+        id:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CanvasNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/CanvasEdge'
+        deletedIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        summary:
+          type: string

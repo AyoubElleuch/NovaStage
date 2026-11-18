@@ -8,6 +8,19 @@ const releases = [
   {
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
+    title: "A More Reliable Canvas",
+    summary: "Easier alignment, safer collaboration, reviewed AI changes, and faster verification—with the same NovaStage look.",
+    changes: [
+      "Precise alignment: The visible grid matches snapping, cards align by edges and port centers, and aligned connections stay straight. Focus a selection to inspect dense diagrams.",
+      "Safer saving: Tidy and multi-card moves save together, stale edits are rejected, and failed edits stay available as recovery drafts. Undo history survives refresh on this device.",
+      "Review AI changes: Inspect generated diagrams and removals before applying. Previews survive refresh and protect against changes made by collaborators.",
+      "Better placement: Canvas controls adapt to the available space, details scroll comfortably on small phones, and search, exports, invitations, and plan limits are clearer.",
+      "Faster verification: A smaller test suite, fewer CI setup steps, cached builds, patched dependencies, and a dedicated staging release check.",
+    ],
+  },
+  {
+    version: "Beta v1.1.6",
+    date: "November 4, 2026",
     title: "Clearer Canvas, Reliable Saving",
     summary: "A guided first canvas, honest save status, undo that persists, and clearer AI generation.",
     changes: [

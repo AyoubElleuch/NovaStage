@@ -48,3 +48,7 @@ Install **migration 026** after 023–025 before deploying this implementation. 
 ## Remaining limits
 
 Routing does not globally minimize crossings or allocate distinct lanes to every connection. Dense paths and labels can still share space; manually overlapping cards retain a curved fallback. Previews intentionally clamp long text, with full content in details. Large phone layouts are overviews requiring zoom/pan for individual resources. Update operations reflow the affected diagram around its anchor rather than preserving every individual manual position; unrelated diagrams remain untouched. Existing saved canvases are not automatically resized or rearranged. Native Codex/Claude execution and live model fidelity require a separate user-run integration check.
+
+## Beta v1.2.0 follow-up
+
+Built-in generation now saves a private preview and requires explicit acceptance before mutation. Migration 028 protects preview acceptance against intervening content changes and duplicate requests; migration 027 makes Tidy and multi-card moves atomic. See [operations](operations.md) for current deployment and live verification requirements.

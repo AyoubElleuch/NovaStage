@@ -22,7 +22,7 @@ Set the SDK base URL to the NovaStage origin, without `/api`. The specification 
 | GET / POST / DELETE | `/api/dashboard/projects/{slug}/canvas/share` | `getCanvasShare` / `enableCanvasShare` / `disableCanvasShare` | Owner only |
 | POST | `/api/dashboard/projects/{slug}/canvas/checkpoints` | `mutateCheckpoint` | Project member; milestone claim required |
 | POST | `/api/dashboard/projects/{slug}/canvas/claim` | `manageCanvasClaim` | Project member; some actions require holder or owner |
-| POST | `/api/dashboard/projects/{slug}/canvas/ai-generate` | `generateProjectCanvas` | Project member; AI quota and server configuration required |
+| GET / POST | `/api/dashboard/projects/{slug}/canvas/ai-generate` | `generateProjectCanvas` | Project member; AI quota and server configuration required |
 | GET | `/auth/callback` | `completeAuthCallback` | Browser OAuth/PKCE flow; redirects with 307 |
 
 Request fields, response schemas, action variants, and permission failures are defined in the YAML. Next.js server actions, Supabase Realtime messages, and external provider APIs are outside this HTTP contract.
@@ -57,6 +57,14 @@ Browser SDKs on the NovaStage origin should use `credentials: 'include'` and let
 - Canvas mutations and claims can return 200 with `success: false`; inspect the response body.
 - Project `updatedAt`, member `joinedAt`, join-request `createdAt`, and banned-member `bannedAt` are display strings, not ISO timestamps.
 - Most POST routes return 500 for malformed JSON; AI generation returns 400. Permission and validation status codes vary by route and are documented as implemented.
-- Project listing and canvas reads can return empty data after a caught database error.
+- Project listing can return empty data after a caught database error. Canvas reads now fail with 500 if any graph-table read fails; incomplete graphs are not presented as empty success.
+
+## Canvas v1.2.0 contracts
+
+- GET `canvas?access=1` validates membership and returns 204 without loading the graph.
+- POST `canvas` with `action: "update_node"` accepts `expected_version` and returns the new `version`. Conflicts return 409 with `success: false`.
+- POST `canvas` with `action: "apply_layout"` accepts `nodes: [{ id, version, position_x, position_y, width?, height? }]`. The batch commits atomically and returns `versions` keyed by node ID. Invalid/stale batches return 409 without writes.
+- POST `canvas/ai-generate` with a prompt returns the unchanged saved graph and a `preview` containing `id`, `expiresAt`, proposed `nodes`, `edges`, and `deletedIds`. Generation consumes quota; acceptance does not.
+- POST the same AI endpoint with `{ action: "apply_preview", id }` to accept, or `{ action: "dismiss_preview", id }` to discard. Acceptance rejects expired or changed canvases with 409. GET recovers the signed-in user's latest unexpired, unapplied preview. Apply is idempotent.
 
 Edit the YAML directly when routes change. Specification validation and route coverage checks do not replace authenticated SDK tests against a configured deployment.

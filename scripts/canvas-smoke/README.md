@@ -3,7 +3,7 @@
 Run from the repository root:
 
 ```sh
-node scripts/test-canvas-browser.mjs
+node scripts/test-browser-suites.mjs
 ```
 
 The script uses the installed Playwright Chromium browser. If Chromium is missing,
@@ -47,16 +47,24 @@ Run `npm run test:usability-browser` for the first-project experience: empty-sta
 
 ## Realistic API model, collaboration and failures
 
-`scripts/canvas-smoke/api-model.mjs` is a stateful in-memory model of the canvas routes (nodes, checkpoints, claims, edges, sharing). It mirrors the real authorization rules and response shapes (claim leases, ownership, `423` for unclaimed checkpoint edits, `success: false` answers on HTTP 200) and adds failure injection (`model.fail(...)`), latency, a movable clock (`model.advance(ms)`) and per-user identity. `mocks.jsx` implements Realtime with a `BroadcastChannel`, so two pages of one browser context collaborate, and `window.__canvasSmokeRealtime.drop()/restore()` simulates an outage.
+`scripts/canvas-smoke/api-model.mjs` is a stateful in-memory model of the canvas routes (nodes, checkpoints, claims, edges, sharing). It mirrors the real authorization rules and response shapes (claim leases, ownership, `423` for unclaimed checkpoint edits, version conflicts, atomic layout batches and explicit AI previews) and adds failure injection (`model.fail(...)`), latency, a movable clock (`model.advance(ms)`) and per-user identity. `mocks.jsx` implements Realtime with a `BroadcastChannel`, so two pages of one browser context collaborate, and `window.__canvasSmokeRealtime.drop()/restore()` simulates an outage.
 
 Run `npm run test:reliability-browser` for persistence after refresh, undo/redo persistence, concurrent editing, claim handoff and races, rejected saves, offline and reconnect, Realtime recovery, lease renewal under a fake clock, removed members and a phone check. See `docs/canvas-reliability.md` for what this does and does not prove.
 
 For interactive review run `PORT=4180 node scripts/canvas-smoke/serve.mjs` and open `/scripts/canvas-smoke/index.html?live` and `?live&user=collab` in two tabs. `?live` loads the canvas from the API (as the real page does) so a refresh shows what was persisted; `?user=collab` signs in as a non-owner. `/__reset` restores the seed data, `/__fail/<status>` fails the next request and `/__latency/<ms>` slows responses. State is shared by all tabs and lost when the process exits.
 
-Fixture limits: it is a model of the contract, not the production stack. It has no Supabase, row-level security, Redis, auth sessions or real network behavior, and the AI and MCP endpoints are only exercised by the main smoke suite's own fixtures.
+Fixture limits: it is a model of the contract, not the production stack. It has no Supabase, row-level security, Redis, auth sessions or real network behavior, and live provider behavior. Built-in AI previews use the API model; MCP acceptance uses dedicated smoke fixtures.
 
-Run `npm run test:ai-browser` for the built-in AI assistant: the preview of what a request will change, the update/add-new choice that is actually sent, the result banner with Undo, and quota, model, lock and network failures with recovery actions. The generation route is a deterministic model; no model is called and no quota is spent.
+Run `npm run test:ai-browser` for the built-in AI assistant: the preview of what a request will change, the update/add-new choice that is actually sent, explicit preview acceptance/discard and refresh recovery, the result banner with Undo, and quota, model, lock and network failures with recovery actions. The generation route is a deterministic model; no model is called and no quota is spent.
 
 ## Generated diagram matrix
 
-Run `npm run test:generation-browser` for real cards, groups and edges built by the production graph pipeline. It covers workflow, serverless, nested, feedback and appended graphs on desktop and phone in light/dark themes, checks fit, card content height, zoom, pan and long-content details, and writes screenshots to `.tmp/generation-after/`. The main smoke suite also checks MCP draft preview and acceptance. See `docs/canvas-generation-rebuild.md` for before/after evidence and `docs/releases/v1.1.5-pr.md` for deployment requirements.
+Run `npm run test:generation-browser` for real cards, groups and edges built by the production graph pipeline. It covers workflow, serverless, nested, feedback and appended graphs on desktop and phone in light/dark themes, checks fit, card content height, zoom, pan and long-content details, and writes screenshots to `.tmp/generation-after/`. The main smoke suite also checks MCP draft preview and acceptance. See `docs/canvas-generation-rebuild.md` for before/after evidence and `docs/releases/v1.2.0-pr.md` for deployment requirements.
+
+## Focused CI and live checks
+
+CI groups these suites into interaction (canvas and usability) and recovery/generation (reliability, AI and generation). Each runner installs dependencies and Chromium once; the suite runner reports duration and continues after a failed suite so diagnostics are available. The claim-renewal check advances minutes without executing every animation frame.
+
+The unit suite keeps 194 core checks; duplicated component-render and repeated geometry assertions were removed where the real-browser flows already cover the behavior. Security, authorization, migration rollback, stale writes, graph validation and recovery remain covered. The optional AWS gallery still renders the full fixture catalog with `npm run preview:aws-layout`.
+
+Use `scripts/test-staging.mjs` only with an explicitly configured disposable staging project and two test accounts. It creates and cleans up two unique test nodes, checks real session cookies, atomic/stale layouts, claims and access latency, and optionally spends one AI request to review and discard a real preview. See [operations](../../docs/operations.md) for variables and the remaining live checks.
