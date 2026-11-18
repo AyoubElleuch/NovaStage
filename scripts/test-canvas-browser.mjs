@@ -29,7 +29,15 @@ let browser;
 const results = [];
 
 async function check(label, action) {
-  await action();
+  try {
+    await action();
+  } catch (error) {
+    for (const [index, page] of (browser?.contexts().flatMap(context => context.pages()) || []).entries()) {
+      await page.screenshot({ path: resolve(output, `failure-${results.length}-${index}.png`) }).catch(() => {});
+    }
+    await writeFile(resolve(output, "failure.json"), JSON.stringify({ label, error: String(error) }, null, 2));
+    throw error;
+  }
   results.push(label);
   console.log(`PASS ${label}`);
 }
@@ -528,6 +536,9 @@ try {
     const { page: phone, state, errors } = await fixturePage(context);
     const size = `${viewport.width}x${viewport.height}`;
     await check(`${size} navigation, tools, search and AWS palette stay reachable`, async () => {
+      // Closing another context can leave Chromium's OS clipboard owner unfocused on Linux.
+      await phone.bringToFront();
+      await phone.waitForFunction(() => document.hasFocus());
       assert.ok(await phone.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       const dock = phone.getByRole("navigation", { name: "Canvas control dock", exact: true });
       if (viewport.width < 768) {
@@ -540,6 +551,7 @@ try {
         const menu = phone.getByRole("region", { name: "Canvas options", exact: true });
         await menu.getByRole("button", { name: "Copy project invite NS-TEST0", exact: true }).click();
         await menu.getByRole("button", { name: "Invite code copied NS-TEST0", exact: true }).waitFor();
+        assert.equal(await phone.evaluate(() => navigator.clipboard.readText()), "NS-TEST0");
         await menu.getByRole("button", { name: "Switch to dark mode", exact: true }).click();
         await menu.getByRole("button", { name: "Switch to light mode", exact: true }).waitFor();
         await menu.getByRole("button", { name: "Close canvas options", exact: true }).click();
