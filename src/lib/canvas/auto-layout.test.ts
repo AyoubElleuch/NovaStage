@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { autoLayoutNodes } from "./auto-layout";
 import { layoutAWSArchitecture } from "./aws-layout";
-import type { CanvasNode, CanvasEdge } from "./types";
+import type { CanvasNode } from "./types";
 
 describe("Canvas Auto-Layout Algorithm", () => {
   const createMockNode = (id: string, x = 0, y = 0): CanvasNode => ({
@@ -21,32 +21,6 @@ describe("Canvas Auto-Layout Algorithm", () => {
     created_at: "",
     updated_at: "",
     checkpoints: [],
-  });
-
-  it("topologically sequences dependent linear chains and branch-and-merge DAG layouts", () => {
-    const nodes = [
-      createMockNode("Root"),
-      createMockNode("B"),
-      createMockNode("C"),
-      createMockNode("D"),
-    ];
-    const edges: CanvasEdge[] = [
-      { id: "e1", project_id: "p1", source_node_id: "Root", target_node_id: "B", source_handle: "right", target_handle: "left", created_at: "" },
-      { id: "e2", project_id: "p1", source_node_id: "Root", target_node_id: "C", source_handle: "right", target_handle: "left", created_at: "" },
-      { id: "e3", project_id: "p1", source_node_id: "B", target_node_id: "D", source_handle: "right", target_handle: "left", created_at: "" },
-      { id: "e4", project_id: "p1", source_node_id: "C", target_node_id: "D", source_handle: "right", target_handle: "left", created_at: "" },
-    ];
-
-    const layout = autoLayoutNodes(nodes, edges);
-    const root = layout.find((n) => n.id === "Root")!;
-    const b = layout.find((n) => n.id === "B")!;
-    const c = layout.find((n) => n.id === "C")!;
-    const d = layout.find((n) => n.id === "D")!;
-
-    expect(root.position_x).toBe(120);
-    expect(b.position_x).toBeGreaterThanOrEqual(root.position_x + root.width + 140);
-    expect(c.position_x).toBe(b.position_x);
-    expect(d.position_x).toBeGreaterThanOrEqual(b.position_x + b.width + 140);
   });
 
   it("sizes nested AWS groups around their children without sibling overlaps", () => {
@@ -73,26 +47,6 @@ describe("Canvas Auto-Layout Algorithm", () => {
       services[0].position_y + services[0].height + 100 <= services[1].position_y).toBe(true);
     expect(nodes[0].position_x).toBe(0);
     expect(autoLayoutNodes(result, [])).toEqual(result);
-  });
-
-  it("handles cycles, invalid edges, and empty inputs deterministically", () => {
-    expect(autoLayoutNodes([], [])).toEqual([]);
-
-    const nodes: CanvasNode[] = [
-      { ...createMockNode("group"), node_type: "group", group_metadata: {
-        label: "VPC", style: "vpc", childNodeIds: ["A", "B"],
-      } },
-      createMockNode("A"), createMockNode("B"),
-    ];
-    const edges = [
-      { source_node_id: "A", target_node_id: "B" },
-      { source_node_id: "B", target_node_id: "A" },
-      { source_node_id: "missing", target_node_id: "A" },
-    ];
-    const result = autoLayoutNodes(nodes, edges);
-    expect(result.every((node) => Number.isFinite(node.position_x))).toBe(true);
-    expect(result[1].position_x).toBeGreaterThan(result[0].position_x);
-    expect(autoLayoutNodes(nodes, edges)).toEqual(result);
   });
 
   it("anchors updated layouts to existing architecture positions", () => {

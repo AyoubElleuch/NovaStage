@@ -101,7 +101,7 @@ try {
     assert.equal(await page.getByRole("heading", { name: "Plan the release", exact: true }).count(), 1, "undone rename stays undone after refresh");
     await title.waitFor({ state: "detached" });
     await page.getByRole("button", { name: "Undo", exact: true }).waitFor();
-    assert.equal(await page.getByRole("button", { name: "Undo", exact: true }).isDisabled(), true, "a fresh session starts with an empty history");
+    await until(async () => !(await page.getByRole("button", { name: "Undo", exact: true }).isDisabled()), "saved history survives refresh");
     assert.deepEqual(page.errors, []);
     await context.close();
   });
@@ -270,7 +270,7 @@ try {
     await context.close();
   });
 
-  await check("going offline is shown honestly, unsaved edits are discarded with an explanation on reconnect", async () => {
+  await check("going offline preserves a recoverable draft and explains the saved canvas on reconnect", async () => {
     const model = freshModel();
     const context = await openContext();
     const page = await openPage(context, model);
@@ -286,10 +286,14 @@ try {
     assert.equal(await saveState(page), "offline", "never claims saved while offline");
     model.clearFailures();
     await context.setOffline(false);
-    await until(async () => (await toasts(page)).some(item => item.includes("Unsaved edits discarded")), "reconnect explains the discarded edit", 20_000);
+    await until(async () => (await toasts(page)).some(item => item.includes("Draft preserved")), "reconnect explains the preserved draft", 20_000);
     await until(async () => (await title.inputValue()) === "Plan the release", "screen shows the saved version again");
     assert.equal(model.stored("plan").title, "Plan the release");
     await until(async () => ["failed", "saved"].includes(await saveState(page)), "indicator leaves the offline state");
+    await page.reload();
+    await page.getByRole("button", { name: "Restore draft", exact: true }).click();
+    await until(() => model.stored("plan").title === "Written offline", "preserved draft restores after refresh");
+    await settled(page);
     await context.close();
   });
 
@@ -321,7 +325,7 @@ try {
     const leaseEndsAt = () => Date.parse(created.claim_expires_at);
     for (let minute = 0; minute < 7; minute += 1) {
       model.advance(60_000);
-      await page.clock.runFor(60_000);
+      await page.clock.fastForward(60_000);
       await page.waitForTimeout(150);
       // Local edits during the session must not stop the renewal timer.
       await page.getByLabel("Milestone title").fill(`Long edit session ${minute}`).catch(() => {});

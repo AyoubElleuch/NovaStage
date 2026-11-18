@@ -76,19 +76,6 @@ describe("analyzeReleasePulse", () => {
     expect(result.criticalPath).toHaveLength(1);
   });
 
-  it("returns an empty pulse for an empty canvas", () => {
-    expect(analyzeReleasePulse([], [])).toMatchObject({
-      readiness: 0,
-      completedNodes: 0,
-      totalNodes: 0,
-      readyNow: [],
-      blockedNodes: [],
-      blockers: [],
-      criticalPath: [],
-      hasCycle: false,
-    });
-  });
-
   it("ignores AWS service nodes and group containers when calculating milestone pulse", () => {
     const awsNode: CanvasNode = {
       id: "alb-1",

@@ -15,6 +15,7 @@ export function createApiModel({ nodes = [], edges = [], projectId = "canvas-smo
     nodes: clone(nodes), edges: clone(edges), claimRequests: [], shareToken: null,
     requests: [], failures: [], skew: 0, latencyMs: 0, counter: 0, ownerId: OWNER.id,
     // Built-in AI state: remaining allowance, a collaborator holding the project lock, or a one-off model failure.
+    previews: new Map(),
     ai: { remaining: 10, max: 10, lockedBy: null, failNext: false },
   };
   const now = () => Date.now() + model.skew;
@@ -53,16 +54,23 @@ export function createApiModel({ nodes = [], edges = [], projectId = "canvas-smo
         model.nodes.push(node);
         return reply({ success: true, node: view(node) });
       }
+      case "apply_layout": {
+        if (!Array.isArray(body.nodes) || body.nodes.some(item => !find(item.id) || find(item.id).version !== item.version)) return reply({ success: false, error: "Stale layout; refresh before retrying" }, 409);
+        const versions = {};
+        for (const item of body.nodes) { const node = find(item.id); for (const key of ["position_x", "position_y", "width", "height"]) if (item[key] !== undefined) node[key] = item[key]; versions[node.id] = ++node.version; }
+        return reply({ success: true, versions });
+      }
       case "update_node": {
         const node = find(body.node_id);
         if (!node) return reply({ success: false, error: "Node not found" });
+        if (body.expected_version !== undefined && body.expected_version !== node.version) return reply({ success: false, error: "This item changed. Refresh before retrying." }, 409);
         const updates = body.updates || {};
         if (CONTENT_FIELDS.some(field => updates[field] !== undefined) && !owns(node, user)) {
           return reply({ success: false, error: "You must claim this milestone box to edit its content" });
         }
         for (const field of UPDATE_FIELDS) if (updates[field] !== undefined) node[field] = updates[field];
         node.version += 1;
-        return reply({ success: true });
+        return reply({ success: true, version: node.version });
       }
       case "delete_node": {
         const node = find(body.node_id);
@@ -174,6 +182,16 @@ export function createApiModel({ nodes = [], edges = [], projectId = "canvas-smo
 
   /** Deterministic stand-in for the built-in generation route: no model is called and no quota is spent. */
   function aiAction(body, user) {
+    if (body.action) {
+      const draft = model.previews.get(user.id);
+      if (!draft || draft.id !== body.id) return reply({ error: "Preview not found" }, 404);
+      if (body.action === "apply_preview") {
+        if (draft.baseline !== JSON.stringify([model.nodes, model.edges])) return reply({ error: "PREVIEW_STALE", message: "Canvas changed; generate a new preview." }, 409);
+        model.nodes.push(...draft.nodes); model.edges.push(...draft.edges);
+      }
+      model.previews.delete(user.id);
+      return reply({ success: true, nodes: model.nodes.map(view), edges: clone(model.edges) });
+    }
     if (!["workflow", "aws_architecture"].includes(body.mode ?? "workflow")) return reply({ error: "Choose Workflow or AWS Architecture." }, 400);
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     if (!prompt) return reply({ error: "Prompt is required to generate or update a workflow" }, 400);
@@ -204,16 +222,16 @@ export function createApiModel({ nodes = [], edges = [], projectId = "canvas-smo
       added.push(group, ...services);
       addedEdges.push({ id: id("ai-edge"), project_id: projectId, source_node_id: services[0].id, target_node_id: services[1].id, source_handle: "right", target_handle: "left", edge_type: "data_flow", label: null });
     }
-    model.nodes.push(...added);
-    model.edges.push(...addedEdges);
+    const preview = { id: id("preview"), expiresAt: iso(now() + 900000), nodes: added, edges: addedEdges, deletedIds: [], baseline: JSON.stringify([model.nodes, model.edges]) };
+    model.previews.set(user.id, preview);
     return reply({
-      success: true, intent: operation === "update" ? "update_pipeline" : "create_pipeline", mode, operation, summary: `Generated ${added.length} items`,
+      success: true, preview: clone(preview), intent: operation === "update" ? "update_pipeline" : "create_pipeline", mode, operation, summary: `Generated ${added.length} items`,
       nodes: model.nodes.map(view), edges: clone(model.edges), requests_used: model.ai.max - model.ai.remaining, requests_remaining: model.ai.remaining,
     });
   }
 
   /** Handles one request. `user` is the signed-in profile; `null` simulates a signed-out or removed member. */
-  async function handle({ method, pathname, body = {}, user }) {
+  async function handle({ method, pathname, search = "", body = {}, user }) {
     model.requests.push({ method, pathname, body, user: user?.id ?? null });
     if (model.latencyMs) await new Promise(done => setTimeout(done, model.latencyMs));
     const index = model.failures.findIndex(failure => failure.matches({ method, pathname, body, user }));
@@ -230,6 +248,8 @@ export function createApiModel({ nodes = [], edges = [], projectId = "canvas-smo
       if (method === "DELETE") model.shareToken = null;
       return reply({ token: model.shareToken });
     }
+    if (method === "GET" && pathname.endsWith("/ai-generate")) return reply({ preview: model.previews.get(user.id) || null });
+    if (method === "GET" && search === "?access=1") return { status: 204 };
     if (method === "GET") return reply({ project: { id: projectId, slug: projectId, name: "Launch workspace" }, nodes: model.nodes.map(view), edges: clone(model.edges), claimRequests: [] });
     if (method !== "POST") return reply({ error: "Method not allowed" }, 405);
     if (pathname.endsWith("/canvas/ai-generate")) return aiAction(body, user);
@@ -262,7 +282,7 @@ export async function routeModel(page, model, { origin, user = OWNER, allowExter
     if (url.origin !== origin) return allowExternal ? route.continue() : route.abort();
     if (!url.pathname.startsWith("/api/")) return route.continue();
     const body = request.method() === "POST" ? request.postDataJSON() : {};
-    const result = await model.handle({ method: request.method(), pathname: url.pathname, body, user: session.current });
+    const result = await model.handle({ method: request.method(), pathname: url.pathname, search: url.search, body, user: session.current });
     if (result.network) return route.abort("failed");
     return result.status === 204 ? route.fulfill({ status: 204 }) : route.fulfill({ status: result.status, json: result.json });
   });

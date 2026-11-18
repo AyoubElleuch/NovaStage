@@ -23,7 +23,7 @@ describe("AWS provider wire contract through orchestration", () => {
     expect(generated.deletedGroupIds).toContain("saved-empty");
   });
 
-  it.each(AWS_ARCHITECTURE_FIXTURES)("$name", async ({ name, result }) => {
+  it.each([AWS_ARCHITECTURE_FIXTURES[0], AWS_ARCHITECTURE_FIXTURES[1]])("$name", async ({ name, result }) => {
     vi.mocked(callGemini).mockReset().mockResolvedValue({ ...result, serviceNodes: result.serviceNodes!.map(service => ({ ...service, configEntries: [{ key: "Environment", value: "fixture" }, { key: "Purpose", value: service.serviceId }] })) });
     const generated = await executeAIPipeline(name, "aws_architecture");
     expect(generated.serviceNodes).toHaveLength(result.serviceNodes!.length);

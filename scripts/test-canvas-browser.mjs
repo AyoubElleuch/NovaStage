@@ -116,6 +116,11 @@ async function fixturePage(context, shared = false, empty = false) {
       if (node) node.claimed_by = body.action === "release" ? null : "smoke-user";
       return route.fulfill({ json: { success: true } });
     }
+    if (body.action === "apply_layout") {
+      const versions = {};
+      for (const item of body.nodes) { const node = state.nodes.find(node => node.id === item.id); assert.ok(node); Object.assign(node, item, { version: (node.version || 1) + 1 }); versions[node.id] = node.version; }
+      return route.fulfill({ json: { success: true, versions } });
+    }
     if (body.action === "update_node") state.nodes = state.nodes.map(node => node.id === body.node_id ? { ...node, ...body.updates } : node);
     else if (body.action === "create_node") state.nodes.push({ ...body, project_id: "canvas-smoke", status: "draft", sort_order: state.nodes.length, claimed_by: "smoke-user", version: 1, checkpoints: body.checkpoints || [] });
     else if (body.action === "delete_node") {
@@ -360,13 +365,13 @@ try {
     const box = await title.boundingBox();
     const before = state.nodes.find(node => node.id === "plan");
     const original = { x: before.position_x, y: before.position_y };
-    const saved = page.waitForResponse(response => response.url().includes("/api/") && response.request().postDataJSON()?.action === "update_node");
+    const saved = page.waitForResponse(response => response.url().includes("/api/") && response.request().method() === "POST" && response.request().postDataJSON()?.action === "apply_layout");
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(box.x + box.width / 2 + 64, box.y + box.height / 2 + 32, { steps: 5 });
     await page.mouse.up();
     await saved;
-    assert.ok(state.mutations.some(item => item.action === "update_node" && item.node_id === "plan" && (item.updates.position_x !== original.x || item.updates.position_y !== original.y)));
+    assert.ok(state.mutations.some(item => item.action === "apply_layout" && item.nodes.some(node => node.id === "plan" && (node.position_x !== original.x || node.position_y !== original.y))));
     await page.getByRole("button", { name: "Close details", exact: true }).click();
   });
   await check("inline rename saves once and keeps the canvas usable", async () => {
@@ -388,6 +393,7 @@ try {
     await page.keyboard.press("Shift+Digit1");
   });
   await check("grabbing the radar viewport does not jump and drag pans smoothly", async () => {
+    await page.getByRole("button", { name: "Radar", exact: true }).click();
     const world = canvas.locator("[data-canvas-bg='true']").last();
     const before = await world.getAttribute("style");
     const radar = await page.getByTestId("minimap-viewport").boundingBox();

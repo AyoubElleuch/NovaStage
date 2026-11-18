@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { alignNodePosition, fitCanvasNodes, zoomAroundCenter, getCanvasNodeAtPoint } from "./workspace";
+import { routeArchitectureEdge } from "./architecture-routing";
 import { getNodeDimensions } from "./coordinate-math";
 import type { CanvasNode } from "./types";
 
@@ -72,6 +73,12 @@ it("aligns unequal card centers so facing ports form a straight connection", () 
   const a = { ...nodes[1], id: "a", position_x: 0, position_y: 0 };
   const b = { ...a, id: "b", title: "A much longer title ".repeat(10), position_x: 600 };
   const y = getNodeDimensions(a).height / 2 - getNodeDimensions(b).height / 2;
-  expect(alignNodePosition(b, { x: 600, y: y + 3 }, [a, b], 1).y).toBe(y);
+  const aligned = { ...b, position_y: alignNodePosition(b, { x: 600, y: y + 3 }, [a, b], 1).y };
+  expect(aligned.position_y).toBe(y);
+  const route = routeArchitectureEdge(a, aligned, "right", "left", [a, aligned]);
+  expect(route?.points).toHaveLength(2);
+  expect(route?.points[0].y).toBe(route?.points[1].y);
+  const obstacle = { ...a, id: "obstacle", position_x: 350, width: 100 };
+  expect(routeArchitectureEdge(a, aligned, "right", "left", [a, aligned, obstacle])?.points.length).toBeGreaterThan(2);
   expect(alignNodePosition(b, { x: 603, y: 499 }, [b], 1)).toMatchObject({ x: 608, y: 496 });
 });

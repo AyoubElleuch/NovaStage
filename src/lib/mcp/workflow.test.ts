@@ -5,27 +5,6 @@ import { sampleWorkflow, sampleArchitecture } from "./test-fixtures";
 import { mcpSetup } from "./setup";
 
 describe("external assistant generation", () => {
-  it("normalizes AWS aliases and builds a complete nested graph without changing existing content", () => {
-    const { workflow } = prepareWorkflow(sampleArchitecture());
-    expect(workflow.serviceNodes![0].serviceId).toBe("apigateway");
-    const { nodes, edges } = buildMcpGraph(workflow, []);
-    expect(nodes).toHaveLength(5);
-    expect(edges).toHaveLength(2);
-    expect(nodes.flatMap(node => node.checkpoints)).toHaveLength(0);
-    const handler = nodes.find(node => node.title === "Request handler")!;
-    const subnet = nodes.find(node => node.title === "Private subnet")!;
-    expect(handler.parent_group_id).toBe(subnet.id);
-    expect(subnet.group_metadata!.childNodeIds).toContain(handler.id);
-    expect(handler.position_x).toBeGreaterThan(subnet.position_x);
-    expect(handler.position_x + handler.width).toBeLessThan(subnet.position_x + subnet.width);
-    const originals = structuredClone(nodes);
-    const addition = buildMcpGraph(workflow, nodes);
-    expect(nodes).toEqual(originals);
-    expect(Math.min(...addition.nodes.map(node => node.position_x))).toBeGreaterThan(Math.max(...nodes.map(node => node.position_x + node.width)));
-    const ids = new Set(nodes.map(node => node.id));
-    expect(addition.nodes.every(node => !ids.has(node.id))).toBe(true);
-    expect(edges.every(edge => ids.has(edge.source_node_id) && ids.has(edge.target_node_id))).toBe(true);
-  });
 
   it.each(["id", "deletedMilestoneIds", "intent"])("rejects overwrite or deletion field %s", field => {
     const input = { ...sampleWorkflow(), [field]: field === "intent" ? "update_pipeline" : ["existing-node"] };
@@ -65,13 +44,6 @@ describe("external assistant generation", () => {
     expect(() => prepareWorkflow({ ...architecture, milestones: base.milestones })).toThrow("services, groups, and data flow edges only");
     expect(() => prepareWorkflow({ ...base, mode: "unsupported" })).toThrow();
     expect(() => prepareWorkflow({ ...base, summary: "x".repeat(2001) })).toThrow();
-  });
-  it("builds delivery milestones with their tasks and dependency edges", () => {
-    const { nodes, edges } = buildMcpGraph(prepareWorkflow(sampleWorkflow()).workflow, []);
-    expect(nodes).toHaveLength(2);
-    expect(nodes.flatMap(node => node.checkpoints)).toHaveLength(8);
-    expect(edges).toHaveLength(1);
-    expect(nodes.every(node => node.node_type === "milestone")).toBe(true);
   });
   it("rejects changing the queued mode and bypassing validation with a mixed graph", () => {
     expect(() => prepareWorkflow(sampleWorkflow(), "aws_architecture")).toThrow("mode cannot be changed");

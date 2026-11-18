@@ -23,7 +23,7 @@ const check = async (label, action) => {
 
 const emptyModel = () => createApiModel({ nodes: [], edges: [] });
 const seededModel = () => createApiModel({ nodes, edges });
-const aiRequests = model => model.requests.filter(request => request.pathname.endsWith("/ai-generate"));
+const aiRequests = model => model.requests.filter(request => request.pathname.endsWith("/ai-generate") && request.method === "POST" && !request.body.action);
 const assistant = page => page.getByRole("dialog", { name: "AI assistant" });
 const preview = page => assistant(page).getByRole("region", { name: "What this will change" });
 async function openAssistant(page) { await page.getByRole("button", { name: "Toggle AI Assistant" }).click(); await assistant(page).waitFor(); }
@@ -50,7 +50,7 @@ try {
     await chooseMode(page, "AWS Architecture");
     await preview(page).getByText("Adds a new architecture to your canvas").waitFor();
     await preview(page).getByText(/Milestones and checkpoints are not added or changed/).waitFor();
-    await assistant(page).getByText(/adds its result to the canvas right away\. Undo is available/).waitFor();
+    await assistant(page).getByText(/prepares a preview. Review and apply/).waitFor();
     await page.screenshot({ path: `${output}/preview-empty.png` });
     await context.close();
   });
@@ -76,6 +76,13 @@ try {
     await assistant(page).getByRole("button", { name: /^Generate/ }).click();
     await until(() => aiRequests(model).length === 1, "generation request sent");
     assert.deepEqual({ mode: aiRequests(model)[0].body.mode, operation: aiRequests(model)[0].body.operation }, { mode: "workflow", operation: "create" });
+    const count = model.nodes.length;
+    await page.getByRole("dialog", { name: "Review AI changes" }).waitFor();
+    assert.equal(model.nodes.length, count, "preview leaves the graph untouched");
+    await page.reload();
+    await page.getByRole("dialog", { name: "Review AI changes" }).waitFor();
+    await page.getByRole("button", { name: "Discard preview" }).click();
+    assert.equal(model.nodes.length, count, "discard preserves existing content");
     await context.close();
   });
 
@@ -86,6 +93,8 @@ try {
     const before = { nodes: model.nodes.length, edges: model.edges.length };
     await openAssistant(page);
     await generate(page, "plan a launch");
+    await page.getByRole("dialog", { name: "Review AI changes" }).waitFor();
+    await page.getByRole("button", { name: "Apply changes", exact: true }).click();
     const banner = page.locator("[data-change-banner]");
     await banner.waitFor();
     assert.match(await banner.textContent(), /Workflow generated\. Added 3 cards and 2 connections\./);
@@ -109,6 +118,8 @@ try {
     await openAssistant(page);
     await chooseMode(page, "AWS Architecture");
     await generate(page, "add a cache layer");
+    await page.getByRole("dialog", { name: "Review AI changes" }).waitFor();
+    await page.getByRole("button", { name: "Apply changes", exact: true }).click();
     const banner = page.locator("[data-change-banner]");
     await banner.waitFor();
     assert.match(await banner.textContent(), /AWS architecture generated\. Added 3 cards and 1 connection\./);
@@ -154,6 +165,8 @@ try {
     assert.equal(model.nodes.length, count);
     assert.equal(model.ai.remaining, 10);
     await alert.getByRole("button", { name: "Try again" }).click();
+    await page.getByRole("dialog", { name: "Review AI changes" }).waitFor();
+    await page.getByRole("button", { name: "Apply changes", exact: true }).click();
     await page.locator("[data-change-banner]").waitFor();
     assert.equal(model.ai.remaining, 9);
     await context.close();
@@ -175,6 +188,8 @@ try {
     await offline.waitFor();
     await offline.getByText("Nothing was added to your canvas.").waitFor();
     await offline.getByRole("button", { name: "Try again" }).click();
+    await page.getByRole("dialog", { name: "Review AI changes" }).waitFor();
+    await page.getByRole("button", { name: "Apply changes", exact: true }).click();
     await page.locator("[data-change-banner]").waitFor();
     await context.close();
   });

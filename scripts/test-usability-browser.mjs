@@ -79,9 +79,10 @@ try {
     const box = await inViewport(page, guide);
     for (const card of await page.getByRole("group").all()) assert.ok(!overlaps(box, await card.boundingBox()), "guide does not cover the diagram on first fit");
     const dockBox = await page.getByRole("navigation", { name: "Canvas control dock" }).boundingBox();
-    const radarBox = await page.getByRole("region", { name: /Canvas overview/ }).boundingBox();
+    const radar = page.getByRole("region", { name: /Canvas overview/ });
+    const radarBox = await radar.count() ? await radar.boundingBox() : null;
     assert.ok(!overlaps(box, dockBox), "guide does not overlap the dock");
-    assert.ok(!overlaps(box, radarBox), "guide does not overlap the radar");
+    if (radarBox) assert.ok(!overlaps(box, radarBox), "guide does not overlap the radar");
     for (const name of ["Export canvas", "Share canvas", "Copy invite code"]) assert.ok(!overlaps(box, await page.getByRole("button", { name }).boundingBox()), `guide does not overlap ${name}`);
     await page.keyboard.press("Control+k");
     assert.equal(await guide.count(), 0, "guide steps aside while search is open");

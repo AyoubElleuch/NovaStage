@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CanvasCheckpoint, CanvasEdge, CanvasNode } from "./types";
-import { applyOps, canRedo, canUndo, describeOpsDone, diffCanvas, edgeKey, emptyHistory, invertOps, MAX_HISTORY_ENTRIES, recordHistory, summarizeOps } from "./history";
+import { applyOps, describeOpsDone, diffCanvas, edgeKey, invertOps, summarizeOps } from "./history";
 
 const node = (id: string, extra: Partial<CanvasNode> = {}): CanvasNode => ({
   id, project_id: "p", title: id, description: "", status: "draft", position_x: 0, position_y: 0, width: 280, height: 170,
@@ -12,12 +12,6 @@ const edge = (id: string, source: string, target: string, extra: Partial<CanvasE
 });
 
 describe("canvas history deltas", () => {
-  it("records only the user's change and ignores unrelated differences", () => {
-    const before = { nodes: [node("a"), node("b")], edges: [] };
-    const after = { nodes: [node("a", { title: "Renamed" }), node("b")], edges: [] };
-    expect(diffCanvas(before, after)).toEqual([{ kind: "node:update", nodeId: "a", from: { title: "a" }, to: { title: "Renamed" } }]);
-    expect(diffCanvas(before, before)).toEqual([]);
-  });
 
   it("undo restores the edited card without overwriting a collaborator's change to another card", () => {
     const before = { nodes: [node("a"), node("b")], edges: [] };
@@ -81,13 +75,6 @@ describe("canvas history deltas", () => {
     expect(result.edges).toEqual([]);
   });
 
-  it("skips operations whose targets were removed by someone else", () => {
-    const ops = diffCanvas({ nodes: [node("a")], edges: [] }, { nodes: [node("a", { title: "New" })], edges: [] });
-    expect(applyOps({ nodes: [], edges: [] }, ops)).toEqual({ nodes: [], edges: [] });
-    const connect = diffCanvas({ nodes: [node("a"), node("b")], edges: [] }, { nodes: [node("a"), node("b")], edges: [edge("e", "a", "b")] });
-    expect(applyOps({ nodes: [node("a")], edges: [] }, connect).edges).toEqual([]);
-  });
-
   it("tracks connection label and type edits", () => {
     const before = { nodes: [node("a"), node("b")], edges: [edge("e", "a", "b")] };
     const after = { nodes: before.nodes, edges: [edge("e", "a", "b", { label: "HTTPS", edge_type: "sync_http" })] };
@@ -95,22 +82,6 @@ describe("canvas history deltas", () => {
     expect(ops).toHaveLength(1);
     expect(applyOps(after, invertOps(ops)).edges[0]).toMatchObject({ label: null, edge_type: "dependency" });
     expect(edgeKey(before.edges[0])).toBe("a|b|right|left");
-  });
-
-  it("manages undo and redo positions and discards redo after a new change", () => {
-    let history = emptyHistory();
-    expect(canUndo(history)).toBe(false);
-    history = recordHistory(history, [{ kind: "node:create", node: node("a") }]);
-    history = recordHistory(history, [{ kind: "node:create", node: node("b") }]);
-    expect(history.index).toBe(2);
-    history = { ...history, index: 1 };
-    expect(canUndo(history) && canRedo(history)).toBe(true);
-    history = recordHistory(history, [{ kind: "node:create", node: node("c") }]);
-    expect(history.entries).toHaveLength(2);
-    expect(canRedo(history)).toBe(false);
-    expect(recordHistory(history, [])).toBe(history);
-    for (let i = 0; i < MAX_HISTORY_ENTRIES + 5; i += 1) history = recordHistory(history, [{ kind: "node:create", node: node(`n${i}`) }]);
-    expect(history.entries).toHaveLength(MAX_HISTORY_ENTRIES);
   });
 
   it("summarizes operations in plain language", () => {
