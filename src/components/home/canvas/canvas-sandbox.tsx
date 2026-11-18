@@ -10,7 +10,6 @@ import {
   type PointerEvent,
 } from "react";
 import { Maximize2, Minimize2, RotateCcw, Trash2 } from "lucide-react";
-import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
 import { DropdownBoundary } from "@/components/ui/dropdown";
 import CanvasViewportContainer from "@/components/canvas/canvas-viewport";
 import CanvasNodeComponent from "@/components/canvas/canvas-node";
@@ -20,7 +19,8 @@ import CanvasDock from "@/components/canvas/canvas-dock";
 import CanvasDrawer from "@/components/canvas/canvas-drawer";
 import CanvasReleasePulse from "@/components/canvas/canvas-release-pulse";
 import CanvasServicePalette from "@/components/canvas/canvas-service-palette";
-import { AWS_SERVICE_REGISTRY } from "@/components/canvas/aws-icons";
+import { getCloudService } from "@/components/canvas/cloud-icons";
+import type { CloudProvider } from "@/lib/canvas/types";
 import { getNodeDimensions, getNodeHandlePosition } from "@/lib/canvas/coordinate-math";
 import type { CanvasNode, CanvasTool, CanvasViewport, HandlePosition } from "@/lib/canvas/types";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
@@ -67,6 +67,7 @@ export default function CanvasSandbox({
     currentX: number;
     currentY: number;
   } | null>(null);
+  const [serviceProvider, setServiceProvider] = useState<CloudProvider>("aws");
   const [isServicePaletteOpen, setIsServicePaletteOpen] = useState(false);
   const [isReleasePulseOpen, setIsReleasePulseOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -338,12 +339,19 @@ export default function CanvasSandbox({
     setSelectedNodeIds(new Set([node.id]));
   }
 
-  function addAWSService(serviceId: string) {
-    const service = AWS_SERVICE_REGISTRY[serviceId];
+  function addCloudService(serviceId: string) {
+    const service = getCloudService(serviceProvider, serviceId);
     if (!service) return;
     const position = nextOpenPosition();
     const node = {
-      ...createService(crypto.randomUUID(), service.name, serviceId, position.x, position.y),
+      ...createService(
+        crypto.randomUUID(),
+        service.name,
+        serviceId,
+        position.x,
+        position.y,
+        serviceProvider,
+      ),
       claimed_by: VISITOR_ID,
       claim_holder: { id: VISITOR_ID, fullName: "You" },
     };
@@ -371,44 +379,6 @@ export default function CanvasSandbox({
 
   function releaseNode(id: string) {
     updateNode(id, { claimed_by: null, claim_holder: null });
-  }
-
-  function tidy() {
-    const nodes = autoLayoutNodes(graph.nodes, graph.edges, { rankSep: 150, nodeSep: 130 });
-    const byId = new Map(nodes.map((node) => [node.id, node]));
-    const edges = graph.edges.map((edge) => {
-      const source = byId.get(edge.source_node_id),
-        target = byId.get(edge.target_node_id);
-      if (!source || !target) return edge;
-      const sourceSize = getNodeDimensions(source),
-        targetSize = getNodeDimensions(target);
-      const dx =
-        target.position_x + targetSize.width / 2 - source.position_x - sourceSize.width / 2;
-      const dy =
-        target.position_y + targetSize.height / 2 - source.position_y - sourceSize.height / 2;
-      const horizontal = Math.abs(dx) >= Math.abs(dy);
-      return {
-        ...edge,
-        source_handle: horizontal
-          ? dx >= 0
-            ? ("right" as const)
-            : ("left" as const)
-          : dy >= 0
-            ? ("bottom" as const)
-            : ("top" as const),
-        target_handle: horizontal
-          ? dx >= 0
-            ? ("left" as const)
-            : ("right" as const)
-          : dy >= 0
-            ? ("top" as const)
-            : ("bottom" as const),
-      };
-    });
-    const next = { ...graph, nodes, edges };
-    graphRef.current = next;
-    dispatch({ type: "commit", graph: next });
-    fitView();
   }
 
   function zoomBy(factor: number) {
@@ -712,7 +682,6 @@ export default function CanvasSandbox({
               onFitView={() => fitView()}
               onAddNode={addMilestone}
               onAddGroup={addGroup}
-              onTidyLayout={tidy}
               snapGrid={snap}
               onToggleSnapGrid={() => setSnap(!snap)}
               canUndo={history.past.length > 0}
@@ -721,13 +690,22 @@ export default function CanvasSandbox({
               onRedo={() => dispatch({ type: "redo" })}
               isReleasePulseOpen={isReleasePulseOpen}
               onToggleReleasePulse={() => setIsReleasePulseOpen((current) => !current)}
-              onToggleServicePalette={() => setIsServicePaletteOpen((current) => !current)}
+              onToggleServicePalette={() => {
+                setServiceProvider("aws");
+                setIsServicePaletteOpen((current) => serviceProvider !== "aws" || !current);
+              }}
+              onToggleGoogleCloudPalette={() => {
+                setServiceProvider("gcp");
+                setIsServicePaletteOpen((current) => serviceProvider !== "gcp" || !current);
+              }}
             />
           </div>
           <CanvasServicePalette
+            key={serviceProvider}
+            provider={serviceProvider}
             isOpen={isServicePaletteOpen}
             onClose={() => setIsServicePaletteOpen(false)}
-            onAddService={addAWSService}
+            onAddService={addCloudService}
           />
           {interactive && isReleasePulseOpen && (
             <CanvasReleasePulse

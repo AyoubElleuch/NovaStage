@@ -1,4 +1,5 @@
 "use client";
+import GoogleCloudLogo from "@/components/google-cloud-logo";
 import AWSLogo from "@/components/aws-logo";
 
 import React, { useEffect, useId, useRef, useState } from "react";
@@ -8,7 +9,6 @@ import {
   Grid,
   Hand,
   Keyboard,
-  MapPin,
   Maximize2,
   Minus,
   MousePointer,
@@ -16,7 +16,6 @@ import {
   Redo2,
   SlidersHorizontal,
   Undo2,
-  Waypoints,
   X,
   Square,
 } from "lucide-react";
@@ -24,6 +23,7 @@ import { CanvasTool, CanvasViewport } from "@/lib/canvas/types";
 
 interface CanvasDockProps {
   className?: string;
+  auxiliaryControls?: React.ReactNode;
   isBusy?: boolean;
   activeTool: CanvasTool;
   onSelectTool: (tool: CanvasTool) => void;
@@ -34,18 +34,16 @@ interface CanvasDockProps {
   onFitView: () => void;
   onAddNode: () => void;
   onAddGroup?: () => void;
-  onTidyLayout: () => void;
   snapGrid: boolean;
   onToggleSnapGrid: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
-  isMinimapOpen?: boolean;
-  onToggleMinimap?: () => void;
   isReleasePulseOpen?: boolean;
   onToggleReleasePulse?: () => void;
   onToggleServicePalette?: () => void;
+  onToggleGoogleCloudPalette?: () => void;
   onOpenShortcuts?: () => void;
   onOpenGuide?: () => void;
   isGuideOpen?: boolean;
@@ -53,6 +51,7 @@ interface CanvasDockProps {
 
 export default function CanvasDock({
   className,
+  auxiliaryControls,
   isBusy = false,
   activeTool,
   onSelectTool,
@@ -63,18 +62,16 @@ export default function CanvasDock({
   onFitView,
   onAddNode,
   onAddGroup,
-  onTidyLayout,
   snapGrid,
   onToggleSnapGrid,
   canUndo,
   canRedo,
   onUndo,
   onRedo,
-  isMinimapOpen,
-  onToggleMinimap,
   isReleasePulseOpen,
   onToggleReleasePulse,
   onToggleServicePalette,
+  onToggleGoogleCloudPalette,
   onOpenShortcuts,
   onOpenGuide,
   isGuideOpen,
@@ -98,8 +95,13 @@ export default function CanvasDock({
     <div
       ref={rootRef}
       data-canvas-ui="true"
-      onPointerDown={(event) => event.stopPropagation()}
+      data-canvas-dock
+      onPointerDown={(event) => {
+        if (event.currentTarget.contains(event.target as Node)) event.stopPropagation();
+      }}
       onKeyDown={(event) => {
+        // Assistant and Notebook render portals that handle their own keyboard events.
+        if (!event.currentTarget.contains(event.target as Node)) return;
         event.stopPropagation();
         if (event.key === "Escape" && isQuickToolsOpen) {
           event.preventDefault();
@@ -109,13 +111,13 @@ export default function CanvasDock({
       }}
       className="relative min-w-0 max-w-full [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-emerald-500 [&_button:disabled]:cursor-not-allowed [&_button:disabled]:opacity-40"
     >
-      {/* Mobile Quick Tools Popover */}
+      {/* Secondary canvas controls */}
       {isQuickToolsOpen && (
         <div
           id={quickToolsId}
           role="region"
           aria-label="Canvas tools"
-          className="dash-pop absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-30 flex max-h-[calc(100dvh-10rem)] w-[min(340px,calc(100vw-24px))] flex-col gap-2 overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200/90 bg-white/95 p-3 shadow-2xl backdrop-blur-xl @[950px]/controls:hidden [&_button]:min-h-11 dark:border-[#283548] dark:bg-[#161d27]/95"
+          className={`canvas-dock-tools dash-pop absolute bottom-full ${auxiliaryControls ? "mb-[4.5rem] @[640px]/controls:mb-3" : "mb-3"} left-1/2 -translate-x-1/2 z-30 flex max-h-[calc(100dvh-10rem)] w-[min(340px,calc(100vw-24px))] flex-col gap-2 overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200/90 bg-white/95 p-3 shadow-2xl backdrop-blur-xl [&_button]:min-h-11 dark:border-[#283548] dark:bg-[#161d27]/95`}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100 dark:border-[#283548]">
@@ -132,8 +134,8 @@ export default function CanvasDock({
             </button>
           </div>
 
-          {/* Mobile Zoom Bar */}
-          <div className="flex items-center justify-between gap-1 rounded-xl bg-neutral-100/80 p-1 dark:bg-[#121721]">
+          {/* Zoom controls for compact layouts */}
+          <div className="flex @[1360px]/controls:hidden items-center justify-between gap-1 rounded-xl bg-neutral-100/80 p-1 dark:bg-[#121721]">
             <button
               type="button"
               onClick={onZoomOut}
@@ -171,7 +173,7 @@ export default function CanvasDock({
             </button>
           </div>
 
-          {/* Mobile Quick Action Buttons */}
+          {/* Actions and view options */}
           <div className="grid grid-cols-2 gap-1.5 pt-1 text-xs">
             {onAddGroup && (
               <button
@@ -192,7 +194,7 @@ export default function CanvasDock({
                 type="button"
                 disabled={!canUndo || isBusy}
                 onClick={onUndo}
-                className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 dark:border-[#283548] dark:text-neutral-300"
+                className="flex @[1360px]/controls:hidden items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 dark:border-[#283548] dark:text-neutral-300"
               >
                 <Undo2 className="h-4 w-4" />
                 Undo
@@ -203,7 +205,7 @@ export default function CanvasDock({
                 type="button"
                 disabled={!canRedo || isBusy}
                 onClick={onRedo}
-                className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 dark:border-[#283548] dark:text-neutral-300"
+                className="flex @[1360px]/controls:hidden items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 dark:border-[#283548] dark:text-neutral-300"
               >
                 <Redo2 className="h-4 w-4" />
                 Redo
@@ -213,8 +215,10 @@ export default function CanvasDock({
               <button
                 type="button"
                 data-guide-trigger
+                aria-pressed={Boolean(isGuideOpen)}
                 onClick={() => {
                   setIsQuickToolsOpen(false);
+                  quickToolsRef.current?.focus();
                   onOpenGuide();
                 }}
                 className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 text-neutral-700 hover:bg-neutral-50 dark:border-[#283548] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
@@ -239,19 +243,8 @@ export default function CanvasDock({
             )}
             <button
               type="button"
-              onClick={() => {
-                onTidyLayout();
-                setIsQuickToolsOpen(false);
-              }}
-              disabled={isBusy}
-              className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-2.5 py-2 font-medium text-neutral-700 hover:bg-neutral-50 cursor-pointer dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
-            >
-              <Waypoints className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
-              <span>Tidy Layout</span>
-            </button>
-            <button
-              type="button"
               onClick={onToggleSnapGrid}
+              aria-label="Snap to grid"
               aria-pressed={snapGrid}
               className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 font-medium cursor-pointer transition-colors ${
                 snapGrid
@@ -262,23 +255,6 @@ export default function CanvasDock({
               <Grid className="h-3.5 w-3.5" />
               <span>{snapGrid ? "Grid: ON" : "Grid: OFF"}</span>
             </button>
-            {onToggleMinimap && (
-              <button
-                type="button"
-                onClick={() => {
-                  onToggleMinimap();
-                  setIsQuickToolsOpen(false);
-                }}
-                className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 font-medium cursor-pointer transition-colors ${
-                  isMinimapOpen
-                    ? "border-neutral-900 bg-neutral-900 text-white dark:border-emerald-600 dark:bg-emerald-600"
-                    : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
-                }`}
-              >
-                <MapPin className="h-3.5 w-3.5" />
-                <span>Minimap</span>
-              </button>
-            )}
             {onToggleReleasePulse && (
               <button
                 type="button"
@@ -293,10 +269,21 @@ export default function CanvasDock({
                 }`}
               >
                 <Activity className="h-3.5 w-3.5" />
-                <span>Release Pulse</span>
+                <span>{isReleasePulseOpen ? "Close Release Pulse" : "Open Release Pulse"}</span>
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {auxiliaryControls && (
+        <div
+          className={`absolute bottom-full left-1/2 mb-3 -translate-x-1/2 items-center gap-2 rounded-2xl border border-neutral-200/90 bg-white/95 p-1 backdrop-blur-xl @[640px]/controls:top-1/2 @[640px]/controls:bottom-auto @[640px]/controls:left-auto @[640px]/controls:right-full @[640px]/controls:mb-0 @[640px]/controls:mr-2 @[640px]/controls:flex @[640px]/controls:translate-x-0 @[640px]/controls:-translate-y-1/2 @[640px]/controls:rounded-none @[640px]/controls:border-0 @[640px]/controls:border-r @[640px]/controls:bg-transparent @[640px]/controls:p-0 @[640px]/controls:pr-2 @[640px]/controls:backdrop-blur-none dark:border-[#283548] dark:bg-[#161d27]/95 @[640px]/controls:dark:bg-transparent ${isQuickToolsOpen ? "flex" : "hidden"}`}
+          onClick={(event) => {
+            if (event.currentTarget.contains(event.target as Node)) setIsQuickToolsOpen(false);
+          }}
+        >
+          {auxiliaryControls}
         </div>
       )}
 
@@ -304,24 +291,24 @@ export default function CanvasDock({
         aria-label="Canvas control dock"
         className={
           className ||
-          "flex min-w-0 shrink-0 items-center gap-1 @[950px]/controls:gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1 @[950px]/controls:p-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all select-none max-w-full overflow-x-auto no-scrollbar dark:border-[#283548] dark:bg-[#161d27]/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+          "flex min-w-0 shrink-0 items-center gap-1 @[1360px]/controls:gap-1.5 rounded-2xl border border-neutral-200/80 bg-white/90 p-1 @[1360px]/controls:p-1.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl select-none max-w-full overflow-x-auto no-scrollbar dark:border-[#283548] dark:bg-[#161d27]/90 dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
         }
       >
         {/* Primary Interaction Tools (Pan & Select) */}
-        <div className="flex items-center gap-0.5 @[950px]/controls:gap-1 border-r border-neutral-200/80 dark:border-[#283548] pr-1 @[950px]/controls:pr-1.5">
+        <div className="flex items-center gap-0.5 @[1360px]/controls:gap-1 border-r border-neutral-200/80 dark:border-[#283548] pr-1 @[1360px]/controls:pr-1.5">
           <button
             type="button"
             onClick={() => onSelectTool("select")}
             aria-label="Select and move nodes"
             aria-pressed={activeTool === "select"}
             title="Select & Marquee tool (V)"
-            className={`flex h-11 w-11 @[950px]/controls:h-9 @[950px]/controls:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
+            className={`flex h-11 w-11 @[1360px]/controls:h-9 @[1360px]/controls:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
               activeTool === "select"
                 ? "bg-neutral-900 text-white shadow-xs dark:bg-emerald-600"
                 : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
             }`}
           >
-            <MousePointer className="h-3.5 w-3.5 @[950px]/controls:h-4 @[950px]/controls:w-4" />
+            <MousePointer className="h-3.5 w-3.5 @[1360px]/controls:h-4 @[1360px]/controls:w-4" />
           </button>
 
           <button
@@ -330,13 +317,13 @@ export default function CanvasDock({
             aria-label="Pan canvas"
             aria-pressed={activeTool === "hand"}
             title="Hand / Pan tool (H or Spacebar)"
-            className={`flex h-11 w-11 @[950px]/controls:h-9 @[950px]/controls:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
+            className={`flex h-11 w-11 @[1360px]/controls:h-9 @[1360px]/controls:w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
               activeTool === "hand"
                 ? "bg-neutral-900 text-white shadow-xs dark:bg-emerald-600"
                 : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
             }`}
           >
-            <Hand className="h-3.5 w-3.5 @[950px]/controls:h-4 @[950px]/controls:w-4" />
+            <Hand className="h-3.5 w-3.5 @[1360px]/controls:h-4 @[1360px]/controls:w-4" />
           </button>
         </div>
 
@@ -347,26 +334,11 @@ export default function CanvasDock({
           disabled={isBusy}
           aria-label="Add milestone"
           title="Add Milestone Node (N)"
-          className="inline-flex h-11 @[950px]/controls:h-9 shrink-0 items-center gap-1 @[950px]/controls:gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 hover:scale-[1.02] cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
+          className="inline-flex h-11 @[1360px]/controls:h-9 shrink-0 items-center gap-1 @[1360px]/controls:gap-1.5 whitespace-nowrap rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 hover:scale-[1.02] cursor-pointer dark:bg-emerald-600 dark:hover:bg-emerald-500"
         >
           <Plus className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden @[950px]/controls:inline">Milestone</span>
+          <span className="hidden @[1360px]/controls:inline">Milestone</span>
         </button>
-
-        {/* Add Group Action Button */}
-        {onAddGroup && (
-          <button
-            type="button"
-            onClick={onAddGroup}
-            disabled={isBusy}
-            title="Add Group"
-            aria-label="Add group"
-            className="hidden @[950px]/controls:inline-flex h-8 @[950px]/controls:h-9 shrink-0 items-center gap-1 @[950px]/controls:gap-1.5 whitespace-nowrap rounded-xl border border-neutral-200/80 bg-white/90 px-2 @[950px]/controls:px-3 text-xs font-semibold text-neutral-700 shadow-[0_2px_5px_rgba(0,0,0,0.04)] transition-all hover:bg-neutral-50 hover:scale-[1.02] cursor-pointer dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
-          >
-            <Square className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden @[950px]/controls:inline">Group</span>
-          </button>
-        )}
 
         {/* AWS Services Button */}
         {onToggleServicePalette && (
@@ -376,97 +348,48 @@ export default function CanvasDock({
             disabled={isBusy}
             title="AWS Services"
             aria-label="AWS Services"
-            className="inline-flex h-11 @[950px]/controls:h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-[#FF9900]/30 bg-[#FF9900]/10 px-2 @[950px]/controls:px-2.5 text-xs font-bold text-[#FF9900] shadow-[0_2px_5px_rgba(255,153,0,0.08)] transition-all hover:bg-[#FF9900]/20 hover:scale-[1.02] cursor-pointer"
+            className="inline-flex h-11 @[1360px]/controls:h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-[#FF9900]/30 bg-[#FF9900]/10 px-2 @[1360px]/controls:px-2.5 text-xs font-bold text-[#FF9900] shadow-[0_2px_5px_rgba(255,153,0,0.08)] transition-all hover:bg-[#FF9900]/20 hover:scale-[1.02] cursor-pointer"
           >
             <AWSLogo className="h-6 w-7" />
           </button>
         )}
 
-        {/* Mobile Tools Trigger Button (Replaces 8 desktop buttons on mobile screens) */}
+        {/* Google Cloud Services Button */}
+        {onToggleGoogleCloudPalette && (
+          <button
+            type="button"
+            onClick={onToggleGoogleCloudPalette}
+            disabled={isBusy}
+            title="Google Cloud Services"
+            aria-label="Google Cloud Services"
+            className="inline-flex h-11 @[1360px]/controls:h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-[#4285F4]/30 bg-[#4285F4]/10 px-2 @[1360px]/controls:px-2.5 text-xs font-bold text-[#4285F4] shadow-[0_2px_5px_rgba(66,133,244,0.08)] transition-all hover:bg-[#4285F4]/20 hover:scale-[1.02] cursor-pointer"
+          >
+            <GoogleCloudLogo className="h-6 w-7" />
+          </button>
+        )}
+
+        {/* Tools stay available at every width */}
         <button
           ref={quickToolsRef}
+          data-dock-tools-trigger
+          data-guide-trigger
           type="button"
           onClick={() => setIsQuickToolsOpen((v) => !v)}
           aria-label="Canvas tools"
           aria-expanded={isQuickToolsOpen}
           aria-controls={quickToolsId}
           title="Open Canvas Tools"
-          className={`@[950px]/controls:hidden flex h-11 items-center gap-1 rounded-xl px-3 text-xs font-semibold transition-colors cursor-pointer ${
+          className={`flex h-11 w-11 @[1360px]/controls:h-9 @[1360px]/controls:w-9 shrink-0 items-center justify-center rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
             isQuickToolsOpen
               ? "bg-neutral-900 text-white dark:bg-emerald-600"
               : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-[#1e2634]"
           }`}
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
-          <span className="font-mono text-[11px]">{zoomPct}%</span>
         </button>
 
-        {/* Desktop-only tool controls: Graph Helpers, Zoom & Minimap */}
-        <div className="hidden @[950px]/controls:flex items-center gap-1 border-l border-neutral-200/80 dark:border-[#283548] pl-1.5">
-          <button
-            type="button"
-            onClick={onTidyLayout}
-            disabled={isBusy}
-            title="Auto-Layout / Tidy Graph"
-            aria-label="Tidy layout"
-            className="flex h-9 items-center gap-1 rounded-xl px-2 text-xs font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
-          >
-            <Waypoints className="h-3.5 w-3.5" />
-            <span>Tidy</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onToggleSnapGrid}
-            aria-label="Snap to grid"
-            aria-pressed={snapGrid}
-            title={snapGrid ? "Snap to Grid: ON" : "Snap to Grid: OFF"}
-            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
-              snapGrid
-                ? "bg-neutral-100 text-neutral-900 font-semibold dark:bg-[#1e2634] dark:text-white"
-                : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-500 dark:hover:bg-[#1e2634] dark:hover:text-neutral-300"
-            }`}
-          >
-            <Grid className="h-4 w-4" />
-          </button>
-
-          {onToggleMinimap && (
-            <button
-              type="button"
-              onClick={onToggleMinimap}
-              aria-label="Minimap"
-              aria-pressed={Boolean(isMinimapOpen)}
-              title={isMinimapOpen ? "Radar Minimap: Visible" : "Radar Minimap: Hidden"}
-              className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors cursor-pointer ${
-                isMinimapOpen
-                  ? "bg-neutral-100 text-neutral-900 font-semibold dark:bg-[#1e2634] dark:text-white"
-                  : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-500 dark:hover:bg-[#1e2634] dark:hover:text-neutral-300"
-              }`}
-            >
-              <MapPin className="h-4 w-4" />
-            </button>
-          )}
-
-          {onToggleReleasePulse && (
-            <button
-              type="button"
-              onClick={onToggleReleasePulse}
-              title={isReleasePulseOpen ? "Close Release Pulse" : "Open Release Pulse"}
-              aria-label={isReleasePulseOpen ? "Close Release Pulse" : "Open Release Pulse"}
-              aria-expanded={isReleasePulseOpen}
-              className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl transition-colors ${
-                isReleasePulseOpen
-                  ? "bg-emerald-600 text-white shadow-xs"
-                  : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-500 dark:hover:bg-[#1e2634] dark:hover:text-neutral-300"
-              }`}
-            >
-              <Activity className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
         {/* Desktop-only Zoom Controls */}
-        <div className="hidden @[950px]/controls:flex items-center gap-0.5 border-l border-neutral-200/80 dark:border-[#283548] pl-1.5">
+        <div className="hidden @[1360px]/controls:flex items-center gap-0.5 border-l border-neutral-200/80 dark:border-[#283548] pl-1.5">
           <button
             type="button"
             onClick={onZoomOut}
@@ -508,34 +431,9 @@ export default function CanvasDock({
           </button>
         </div>
 
-        {onOpenGuide && (
-          <button
-            type="button"
-            data-guide-trigger
-            onClick={onOpenGuide}
-            aria-label="Canvas guide"
-            aria-pressed={Boolean(isGuideOpen)}
-            title="Canvas guide"
-            className={`hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-neutral-100 @[950px]/controls:flex dark:hover:bg-[#1e2634] dark:hover:text-white ${isGuideOpen ? "bg-neutral-100 text-neutral-900 dark:bg-[#1e2634] dark:text-white" : "text-neutral-500 dark:text-neutral-400"}`}
-          >
-            <CircleHelp className="h-4 w-4" />
-          </button>
-        )}
-        {onOpenShortcuts && (
-          <button
-            type="button"
-            onClick={onOpenShortcuts}
-            aria-label="Keyboard shortcuts"
-            title="Keyboard shortcuts (?)"
-            className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 @[950px]/controls:flex dark:text-neutral-400 dark:hover:bg-[#1e2634] dark:hover:text-white"
-          >
-            <Keyboard className="h-4 w-4" />
-          </button>
-        )}
-
         {/* Undo / Redo (Both Desktop & Mobile) */}
         {(onUndo || onRedo) && (
-          <div className="hidden @[950px]/controls:flex items-center gap-0.5 border-l border-neutral-200/80 dark:border-[#283548] pl-1.5">
+          <div className="hidden @[1360px]/controls:flex items-center gap-0.5 border-l border-neutral-200/80 dark:border-[#283548] pl-1.5">
             <button
               type="button"
               onClick={onUndo}

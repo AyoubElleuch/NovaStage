@@ -1,8 +1,8 @@
-# Operations: Beta v1.2.0
+# Operations for Beta v1.2.1
 
 ## Deployment order
 
-1. Back up the database and test migrations on staging. Apply migrations through **028** in order: 026 supplies atomic AI graph writes, 027 adds atomic layout batches, and 028 adds private AI previews and acceptance. These additive migrations do not rearrange existing diagrams.
+1. Back up the database and test migrations on staging. Apply migrations through **029** in order: 026 supplies atomic AI graph writes, 027 adds atomic layout batches, 028 adds private AI previews and acceptance, and 029 adds Google Cloud resource metadata. These additive migrations do not rearrange existing diagrams.
 2. Configure `.env.example` values and enable Supabase Realtime. Deploy the application only after the migrations succeed. Missing functions fail closed; there is no partial-save fallback.
 3. Run the regular CI workflow and the live staging release gate below before promoting to production. Local embedded PostgreSQL and browser API models do not verify a hosted deployment.
 
@@ -29,7 +29,7 @@ Record the deployment revision and results before production promotion. The repo
 
 ## Runtime behavior and limits
 
-- Tidy and multi-card moves commit one transaction. Node updates compare versions; conflicts preserve a local draft and refresh the shared state.
+- Multi-card moves commit one transaction. Node updates compare versions; conflicts preserve a local draft and refresh the shared state.
 - Failed/offline edits are not silently replayed. Drafts and up to 50 undo steps are scoped to user/project in browser storage, expire after seven days, and are limited to 4 MB. If storage is unavailable, the UI offers an in-tab draft to download before leaving. Clearing browser data removes local history.
 - Restoring a draft requires its starting canvas to match the current shared canvas. Otherwise download it for manual reconciliation. Undo rejects conflicting newer edits.
 - Built-in AI previews expire after 15 minutes. Accepting is idempotent and uses no extra quota; completed generation consumes a request even if discarded. Expired rows are cleaned on that user's next generation; a scheduled database purge can remove expired rows for inactive accounts.
@@ -39,6 +39,6 @@ Record the deployment revision and results before production promotion. The repo
 
 ## CI and rollback
 
-CI keeps 196 core unit/integration tests, 54 browser checks and 20 generated-diagram views. It uses three dependency installations rather than seven, a Next build cache, two browser groups, cancellation of superseded runs and failure artifacts. Local unit time fell from roughly 36 seconds to 6 seconds; hosted runner times vary.
+CI keeps 200 core unit/integration tests, 56 browser checks and 20 generated-diagram views. It uses three dependency installations rather than seven, a Next build cache, two browser groups, cancellation of superseded runs and failure artifacts. Runner timings vary.
 
-For application rollback, redeploy the prior application revision. Leave additive migrations 027–028 installed; older clients do not use them. They will also lack v1.2.0's concurrency and preview protections. Do not drop tables containing previews or remove functions while v1.2.0 instances are still running. Repeat the staging checks after rollback.
+For application rollback, redeploy the prior application revision. Leave additive migrations 027–029 installed; older clients do not use them. They will also lack v1.2.0's concurrency and preview protections. Do not drop tables containing previews or remove functions while v1.2.0 instances are still running. Clients before Google Cloud support cannot display the new resource type correctly; avoid rolling back to them once Google Cloud nodes have been created. Repeat the staging checks after rollback.

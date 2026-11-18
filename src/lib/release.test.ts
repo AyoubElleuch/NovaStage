@@ -5,8 +5,8 @@ import { APP_VERSION, APP_RELEASE, APP_RELEASE_DATE } from "./release";
 it("keeps release and package versions consistent", () => {
   const manifest = JSON.parse(readFileSync("package.json", "utf8"));
   const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
-  expect(APP_VERSION).toBe("1.2.0");
-  expect(APP_RELEASE).toBe("Beta v1.2.0");
+  expect(APP_VERSION).toBe("1.2.1");
+  expect(APP_RELEASE).toBe("Beta v1.2.1");
   expect(APP_RELEASE_DATE).toBe("November 18, 2026");
   expect(manifest.version).toBe(APP_VERSION);
   expect(lock.version).toBe(APP_VERSION);

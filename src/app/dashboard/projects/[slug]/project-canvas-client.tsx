@@ -1,4 +1,11 @@
 "use client";
+import {
+  CLOUD_PROVIDER_LABELS,
+  createCloudServiceNodeData,
+  SERVICE_NODE_SIZE,
+  isServiceNode,
+} from "@/lib/canvas/cloud-services";
+import type { CloudProvider } from "@/lib/canvas/types";
 
 import React, {
   useState,
@@ -34,7 +41,6 @@ import {
   exportToMermaid,
   getNodeDimensions,
 } from "@/lib/canvas/coordinate-math";
-import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
 import {
   readRecovery,
   writeRecovery,
@@ -96,7 +102,6 @@ import CanvasShortcuts from "@/components/canvas/canvas-shortcuts";
 import CanvasGuide from "@/components/canvas/canvas-guide";
 import CanvasChangeBanner from "@/components/canvas/canvas-change-banner";
 import { isGuideDismissed, setGuideDismissed, subscribeGuide } from "@/lib/canvas/guide";
-import { createAWSServiceNodeData, AWS_SERVICE_NODE_SIZE } from "@/lib/canvas/aws-service-node";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
 
@@ -187,7 +192,7 @@ export default function ProjectCanvasClient({
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [snapGrid, setSnapGrid] = useState(true);
-  const [isMinimapOpen, setIsMinimapOpen] = useState(false);
+  const [serviceProvider, setServiceProvider] = useState<CloudProvider>("aws");
   const [isServicePaletteOpen, setIsServicePaletteOpen] = useState(false);
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -200,7 +205,6 @@ export default function ProjectCanvasClient({
     const update = () => {
       setIsMobile(mq.matches);
       if (mq.matches) {
-        setIsMinimapOpen(false);
         setActiveTool("hand");
       }
     };
@@ -742,8 +746,8 @@ export default function ProjectCanvasClient({
   );
 
   // Add AWS Service Node (Optimistic Instant Pop)
-  const handleAddAWSService = useCallback(
-    (serviceId: string, customPos?: { x: number; y: number }) => {
+  const handleAddCloudService = useCallback(
+    (provider: CloudProvider, serviceId: string, customPos?: { x: number; y: number }) => {
       if (isAIGenerating) return;
       const position =
         customPos ||
@@ -751,14 +755,14 @@ export default function ProjectCanvasClient({
           nodes,
           viewport,
           { ...getCanvasArea(), rightInset: isMobile ? 0 : 420 },
-          AWS_SERVICE_NODE_SIZE,
+          SERVICE_NODE_SIZE,
         );
       const posX = position.x;
       const posY = position.y;
       const finalX = snapGrid ? snapToGrid(posX) : posX;
       const finalY = snapGrid ? snapToGrid(posY) : posY;
 
-      const serviceData = createAWSServiceNodeData(serviceId);
+      const serviceData = createCloudServiceNodeData(provider, serviceId);
       const serviceName = serviceData.title;
       const clientNodeId = crypto.randomUUID();
 
@@ -785,8 +789,9 @@ export default function ProjectCanvasClient({
         claim_holder: myHolder,
         version: 1,
         checkpoints: [],
-        node_type: "aws_service",
+        node_type: serviceData.node_type,
         aws_metadata: serviceData.aws_metadata,
+        gcp_metadata: serviceData.gcp_metadata,
       };
 
       // 0ms instant local insertion & close palette
@@ -803,7 +808,10 @@ export default function ProjectCanvasClient({
       pushHistorySnapshot([...nodes, optimisticNode], edges);
       canvasSounds.addNode();
       broadcastEvent("node:created", { node: optimisticNode });
-      notify({ title: "AWS Service Added", message: `Added "${serviceName}" to canvas` });
+      notify({
+        title: `${CLOUD_PROVIDER_LABELS[provider]} Service Added`,
+        message: `Added "${serviceName}" to canvas`,
+      });
 
       // Background persistence
       void trackSave(() =>
@@ -811,15 +819,16 @@ export default function ProjectCanvasClient({
           action: "create_node",
           id: clientNodeId,
           title: serviceName,
-          node_type: "aws_service",
+          node_type: serviceData.node_type,
           width: serviceData.width,
           height: serviceData.height,
           position_x: finalX,
           position_y: finalY,
           aws_metadata: serviceData.aws_metadata,
+          gcp_metadata: serviceData.gcp_metadata,
           checkpoints: [],
         }),
-      ).catch((e) => reportSaveFailure("AWS Service Not Saved", e));
+      ).catch((e) => reportSaveFailure(`${CLOUD_PROVIDER_LABELS[provider]} Service Not Saved`, e));
     },
     [
       broadcastEvent,
@@ -1426,6 +1435,7 @@ export default function ProjectCanvasClient({
               height: node.height,
               node_type: node.node_type,
               aws_metadata: node.aws_metadata,
+              gcp_metadata: node.gcp_metadata,
               group_metadata: node.group_metadata,
               annotation_metadata: node.annotation_metadata,
               parent_group_id: node.parent_group_id,
@@ -2437,7 +2447,7 @@ export default function ProjectCanvasClient({
           setSnappedHandle({ node: nearest.node, handle: nearest.handle });
           const cycle =
             ![draftEdgeRef.current.sourceNode, nearest.node].every(
-              (item) => item.node_type === "aws_service" || item.node_type === "group",
+              (item) => isServiceNode(item) || item.node_type === "group",
             ) &&
             detectCycle(edges, {
               sourceNodeId: draftEdgeRef.current.sourceNode.id,
@@ -2462,7 +2472,7 @@ export default function ProjectCanvasClient({
             setSnappedHandle({ node: hoveredCandidate, handle: bestHandle });
             const cycle =
               ![draftEdgeRef.current.sourceNode, hoveredCandidate].every(
-                (item) => item.node_type === "aws_service" || item.node_type === "group",
+                (item) => isServiceNode(item) || item.node_type === "group",
               ) &&
               detectCycle(edges, {
                 sourceNodeId: draftEdgeRef.current.sourceNode.id,
@@ -2733,7 +2743,7 @@ export default function ProjectCanvasClient({
 
     // Check for circular dependency
     const architectureLink = [activeDraft.sourceNode, node].every(
-      (item) => item.node_type === "aws_service" || item.node_type === "group",
+      (item) => isServiceNode(item) || item.node_type === "group",
     );
     const cycle = !architectureLink && detectCycle(edges, { sourceNodeId, targetNodeId });
     if (cycle) {
@@ -2763,11 +2773,7 @@ export default function ProjectCanvasClient({
           ? handle
           : getClosestHandleToPoint(node, activeDraft.currentPos);
 
-    const sourceNode = nodes.find((n) => n.id === sourceNodeId);
-    const isAwsConnection =
-      (sourceNode?.node_type === "aws_service" || sourceNode?.node_type === "group") &&
-      (node.node_type === "aws_service" || node.node_type === "group");
-    const edgeType: EdgeType = isAwsConnection ? "data_flow" : "dependency";
+    const edgeType: EdgeType = architectureLink ? "data_flow" : "dependency";
 
     // 0ms instant local insertion
     const clientEdgeId = `edge_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -2788,7 +2794,7 @@ export default function ProjectCanvasClient({
     broadcastEvent("edge:created", { edge: optimisticEdge });
     notify({
       title: "Connected!",
-      message: isAwsConnection ? "Architecture data flow wire created" : "Dependency wire created",
+      message: architectureLink ? "Architecture data flow wire created" : "Dependency wire created",
     });
 
     // Cache immediately in browser localStorage
@@ -2898,45 +2904,6 @@ export default function ProjectCanvasClient({
     }
   };
 
-  const handleTidyLayout = async () => {
-    if (!nodes.length || isAIGenerating) return;
-    const tidyNodes = autoLayoutNodes(nodes, edges);
-    const changedNodes = tidyNodes.filter((node, index) => {
-      const previous = nodes[index];
-      return (
-        node.position_x !== previous.position_x ||
-        node.position_y !== previous.position_y ||
-        node.width !== previous.width ||
-        node.height !== previous.height
-      );
-    });
-    if (!changedNodes.length) return;
-    setNodes(tidyNodes);
-    pushHistorySnapshot(tidyNodes, edges);
-
-    try {
-      await trackSave(() =>
-        saveRequest("canvas", {
-          action: "apply_layout",
-          nodes: changedNodes.map((node) => ({
-            id: node.id,
-            position_x: node.position_x,
-            position_y: node.position_y,
-            width: node.width,
-            height: node.height,
-          })),
-        }),
-      );
-      broadcastEvent("canvas:resync", { userId: currentUser.id });
-      notify({
-        title: "Auto-Layout Complete",
-        message: "Arranged nodes with space for connections and nested groups",
-      });
-    } catch (error) {
-      await reportSaveFailure("Layout Not Saved", error);
-    }
-  };
-
   const handleJumpToNode = (targetNodeId: string) => {
     const target = nodes.find((n) => n.id === targetNodeId);
     if (!target) return;
@@ -2985,6 +2952,17 @@ export default function ProjectCanvasClient({
     notify({ title: "Roadmap Exported", message: `Downloaded ${project.slug}-roadmap.json` });
   };
 
+  const toggleServicePalette = (provider: CloudProvider) => {
+    setSelectedNodeId(null);
+    setIsMobileDrawerOpen(false);
+    setIsNavigatorOpen(false);
+    setIsAIAssistantOpen(false);
+    setIsNotebookOpen(false);
+    setIsReleasePulseOpen(false);
+    setServiceProvider(provider);
+    setIsServicePaletteOpen((open) => serviceProvider !== provider || !open);
+  };
+
   const milestoneNodes = nodes
     .filter((n) => !n.node_type || n.node_type === "milestone")
     .sort((a, b) => a.sort_order - b.sort_order);
@@ -3023,7 +3001,7 @@ export default function ProjectCanvasClient({
   return (
     <div
       ref={setCanvasRootElement}
-      className="canvas-workspace relative h-full w-full overflow-hidden select-none"
+      className="canvas-workspace @container/controls relative h-full w-full overflow-hidden select-none"
     >
       {recoveryDraft && (
         <section
@@ -3109,6 +3087,7 @@ export default function ProjectCanvasClient({
       />
 
       <CanvasNavigator
+        onFocusSelection={selectedNodeIds.size > 0 ? () => handleFitView(true) : undefined}
         nodes={nodes}
         isOpen={isNavigatorOpen}
         onToggle={() => {
@@ -3152,7 +3131,10 @@ export default function ProjectCanvasClient({
               </button>
               <button
                 type="button"
-                onClick={() => setIsServicePaletteOpen(true)}
+                onClick={() => {
+                  setServiceProvider("aws");
+                  setIsServicePaletteOpen(true);
+                }}
                 className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-orange-400 hover:bg-orange-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-100/70 dark:bg-orange-500/10">
@@ -3461,17 +3443,6 @@ export default function ProjectCanvasClient({
         <CanvasCursors collaborators={collaborators} currentUserId={currentUser.id} />
       </CanvasViewportContainer>
 
-      {selectedNodeIds.size > 0 && (
-        <button
-          data-canvas-ui
-          type="button"
-          onClick={() => handleFitView(true)}
-          className="absolute left-3 top-[124px] z-20 rounded-xl border border-neutral-200 bg-white/95 px-3 py-2 text-xs font-medium shadow-sm dark:border-[#283548] dark:bg-[#161d27]"
-        >
-          Focus selection
-        </button>
-      )}
-      {/* Interactive Radar Minimap Component */}
       <CanvasMinimap
         nodes={nodes}
         viewport={viewport}
@@ -3479,9 +3450,7 @@ export default function ProjectCanvasClient({
           setFollowingUserId(null);
           setViewport(next);
         }}
-        isOpen={isMinimapOpen && !isNotebookOpen && !isAIAssistantOpen}
-        rightInset={(selectedNode || isReleasePulseOpen) && !isMobile ? 420 : 0}
-        onToggleOpen={() => setIsMinimapOpen((v) => !v)}
+        hasSidePanel={Boolean(selectedNode || isReleasePulseOpen || isNotebookOpen) && !isMobile}
       />
 
       {/* AI Generation Aura Overlay */}
@@ -3545,60 +3514,54 @@ export default function ProjectCanvasClient({
         />
       )}
 
-      {/* Bottom Floating Control Bar (Canvas Tools Dock + AI Assistant) */}
-      <div
-        style={{ right: (selectedNode || isReleasePulseOpen) && !isMobile ? 420 : 0 }}
-        className="@container/controls pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-6 z-20 px-3"
-      >
-        <div className="flex flex-col @[950px]/controls:flex-row items-center justify-center gap-2">
-          {/* On mobile: AI Assistant & Notebook stack above toolbar (order-1). On desktop: sit alongside dock (sm:order-2) */}
-          <div
-            className={`order-1 @[950px]/controls:order-2 pointer-events-auto ${selectedNode && isMobile ? "hidden" : "flex"} items-center justify-end @[950px]/controls:justify-start gap-2 w-full max-w-[340px] @[950px]/controls:w-auto @[950px]/controls:max-w-none`}
-          >
-            <CanvasAIAssistant
-              projectId={project.id}
-              projectSlug={project.slug}
-              onExternalApplied={() => {
-                void resyncCanvasState();
-              }}
-              isOpen={isAIAssistantOpen}
-              portalContainer={canvasRootElement}
-              onToggle={() => {
-                setSelectedNodeId(null);
-                setIsMobileDrawerOpen(false);
-                setIsServicePaletteOpen(false);
-                setIsNavigatorOpen(false);
-                setIsNotebookOpen(false);
-                setIsReleasePulseOpen(false);
-                setIsAIAssistantOpen((prev) => !prev);
-              }}
-              onClose={() => setIsAIAssistantOpen(false)}
-              requestsRemaining={aiRequestsRemaining}
-              maxRequests={maxAiRequests}
-              userPlan={userPlan}
-              existingNodes={nodes}
-              onReloadCanvas={() => {
-                void resyncCanvasState();
-              }}
-              onSubmitPrompt={handleGenerateAIWorkflow}
-            />
-
-            <CanvasNotebook
-              projectId={project.id}
-              isOpen={isNotebookOpen}
-              onToggle={() => {
-                setSelectedNodeId(null);
-                setIsAIAssistantOpen(false);
-                setIsReleasePulseOpen(false);
-                setIsNotebookOpen((open) => !open);
-              }}
-              onClose={() => setIsNotebookOpen(false)}
-            />
-          </div>
-
-          {/* Primary Canvas Dock: order-2 on mobile (at bottom), sm:order-1 on desktop (on left) */}
-          <div className="order-2 @[950px]/controls:order-1 pointer-events-auto flex items-center justify-center max-w-full">
+      <div className="canvas-dock-position pointer-events-none absolute inset-x-0 z-20 flex justify-center px-3">
+        <div className="relative min-w-0 max-w-full">
+          <div className="pointer-events-auto">
             <CanvasDock
+              auxiliaryControls={
+                <>
+                  <CanvasAIAssistant
+                    projectId={project.id}
+                    projectSlug={project.slug}
+                    onExternalApplied={() => {
+                      void resyncCanvasState();
+                    }}
+                    isOpen={isAIAssistantOpen}
+                    portalContainer={canvasRootElement}
+                    onToggle={() => {
+                      setSelectedNodeId(null);
+                      setIsMobileDrawerOpen(false);
+                      setIsServicePaletteOpen(false);
+                      setIsNavigatorOpen(false);
+                      setIsNotebookOpen(false);
+                      setIsReleasePulseOpen(false);
+                      setIsAIAssistantOpen((prev) => !prev);
+                    }}
+                    onClose={() => setIsAIAssistantOpen(false)}
+                    requestsRemaining={aiRequestsRemaining}
+                    maxRequests={maxAiRequests}
+                    userPlan={userPlan}
+                    existingNodes={nodes}
+                    onReloadCanvas={() => {
+                      void resyncCanvasState();
+                    }}
+                    onSubmitPrompt={handleGenerateAIWorkflow}
+                  />
+
+                  <CanvasNotebook
+                    portalContainer={canvasRootElement}
+                    projectId={project.id}
+                    isOpen={isNotebookOpen}
+                    onToggle={() => {
+                      setSelectedNodeId(null);
+                      setIsAIAssistantOpen(false);
+                      setIsReleasePulseOpen(false);
+                      setIsNotebookOpen((open) => !open);
+                    }}
+                    onClose={() => setIsNotebookOpen(false)}
+                  />
+                </>
+              }
               isBusy={isAIGenerating}
               activeTool={activeTool}
               onSelectTool={setActiveTool}
@@ -3608,7 +3571,6 @@ export default function ProjectCanvasClient({
               onResetZoom={() => handleZoom(1)}
               onFitView={() => handleFitView()}
               onAddNode={() => handleAddNode()}
-              onTidyLayout={handleTidyLayout}
               snapGrid={snapGrid}
               onToggleSnapGrid={() => setSnapGrid((v) => !v)}
               canUndo={canUndo}
@@ -3618,8 +3580,6 @@ export default function ProjectCanvasClient({
               onOpenShortcuts={() => setIsShortcutsOpen(true)}
               onOpenGuide={toggleGuide}
               isGuideOpen={isGuideVisible}
-              isMinimapOpen={isMinimapOpen}
-              onToggleMinimap={() => setIsMinimapOpen((v) => !v)}
               isReleasePulseOpen={isReleasePulseOpen}
               onToggleReleasePulse={() => {
                 setSelectedNodeId(null);
@@ -3627,28 +3587,26 @@ export default function ProjectCanvasClient({
                 setIsNotebookOpen(false);
                 setIsReleasePulseOpen((open) => !open);
               }}
-              onToggleServicePalette={() => {
-                setIsNavigatorOpen(false);
-                setIsAIAssistantOpen(false);
-                setIsNotebookOpen(false);
-                setIsReleasePulseOpen(false);
-                setIsServicePaletteOpen((open) => !open);
-              }}
+              onToggleGoogleCloudPalette={() => toggleServicePalette("gcp")}
+              onToggleServicePalette={() => toggleServicePalette("aws")}
               onAddGroup={() => handleAddGroup()}
             />
           </div>
         </div>
       </div>
 
-      {/* AWS Service Palette Flyout */}
+      {/* Cloud service palette */}
       <CanvasServicePalette
+        key={serviceProvider}
+        provider={serviceProvider}
         isOpen={isServicePaletteOpen}
         onClose={() => setIsServicePaletteOpen(false)}
-        onAddService={(serviceId) => handleAddAWSService(serviceId)}
+        onAddService={(serviceId) => handleAddCloudService(serviceProvider, serviceId)}
       />
 
       {isReleasePulseOpen && (
         <CanvasReleasePulse
+          portalContainer={canvasRootElement}
           nodes={nodes}
           edges={edges}
           onClose={() => setIsReleasePulseOpen(false)}

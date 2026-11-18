@@ -17,6 +17,7 @@ import { PrivacyPolicyTrigger } from "@/components/privacy/privacy-policy-modal"
 import { AIGenerationMode, AIGenerationOperation } from "@/lib/ai/types";
 import { AIGenerationError, describeAIFailure, toAIGenerationError } from "@/lib/ai/response";
 import { previewGeneration } from "@/lib/ai/preview";
+import { restorePanelFocus } from "@/lib/canvas/panel-focus";
 import type { CanvasNode } from "@/lib/canvas/types";
 import CanvasMcpAssistant from "./canvas-mcp-assistant";
 import CanvasAIModeSelect from "./canvas-ai-mode-select";
@@ -236,7 +237,7 @@ export default function CanvasAIAssistant({
     document.addEventListener("keydown", trapFocus);
     return () => {
       document.removeEventListener("keydown", trapFocus);
-      trigger?.focus();
+      restorePanelFocus(trigger);
     };
   }, [isOpen]);
 

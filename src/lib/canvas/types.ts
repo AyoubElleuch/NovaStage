@@ -5,7 +5,16 @@ export type HandlePosition = "top" | "right" | "bottom" | "left";
 export type CanvasTool = "select" | "hand" | "add_node" | "link" | "add_service" | "add_group";
 
 /** Discriminated node types for the canvas */
-export type CanvasNodeType = "milestone" | "aws_service" | "group" | "annotation";
+export type CanvasNodeType = "milestone" | "aws_service" | "gcp_service" | "group" | "annotation";
+
+export type CloudProvider = "aws" | "gcp";
+export type GCPServiceCategory = keyof typeof import("./gcp-catalog.json").categories;
+export interface GCPServiceMetadata {
+  serviceId: string;
+  category: GCPServiceCategory;
+  region?: string;
+  config?: Record<string, string>;
+}
 
 /** Edge connection semantics */
 export const EDGE_TYPES = [
@@ -120,6 +129,8 @@ export interface CanvasNode {
   node_type?: CanvasNodeType;
   /** AWS service metadata — only populated for aws_service nodes */
   aws_metadata?: AWSServiceMetadata | null;
+  /** Google Cloud metadata — only populated for gcp_service nodes. */
+  gcp_metadata?: GCPServiceMetadata | null;
   /** Group/container metadata — only populated for group nodes */
   group_metadata?: GroupMetadata | null;
   /** Annotation content — only populated for annotation nodes */

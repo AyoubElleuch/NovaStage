@@ -18,7 +18,7 @@ export async function getSharedCanvas(token: string) {
     admin
       .from("canvas_nodes")
       .select(
-        "id,title,description,status,position_x,position_y,width,height,color,sort_order,node_type,aws_metadata,group_metadata,annotation_metadata,parent_group_id",
+        "id,title,description,status,position_x,position_y,width,height,color,sort_order,node_type,aws_metadata,gcp_metadata,group_metadata,annotation_metadata,parent_group_id",
       )
       .eq("project_id", share.project_id)
       .order("sort_order")

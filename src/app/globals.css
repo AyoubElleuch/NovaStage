@@ -2,6 +2,73 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+.canvas-workspace {
+  --canvas-dock-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  --canvas-dock-clearance: calc(var(--canvas-dock-bottom) + 3.75rem);
+}
+
+.canvas-dock-position {
+  bottom: var(--canvas-dock-bottom);
+}
+
+.canvas-dock-position:has(.canvas-dock-tools) {
+  z-index: 51;
+}
+
+.canvas-workspace > .canvas-floating-panel {
+  max-height: min(560px, calc(100% - var(--canvas-dock-clearance) - 2rem));
+  bottom: var(--canvas-dock-clearance);
+}
+
+.canvas-workspace > .canvas-minimap-radar {
+  bottom: var(--canvas-dock-bottom);
+}
+
+@media (min-width: 768px) {
+  .canvas-workspace {
+    --canvas-dock-bottom: 1.5rem;
+  }
+}
+
+@container controls (width < 768px) {
+  .canvas-workspace > .canvas-full-height-panel {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+  }
+
+  .canvas-workspace:has(> .canvas-full-height-panel) > .canvas-dock-position {
+    visibility: hidden;
+  }
+
+  .canvas-workspace:has(> :is(.canvas-full-height-panel, .canvas-floating-panel))
+    > .canvas-minimap-radar {
+    display: none;
+  }
+}
+
+@container controls (width < 1060px) {
+  .canvas-workspace > .canvas-minimap-radar {
+    bottom: var(--canvas-dock-clearance);
+  }
+}
+
+@container controls (width >= 768px) {
+  .canvas-workspace > .canvas-full-height-panel {
+    /* Leave half the compact dock and a gap between the centered controls and the panel. */
+    width: min(420px, calc(50cqw - 10rem));
+  }
+}
+
+@container controls (width >= 1360px) {
+  .canvas-workspace > .canvas-full-height-panel {
+    /* The wide dock has room for zoom and history controls. */
+    width: min(420px, calc(50cqw - 19.5rem));
+  }
+}
+
 /* Phone controls follow the visible viewport when the software keyboard opens. */
 @media (max-width: 767px) {
   .canvas-workspace [data-canvas-ui] input,
@@ -24,6 +91,28 @@
     bottom: auto;
     max-height: calc(var(--canvas-visible-height, 100dvh) - 24px);
     transition-property: opacity, transform;
+  }
+  .canvas-minimap-radar [data-canvas-navigation] {
+    zoom: 0.65;
+  }
+  .canvas-workspace:has(> .canvas-mobile-node-actions) > .canvas-minimap-radar {
+    bottom: calc(var(--canvas-dock-clearance) + 10rem);
+  }
+  .canvas-workspace > .canvas-full-height-panel {
+    position: fixed;
+    top: var(--canvas-visible-top, 0px);
+    bottom: auto;
+    height: var(--canvas-visible-height, 100dvh);
+  }
+  .canvas-workspace > .canvas-floating-panel {
+    bottom: auto;
+    max-height: max(
+      0px,
+      calc(
+        var(--canvas-visible-height, 100dvh) - var(--canvas-dock-clearance) -
+          max(12px, env(safe-area-inset-top))
+      )
+    );
   }
   .canvas-floating-panel input,
   .canvas-floating-panel textarea {

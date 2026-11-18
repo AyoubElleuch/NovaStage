@@ -37,6 +37,14 @@ export function publicCanvasData(nodes: CanvasNode[], edges: CanvasEdge[]) {
             config: node.aws_metadata.config,
           }
         : null,
+      gcp_metadata: node.gcp_metadata
+        ? {
+            serviceId: node.gcp_metadata.serviceId,
+            category: node.gcp_metadata.category,
+            region: node.gcp_metadata.region,
+            config: node.gcp_metadata.config,
+          }
+        : null,
       group_metadata: node.group_metadata
         ? {
             label: node.group_metadata.label,

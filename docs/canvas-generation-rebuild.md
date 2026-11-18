@@ -51,4 +51,4 @@ Routing does not globally minimize crossings or allocate distinct lanes to every
 
 ## Beta v1.2.0 follow-up
 
-Built-in generation now saves a private preview and requires explicit acceptance before mutation. Migration 028 protects preview acceptance against intervening content changes and duplicate requests; migration 027 makes Tidy and multi-card moves atomic. See [operations](operations.md) for current deployment and live verification requirements.
+Built-in generation now saves a private preview and requires explicit acceptance before mutation. Migration 028 protects preview acceptance against intervening content changes and duplicate requests; migration 027 makes Multi-card moves atomic. See [operations](operations.md) for current deployment and live verification requirements.

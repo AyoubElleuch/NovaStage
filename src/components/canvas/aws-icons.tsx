@@ -19,7 +19,7 @@ export interface AWSServiceDef {
   defaultConfig: Record<string, string>;
 }
 
-function OfficialIcon({
+export function OfficialIcon({
   src,
   name,
   size = 32,

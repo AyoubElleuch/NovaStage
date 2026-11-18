@@ -3,18 +3,19 @@
 Real-time collaborative canvas for engineering roadmaps and AWS architecture diagrams.
 
 [![CI Pipeline](https://github.com/AyoubElleuch/NovaStage/actions/workflows/ci.yml/badge.svg)](https://github.com/AyoubElleuch/NovaStage/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/Beta-v1.2.0-10b981)](docs/releases/v1.2.0-pr.md)
+[![Release](https://img.shields.io/badge/Beta-v1.2.1-10b981)](#beta-v121)
 [![Next.js](https://img.shields.io/badge/Next.js-16.4-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)](https://supabase.com/)
 
 ## Overview
 
-NovaStage gives engineering teams a shared workspace for delivery planning and cloud architecture. Milestones carry actionable checkpoints and dependency connections; AWS resources carry service configuration, infrastructure boundaries and typed data-flow connections. Project permissions, editing claims and database transactions protect collaborative work.
+NovaStage gives engineering teams a shared workspace for delivery planning and cloud architecture. Milestones carry actionable checkpoints and dependency connections; AWS and Google Cloud resources carry service configuration, infrastructure boundaries and typed data-flow connections. Project permissions, editing claims and database transactions protect collaborative work.
 
 ### Capabilities
 
 - **Collaborative canvas:** Pan, zoom, search, drag cards, inspect details and follow collaborators. PostgreSQL stores project state; Supabase realtime broadcasts interaction and editing events.
+- **Google Cloud canvas:** 62 services with official SVG icons, provider search, editable regions and configuration, claims, typed connections (including AWS links), undo/redo, shared viewing and Mermaid export. Google Cloud is manually authored; AI and MCP generation remain workflow/AWS only.
 - **Delivery workflows:** Milestones, checkpoint progress, dependency validation, parallel tracks, merge points and a Release Pulse view of blocked work and readiness.
 - **AWS architectures:** Search a catalog of 300+ service symbols, inspect configuration, and organize resources inside region, VPC, availability-zone and subnet boundaries.
 - **Built-in generation:** A server-side Gemini pipeline decomposes requirements, generates structured content and validates it before layout. Invalid output gets a bounded correction attempt rather than invented tasks or dependencies.
@@ -23,19 +24,19 @@ NovaStage gives engineering teams a shared workspace for delivery planning and c
 - **View-only sharing:** Project owners can enable or revoke a public canvas link. Visitors can navigate and inspect shared content without editing or viewing project membership.
 - **Access controls:** Project membership, roles, row-level security, editing leases and generation locks govern protected actions.
 
-## Beta v1.2.0
+## Beta v1.2.1
 
-This release improves grid and port alignment, keeps controls clear of drawers, saves multi-card layouts atomically, and preserves failed edits and undo history across refreshes. Built-in AI now prepares a reviewable preview before changing the canvas. Plan limits, account feedback, search statuses, and Mermaid exports are consistent with the application.
+This release adds editable Google Cloud services alongside AWS and keeps the canvas toolbar centered when resource details open. Focus selection sits below Find, and the radar stays clear of the toolbar.
 
-See the [release notes](docs/releases/v1.2.0-pr.md), [technical report and before/after screenshots](docs/canvas-generation-rebuild.md), and [layout contract and limitations](docs/aws-architecture-layout.md).
+See the [v1.2.0 release notes](docs/releases/v1.2.0-pr.md), [technical report and before/after screenshots](docs/canvas-generation-rebuild.md), and [layout contract and limitations](docs/aws-architecture-layout.md).
 
-**Deployment requirement:** Apply migrations through `028_canvas_ai_previews.sql`, including `027_atomic_canvas_layout.sql`, before deploying this release. No existing saved canvas is automatically rearranged.
+Apply migrations through `029_google_cloud_canvas.sql` before deploying this release. No existing saved canvas is automatically rearranged.
 
 ## Architecture
 
 The Next.js App Router serves authenticated project APIs and the React canvas. Built-in generation uses the application's provider credentials and quota; external assistants use scoped MCP access and their own accounts. Both supply semantic graphs. Shared application code validates graph meaning, computes dimensions and layout, checks final geometry, and constructs the persistence payload.
 
-Built-in previews use `accept_canvas_ai_preview` and the transactional `apply_canvas_ai_graph` RPC. Tidy and group dragging use `apply_canvas_layout`; content edits compare node versions. MCP acceptance uses `apply_canvas_mcp_draft`, which commits the diagram and acceptance status together and rejects duplicate acceptance. Ownership, membership, claims and generation guards are checked at protected boundaries.
+Built-in previews use `accept_canvas_ai_preview` and the transactional `apply_canvas_ai_graph` RPC. Group dragging and multi-card moves use `apply_canvas_layout`; content edits compare node versions. MCP acceptance uses `apply_canvas_mcp_draft`, which commits the diagram and acceptance status together and rejects duplicate acceptance. Ownership, membership, claims and generation guards are checked at protected boundaries.
 
 | Area                     | Implementation                                                                 |
 | ------------------------ | ------------------------------------------------------------------------------ |
@@ -72,7 +73,7 @@ cp .env.example .env.local
 
 Set the variables documented in `.env.example`, including the Supabase URL, anonymous key, server-only service-role key and application URL. Keep service-role, provider and Redis credentials server-side. Configure optional services only when needed.
 
-Apply the SQL files in `supabase/migrations/` in numerical order through **028**. Migrations 023–026 support MCP and atomic AI graph writes; 027 adds atomic layout batches and 028 adds private AI previews. `supabase/schema.sql` is a reference, not a replacement for subsequent migrations. Tests run their own isolated database and must not be pointed at production.
+Apply the SQL files in `supabase/migrations/` in numerical order through **029**. Migrations 023–026 support MCP and atomic AI graph writes; 027 adds atomic layout batches and 028 adds private AI previews; 029 adds Google Cloud resource metadata. `supabase/schema.sql` is a reference, not a replacement for subsequent migrations. Tests run their own isolated database and must not be pointed at production.
 
 ```sh
 npm run dev
@@ -104,7 +105,7 @@ Install Chromium with `npx playwright install chromium` if needed. Browser fixtu
 
 The generated-diagram browser matrix covers workflow, serverless, nested, feedback and appended diagrams on desktop and phone in both themes. Geometry fixtures also cover parallel branches/joins, disconnected components, shuffled input, long content and large permitted graphs. Database tests execute production migration functions in embedded PostgreSQL and check rollback and mode enforcement. These checks do not establish live-model fidelity or production performance.
 
-The focused unit suite has 196 tests (down from 294), including two checks for the shared canvas access gate. On the development machine it runs in about 6 seconds, versus 36 seconds before removing duplicate component and fixture checks. CI performs three dependency installations instead of seven, caches Next build data, and cancels superseded runs. Runner timings vary. The 54 browser checks and 20 rendered diagram views remain.
+The focused unit suite has 200 tests (down from 294), including two checks for the shared canvas access gate. CI performs three dependency installations instead of seven, caches Next build data, and cancels superseded runs. Runner timings vary. The 56 browser checks and 20 rendered diagram views remain.
 
 Before promotion, run the manual staging gate with two test accounts and a disposable project; see [operations](docs/operations.md). Local fixture tests do not certify live infrastructure or deployment readiness.
 

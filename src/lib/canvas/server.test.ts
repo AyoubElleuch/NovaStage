@@ -1,3 +1,4 @@
+import { createCloudServiceNodeData } from "./cloud-services";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createFakeSupabase, type Row } from "@/lib/test-utils/fake-supabase";
 
@@ -10,7 +11,13 @@ vi.mock("@/lib/redis/client", () => ({
   safeRedisDel: vi.fn(),
   safeRedisExpire: vi.fn(),
 }));
-import { createCanvasEdge, deleteCanvasEdge, updateCanvasNode } from "./server";
+import {
+  createCanvasNode,
+  getProjectCanvasData,
+  createCanvasEdge,
+  deleteCanvasEdge,
+  updateCanvasNode,
+} from "./server";
 
 const future = () => new Date(Date.now() + 60_000).toISOString();
 const past = () => new Date(Date.now() - 60_000).toISOString();
@@ -198,4 +205,40 @@ it("rejects a stale node edit without overwriting the newer value", async () => 
     success: false,
   });
   expect(mocks.tables.canvas_nodes.find((n) => n.id === "mine")?.position_x).toBe(64);
+});
+
+it("persists Google Cloud nodes and protects configuration edits with claims and versions", async () => {
+  const data = {
+    id: "gcp",
+    position_x: 16,
+    position_y: 32,
+    ...createCloudServiceNodeData("gcp", "cloud-run"),
+  };
+  const created = await createCanvasNode("p1", data, "alice");
+  expect(created).toMatchObject({
+    node_type: "gcp_service",
+    gcp_metadata: data.gcp_metadata,
+    aws_metadata: null,
+  });
+  const saved = mocks.tables.canvas_nodes.find((n) => n.id === "gcp")!;
+  saved.version = 1;
+  const changes = {
+    gcp_metadata: { ...data.gcp_metadata!, region: "europe-west1", config: { cpu: "2" } },
+  };
+  expect(await updateCanvasNode("gcp", "p1", changes, "bob", 1)).toMatchObject({ success: false });
+  expect(await updateCanvasNode("gcp", "p1", changes, "alice", 1)).toMatchObject({
+    success: true,
+    version: 2,
+  });
+  expect(await updateCanvasNode("gcp", "p1", { gcp_metadata: null }, "alice", 2)).toMatchObject({
+    success: false,
+  });
+  expect(await updateCanvasNode("gcp", "p1", changes, "alice", 1)).toMatchObject({
+    success: false,
+  });
+  expect(
+    await createCanvasNode("p1", { ...data, id: "bad", node_type: "milestone" }, "alice"),
+  ).toBeNull();
+  const reloaded = await getProjectCanvasData("p1");
+  expect(reloaded.nodes.find((n) => n.id === "gcp")?.gcp_metadata).toEqual(changes.gcp_metadata);
 });

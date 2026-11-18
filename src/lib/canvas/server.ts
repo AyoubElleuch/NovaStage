@@ -1,3 +1,4 @@
+import { validGCPNode } from "./gcp-validation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeRedisSet, safeRedisDel } from "@/lib/redis/client";
 import {
@@ -11,6 +12,7 @@ import {
   HandlePosition,
   NodeStatus,
   AWSServiceMetadata,
+  GCPServiceMetadata,
   GroupMetadata,
   AnnotationMetadata,
 } from "./types";
@@ -39,7 +41,7 @@ export async function getProjectCanvasData(projectId: string): Promise<{
       id, project_id, title, description, status,
       position_x, position_y, width, height, color, sort_order,
       claimed_by, claimed_at, claim_expires_at, version, created_at, updated_at,
-      node_type, aws_metadata, group_metadata, annotation_metadata, parent_group_id
+      node_type, aws_metadata, gcp_metadata, group_metadata, annotation_metadata, parent_group_id
     `,
       )
       .eq("project_id", projectId)
@@ -139,6 +141,7 @@ export async function getProjectCanvasData(projectId: string): Promise<{
       checkpoints: checkpointMap[n.id] || [],
       node_type: (n.node_type || "milestone") as CanvasNodeType,
       aws_metadata: n.aws_metadata || null,
+      gcp_metadata: n.gcp_metadata || null,
       group_metadata: n.group_metadata || null,
       annotation_metadata: n.annotation_metadata || null,
       parent_group_id: n.parent_group_id || null,
@@ -186,6 +189,7 @@ export async function createCanvasNode(
     checkpoints?: string[];
     node_type?: CanvasNodeType;
     aws_metadata?: AWSServiceMetadata | null;
+    gcp_metadata?: GCPServiceMetadata | null;
     group_metadata?: GroupMetadata | null;
     annotation_metadata?: AnnotationMetadata | null;
     parent_group_id?: string | null;
@@ -194,9 +198,20 @@ export async function createCanvasNode(
 ): Promise<CanvasNode | null> {
   const adminClient = createAdminClient();
 
+  if (!validGCPNode(data)) return null;
   const nodeType = data.node_type || "milestone";
-  const defaultWidth = nodeType === "aws_service" ? 200 : nodeType === "group" ? 400 : 280;
-  const defaultHeight = nodeType === "aws_service" ? 140 : nodeType === "group" ? 300 : 170;
+  const defaultWidth =
+    nodeType === "aws_service" || nodeType === "gcp_service"
+      ? 200
+      : nodeType === "group"
+        ? 400
+        : 280;
+  const defaultHeight =
+    nodeType === "aws_service" || nodeType === "gcp_service"
+      ? 140
+      : nodeType === "group"
+        ? 300
+        : 170;
 
   const { data: node, error } = await adminClient
     .from("canvas_nodes")
@@ -211,6 +226,7 @@ export async function createCanvasNode(
       height: data.height || defaultHeight,
       node_type: nodeType,
       aws_metadata: data.aws_metadata || null,
+      gcp_metadata: data.gcp_metadata || null,
       group_metadata: data.group_metadata || null,
       annotation_metadata: data.annotation_metadata || null,
       parent_group_id: data.parent_group_id || null,
@@ -272,6 +288,7 @@ export async function createCanvasNode(
     ...node,
     node_type: (node.node_type || data.node_type || "milestone") as CanvasNodeType,
     aws_metadata: node.aws_metadata || data.aws_metadata || null,
+    gcp_metadata: node.gcp_metadata || data.gcp_metadata || null,
     group_metadata: node.group_metadata || data.group_metadata || null,
     annotation_metadata: node.annotation_metadata || data.annotation_metadata || null,
     parent_group_id: node.parent_group_id || data.parent_group_id || null,
@@ -292,12 +309,14 @@ export async function updateCanvasNode(
   // Verify claim if editing content/position
   const { data: node } = await adminClient
     .from("canvas_nodes")
-    .select("claimed_by, claim_expires_at, version")
+    .select("claimed_by, claim_expires_at, version, node_type, gcp_metadata, aws_metadata")
     .eq("id", nodeId)
     .eq("project_id", projectId)
     .maybeSingle();
 
   if (!node) return { success: false, error: "Node not found" };
+  if (!validGCPNode({ ...node, ...updates }))
+    return { success: false, error: "Invalid Google Cloud resource metadata" };
 
   const isExpired = Boolean(node.claim_expires_at && new Date(node.claim_expires_at) < new Date());
   const isContentUpdate =
@@ -306,6 +325,7 @@ export async function updateCanvasNode(
     updates.status !== undefined ||
     updates.color !== undefined ||
     updates.aws_metadata !== undefined ||
+    updates.gcp_metadata !== undefined ||
     updates.group_metadata !== undefined ||
     updates.annotation_metadata !== undefined;
 
@@ -332,6 +352,7 @@ export async function updateCanvasNode(
   if (updates.color !== undefined) updatePayload.color = updates.color;
   if (updates.node_type !== undefined) updatePayload.node_type = updates.node_type;
   if (updates.aws_metadata !== undefined) updatePayload.aws_metadata = updates.aws_metadata;
+  if (updates.gcp_metadata !== undefined) updatePayload.gcp_metadata = updates.gcp_metadata;
   if (updates.group_metadata !== undefined) updatePayload.group_metadata = updates.group_metadata;
   if (updates.annotation_metadata !== undefined)
     updatePayload.annotation_metadata = updates.annotation_metadata;

@@ -38,6 +38,7 @@ export interface CanvasNodeComponentProps {
 export default function CanvasNodeComponent(props: CanvasNodeComponentProps) {
   switch (props.node.node_type || "milestone") {
     case "aws_service":
+    case "gcp_service":
       return <CanvasServiceNode {...props} />;
     case "group":
       return <CanvasGroupNode {...props} />;

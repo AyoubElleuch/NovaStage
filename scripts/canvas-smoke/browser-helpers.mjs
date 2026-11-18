@@ -60,3 +60,10 @@ export function createSessions({ browser, harness }) {
   }
   return { openContext, openPage };
 }
+export async function openDockAction(page, name) {
+  const action = page.getByRole("button", { name, exact: true });
+  if (!(await action.isVisible())) {
+    await page.getByRole("button", { name: "Canvas tools", exact: true, expanded: false }).click();
+  }
+  await action.click();
+}

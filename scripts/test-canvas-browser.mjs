@@ -6,6 +6,7 @@ import { chromium, devices } from "playwright";
 import { createServer } from "vite";
 import react from "@vitejs/plugin-react";
 import { nodes, edges, project } from "./canvas-smoke/fixtures.mjs";
+import { openDockAction } from "./canvas-smoke/browser-helpers.mjs";
 
 // This harness mounts the actual canvas client. All APIs and realtime are mocked;
 // it never logs in, connects to Supabase, or changes a real project.
@@ -312,6 +313,257 @@ try {
     }
     await page.screenshot({ path: resolve(output, "desktop.png") });
   });
+  await check("the centered dock and lower-left radar stay fixed when details open", async () => {
+    const isolated = await fixturePage(desktop);
+    const layoutPage = isolated.page;
+    const radar = layoutPage.getByRole("region", { name: /^Canvas overview\./ });
+    const dock = layoutPage.getByRole("navigation", { name: "Canvas control dock" });
+    const workspace = layoutPage.locator(".canvas-workspace");
+    const middleX = (box) => box.x + box.width / 2;
+    const middleY = (box) => box.y + box.height / 2;
+    const bottom = (box) => box.y + box.height;
+    const overlap = (a, b) =>
+      a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+    await radar.waitFor();
+    assert.equal(await layoutPage.getByRole("button", { name: "Radar", exact: true }).count(), 0);
+    await layoutPage.getByRole("button", { name: "Canvas tools", exact: true }).click();
+    assert.equal(await layoutPage.getByRole("button", { name: "Minimap", exact: true }).count(), 0);
+    await layoutPage.getByRole("button", { name: "Close tools menu", exact: true }).click();
+    for (const width of [1440, 1360, 1060, 844, 768]) {
+      await layoutPage.setViewportSize({ width, height: 1000 });
+      const canvasBounds = await workspace.boundingBox();
+      assert.equal(await workspace.locator(".canvas-side-divider").count(), 0);
+      const closedRadar = await radar.boundingBox();
+      const closedDock = await dock.boundingBox();
+      const radarLeftInset = closedRadar.x - canvasBounds.x;
+      const radarBottomInset = bottom(canvasBounds) - bottom(closedRadar);
+      assert.ok(radarLeftInset >= 0 && radarLeftInset <= 24, "radar stays at the left canvas edge");
+      assert.ok(
+        radarBottomInset >= 0 && radarBottomInset <= 100,
+        "radar remains near the bottom of the canvas",
+      );
+      assert.ok(
+        Math.abs(closedDock.x + closedDock.width / 2 - (canvasBounds.x + canvasBounds.width / 2)) <=
+          1,
+        `dock is centered in the canvas at ${width}px`,
+      );
+      assert.ok(!overlap(closedRadar, closedDock), "radar clears the dock with details closed");
+      for (const title of ["Plan the release", "Application servers"]) {
+        await layoutPage.getByRole("button", { name: "Find on canvas" }).click();
+        await layoutPage.getByRole("combobox", { name: "Search canvas" }).fill(title);
+        await layoutPage.getByRole("option").first().click();
+        const find = await layoutPage.getByRole("button", { name: "Find on canvas" }).boundingBox();
+        const focus = await layoutPage
+          .getByRole("button", { name: "Focus selection", exact: true })
+          .boundingBox();
+        assert.equal(focus.x, find.x, "Find and Focus share a left edge");
+        assert.ok(focus.y >= find.y + find.height + 8, "Focus has at least 8px clearance");
+        const after = await radar.boundingBox();
+        assert.deepEqual(after, closedRadar, "opening details leaves the radar in place");
+        const controls = await dock.boundingBox();
+        const panel = await layoutPage
+          .getByRole("complementary", { name: /details$/i })
+          .boundingBox();
+        assert.ok(
+          Math.abs(middleX(controls) - middleX(closedDock)) <= 1,
+          "opening details leaves the dock centered",
+        );
+        assert.equal(
+          bottom(controls),
+          bottom(closedDock),
+          "opening details leaves the dock at the same height",
+        );
+        for (const name of ["Toggle AI Assistant", "Open project notebook"]) {
+          const action = await layoutPage.getByRole("button", { name, exact: true }).boundingBox();
+          assert.ok(
+            Math.abs(middleY(action) - middleY(controls)) <= 1,
+            `${name} is on the dock row at ${width}px`,
+          );
+          assert.ok(!overlap(action, after), `${name} clears the radar at ${width}px`);
+          assert.ok(!overlap(action, panel), `${name} clears details at ${width}px`);
+        }
+        assert.equal(panel.y, 0, "details reach the top of the screen");
+        assert.equal(panel.y + panel.height, 1000, "details reach the bottom of the screen");
+        assert.ok(after.x + after.width < panel.x, "radar stays to the left of details");
+        assert.ok(!overlap(after, controls), "radar and dock do not overlap");
+        assert.ok(!overlap(panel, controls), "details and dock do not overlap");
+        assert.ok(controls.width <= 600, "dock stays compact");
+        await layoutPage.getByRole("button", { name: "AWS Services", exact: true }).waitFor();
+        assert.equal(await layoutPage.getByRole("button", { name: /tidy/i }).count(), 0);
+        if (width === 1440 && title === "Application servers")
+          await layoutPage.screenshot({ path: resolve(output, "controls-1440-Application.png") });
+        await layoutPage.getByRole("button", { name: "Close details", exact: true }).click();
+      }
+    }
+    await layoutPage.setViewportSize({ width: 1280, height: 800 });
+    await workspace.evaluate((element) => {
+      element.parentElement.style.cssText += ";margin-left:250px;width:calc(100% - 250px)";
+    });
+    const insetCanvas = await workspace.boundingBox();
+    const insetDock = await dock.boundingBox();
+    const insetRadar = await radar.boundingBox();
+    assert.equal(insetCanvas.x, 250, "the fixture simulates the dashboard sidebar");
+    assert.ok(
+      insetRadar.x >= insetCanvas.x && insetRadar.x <= insetCanvas.x + 24,
+      "radar follows the left canvas edge with a dashboard sidebar",
+    );
+    assert.ok(
+      Math.abs(insetDock.x + insetDock.width / 2 - (insetCanvas.x + insetCanvas.width / 2)) <= 1,
+      "dock follows the canvas midpoint with a dashboard sidebar",
+    );
+    const checkSidePanel = async (name) => {
+      const panel = layoutPage.getByRole("complementary", { name, exact: true });
+      await panel.waitFor();
+      assert.deepEqual(await dock.boundingBox(), insetDock, `${name} leaves the dock in place`);
+      assert.deepEqual(await radar.boundingBox(), insetRadar, `${name} leaves the radar in place`);
+      const bounds = await panel.boundingBox();
+      assert.equal(bounds.height, 800, `${name} fills the screen height`);
+      assert.ok(!overlap(bounds, insetDock), `${name} clears the dock`);
+      assert.ok(!overlap(bounds, insetRadar), `${name} clears the radar`);
+    };
+    await layoutPage.getByRole("button", { name: "Open project notebook", exact: true }).click();
+    await checkSidePanel("Project notebook");
+    await layoutPage.getByRole("button", { name: "Close notebook", exact: true }).click();
+    await layoutPage.getByRole("button", { name: "Canvas tools", exact: true }).click();
+    await layoutPage.getByRole("button", { name: "Open Release Pulse", exact: true }).click();
+    await checkSidePanel("Release pulse");
+    await layoutPage.close();
+  });
+  await check(
+    "Google Cloud resources save, connect across providers, survive reload and render in shared views",
+    async () => {
+      const cloudContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+      const isolated = await fixturePage(cloudContext);
+      const cloud = isolated.page;
+      const graph = isolated.state;
+      const save = (predicate, action) =>
+        Promise.all([
+          cloud.waitForResponse((r) => predicate(r.request().postDataJSON() || {})),
+          action(),
+        ]);
+      await cloud.getByRole("button", { name: "Google Cloud Services", exact: true }).click();
+      const palette = cloud.getByRole("dialog", { name: "Google Cloud services", exact: true });
+      await palette
+        .getByRole("textbox", { name: "Search Google Cloud services" })
+        .fill("no-such-service");
+      await palette.getByText("No matching services", { exact: true }).waitFor();
+      await palette.getByRole("textbox", { name: "Search Google Cloud services" }).fill("k8s");
+      await palette
+        .getByRole("button", { name: "Add Google Kubernetes Engine to canvas", exact: true })
+        .waitFor();
+      await palette
+        .getByRole("textbox", { name: "Search Google Cloud services" })
+        .fill("Cloud Run");
+      await palette.getByRole("button", { name: "Add Cloud Run to canvas", exact: true }).click();
+      const region = cloud.getByRole("textbox", { name: "Google Cloud Region", exact: true });
+      await region.waitFor();
+      const change = cloud.waitForResponse(
+        (r) => r.request().postDataJSON()?.updates?.gcp_metadata?.region === "europe-west1",
+      );
+      await region.fill("europe-west1");
+      await region.press("Tab");
+      await change;
+      const saved = graph.nodes.find((n) => n.node_type === "gcp_service");
+      assert.ok(saved);
+      assert.equal(saved.gcp_metadata.serviceId, "cloud-run");
+      assert.equal(saved.aws_metadata, null);
+      const image = cloud
+        .getByRole("region", { name: "Google Cloud resource configuration" })
+        .getByRole("img", { name: "Cloud Run", exact: true });
+      assert.equal(
+        await image.evaluate((img) => img.complete && img.naturalWidth > 0),
+        true,
+        "official SVG loads",
+      );
+      await cloud.getByRole("button", { name: "Close details", exact: true }).click();
+      const viewport = cloud.locator("[data-canvas-viewport]");
+      await viewport.focus();
+      await save(
+        (body) => body.updates?.gcp_metadata?.region === "us-central1",
+        () => cloud.keyboard.press("Control+z"),
+      );
+      assert.equal(graph.nodes.find((n) => n.id === saved.id).gcp_metadata.region, "us-central1");
+      await save(
+        (body) => body.updates?.gcp_metadata?.region === "europe-west1",
+        () => cloud.keyboard.press("Control+Shift+z"),
+      );
+      await cloud.keyboard.press("Shift+Digit1");
+      await cloud.getByRole("group", { name: /^Cloud Run, / }).hover();
+      await cloud
+        .getByRole("button", { name: "Link from right port of Cloud Run", exact: true })
+        .click();
+      await save(
+        (body) => body.action === "create_edge",
+        () =>
+          cloud
+            .getByRole("button", {
+              name: "Link from left port of Application servers",
+              exact: true,
+            })
+            .click(),
+      );
+      assert.ok(
+        graph.edges.some(
+          (e) =>
+            e.source_node_id === saved.id &&
+            e.target_node_id === "compute" &&
+            e.edge_type === "data_flow",
+        ),
+      );
+      await cloud.goto(`${origin}/scripts/canvas-smoke/index.html?live`);
+      await cloud.getByRole("button", { name: "Find on canvas", exact: true }).click();
+      await cloud.getByRole("button", { name: "Google Cloud", exact: true }).click();
+      await cloud.getByRole("combobox", { name: "Search canvas" }).fill("europe-west1");
+      assert.equal(await cloud.getByRole("option").count(), 1);
+      await cloud.getByRole("option").click();
+      assert.equal(await region.inputValue(), "europe-west1");
+      await cloud.screenshot({ path: resolve(output, "google-cloud-desktop.png") });
+      await cloud.getByTitle("Switch to dark mode", { exact: true }).click();
+      await cloud.screenshot({ path: resolve(output, "google-cloud-dark.png") });
+      await save(
+        (body) => body.action === "delete_node",
+        () =>
+          cloud.getByRole("button", { name: "Delete google cloud resource", exact: true }).click(),
+      );
+      await viewport.focus();
+      await save(
+        (body) => body.action === "create_node",
+        () => cloud.keyboard.press("Control+z"),
+      );
+      assert.equal(graph.nodes.find((n) => n.id === saved.id).gcp_metadata.region, "europe-west1");
+      await cloud.setViewportSize({ width: 320, height: 568 });
+      await cloud.getByRole("button", { name: "Google Cloud Services", exact: true }).click();
+      await palette.waitFor();
+      const box = await palette.boundingBox();
+      assert.ok(box.x >= 0 && box.x + box.width <= 320 && box.y >= 0 && box.y + box.height <= 568);
+      const dock = await cloud
+        .getByRole("navigation", { name: "Canvas control dock" })
+        .boundingBox();
+      assert.ok(dock.x >= 0 && dock.x + dock.width <= 320);
+      await cloud.screenshot({ path: resolve(output, "google-cloud-phone.png") });
+      await palette.getByRole("textbox", { name: "Search Google Cloud services" }).fill("Pub/Sub");
+      await palette.getByRole("button", { name: "Add Pub/Sub to canvas", exact: true }).click();
+      await region.waitFor();
+      assert.ok(graph.nodes.some((n) => n.gcp_metadata?.serviceId === "pubsub"));
+      await cloud.route("**/__generation/gcp-share", (route) =>
+        route.fulfill({ json: { nodes: graph.nodes, edges: graph.edges } }),
+      );
+      await cloud.goto(`${origin}/scripts/canvas-smoke/index.html?generation=gcp-share`);
+      await cloud.getByRole("button", { name: "Find on canvas", exact: true }).click();
+      await cloud.getByRole("combobox", { name: "Search canvas" }).fill("Cloud Run");
+      await cloud.getByRole("option").click();
+      await cloud
+        .getByRole("dialog")
+        .getByText(/europe-west1/)
+        .waitFor();
+      assert.equal(
+        await cloud.getByRole("button", { name: /Claim|Delete google cloud/i }).count(),
+        0,
+      );
+      assert.deepEqual(isolated.errors, []);
+      await cloudContext.close();
+    },
+  );
   await check(
     "two assistant buttons open prepared desktop requests without MCP installation",
     async () => {
@@ -784,7 +1036,8 @@ try {
     await page.keyboard.press("Shift+Digit1");
   });
   await check("grabbing the radar viewport does not jump and drag pans smoothly", async () => {
-    await page.getByRole("button", { name: "Radar", exact: true }).click();
+    const overview = page.getByRole("region", { name: /^Canvas overview\./ });
+    await overview.waitFor();
     const world = canvas.locator("[data-canvas-bg='true']").last();
     const before = await world.getAttribute("style");
     const radar = await page.getByTestId("minimap-viewport").boundingBox();
@@ -803,7 +1056,6 @@ try {
     await page.mouse.up();
     assert.notEqual(await world.getAttribute("style"), held);
     const mutationsBeforeDelete = state.mutations.length;
-    const overview = page.getByRole("region", { name: /^Canvas overview\./ });
     await overview.press("Delete");
     await overview.press("Backspace");
     assert.equal(
@@ -1053,12 +1305,13 @@ try {
         const tools = phone.getByRole("region", { name: "Canvas tools", exact: true });
         await tools.getByRole("button", { name: "Zoom In", exact: true }).click();
         await tools.getByRole("button", { name: "Zoom Out", exact: true }).click();
-        await tools.getByRole("button", { name: "Grid: ON", exact: true }).click();
-        await tools.getByRole("button", { name: "Grid: OFF", exact: true }).waitFor();
-        await tools.getByRole("button", { name: "Release Pulse", exact: true }).click();
+        await tools.getByRole("button", { name: "Snap to grid", pressed: true }).click();
+        await tools.getByRole("button", { name: "Snap to grid", pressed: false }).waitFor();
+        await tools.getByRole("button", { name: "Open Release Pulse", exact: true }).click();
         await phone.getByRole("button", { name: "Close release pulse", exact: true }).click();
       }
       await phone.getByRole("button", { name: "Find on canvas", exact: true }).click();
+      const dockBeforeDetails = await dock.boundingBox();
       await phone
         .getByRole("combobox", { name: "Search canvas", exact: true })
         .fill("Plan the release");
@@ -1068,8 +1321,20 @@ try {
         await phone.getByRole("button", { name: "Details", exact: true }).click();
       }
       await phone.getByRole("textbox", { name: "Milestone title", exact: true }).waitFor();
+      if (viewport.width < 768) {
+        const panel = await phone
+          .getByRole("complementary", { name: "Milestone details" })
+          .boundingBox();
+        assert.equal(panel.height, viewport.height, "phone details fill the screen");
+        assert.equal(await dock.isVisible(), false, "the phone sheet takes over from the dock");
+      }
       await phone.screenshot({ path: resolve(output, `mobile-${size}-details.png`) });
       await phone.getByRole("button", { name: "Close details", exact: true }).click();
+      assert.deepEqual(
+        await dock.boundingBox(),
+        dockBeforeDetails,
+        "dock returns to the same spot",
+      );
       if (viewport.width < 768)
         await phone.getByRole("button", { name: "Deselect milestone", exact: true }).click();
       await phone.getByRole("button", { name: "AWS Services", exact: true }).click();
@@ -1137,7 +1402,7 @@ try {
     async () => {
       await creator.getByRole("button", { name: "Done", exact: true }).click();
       await creator.getByRole("button", { name: "Deselect AWS resource", exact: true }).click();
-      await creator.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
+      await openDockAction(creator, "Toggle AI Assistant");
       const assistant = creator.getByRole("dialog", { name: "AI assistant", exact: true });
       await assistant.getByRole("textbox", { name: "AI prompt", exact: true }).waitFor();
       await assistant.getByRole("button", { name: "Your AI", exact: true }).click();

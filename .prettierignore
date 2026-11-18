@@ -7,3 +7,4 @@ coverage/
 package-lock.json
 next-env.d.ts
 public/aws-icons/*.svg
+public/gcp-icons/*.svg

@@ -1,4 +1,5 @@
 "use client";
+import { getServiceMetadata } from "@/lib/canvas/cloud-services";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Circle, Eye, Maximize2, Minus, Moon, Plus, Sun, X } from "lucide-react";
@@ -270,14 +271,14 @@ export default function SharedCanvasViewer({
               {selected.annotation_metadata.content}
             </p>
           )}
-          {selected.aws_metadata && (
+          {getServiceMetadata(selected) && (
             <div className="mt-4 space-y-2">
               <p className="text-xs font-semibold">
-                {selected.aws_metadata.serviceId} ·{" "}
-                {selected.aws_metadata.region || "No region specified"}
+                {getServiceMetadata(selected)?.serviceId} ·{" "}
+                {getServiceMetadata(selected)?.region || "No region specified"}
               </p>
               <dl className="space-y-2 text-sm">
-                {Object.entries(selected.aws_metadata.config || {}).map(([key, value]) => (
+                {Object.entries(getServiceMetadata(selected)?.config || {}).map(([key, value]) => (
                   <div key={key} className="rounded-lg bg-neutral-50 p-3 dark:bg-[#10151f]">
                     <dt className="text-xs text-neutral-500 dark:text-neutral-400">{key}</dt>
                     <dd className="mt-1 whitespace-pre-wrap break-words">{value}</dd>

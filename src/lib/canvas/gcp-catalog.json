@@ -1,0 +1,711 @@
+{
+  "source": "https://cloud.google.com/icons",
+  "categories": {
+    "compute": {
+      "label": "Compute",
+      "color": "#4285F4",
+      "bgColor": "#4285F418"
+    },
+    "containers": {
+      "label": "Containers",
+      "color": "#4285F4",
+      "bgColor": "#4285F418"
+    },
+    "storage": {
+      "label": "Storage",
+      "color": "#34A853",
+      "bgColor": "#34A85318"
+    },
+    "database": {
+      "label": "Databases",
+      "color": "#A142F4",
+      "bgColor": "#A142F418"
+    },
+    "networking": {
+      "label": "Networking",
+      "color": "#1A73E8",
+      "bgColor": "#1A73E818"
+    },
+    "integration": {
+      "label": "Integration",
+      "color": "#F9AB00",
+      "bgColor": "#F9AB0018"
+    },
+    "analytics": {
+      "label": "Analytics",
+      "color": "#9334E6",
+      "bgColor": "#9334E618"
+    },
+    "ml": {
+      "label": "AI & Machine Learning",
+      "color": "#E8710A",
+      "bgColor": "#E8710A18"
+    },
+    "security": {
+      "label": "Security & Identity",
+      "color": "#EA4335",
+      "bgColor": "#EA433518"
+    },
+    "management": {
+      "label": "Observability & Management",
+      "color": "#12B5CB",
+      "bgColor": "#12B5CB18"
+    },
+    "developer-tools": {
+      "label": "Developer Tools",
+      "color": "#5F6368",
+      "bgColor": "#5F636818"
+    }
+  },
+  "services": [
+    {
+      "id": "compute-engine",
+      "name": "Compute Engine",
+      "shortName": "Compute Engine",
+      "category": "compute",
+      "description": "Virtual machines for application and batch workloads.",
+      "aliases": ["vm", "gce", "instances", "server"],
+      "iconPath": "/gcp-icons/compute-engine.svg",
+      "defaultConfig": {
+        "machineType": "e2-medium"
+      }
+    },
+    {
+      "id": "cloud-run",
+      "name": "Cloud Run",
+      "shortName": "Cloud Run",
+      "category": "compute",
+      "description": "Run containers without managing servers.",
+      "aliases": ["serverless", "containers", "http"],
+      "iconPath": "/gcp-icons/cloud-run.svg",
+      "defaultConfig": {
+        "cpu": "1",
+        "memory": "512Mi"
+      }
+    },
+    {
+      "id": "cloud-run-functions",
+      "name": "Cloud Run functions",
+      "shortName": "Cloud Run functions",
+      "category": "compute",
+      "description": "Deploy functions triggered by requests or events.",
+      "aliases": ["cloud", "functions", "serverless", "handler"],
+      "iconPath": "/gcp-icons/cloud-run-functions.svg",
+      "defaultConfig": {
+        "runtime": "nodejs22"
+      }
+    },
+    {
+      "id": "app-engine",
+      "name": "App Engine",
+      "shortName": "App Engine",
+      "category": "compute",
+      "description": "Host web applications on a managed application platform.",
+      "aliases": ["gae", "web", "hosting"],
+      "iconPath": "/gcp-icons/app-engine.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "batch",
+      "name": "Batch",
+      "shortName": "Batch",
+      "category": "compute",
+      "description": "Schedule and run batch jobs on compute resources.",
+      "aliases": ["jobs", "hpc"],
+      "iconPath": "/gcp-icons/batch.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "gke",
+      "name": "Google Kubernetes Engine",
+      "shortName": "GKE",
+      "category": "containers",
+      "description": "Operate Kubernetes clusters and container workloads.",
+      "aliases": ["gke", "k8s", "cluster", "autopilot"],
+      "iconPath": "/gcp-icons/gke.svg",
+      "defaultConfig": {
+        "mode": "Autopilot"
+      }
+    },
+    {
+      "id": "cloud-storage",
+      "name": "Cloud Storage",
+      "shortName": "Cloud Storage",
+      "category": "storage",
+      "description": "Store objects, application assets and backups.",
+      "aliases": ["gcs", "buckets", "files", "object"],
+      "iconPath": "/gcp-icons/cloud-storage.svg",
+      "defaultConfig": {
+        "storageClass": "STANDARD"
+      }
+    },
+    {
+      "id": "filestore",
+      "name": "Filestore",
+      "shortName": "Filestore",
+      "category": "storage",
+      "description": "Provide managed network file shares to workloads.",
+      "aliases": ["nfs", "files", "shares"],
+      "iconPath": "/gcp-icons/filestore.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "persistent-disk",
+      "name": "Persistent Disk",
+      "shortName": "Persistent Disk",
+      "category": "storage",
+      "description": "Attach durable block storage to virtual machines.",
+      "aliases": ["block", "volume", "disk"],
+      "iconPath": "/gcp-icons/persistent-disk.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "hyperdisk",
+      "name": "Hyperdisk",
+      "shortName": "Hyperdisk",
+      "category": "storage",
+      "description": "Provision block storage with independent performance settings.",
+      "aliases": ["disk", "iops", "throughput"],
+      "iconPath": "/gcp-icons/hyperdisk.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-sql",
+      "name": "Cloud SQL",
+      "shortName": "Cloud SQL",
+      "category": "database",
+      "description": "Operate managed relational database instances.",
+      "aliases": ["postgres", "postgresql", "mysql", "sql", "server"],
+      "iconPath": "/gcp-icons/cloud-sql.svg",
+      "defaultConfig": {
+        "databaseVersion": "POSTGRES_16"
+      }
+    },
+    {
+      "id": "spanner",
+      "name": "Spanner",
+      "shortName": "Spanner",
+      "category": "database",
+      "description": "Distribute relational data across regions with strong consistency.",
+      "aliases": ["cloud", "spanner", "relational", "distributed", "sql"],
+      "iconPath": "/gcp-icons/spanner.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "alloydb",
+      "name": "AlloyDB for PostgreSQL",
+      "shortName": "AlloyDB for PostgreSQL",
+      "category": "database",
+      "description": "Run PostgreSQL-compatible database workloads.",
+      "aliases": ["alloy", "postgres", "postgresql"],
+      "iconPath": "/gcp-icons/alloydb.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "firestore",
+      "name": "Firestore",
+      "shortName": "Firestore",
+      "category": "database",
+      "description": "Store application documents with realtime synchronization.",
+      "aliases": ["firebase", "nosql", "document"],
+      "iconPath": "/gcp-icons/firestore.svg",
+      "defaultConfig": {
+        "mode": "Native"
+      }
+    },
+    {
+      "id": "bigtable",
+      "name": "Bigtable",
+      "shortName": "Bigtable",
+      "category": "database",
+      "description": "Store wide-column data for high-throughput applications.",
+      "aliases": ["nosql", "wide", "column"],
+      "iconPath": "/gcp-icons/bigtable.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "memorystore",
+      "name": "Memorystore",
+      "shortName": "Memorystore",
+      "category": "database",
+      "description": "Cache application data with managed in-memory instances.",
+      "aliases": ["redis", "valkey", "memcached", "cache"],
+      "iconPath": "/gcp-icons/memorystore.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "vpc",
+      "name": "Virtual Private Cloud",
+      "shortName": "Virtual Private Cloud",
+      "category": "networking",
+      "description": "Define private networks and subnets for cloud resources.",
+      "aliases": ["vpc", "network", "subnet"],
+      "iconPath": "/gcp-icons/vpc.svg",
+      "defaultConfig": {
+        "routingMode": "REGIONAL"
+      }
+    },
+    {
+      "id": "cloud-load-balancing",
+      "name": "Cloud Load Balancing",
+      "shortName": "Cloud Load Balancing",
+      "category": "networking",
+      "description": "Distribute application traffic across backends.",
+      "aliases": ["lb", "alb", "nlb", "https", "proxy"],
+      "iconPath": "/gcp-icons/cloud-load-balancing.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-cdn",
+      "name": "Cloud CDN",
+      "shortName": "Cloud CDN",
+      "category": "networking",
+      "description": "Cache content near application users.",
+      "aliases": ["cdn", "edge", "cache"],
+      "iconPath": "/gcp-icons/cloud-cdn.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-dns",
+      "name": "Cloud DNS",
+      "shortName": "Cloud DNS",
+      "category": "networking",
+      "description": "Manage authoritative DNS zones and records.",
+      "aliases": ["domain", "dns", "records"],
+      "iconPath": "/gcp-icons/cloud-dns.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-nat",
+      "name": "Cloud NAT",
+      "shortName": "Cloud NAT",
+      "category": "networking",
+      "description": "Provide outbound network address translation.",
+      "aliases": ["nat", "internet", "egress"],
+      "iconPath": "/gcp-icons/cloud-nat.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-vpn",
+      "name": "Cloud VPN",
+      "shortName": "Cloud VPN",
+      "category": "networking",
+      "description": "Connect networks using encrypted VPN tunnels.",
+      "aliases": ["ipsec", "vpn", "hybrid"],
+      "iconPath": "/gcp-icons/cloud-vpn.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-router",
+      "name": "Cloud Router",
+      "shortName": "Cloud Router",
+      "category": "networking",
+      "description": "Exchange dynamic routes between connected networks.",
+      "aliases": ["bgp", "routes"],
+      "iconPath": "/gcp-icons/cloud-router.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-interconnect",
+      "name": "Cloud Interconnect",
+      "shortName": "Cloud Interconnect",
+      "category": "networking",
+      "description": "Connect external networks to Google Cloud privately.",
+      "aliases": ["dedicated", "partner", "hybrid"],
+      "iconPath": "/gcp-icons/cloud-interconnect.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "private-service-connect",
+      "name": "Private Service Connect",
+      "shortName": "Private Service Connect",
+      "category": "networking",
+      "description": "Access services through private endpoints.",
+      "aliases": ["psc", "endpoint", "private"],
+      "iconPath": "/gcp-icons/private-service-connect.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "network-connectivity-center",
+      "name": "Network Connectivity Center",
+      "shortName": "Network Connectivity Center",
+      "category": "networking",
+      "description": "Manage connectivity between network hubs and spokes.",
+      "aliases": ["ncc", "hub", "spoke"],
+      "iconPath": "/gcp-icons/network-connectivity-center.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "pubsub",
+      "name": "Pub/Sub",
+      "shortName": "Pub/Sub",
+      "category": "integration",
+      "description": "Pass messages between independent application components.",
+      "aliases": ["pubsub", "pub", "sub", "messaging", "topic", "queue"],
+      "iconPath": "/gcp-icons/pubsub.svg",
+      "defaultConfig": {
+        "retention": "7d"
+      }
+    },
+    {
+      "id": "cloud-tasks",
+      "name": "Cloud Tasks",
+      "shortName": "Cloud Tasks",
+      "category": "integration",
+      "description": "Dispatch asynchronous tasks to application endpoints.",
+      "aliases": ["queue", "async", "retry"],
+      "iconPath": "/gcp-icons/cloud-tasks.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-scheduler",
+      "name": "Cloud Scheduler",
+      "shortName": "Cloud Scheduler",
+      "category": "integration",
+      "description": "Trigger recurring jobs on a schedule.",
+      "aliases": ["cron", "schedules"],
+      "iconPath": "/gcp-icons/cloud-scheduler.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "workflows",
+      "name": "Workflows",
+      "shortName": "Workflows",
+      "category": "integration",
+      "description": "Coordinate API calls and service operations.",
+      "aliases": ["orchestration", "workflow", "steps"],
+      "iconPath": "/gcp-icons/workflows.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "eventarc",
+      "name": "Eventarc",
+      "shortName": "Eventarc",
+      "category": "integration",
+      "description": "Route events from sources to application services.",
+      "aliases": ["events", "triggers"],
+      "iconPath": "/gcp-icons/eventarc.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "api-gateway",
+      "name": "API Gateway",
+      "shortName": "API Gateway",
+      "category": "integration",
+      "description": "Expose and secure APIs for backend services.",
+      "aliases": ["rest", "http", "openapi"],
+      "iconPath": "/gcp-icons/api-gateway.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "apigee",
+      "name": "Apigee",
+      "shortName": "Apigee",
+      "category": "integration",
+      "description": "Manage API proxies, policies and analytics.",
+      "aliases": ["api", "management", "gateway"],
+      "iconPath": "/gcp-icons/apigee.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "bigquery",
+      "name": "BigQuery",
+      "shortName": "BigQuery",
+      "category": "analytics",
+      "description": "Query large datasets using a managed analytics warehouse.",
+      "aliases": ["bq", "sql", "warehouse", "datasets"],
+      "iconPath": "/gcp-icons/bigquery.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "dataflow",
+      "name": "Dataflow",
+      "shortName": "Dataflow",
+      "category": "analytics",
+      "description": "Execute batch and streaming data pipelines.",
+      "aliases": ["apache", "beam", "etl", "streaming"],
+      "iconPath": "/gcp-icons/dataflow.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "dataproc",
+      "name": "Dataproc",
+      "shortName": "Dataproc",
+      "category": "analytics",
+      "description": "Run managed Spark and Hadoop data processing.",
+      "aliases": ["spark", "hadoop", "clusters"],
+      "iconPath": "/gcp-icons/dataproc.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-composer",
+      "name": "Cloud Composer",
+      "shortName": "Cloud Composer",
+      "category": "analytics",
+      "description": "Schedule data workflows with managed Apache Airflow.",
+      "aliases": ["airflow", "orchestration", "dag"],
+      "iconPath": "/gcp-icons/cloud-composer.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "datastream",
+      "name": "Datastream",
+      "shortName": "Datastream",
+      "category": "analytics",
+      "description": "Replicate database changes into data pipelines.",
+      "aliases": ["cdc", "change", "data", "capture"],
+      "iconPath": "/gcp-icons/datastream.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "looker",
+      "name": "Looker",
+      "shortName": "Looker",
+      "category": "analytics",
+      "description": "Explore modeled data and build business dashboards.",
+      "aliases": ["bi", "business", "intelligence"],
+      "iconPath": "/gcp-icons/looker.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "gemini-platform",
+      "name": "Gemini platform",
+      "shortName": "Gemini platform",
+      "category": "ml",
+      "description": "Build and deploy models, agents and AI applications.",
+      "aliases": [
+        "vertex",
+        "ai",
+        "vertexai",
+        "gemini",
+        "enterprise",
+        "agent",
+        "platform",
+        "model",
+        "training"
+      ],
+      "iconPath": "/gcp-icons/gemini-platform.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-tpu",
+      "name": "Cloud TPU",
+      "shortName": "Cloud TPU",
+      "category": "ml",
+      "description": "Accelerate machine learning with tensor processors.",
+      "aliases": ["tensor", "training", "accelerator"],
+      "iconPath": "/gcp-icons/cloud-tpu.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "document-ai",
+      "name": "Document AI",
+      "shortName": "Document AI",
+      "category": "ml",
+      "description": "Extract structured data from business documents.",
+      "aliases": ["ocr", "parsing", "invoices"],
+      "iconPath": "/gcp-icons/document-ai.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "vision-api",
+      "name": "Cloud Vision API",
+      "shortName": "Cloud Vision API",
+      "category": "ml",
+      "description": "Analyze image content and recognize text.",
+      "aliases": ["ocr", "images", "vision"],
+      "iconPath": "/gcp-icons/vision-api.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "speech-to-text",
+      "name": "Speech-to-Text",
+      "shortName": "Speech-to-Text",
+      "category": "ml",
+      "description": "Transcribe speech into text.",
+      "aliases": ["audio", "transcription"],
+      "iconPath": "/gcp-icons/speech-to-text.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "text-to-speech",
+      "name": "Text-to-Speech",
+      "shortName": "Text-to-Speech",
+      "category": "ml",
+      "description": "Generate speech from text input.",
+      "aliases": ["audio", "voices", "synthesis"],
+      "iconPath": "/gcp-icons/text-to-speech.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "translation",
+      "name": "Cloud Translation",
+      "shortName": "Cloud Translation",
+      "category": "ml",
+      "description": "Translate text between languages.",
+      "aliases": ["language", "translate"],
+      "iconPath": "/gcp-icons/translation.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "iam",
+      "name": "Identity and Access Management",
+      "shortName": "IAM",
+      "category": "security",
+      "description": "Control access to cloud resources with roles and policies.",
+      "aliases": ["iam", "roles", "service", "accounts", "permissions"],
+      "iconPath": "/gcp-icons/iam.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "secret-manager",
+      "name": "Secret Manager",
+      "shortName": "Secret Manager",
+      "category": "security",
+      "description": "Store and version application secrets.",
+      "aliases": ["credentials", "passwords", "secrets"],
+      "iconPath": "/gcp-icons/secret-manager.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-kms",
+      "name": "Cloud Key Management Service",
+      "shortName": "Cloud KMS",
+      "category": "security",
+      "description": "Manage cryptographic keys used by applications and services.",
+      "aliases": ["kms", "encryption", "keys"],
+      "iconPath": "/gcp-icons/cloud-kms.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-armor",
+      "name": "Cloud Armor",
+      "shortName": "Cloud Armor",
+      "category": "security",
+      "description": "Apply application traffic protection and filtering policies.",
+      "aliases": ["waf", "ddos", "firewall"],
+      "iconPath": "/gcp-icons/cloud-armor.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "security-command-center",
+      "name": "Security Command Center",
+      "shortName": "Security Command Center",
+      "category": "security",
+      "description": "Inspect cloud security findings and posture.",
+      "aliases": ["scc", "threats", "vulnerabilities"],
+      "iconPath": "/gcp-icons/security-command-center.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "iap",
+      "name": "Identity-Aware Proxy",
+      "shortName": "Identity-Aware Proxy",
+      "category": "security",
+      "description": "Gate application access using identity-aware controls.",
+      "aliases": ["iap", "zero", "trust", "proxy"],
+      "iconPath": "/gcp-icons/iap.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "certificate-manager",
+      "name": "Certificate Manager",
+      "shortName": "Certificate Manager",
+      "category": "security",
+      "description": "Manage TLS certificates for cloud endpoints.",
+      "aliases": ["ssl", "tls", "certificates"],
+      "iconPath": "/gcp-icons/certificate-manager.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-logging",
+      "name": "Cloud Logging",
+      "shortName": "Cloud Logging",
+      "category": "management",
+      "description": "Collect, search and route application and infrastructure logs.",
+      "aliases": ["logs", "observability", "stackdriver"],
+      "iconPath": "/gcp-icons/cloud-logging.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-monitoring",
+      "name": "Cloud Monitoring",
+      "shortName": "Cloud Monitoring",
+      "category": "management",
+      "description": "Inspect metrics and configure monitoring alerts.",
+      "aliases": ["metrics", "alerts", "monitoring"],
+      "iconPath": "/gcp-icons/cloud-monitoring.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-trace",
+      "name": "Cloud Trace",
+      "shortName": "Cloud Trace",
+      "category": "management",
+      "description": "Inspect request traces across application services.",
+      "aliases": ["tracing", "latency", "observability"],
+      "iconPath": "/gcp-icons/cloud-trace.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-profiler",
+      "name": "Cloud Profiler",
+      "shortName": "Cloud Profiler",
+      "category": "management",
+      "description": "Inspect resource usage within running applications.",
+      "aliases": ["profiling", "cpu", "memory"],
+      "iconPath": "/gcp-icons/cloud-profiler.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "error-reporting",
+      "name": "Error Reporting",
+      "shortName": "Error Reporting",
+      "category": "management",
+      "description": "Group and track errors reported by applications.",
+      "aliases": ["exceptions", "errors"],
+      "iconPath": "/gcp-icons/error-reporting.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-build",
+      "name": "Cloud Build",
+      "shortName": "Cloud Build",
+      "category": "developer-tools",
+      "description": "Build and test source code with configurable pipelines.",
+      "aliases": ["ci", "cd", "build", "containers"],
+      "iconPath": "/gcp-icons/cloud-build.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-deploy",
+      "name": "Cloud Deploy",
+      "shortName": "Cloud Deploy",
+      "category": "developer-tools",
+      "description": "Manage application releases across deployment targets.",
+      "aliases": ["cd", "delivery", "rollout"],
+      "iconPath": "/gcp-icons/cloud-deploy.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "artifact-registry",
+      "name": "Artifact Registry",
+      "shortName": "Artifact Registry",
+      "category": "developer-tools",
+      "description": "Store container images and software packages.",
+      "aliases": ["docker", "oci", "npm", "maven", "registry"],
+      "iconPath": "/gcp-icons/artifact-registry.svg",
+      "defaultConfig": {}
+    },
+    {
+      "id": "cloud-shell",
+      "name": "Cloud Shell",
+      "shortName": "Cloud Shell",
+      "category": "developer-tools",
+      "description": "Use a browser-based terminal for cloud administration.",
+      "aliases": ["terminal", "cli", "gcloud"],
+      "iconPath": "/gcp-icons/cloud-shell.svg",
+      "defaultConfig": {}
+    }
+  ]
+}

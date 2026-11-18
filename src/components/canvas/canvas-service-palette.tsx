@@ -5,17 +5,22 @@ import Dropdown from "@/components/ui/dropdown";
 import { getAWSServiceAliases, normalizeAWSServiceId } from "@/lib/canvas/aws-catalog-lookup";
 import React, { useState, useMemo, useRef, useEffect, useId } from "react";
 import { Search, X, ChevronRight, ChevronDown, Plus } from "lucide-react";
-import { AWS_SERVICE_REGISTRY, AWS_CATEGORIES, AWSLogoIcon } from "./aws-icons";
-import type { AWSServiceCategory } from "@/lib/canvas/types";
-import type { AWSServiceDef } from "./aws-icons";
+import {
+  CLOUD_CATALOGS,
+  CloudLogoIcon,
+  type CloudServiceDef,
+  type CloudCategory,
+} from "./cloud-icons";
+import { CLOUD_PROVIDER_LABELS } from "@/lib/canvas/cloud-services";
+import type { CloudProvider } from "@/lib/canvas/types";
 
 interface CanvasServicePaletteProps {
+  provider?: CloudProvider;
   isOpen: boolean;
   onClose: () => void;
   onAddService: (serviceId: string) => void;
 }
 
-const POPULAR_SERVICE_IDS = ["lambda", "apigateway", "s3", "ec2", "rds", "vpc"];
 const SEARCH_ALIASES: Record<string, string> = {
   lambda: "serverless function functions handler",
   ec2: "virtual machine vm instance instances server",
@@ -27,29 +32,39 @@ const SEARCH_ALIASES: Record<string, string> = {
   sqs: "queue messaging asynchronous async",
   sns: "pub sub notifications messaging events",
 };
-const SERVICES = Object.values(AWS_SERVICE_REGISTRY);
-const CATEGORIES = (
-  Object.entries(AWS_CATEGORIES) as [
-    AWSServiceCategory,
-    { label: string; color: string; bgColor: string },
-  ][]
-).sort((a, b) => a[1].label.localeCompare(b[1].label));
-const SERVICES_BY_CATEGORY = new Map(
-  CATEGORIES.map(([category]) => [
-    category,
-    SERVICES.filter((service) => service.category === category),
-  ]),
-);
-
-function searchText(service: AWSServiceDef) {
-  return `${service.name} ${service.shortName} ${service.id} ${service.description} ${AWS_CATEGORIES[service.category]?.label ?? ""} ${SEARCH_ALIASES[service.id] ?? ""} ${getAWSServiceAliases(service.id).join(" ")}`.toLowerCase();
+function serviceSearchText(service: CloudServiceDef, provider: CloudProvider, category: string) {
+  const aliases =
+    provider === "aws"
+      ? [SEARCH_ALIASES[service.id] || "", ...getAWSServiceAliases(service.id)]
+      : service.aliases || [];
+  return [service.name, service.shortName, service.id, service.description, category, ...aliases]
+    .join(" ")
+    .toLowerCase();
 }
 
 export default function CanvasServicePalette({
+  provider = "aws",
   isOpen,
   onClose,
   onAddService,
 }: CanvasServicePaletteProps) {
+  const catalog = CLOUD_CATALOGS[provider];
+  const label = CLOUD_PROVIDER_LABELS[provider];
+  const services = useMemo(() => Object.values(catalog.services), [catalog]);
+  const categories = useMemo(
+    () => Object.entries(catalog.categories).sort((a, b) => a[1].label.localeCompare(b[1].label)),
+    [catalog],
+  );
+  const servicesByCategory = useMemo(
+    () =>
+      new Map(
+        categories.map(([category]) => [
+          category,
+          services.filter((service) => service.category === category),
+        ]),
+      ),
+    [categories, services],
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
@@ -76,19 +91,28 @@ export default function CanvasServicePalette({
   const filteredServices = useMemo(() => {
     const tokens = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (!tokens.length && !categoryFilter) return null;
-    return SERVICES.filter(
-      (service) =>
-        (!categoryFilter || service.category === categoryFilter) &&
-        tokens.every((token) => searchText(service).includes(token)),
-    ).sort((a, b) => {
-      const query = searchQuery.trim().toLowerCase();
-      const aExact = a.id === normalizeAWSServiceId(query) || a.shortName.toLowerCase() === query;
-      const bExact = b.id === normalizeAWSServiceId(query) || b.shortName.toLowerCase() === query;
-      return Number(bExact) - Number(aExact) || a.shortName.localeCompare(b.shortName);
-    });
-  }, [searchQuery, categoryFilter]);
+    return services
+      .filter(
+        (service) =>
+          (!categoryFilter || service.category === categoryFilter) &&
+          tokens.every((token) =>
+            serviceSearchText(
+              service,
+              provider,
+              catalog.categories[service.category]?.label || "",
+            ).includes(token),
+          ),
+      )
+      .sort((a, b) => {
+        const query = searchQuery.trim().toLowerCase();
+        const canonicalId = provider === "aws" ? normalizeAWSServiceId(query) : query;
+        const aExact = a.id === canonicalId || a.shortName.toLowerCase() === query;
+        const bExact = b.id === canonicalId || b.shortName.toLowerCase() === query;
+        return Number(bExact) - Number(aExact) || a.shortName.localeCompare(b.shortName);
+      });
+  }, [searchQuery, categoryFilter, services, catalog, provider]);
 
-  const addService = (service: AWSServiceDef) => {
+  const addService = (service: CloudServiceDef) => {
     onAddService(service.id);
     setLastAdded(`${service.shortName} added to canvas`);
   };
@@ -124,15 +148,15 @@ export default function CanvasServicePalette({
     >
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <div className="flex items-center gap-2">
-          <AWSLogoIcon size={22} />
+          <CloudLogoIcon provider={provider} size={22} />
           <h2
             id={`${paletteId}-title`}
             className="text-sm font-bold text-neutral-900 dark:text-white"
           >
-            AWS services
+            {label} services
           </h2>
           <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-500 dark:bg-[#1e2634] dark:text-neutral-400">
-            {SERVICES.length}
+            {services.length}
           </span>
         </div>
         <button
@@ -156,7 +180,7 @@ export default function CanvasServicePalette({
           <input
             ref={searchInputRef}
             type="text"
-            aria-label="Search AWS services"
+            aria-label={`Search ${label} services`}
             placeholder="Search by service, use case, or category"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -186,13 +210,14 @@ export default function CanvasServicePalette({
           )}
         </div>
         <Dropdown
-          aria-label="Filter AWS services by category"
+          aria-label={`Filter ${label} services by category`}
           value={categoryFilter}
           onChange={setCategoryFilter}
           options={[
             { value: "", label: "All categories" },
-            ...CATEGORIES.filter(([key]) => SERVICES_BY_CATEGORY.get(key)?.length).map(
-              ([value, meta]) => ({
+            ...categories
+              .filter(([key]) => servicesByCategory.get(key)?.length)
+              .map(([value, meta]) => ({
                 value,
                 label: meta.label,
                 indicator: (
@@ -201,8 +226,7 @@ export default function CanvasServicePalette({
                     style={{ backgroundColor: meta.color }}
                   />
                 ),
-              }),
-            ),
+              })),
           ]}
         />
       </div>
@@ -255,7 +279,12 @@ export default function CanvasServicePalette({
               </div>
             ) : (
               filteredServices.map((service) => (
-                <ServiceCard key={service.id} service={service} onAdd={() => addService(service)} />
+                <ServiceCard
+                  key={service.id}
+                  service={service}
+                  category={catalog.categories[service.category]}
+                  onAdd={() => addService(service)}
+                />
               ))
             )}
           </div>
@@ -265,12 +294,14 @@ export default function CanvasServicePalette({
               <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                 Popular services
               </p>
-              {POPULAR_SERVICE_IDS.map((id) => AWS_SERVICE_REGISTRY[id])
+              {catalog.popular
+                .map((id) => catalog.services[id])
                 .filter(Boolean)
                 .map((service) => (
                   <ServiceCard
                     key={service.id}
                     service={service}
+                    category={catalog.categories[service.category]}
                     onAdd={() => addService(service)}
                   />
                 ))}
@@ -278,8 +309,8 @@ export default function CanvasServicePalette({
             <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
               Browse categories
             </p>
-            {CATEGORIES.map(([key, meta]) => {
-              const services = SERVICES_BY_CATEGORY.get(key) ?? [];
+            {categories.map(([key, meta]) => {
+              const services = servicesByCategory.get(key) ?? [];
               if (!services.length) return null;
               const expanded = expandedCategories.has(key);
               return (
@@ -311,6 +342,7 @@ export default function CanvasServicePalette({
                         <ServiceCard
                           key={service.id}
                           service={service}
+                          category={catalog.categories[service.category]}
                           onAdd={() => addService(service)}
                         />
                       ))}
@@ -338,9 +370,16 @@ export default function CanvasServicePalette({
   );
 }
 
-function ServiceCard({ service, onAdd }: { service: AWSServiceDef; onAdd: () => void }) {
+function ServiceCard({
+  service,
+  category,
+  onAdd,
+}: {
+  service: CloudServiceDef;
+  category: CloudCategory;
+  onAdd: () => void;
+}) {
   const Icon = service.icon;
-  const category = AWS_CATEGORIES[service.category];
   return (
     <button
       type="button"

@@ -8,14 +8,24 @@ const releases = [
   {
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
-    title: "A More Reliable Canvas",
-    summary:
-      "Easier alignment, safer collaboration, reviewed AI changes, and faster verification—with the same NovaStage look.",
+    title: "Google Cloud and a Clearer Canvas",
+    summary: "Design with both cloud providers and keep canvas controls in a predictable place.",
     changes: [
-      "Precise alignment: The visible grid matches snapping, cards align by edges and port centers, and aligned connections stay straight. Focus a selection to inspect dense diagrams.",
-      "Safer saving: Tidy and multi-card moves save together, stale edits are rejected, and failed edits stay available as recovery drafts. Undo history survives refresh on this device.",
+      "Add 62 Google Cloud services with official SVG icons and editable settings, and connect them to AWS resources.",
+      "The toolbar stays centered with AI and Notebook beside it on desktop. The right details panel fills the screen, and the radar stays visible in the lower-left corner.",
+    ],
+  },
+  {
+    version: "Beta v1.2.0",
+    date: "November 18, 2026",
+    title: "A More Reliable Cloud Canvas",
+    summary:
+      "Google Cloud resources, easier alignment, safer collaboration, and faster verification with the same NovaStage look.",
+    changes: [
+      "Google Cloud canvas: Add 62 services with official icons, edit resource settings, and connect them to AWS. Search, sharing, exports, and undo work across both providers.",
+      "Clearer controls: A compact dock keeps AWS and Google Cloud visible. Selection focus sits below Find, the radar stays at the bottom, and grid snapping keeps aligned connections straight.",
+      "Safer saving: Multi-card moves save together, stale edits are rejected, and failed edits stay available as recovery drafts. Undo history survives refresh on this device.",
       "Review AI changes: Inspect generated diagrams and removals before applying. Previews survive refresh and protect against changes made by collaborators.",
-      "Better placement: Canvas controls adapt to the available space, details scroll comfortably on small phones, and search, exports, invitations, and plan limits are clearer.",
       "Faster verification: A smaller test suite, fewer CI setup steps, cached builds, patched dependencies, and a dedicated staging release check.",
     ],
   },

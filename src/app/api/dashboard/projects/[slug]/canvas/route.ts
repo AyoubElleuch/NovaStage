@@ -1,3 +1,4 @@
+import { validGCPNode } from "@/lib/canvas/gcp-validation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { isProjectOwner } from "@/lib/projects";
@@ -61,6 +62,11 @@ export async function POST(request: NextRequest, context: CanvasRouteContext) {
     }
 
     if (action === "create_node") {
+      if (!validGCPNode(body))
+        return NextResponse.json(
+          { success: false, error: "Invalid Google Cloud resource metadata" },
+          { status: 400 },
+        );
       const newNode = await createCanvasNode(
         project.id,
         {
@@ -74,6 +80,7 @@ export async function POST(request: NextRequest, context: CanvasRouteContext) {
           checkpoints: body.checkpoints,
           node_type: body.node_type,
           aws_metadata: body.aws_metadata,
+          gcp_metadata: body.gcp_metadata,
           group_metadata: body.group_metadata,
           annotation_metadata: body.annotation_metadata,
           parent_group_id: body.parent_group_id,
