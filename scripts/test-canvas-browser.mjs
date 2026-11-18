@@ -1005,6 +1005,18 @@ try {
       viewport,
       permissions: ["clipboard-read", "clipboard-write"],
     });
+    // Viewport checks isolate the OS clipboard; desktop scenarios above cover native clipboard access.
+    await context.addInitScript(() => {
+      let clipboardText = "";
+      Object.defineProperty(navigator, "clipboard", {
+        value: {
+          writeText: async (value) => {
+            clipboardText = value;
+          },
+          readText: async () => clipboardText,
+        },
+      });
+    });
     const { page: phone, state, errors } = await fixturePage(context);
     const size = `${viewport.width}x${viewport.height}`;
     await check(`${size} navigation, tools, search and AWS palette stay reachable`, async () => {

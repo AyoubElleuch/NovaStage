@@ -104,7 +104,7 @@ Install Chromium with `npx playwright install chromium` if needed. Browser fixtu
 
 The generated-diagram browser matrix covers workflow, serverless, nested, feedback and appended diagrams on desktop and phone in both themes. Geometry fixtures also cover parallel branches/joins, disconnected components, shuffled input, long content and large permitted graphs. Database tests execute production migration functions in embedded PostgreSQL and check rollback and mode enforcement. These checks do not establish live-model fidelity or production performance.
 
-The focused unit suite has 194 tests (down from 294). On the development machine it runs in about 6 seconds, versus 36 seconds before removing duplicate component and fixture checks. CI performs three dependency installations instead of seven, caches Next build data, and cancels superseded runs. Runner timings vary. The 54 browser checks and 20 rendered diagram views remain.
+The focused unit suite has 196 tests (down from 294), including two checks for the shared canvas access gate. On the development machine it runs in about 6 seconds, versus 36 seconds before removing duplicate component and fixture checks. CI performs three dependency installations instead of seven, caches Next build data, and cancels superseded runs. Runner timings vary. The 54 browser checks and 20 rendered diagram views remain.
 
 Before promotion, run the manual staging gate with two test accounts and a disposable project; see [operations](docs/operations.md). Local fixture tests do not certify live infrastructure or deployment readiness.
 

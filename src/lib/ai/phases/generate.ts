@@ -1,3 +1,4 @@
+import { formatDecompositionContext } from "../prompts/decomposition-context";
 /**
  * Phase 2: Deep Workflow Generation
  * Generates comprehensive branching DAG pipelines with domain-aware checkpoints and parallel groupings.
@@ -122,28 +123,7 @@ export async function generateDeepWorkflow(
     )}`;
   }
 
-  let decompositionContext = "";
-  if (decomposition) {
-    decompositionContext = `\n\nPhase 1 Architectural Decomposition:\n${JSON.stringify(
-      {
-        projectType: decomposition.projectType,
-        complexityTier: decomposition.complexityTier,
-        domainTags: decomposition.domainTags,
-        targetMilestones: decomposition.targetMilestoneCount,
-        suggestedParallelTracks: decomposition.suggestedParallelTracks,
-        concernAreas: decomposition.concernAreas.map((c) => ({
-          name: c.name,
-          category: c.category,
-          priority: c.priority,
-          dependencies: c.dependencies,
-        })),
-        techStackHints: decomposition.techStackHints,
-        riskFactors: decomposition.riskFactors,
-      },
-      null,
-      2,
-    )}`;
-  }
+  const decompositionContext = formatDecompositionContext(decomposition);
 
   const userPromptText = `Selected mode: Workflow. Operation: ${context?.operation || "create"}. ${context?.operation === "update" ? "Return the complete desired workflow, retaining existing milestone and checkpoint IDs." : "Create a distinct new workflow using new tempIds only. Existing work is context; do not modify or delete it."}\n${contextDescription}${decompositionContext}\n\nUser Request: "${prompt}"`;
 

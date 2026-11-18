@@ -39,6 +39,6 @@ Record the deployment revision and results before production promotion. The repo
 
 ## CI and rollback
 
-CI keeps 194 core unit/integration tests, 54 browser checks and 20 generated-diagram views. It uses three dependency installations rather than seven, a Next build cache, two browser groups, cancellation of superseded runs and failure artifacts. Local unit time fell from roughly 36 seconds to 6 seconds; hosted runner times vary.
+CI keeps 196 core unit/integration tests, 54 browser checks and 20 generated-diagram views. It uses three dependency installations rather than seven, a Next build cache, two browser groups, cancellation of superseded runs and failure artifacts. Local unit time fell from roughly 36 seconds to 6 seconds; hosted runner times vary.
 
 For application rollback, redeploy the prior application revision. Leave additive migrations 027–028 installed; older clients do not use them. They will also lack v1.2.0's concurrency and preview protections. Do not drop tables containing previews or remove functions while v1.2.0 instances are still running. Repeat the staging checks after rollback.

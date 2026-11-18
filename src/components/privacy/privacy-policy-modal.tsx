@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useModalLifecycle } from "@/lib/use-modal-lifecycle";
 import { createPortal } from "react-dom";
 import { Shield, X } from "lucide-react";
 
@@ -10,37 +11,12 @@ interface PrivacyPolicyModalProps {
   variant?: "landing" | "default";
 }
 
-const emptySubscribe = () => () => {};
-
 export function PrivacyPolicyModal({
   isOpen,
   onClose,
   variant = "default",
 }: PrivacyPolicyModalProps) {
-  const isMounted = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false,
-  );
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [isOpen, onClose]);
+  const isMounted = useModalLifecycle(isOpen, onClose);
 
   if (!isOpen || !isMounted) return null;
 

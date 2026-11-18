@@ -1,25 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectBySlug, isProjectMember } from "@/lib/projects";
-import { getAuthenticatedProfile } from "@/lib/auth/session";
+import { requireCanvasAccess, type CanvasRouteContext } from "@/lib/canvas/access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function POST(request: NextRequest, context: { params: Promise<{ slug: string }> }) {
+export async function POST(request: NextRequest, context: CanvasRouteContext) {
   try {
-    const session = await getAuthenticatedProfile();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { slug } = await context.params;
-    const project = await getProjectBySlug(slug);
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    const isMember = await isProjectMember(project.id, session.user.id);
-    if (!isMember) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const access = await requireCanvasAccess(context);
+    if (access.response) return access.response;
+    const { session, project } = access;
 
     const body = await request.json();
     const { action, node_id, checkpoint_id, title, is_completed } = body;

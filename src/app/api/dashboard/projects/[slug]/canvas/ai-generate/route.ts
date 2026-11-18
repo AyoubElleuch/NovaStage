@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectBySlug, isProjectMember } from "@/lib/projects";
-import { getAuthenticatedProfile } from "@/lib/auth/session";
+import { requireCanvasAccess, type CanvasRouteContext } from "@/lib/canvas/access";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { executeAIPipeline } from "@/lib/ai/pipeline";
@@ -12,26 +11,14 @@ import { getAiRequestLimit } from "@/lib/plans";
 
 export const maxDuration = 120;
 
-export async function POST(request: NextRequest, context: { params: Promise<{ slug: string }> }) {
+export async function POST(request: NextRequest, context: CanvasRouteContext) {
   let projectToUnlock: string | null = null;
   let quotaConsumed = false;
 
   try {
-    const session = await getAuthenticatedProfile();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { slug } = await context.params;
-    const project = await getProjectBySlug(slug);
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
-
-    const isMember = await isProjectMember(project.id, session.user.id);
-    if (!isMember) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const access = await requireCanvasAccess(context);
+    if (access.response) return access.response;
+    const { session, project } = access;
 
     const body = await request.json().catch(() => ({}));
     if (body.action === "apply_preview") {
@@ -378,13 +365,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ sl
   }
 }
 
-export async function GET(_request: NextRequest, context: { params: Promise<{ slug: string }> }) {
-  const session = await getAuthenticatedProfile();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { slug } = await context.params;
-  const project = await getProjectBySlug(slug);
-  if (!project || !(await isProjectMember(project.id, session.user.id)))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+export async function GET(_request: NextRequest, context: CanvasRouteContext) {
+  const access = await requireCanvasAccess(context, 403);
+  if (access.response) return access.response;
+  const { session, project } = access;
   const { data, error } = await createAdminClient()
     .from("canvas_ai_previews")
     .select("id,graph,summary,expires_at")

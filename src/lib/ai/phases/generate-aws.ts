@@ -1,3 +1,4 @@
+import { formatDecompositionContext } from "../prompts/decomposition-context";
 /**
  * Phase 2: AWS Architecture Generation
  * Generates comprehensive AWS infrastructure DAGs with VPCs, Subnets, and service nodes.
@@ -142,28 +143,7 @@ export async function generateAWSArchitecture(
       )}`;
   }
 
-  let decompositionContext = "";
-  if (decomposition) {
-    decompositionContext = `\n\nPhase 1 Architectural Decomposition:\n${JSON.stringify(
-      {
-        projectType: decomposition.projectType,
-        complexityTier: decomposition.complexityTier,
-        domainTags: decomposition.domainTags,
-        targetMilestones: decomposition.targetMilestoneCount,
-        suggestedParallelTracks: decomposition.suggestedParallelTracks,
-        concernAreas: decomposition.concernAreas.map((c) => ({
-          name: c.name,
-          category: c.category,
-          priority: c.priority,
-          dependencies: c.dependencies,
-        })),
-        techStackHints: decomposition.techStackHints,
-        riskFactors: decomposition.riskFactors,
-      },
-      null,
-      2,
-    )}`;
-  }
+  const decompositionContext = formatDecompositionContext(decomposition);
 
   const userPromptText =
     `${contextDescription}${decompositionContext}\n\nUser Request: "${prompt}"\n\n` +
