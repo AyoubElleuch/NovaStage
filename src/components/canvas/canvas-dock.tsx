@@ -9,7 +9,6 @@ import {
   Grid,
   Hand,
   Keyboard,
-  MapPin,
   Maximize2,
   Minus,
   MousePointer,
@@ -41,8 +40,6 @@ interface CanvasDockProps {
   canRedo?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
-  isMinimapOpen?: boolean;
-  onToggleMinimap?: () => void;
   isReleasePulseOpen?: boolean;
   onToggleReleasePulse?: () => void;
   onToggleServicePalette?: () => void;
@@ -71,8 +68,6 @@ export default function CanvasDock({
   canRedo,
   onUndo,
   onRedo,
-  isMinimapOpen,
-  onToggleMinimap,
   isReleasePulseOpen,
   onToggleReleasePulse,
   onToggleServicePalette,
@@ -260,23 +255,6 @@ export default function CanvasDock({
               <Grid className="h-3.5 w-3.5" />
               <span>{snapGrid ? "Grid: ON" : "Grid: OFF"}</span>
             </button>
-            {onToggleMinimap && (
-              <button
-                type="button"
-                onClick={() => {
-                  onToggleMinimap();
-                  setIsQuickToolsOpen(false);
-                }}
-                className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 font-medium cursor-pointer transition-colors ${
-                  isMinimapOpen
-                    ? "border-neutral-900 bg-neutral-900 text-white dark:border-emerald-600 dark:bg-emerald-600"
-                    : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
-                }`}
-              >
-                <MapPin className="h-3.5 w-3.5" />
-                <span>Minimap</span>
-              </button>
-            )}
             {onToggleReleasePulse && (
               <button
                 type="button"

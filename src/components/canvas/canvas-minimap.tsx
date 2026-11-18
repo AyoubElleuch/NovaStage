@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useId } from "react";
-import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { CanvasNode, CanvasViewport } from "@/lib/canvas/types";
 import {
   getCanvasBoundingBox,
@@ -13,8 +13,6 @@ interface CanvasMinimapProps {
   nodes: CanvasNode[];
   viewport: CanvasViewport;
   onViewportChange: (newViewport: CanvasViewport) => void;
-  isOpen?: boolean;
-  onToggleOpen?: () => void;
   hasSidePanel?: boolean;
 }
 
@@ -25,8 +23,6 @@ export default function CanvasMinimap({
   nodes,
   viewport,
   onViewportChange,
-  isOpen = true,
-  onToggleOpen,
   hasSidePanel = false,
 }: CanvasMinimapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -78,7 +74,7 @@ export default function CanvasMinimap({
       window.removeEventListener("blur", cancelDrag);
       cancelDrag();
     };
-  }, [isOpen]);
+  }, []);
 
   // Include the visible world so the view indicator remains visible even far from the graph.
   const visibleCanvasWidth = canvasSize.width;
@@ -215,125 +211,104 @@ export default function CanvasMinimap({
       data-canvas-ui
       ref={asideRef}
       aria-label="Canvas Minimap Radar"
-      className={`canvas-minimap-radar absolute right-3 sm:right-6 z-20 flex flex-col items-end pointer-events-auto ${
-        !isOpen ? "hidden sm:flex" : ""
-      }`}
+      className="canvas-minimap-radar pointer-events-auto absolute left-3 z-20 flex flex-col items-start sm:left-6"
     >
-      {/* Header bar / toggle button */}
-      <div className="flex items-center gap-1 mb-1.5">
-        <button
-          type="button"
-          onClick={onToggleOpen}
-          aria-expanded={isOpen}
-          aria-controls={isOpen ? mapId : undefined}
-          title={isOpen ? "Collapse Minimap" : "Expand Minimap"}
-          className="flex items-center gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-neutral-700 shadow-sm backdrop-blur-md hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300 dark:hover:bg-[#1e2634] dark:hover:text-white"
-        >
-          <MapPin className="h-3 w-3 text-neutral-500 dark:text-neutral-400" />
-          <span>Radar</span>
-          {isOpen ? (
-            <ChevronDown className="h-3 w-3 text-neutral-400" />
-          ) : (
-            <ChevronUp className="h-3 w-3 text-neutral-400" />
-          )}
-        </button>
-      </div>
-
-      {/* Radar Map Container */}
-      {isOpen && (
+      <span className="mb-1.5 inline-flex items-center gap-1.5 rounded-xl border border-neutral-200/80 bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-neutral-700 shadow-sm backdrop-blur-md dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300">
+        <MapPin className="h-3 w-3 text-neutral-500 dark:text-neutral-400" aria-hidden="true" />
+        Radar
+      </span>
+      <div
+        ref={mapRef}
+        data-canvas-navigation
+        id={mapId}
+        role="region"
+        aria-label="Canvas overview. Click to navigate or drag the viewport to pan."
+        aria-describedby={`${mapId}-help`}
+        tabIndex={0}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onLostPointerCapture={handlePointerUp}
+        onKeyDown={(e) => {
+          const step = e.shiftKey ? 160 : 48;
+          const delta: Record<string, { x: number; y: number }> = {
+            ArrowLeft: { x: step, y: 0 },
+            ArrowRight: { x: -step, y: 0 },
+            ArrowUp: { x: 0, y: step },
+            ArrowDown: { x: 0, y: -step },
+          };
+          if (!delta[e.key] || e.ctrlKey || e.metaKey || e.altKey) return;
+          e.preventDefault();
+          e.stopPropagation();
+          onViewportChange({
+            ...viewport,
+            x: viewport.x + delta[e.key].x,
+            y: viewport.y + delta[e.key].y,
+          });
+        }}
+        style={{ width: `${MINIMAP_WIDTH}px`, height: `${MINIMAP_HEIGHT}px` }}
+        className="relative overflow-hidden rounded-2xl border border-neutral-200/90 bg-white/95 shadow-xl backdrop-blur-xl select-none touch-none cursor-crosshair focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-[#283548] dark:bg-[#161d27]/95"
+      >
+        <span id={`${mapId}-help`} className="sr-only pointer-events-none">
+          Click to center the canvas, or drag the viewport window to pan. Use arrow keys to pan the
+          canvas. Hold Shift to pan further.
+        </span>
+        {/* Subtle grid background */}
         <div
-          ref={mapRef}
-          data-canvas-navigation
-          id={mapId}
-          role="region"
-          aria-label="Canvas overview. Click to navigate or drag the viewport to pan."
-          aria-describedby={`${mapId}-help`}
-          tabIndex={0}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          onLostPointerCapture={handlePointerUp}
-          onKeyDown={(e) => {
-            const step = e.shiftKey ? 160 : 48;
-            const delta: Record<string, { x: number; y: number }> = {
-              ArrowLeft: { x: step, y: 0 },
-              ArrowRight: { x: -step, y: 0 },
-              ArrowUp: { x: 0, y: step },
-              ArrowDown: { x: 0, y: -step },
-            };
-            if (!delta[e.key] || e.ctrlKey || e.metaKey || e.altKey) return;
-            e.preventDefault();
-            e.stopPropagation();
-            onViewportChange({
-              ...viewport,
-              x: viewport.x + delta[e.key].x,
-              y: viewport.y + delta[e.key].y,
-            });
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{
+            backgroundImage: "radial-gradient(circle, #737373 1px, transparent 1px)",
+            backgroundSize: "12px 12px",
           }}
-          style={{ width: `${MINIMAP_WIDTH}px`, height: `${MINIMAP_HEIGHT}px` }}
-          className="relative overflow-hidden rounded-2xl border border-neutral-200/90 bg-white/95 shadow-xl backdrop-blur-xl select-none touch-none cursor-crosshair focus-visible:outline-2 focus-visible:outline-blue-500 dark:border-[#283548] dark:bg-[#161d27]/95"
-        >
-          <span id={`${mapId}-help`} className="sr-only pointer-events-none">
-            Click to center the canvas, or drag the viewport window to pan. Use arrow keys to pan
-            the canvas. Hold Shift to pan further.
-          </span>
-          {/* Subtle grid background */}
-          <div
-            className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{
-              backgroundImage: "radial-gradient(circle, #737373 1px, transparent 1px)",
-              backgroundSize: "12px 12px",
-            }}
-          />
+        />
 
-          {/* Render Miniature Nodes */}
-          {nodes.map((node) => {
-            const pos = worldToMap(node.position_x, node.position_y);
-            const dimensions = getNodeDimensions(node);
-            const w = Math.max(6, dimensions.width * mapScale);
-            const h = Math.max(4, dimensions.height * mapScale);
-            const isDone = isNodeFullyComplete(node);
-            const isClaimed = Boolean(node.claimed_by);
+        {/* Render Miniature Nodes */}
+        {nodes.map((node) => {
+          const pos = worldToMap(node.position_x, node.position_y);
+          const dimensions = getNodeDimensions(node);
+          const w = Math.max(6, dimensions.width * mapScale);
+          const h = Math.max(4, dimensions.height * mapScale);
+          const isDone = isNodeFullyComplete(node);
+          const isClaimed = Boolean(node.claimed_by);
 
-            return (
-              <div
-                key={node.id}
-                title={node.title}
-                style={{
-                  left: `${pos.x}px`,
-                  top: `${pos.y}px`,
-                  width: `${w}px`,
-                  height: `${h}px`,
-                }}
-                className={`absolute rounded-xs pointer-events-none transition-colors ${
-                  node.node_type === "group"
-                    ? "border border-dashed border-blue-400/80 bg-blue-400/10"
-                    : node.node_type === "annotation"
-                      ? "bg-yellow-300 ring-1 ring-yellow-500/50"
-                      : isDone
-                        ? "bg-emerald-500 ring-1 ring-emerald-600/50"
-                        : isClaimed
-                          ? "bg-amber-400 ring-1 ring-amber-500/50"
-                          : "bg-neutral-800 ring-1 ring-neutral-900/30 dark:bg-slate-400 dark:ring-slate-500/30"
-                }`}
-              />
-            );
-          })}
+          return (
+            <div
+              key={node.id}
+              title={node.title}
+              style={{
+                left: `${pos.x}px`,
+                top: `${pos.y}px`,
+                width: `${w}px`,
+                height: `${h}px`,
+              }}
+              className={`absolute rounded-xs pointer-events-none transition-colors ${
+                node.node_type === "group"
+                  ? "border border-dashed border-blue-400/80 bg-blue-400/10"
+                  : node.node_type === "annotation"
+                    ? "bg-yellow-300 ring-1 ring-yellow-500/50"
+                    : isDone
+                      ? "bg-emerald-500 ring-1 ring-emerald-600/50"
+                      : isClaimed
+                        ? "bg-amber-400 ring-1 ring-amber-500/50"
+                        : "bg-neutral-800 ring-1 ring-neutral-900/30 dark:bg-slate-400 dark:ring-slate-500/30"
+              }`}
+            />
+          );
+        })}
 
-          {/* Render Viewport Window Indicator */}
-          <div
-            style={{
-              left: `${viewMapPos.x}px`,
-              top: `${viewMapPos.y}px`,
-              width: `${viewMapW}px`,
-              height: `${viewMapH}px`,
-            }}
-            data-testid="minimap-viewport"
-            className="absolute rounded-sm border-2 border-blue-500 bg-blue-500/10 pointer-events-none shadow-xs dark:border-emerald-400 dark:bg-emerald-400/15"
-          />
-        </div>
-      )}
+        {/* Render Viewport Window Indicator */}
+        <div
+          style={{
+            left: `${viewMapPos.x}px`,
+            top: `${viewMapPos.y}px`,
+            width: `${viewMapW}px`,
+            height: `${viewMapH}px`,
+          }}
+          data-testid="minimap-viewport"
+          className="absolute rounded-sm border-2 border-blue-500 bg-blue-500/10 pointer-events-none shadow-xs dark:border-emerald-400 dark:bg-emerald-400/15"
+        />
+      </div>
     </aside>
   );
 }

@@ -12,7 +12,7 @@ const releases = [
     summary: "Design with both cloud providers and keep canvas controls in a predictable place.",
     changes: [
       "Add 62 Google Cloud services with official SVG icons and editable settings, and connect them to AWS resources.",
-      "The toolbar stays centered with AI and Notebook beside it on desktop. The details divider stays visible, the right panel fills the screen height, and the radar stays clear.",
+      "The toolbar stays centered with AI and Notebook beside it on desktop. The right details panel fills the screen, and the radar stays visible in the lower-left corner.",
     ],
   },
   {

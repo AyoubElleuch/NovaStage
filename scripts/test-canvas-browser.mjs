@@ -313,10 +313,10 @@ try {
     }
     await page.screenshot({ path: resolve(output, "desktop.png") });
   });
-  await check("the dock stays centered and clear of full-height panels and the radar", async () => {
+  await check("the centered dock and lower-left radar stay fixed when details open", async () => {
     const isolated = await fixturePage(desktop);
     const layoutPage = isolated.page;
-    const radar = layoutPage.getByRole("complementary", { name: "Canvas Minimap Radar" });
+    const radar = layoutPage.getByRole("region", { name: /^Canvas overview\./ });
     const dock = layoutPage.getByRole("navigation", { name: "Canvas control dock" });
     const workspace = layoutPage.locator(".canvas-workspace");
     const middleX = (box) => box.x + box.width / 2;
@@ -324,15 +324,24 @@ try {
     const bottom = (box) => box.y + box.height;
     const overlap = (a, b) =>
       a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
-    await layoutPage.getByRole("button", { name: "Radar", exact: true }).click();
+    await radar.waitFor();
+    assert.equal(await layoutPage.getByRole("button", { name: "Radar", exact: true }).count(), 0);
+    await layoutPage.getByRole("button", { name: "Canvas tools", exact: true }).click();
+    assert.equal(await layoutPage.getByRole("button", { name: "Minimap", exact: true }).count(), 0);
+    await layoutPage.getByRole("button", { name: "Close tools menu", exact: true }).click();
     for (const width of [1920, 1440, 1360, 1359, 1280, 1060, 1024, 844, 768]) {
       await layoutPage.setViewportSize({ width, height: 1000 });
       const canvasBounds = await workspace.boundingBox();
-      const divider = workspace.locator(".canvas-side-divider");
-      const dividerBeforeDetails = await divider.boundingBox();
-      assert.equal(dividerBeforeDetails.height, 1000, "the divider is visible with details closed");
+      assert.equal(await workspace.locator(".canvas-side-divider").count(), 0);
       const closedRadar = await radar.boundingBox();
       const closedDock = await dock.boundingBox();
+      const radarLeftInset = closedRadar.x - canvasBounds.x;
+      const radarBottomInset = bottom(canvasBounds) - bottom(closedRadar);
+      assert.ok(radarLeftInset >= 0 && radarLeftInset <= 24, "radar stays at the left canvas edge");
+      assert.ok(
+        radarBottomInset >= 0 && radarBottomInset <= 100,
+        "radar remains near the bottom of the canvas",
+      );
       assert.ok(
         Math.abs(closedDock.x + closedDock.width / 2 - (canvasBounds.x + canvasBounds.width / 2)) <=
           1,
@@ -350,11 +359,7 @@ try {
         assert.equal(focus.x, find.x, "Find and Focus share a left edge");
         assert.ok(focus.y >= find.y + find.height + 8, "Focus has at least 8px clearance");
         const after = await radar.boundingBox();
-        assert.equal(
-          Math.round(after.y + after.height),
-          Math.round(closedRadar.y + closedRadar.height),
-          "details must not lift the radar",
-        );
+        assert.deepEqual(after, closedRadar, "opening details leaves the radar in place");
         const controls = await dock.boundingBox();
         const panel = await layoutPage
           .getByRole("complementary", { name: /details$/i })
@@ -379,7 +384,6 @@ try {
         }
         assert.equal(panel.y, 0, "details reach the top of the screen");
         assert.equal(panel.y + panel.height, 1000, "details reach the bottom of the screen");
-        assert.ok(Math.abs(dividerBeforeDetails.x - panel.x) <= 1, "details open on the divider");
         assert.ok(after.x + after.width < panel.x, "radar stays to the left of details");
         assert.ok(!overlap(after, controls), "radar and dock do not overlap");
         assert.ok(!overlap(panel, controls), "details and dock do not overlap");
@@ -398,7 +402,12 @@ try {
     });
     const insetCanvas = await workspace.boundingBox();
     const insetDock = await dock.boundingBox();
+    const insetRadar = await radar.boundingBox();
     assert.equal(insetCanvas.x, 250, "the fixture simulates the dashboard sidebar");
+    assert.ok(
+      insetRadar.x >= insetCanvas.x && insetRadar.x <= insetCanvas.x + 24,
+      "radar follows the left canvas edge with a dashboard sidebar",
+    );
     assert.ok(
       Math.abs(insetDock.x + insetDock.width / 2 - (insetCanvas.x + insetCanvas.width / 2)) <= 1,
       "dock follows the canvas midpoint with a dashboard sidebar",
@@ -407,9 +416,11 @@ try {
       const panel = layoutPage.getByRole("complementary", { name, exact: true });
       await panel.waitFor();
       assert.deepEqual(await dock.boundingBox(), insetDock, `${name} leaves the dock in place`);
+      assert.deepEqual(await radar.boundingBox(), insetRadar, `${name} leaves the radar in place`);
       const bounds = await panel.boundingBox();
       assert.equal(bounds.height, 800, `${name} fills the screen height`);
       assert.ok(!overlap(bounds, insetDock), `${name} clears the dock`);
+      assert.ok(!overlap(bounds, insetRadar), `${name} clears the radar`);
     };
     await layoutPage.getByRole("button", { name: "Open project notebook", exact: true }).click();
     await checkSidePanel("Project notebook");
@@ -1026,7 +1037,8 @@ try {
     await page.keyboard.press("Shift+Digit1");
   });
   await check("grabbing the radar viewport does not jump and drag pans smoothly", async () => {
-    await page.getByRole("button", { name: "Radar", exact: true }).click();
+    const overview = page.getByRole("region", { name: /^Canvas overview\./ });
+    await overview.waitFor();
     const world = canvas.locator("[data-canvas-bg='true']").last();
     const before = await world.getAttribute("style");
     const radar = await page.getByTestId("minimap-viewport").boundingBox();
@@ -1045,7 +1057,6 @@ try {
     await page.mouse.up();
     assert.notEqual(await world.getAttribute("style"), held);
     const mutationsBeforeDelete = state.mutations.length;
-    const overview = page.getByRole("region", { name: /^Canvas overview\./ });
     await overview.press("Delete");
     await overview.press("Backspace");
     assert.equal(

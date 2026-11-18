@@ -192,7 +192,6 @@ export default function ProjectCanvasClient({
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [snapGrid, setSnapGrid] = useState(true);
-  const [isMinimapOpen, setIsMinimapOpen] = useState(false);
   const [serviceProvider, setServiceProvider] = useState<CloudProvider>("aws");
   const [isServicePaletteOpen, setIsServicePaletteOpen] = useState(false);
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
@@ -206,7 +205,6 @@ export default function ProjectCanvasClient({
     const update = () => {
       setIsMobile(mq.matches);
       if (mq.matches) {
-        setIsMinimapOpen(false);
         setActiveTool("hand");
       }
     };
@@ -3445,10 +3443,6 @@ export default function ProjectCanvasClient({
         <CanvasCursors collaborators={collaborators} currentUserId={currentUser.id} />
       </CanvasViewportContainer>
 
-      <div
-        aria-hidden="true"
-        className="canvas-side-divider pointer-events-none absolute inset-y-0 z-10 hidden w-px bg-neutral-200 dark:bg-[#283548]"
-      />
       <CanvasMinimap
         nodes={nodes}
         viewport={viewport}
@@ -3456,9 +3450,7 @@ export default function ProjectCanvasClient({
           setFollowingUserId(null);
           setViewport(next);
         }}
-        isOpen={isMinimapOpen && !isNotebookOpen && !isAIAssistantOpen}
         hasSidePanel={Boolean(selectedNode || isReleasePulseOpen || isNotebookOpen) && !isMobile}
-        onToggleOpen={() => setIsMinimapOpen((v) => !v)}
       />
 
       {/* AI Generation Aura Overlay */}
@@ -3588,8 +3580,6 @@ export default function ProjectCanvasClient({
               onOpenShortcuts={() => setIsShortcutsOpen(true)}
               onOpenGuide={toggleGuide}
               isGuideOpen={isGuideVisible}
-              isMinimapOpen={isMinimapOpen}
-              onToggleMinimap={() => setIsMinimapOpen((v) => !v)}
               isReleasePulseOpen={isReleasePulseOpen}
               onToggleReleasePulse={() => {
                 setSelectedNodeId(null);

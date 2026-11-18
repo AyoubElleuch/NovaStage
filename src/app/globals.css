@@ -43,9 +43,7 @@
     visibility: hidden;
   }
 
-  .canvas-workspace:has(
-      > :is(.canvas-full-height-panel, .canvas-floating-panel, .canvas-mobile-node-actions)
-    )
+  .canvas-workspace:has(> :is(.canvas-full-height-panel, .canvas-floating-panel))
     > .canvas-minimap-radar {
     display: none;
   }
@@ -58,37 +56,16 @@
 }
 
 @container controls (width >= 768px) {
-  .canvas-workspace > :is(.canvas-full-height-panel, .canvas-minimap-radar, .canvas-side-divider) {
-    /* Leave half the compact dock and a gap between the centered controls and the panel. */
-    --canvas-side-panel-width: min(420px, calc(50cqw - 10rem));
-  }
-
   .canvas-workspace > .canvas-full-height-panel {
-    width: var(--canvas-side-panel-width);
-  }
-
-  .canvas-workspace > .canvas-side-divider {
-    display: block;
-    right: calc(var(--canvas-side-panel-width) - 1px);
-  }
-
-  .canvas-workspace:has(> .canvas-full-height-panel) > .canvas-minimap-radar {
-    left: 1.5rem;
-    right: auto;
+    /* Leave half the compact dock and a gap between the centered controls and the panel. */
+    width: min(420px, calc(50cqw - 10rem));
   }
 }
 
 @container controls (width >= 1360px) {
-  .canvas-workspace > :is(.canvas-full-height-panel, .canvas-minimap-radar, .canvas-side-divider) {
+  .canvas-workspace > .canvas-full-height-panel {
     /* The wide dock has room for zoom and history controls. */
-    --canvas-side-panel-width: min(420px, calc(50cqw - 19.5rem));
-  }
-}
-
-@container controls (width >= 1900px) {
-  .canvas-workspace:has(> .canvas-full-height-panel) > .canvas-minimap-radar {
-    left: auto;
-    right: calc(var(--canvas-side-panel-width) + 1.5rem);
+    width: min(420px, calc(50cqw - 19.5rem));
   }
 }
 
@@ -114,6 +91,12 @@
     bottom: auto;
     max-height: calc(var(--canvas-visible-height, 100dvh) - 24px);
     transition-property: opacity, transform;
+  }
+  .canvas-minimap-radar [data-canvas-navigation] {
+    zoom: 0.65;
+  }
+  .canvas-workspace:has(> .canvas-mobile-node-actions) > .canvas-minimap-radar {
+    bottom: calc(var(--canvas-dock-clearance) + 10rem);
   }
   .canvas-workspace > .canvas-full-height-panel {
     position: fixed;
