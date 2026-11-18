@@ -27,6 +27,7 @@ beforeAll(async () => {
   await db.exec(readFileSync("supabase/migrations/024_retire_combined_generation.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/025_enforce_mcp_diagram_modes.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/026_atomic_ai_canvas_graph.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/027_atomic_canvas_layout.sql", "utf8"));
 }, 30000);
 beforeEach(async () => {
   await db.exec(`truncate public.projects, auth.users, public.project_members, public.project_banned_members cascade;
@@ -156,4 +157,20 @@ it("denies browser roles access to credentials, drafts, and the privileged write
     await expect(db.query("select * from public.canvas_mcp_drafts")).rejects.toThrow("permission denied");
     await expect(apply(graph())).rejects.toThrow("permission denied");
   } finally { await db.exec("reset role"); }
+});
+
+it("atomically lays out nodes and rolls back stale, foreign, invalid, or unauthorized batches", async () => {
+  await db.query("update public.projects set ai_generating_by=$1, ai_generating_at=now()", [user]);
+  const graph = buildAIGraph({ ...sampleWorkflow(), intent: "create_pipeline" }, [], "workflow");
+  await applyAI(graph);
+  const layout = graph.nodes.map(node => ({ id: node.id, version: 1, position_x: 500, position_y: 300 }));
+  const applyLayout = (nodes: unknown, actor = user) => db.query("select public.apply_canvas_layout($1,$2,$3::jsonb)", [project, actor, JSON.stringify(nodes)]);
+  await expect(applyLayout(layout, randomUUID())).rejects.toThrow("access denied");
+  await expect(applyLayout([layout[0], { ...layout[1], version: 99 }])).rejects.toThrow("Stale");
+  expect((await db.query<{ version: number }>("select version from public.canvas_nodes")).rows.every(n => n.version === 1)).toBe(true);
+  await expect(applyLayout([{ ...layout[0], width: -1 }])).rejects.toThrow("Invalid geometry");
+  await expect(applyLayout([{ ...layout[0], id: randomUUID() }])).rejects.toThrow("Stale");
+  await applyLayout(layout);
+  expect((await db.query<{ version: number; position_x: number }>("select version, position_x from public.canvas_nodes")).rows.every(n => n.version === 2 && n.position_x === 500)).toBe(true);
+  await expect(applyLayout(layout)).rejects.toThrow("Stale");
 });

@@ -1,3 +1,4 @@
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { getProjectBySlug, isProjectMember, isProjectOwner } from "@/lib/projects";
 import { getAuthenticatedProfile } from "@/lib/auth/session";
@@ -32,6 +33,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    if (request.nextUrl.searchParams.get("access") === "1") return new NextResponse(null, { status: 204, headers: { "Cache-Control": "no-store" } });
     const canvasData = await getProjectCanvasData(project.id);
     return NextResponse.json({
       project: { id: project.id, slug: project.slug, name: project.name },
@@ -70,6 +72,12 @@ export async function POST(
 
     const isOwner = await isProjectOwner(project.id, session.user.id);
 
+    if (action === "apply_layout") {
+      const { data: versions, error } = await createAdminClient().rpc("apply_canvas_layout", { p_project_id: project.id, p_user_id: session.user.id, p_nodes: body.nodes });
+      if (error) return NextResponse.json({ success: false, error: "Layout was not saved. It may have changed; refresh before retrying." }, { status: 409 });
+      return NextResponse.json({ success: true, versions });
+    }
+
     if (action === "create_node") {
       const newNode = await createCanvasNode(
         project.id,
@@ -101,9 +109,10 @@ export async function POST(
         body.node_id,
         project.id,
         body.updates || {},
-        session.user.id
+        session.user.id,
+        body.expected_version
       );
-      return NextResponse.json(result);
+      return NextResponse.json(result, { status: result.success ? 200 : 409 });
     }
 
     if (action === "delete_node") {

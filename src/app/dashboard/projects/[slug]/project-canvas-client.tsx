@@ -386,18 +386,33 @@ export default function ProjectCanvasClient({
     [handleEviction]
   );
 
+  const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const versionsRef = useRef(new Map(initialNodes.map(node => [node.id, node.version])));
+
   // Sends one canvas mutation and throws unless the server confirms it was stored.
   const saveRequest = useCallback(
     async (path: "canvas" | "canvas/checkpoints" | "canvas/claim", body: Record<string, unknown>) => {
+      const execute = async () => {
+      const payload = { ...body };
+      if (body.action === "update_node") payload.expected_version = versionsRef.current.get(String(body.node_id));
+      if (body.action === "apply_layout") payload.nodes = (body.nodes as CanvasNode[]).map(node => ({ ...node, version: versionsRef.current.get(node.id) ?? node.version }));
       const response = await secureFetch(`/api/dashboard/projects/${project.slug}/${path}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
       let data: { success?: boolean; error?: string; [key: string]: unknown } | null = null;
       try { data = await response.json(); } catch {}
       if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to save canvas changes. Please try again.");
+      const versions = (data.versions || (typeof data.version === "number" ? { [String(body.node_id)]: data.version } : {})) as Record<string, number>;
+      for (const [id, version] of Object.entries(versions)) versionsRef.current.set(id, version);
+      if (data.node) { const node = data.node as CanvasNode; versionsRef.current.set(node.id, node.version); }
+      setNodes(current => current.map(node => versions[node.id] ? { ...node, version: versions[node.id] } : node));
       return data;
+      };
+      const queued = saveQueueRef.current.then(execute);
+      saveQueueRef.current = queued.catch(() => {});
+      return queued;
     },
     [project.slug, secureFetch]
   );
@@ -409,7 +424,7 @@ export default function ProjectCanvasClient({
       if (res.ok) {
         const hadUnsavedEdits = saveStateRef.current.diverged;
         const data = await res.json();
-        if (data.nodes) { nodesRef.current = data.nodes; setNodes(data.nodes); }
+        if (data.nodes) { versionsRef.current = new Map((data.nodes as CanvasNode[]).map(node => [node.id, node.version])); nodesRef.current = data.nodes; setNodes(data.nodes); }
         if (data.edges) { edgesRef.current = data.edges; setEdges(data.edges); }
         dispatchSave({ type: "synced" });
         if (!options.quiet) {
@@ -1703,7 +1718,7 @@ export default function ProjectCanvasClient({
       if (isChecking) return;
       isChecking = true;
       try {
-        const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas`, {
+        const res = await fetch(`/api/dashboard/projects/${project.slug}/canvas?access=1`, {
           cache: "no-store",
           headers: { pragma: "no-cache", "cache-control": "no-cache" },
         });
@@ -1711,6 +1726,7 @@ export default function ProjectCanvasClient({
           handleEviction();
           return;
         }
+        if (res.status === 204) return;
         const json = await res.json();
         if (json.error === "Forbidden" || json.error === "Unauthorized" || json.error === "Project not found") {
           handleEviction();
@@ -1948,16 +1964,10 @@ export default function ProjectCanvasClient({
       const position = positions.get(node.id);
       return position ? { ...node, position_x: position.x, position_y: position.y } : node;
     }), edges);
-    const saves = await Promise.allSettled(changed.map(([nodeId, pos]) => {
-      broadcastEvent("node:drag", { nodeId, x: pos.x, y: pos.y });
-      return trackSave(() => saveRequest("canvas", {
-        action: "update_node",
-        node_id: nodeId,
-        updates: { position_x: pos.x, position_y: pos.y },
-      }));
-    }));
-    const failed = saves.find((result): result is PromiseRejectedResult => result.status === "rejected");
-    if (failed) await reportSaveFailure("Position Not Saved", failed.reason);
+    try {
+      await trackSave(() => saveRequest("canvas", { action: "apply_layout", nodes: changed.map(([id, pos]) => ({ id, position_x: pos.x, position_y: pos.y })) }));
+      broadcastEvent("canvas:resync", { userId: currentUser.id });
+    } catch (error) { await reportSaveFailure("Position Not Saved", error); }
   }, [pushHistorySnapshot, nodes, edges, broadcastEvent, saveRequest, trackSave, reportSaveFailure]);
 
   // Marquee Selection Handlers
@@ -2320,20 +2330,11 @@ export default function ProjectCanvasClient({
     setNodes(tidyNodes);
     pushHistorySnapshot(tidyNodes, edges);
 
-    const saves = await Promise.allSettled(changedNodes.map((node) => {
-      const updates = {
-        position_x: node.position_x, position_y: node.position_y,
-        width: node.width, height: node.height,
-      };
-      broadcastEvent("node:updated", { nodeId: node.id, updates });
-      return trackSave(() => saveRequest("canvas", { action: "update_node", node_id: node.id, updates }));
-    }));
-    const failed = saves.find((result): result is PromiseRejectedResult => result.status === "rejected");
-    if (failed) {
-      await reportSaveFailure("Layout Not Fully Saved", failed.reason);
-    } else {
+    try {
+      await trackSave(() => saveRequest("canvas", { action: "apply_layout", nodes: changedNodes.map(node => ({ id: node.id, position_x: node.position_x, position_y: node.position_y, width: node.width, height: node.height })) }));
+      broadcastEvent("canvas:resync", { userId: currentUser.id });
       notify({ title: "Auto-Layout Complete", message: "Arranged nodes with space for connections and nested groups" });
-    }
+    } catch (error) { await reportSaveFailure("Layout Not Saved", error); }
   };
 
   const handleJumpToNode = (targetNodeId: string) => {

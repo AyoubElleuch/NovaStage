@@ -13,7 +13,7 @@ export async function getProjectCanvasData(projectId: string): Promise<{
   const adminClient = createAdminClient();
 
   // Independent graph tables load together instead of four network round trips.
-  const [{ data: rawNodes, error: nodesErr }, { data: rawCheckpoints }, { data: rawEdges }, { data: rawClaims }] = await Promise.all([
+  const [{ data: rawNodes, error: nodesErr }, { data: rawCheckpoints, error: checkpointsErr }, { data: rawEdges, error: edgesErr }, { data: rawClaims, error: claimsErr }] = await Promise.all([
     adminClient
     .from("canvas_nodes")
     .select(`
@@ -42,9 +42,8 @@ export async function getProjectCanvasData(projectId: string): Promise<{
     .eq("status", "pending"),
   ]);
 
-  if (nodesErr) {
-    console.error("Error loading canvas nodes:", nodesErr);
-    return { nodes: [], edges: [], claimRequests: [] };
+  if (nodesErr || checkpointsErr || edgesErr || claimsErr) {
+    throw new Error("Unable to load the complete canvas. Please retry.");
   }
 
   // Fetch profiles for claimed users
@@ -261,14 +260,15 @@ export async function updateCanvasNode(
   nodeId: string,
   projectId: string,
   updates: Partial<CanvasNode>,
-  userId: string
-): Promise<{ success: boolean; error?: string }> {
+  userId: string,
+  expectedVersion?: number
+): Promise<{ success: boolean; error?: string; version?: number }> {
   const adminClient = createAdminClient();
 
   // Verify claim if editing content/position
   const { data: node } = await adminClient
     .from("canvas_nodes")
-    .select("claimed_by, claim_expires_at")
+    .select("claimed_by, claim_expires_at, version")
     .eq("id", nodeId)
     .eq("project_id", projectId)
     .maybeSingle();
@@ -292,7 +292,9 @@ export async function updateCanvasNode(
     }
   }
 
+  if (expectedVersion !== undefined && expectedVersion !== node.version) return { success: false, error: "This item changed. Refresh before retrying." };
   const updatePayload: Record<string, unknown> = {
+    version: (node.version || 1) + 1,
     updated_at: new Date().toISOString(),
   };
   if (updates.title !== undefined) updatePayload.title = updates.title;
@@ -309,14 +311,18 @@ export async function updateCanvasNode(
   if (updates.annotation_metadata !== undefined) updatePayload.annotation_metadata = updates.annotation_metadata;
   if (updates.parent_group_id !== undefined) updatePayload.parent_group_id = updates.parent_group_id;
 
-  const { error } = await adminClient
+  const { data: saved, error } = await adminClient
     .from("canvas_nodes")
     .update(updatePayload)
     .eq("id", nodeId)
-    .eq("project_id", projectId);
+    .eq("project_id", projectId)
+    .eq("version", node.version)
+    .select("version")
+    .maybeSingle();
 
   if (error) return { success: false, error: error.message };
-  return { success: true };
+  if (!saved) return { success: false, error: "This item changed. Refresh before retrying." };
+  return { success: true, version: saved.version };
 }
 
 export async function deleteCanvasNode(

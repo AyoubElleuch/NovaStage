@@ -12,11 +12,11 @@ const past = () => new Date(Date.now() - 60_000).toISOString();
 beforeEach(() => {
   mocks.tables = {
     canvas_nodes: [
-      { id: "mine", project_id: "p1", claimed_by: "alice", claim_expires_at: future(), node_type: "milestone" },
-      { id: "theirs", project_id: "p1", claimed_by: "bob", claim_expires_at: future(), node_type: "milestone" },
-      { id: "free", project_id: "p1", claimed_by: null, claim_expires_at: null, node_type: "milestone" },
-      { id: "lapsed", project_id: "p1", claimed_by: "alice", claim_expires_at: past(), node_type: "milestone" },
-      { id: "foreign", project_id: "p2", claimed_by: null, claim_expires_at: null, node_type: "milestone" },
+      { id: "mine", project_id: "p1", claimed_by: "alice", claim_expires_at: future(), node_type: "milestone", version: 1 },
+      { id: "theirs", project_id: "p1", claimed_by: "bob", claim_expires_at: future(), node_type: "milestone", version: 1 },
+      { id: "free", project_id: "p1", claimed_by: null, claim_expires_at: null, node_type: "milestone", version: 1 },
+      { id: "lapsed", project_id: "p1", claimed_by: "alice", claim_expires_at: past(), node_type: "milestone", version: 1 },
+      { id: "foreign", project_id: "p2", claimed_by: null, claim_expires_at: null, node_type: "milestone", version: 1 },
     ],
     canvas_edges: [
       { id: "edge-1", project_id: "p1", source_node_id: "mine", target_node_id: "theirs", source_handle: "right", target_handle: "left" },
@@ -68,11 +68,17 @@ describe("deleting connections", () => {
 
 describe("updating cards", () => {
   it("lets anyone move a card but requires a live claim to change its content", async () => {
-    expect(await updateCanvasNode("theirs", "p1", { position_x: 40 }, "alice")).toEqual({ success: true });
+    expect(await updateCanvasNode("theirs", "p1", { position_x: 40 }, "alice")).toMatchObject({ success: true });
     expect(mocks.tables.canvas_nodes.find((node) => node.id === "theirs")?.position_x).toBe(40);
     expect(await updateCanvasNode("theirs", "p1", { title: "Mine now" }, "alice")).toMatchObject({ success: false, error: expect.stringContaining("must claim") });
     expect(await updateCanvasNode("lapsed", "p1", { title: "Stale" }, "alice")).toMatchObject({ success: false });
-    expect(await updateCanvasNode("mine", "p1", { title: "Renamed" }, "alice")).toEqual({ success: true });
+    expect(await updateCanvasNode("mine", "p1", { title: "Renamed" }, "alice")).toMatchObject({ success: true, version: 2 });
     expect(await updateCanvasNode("foreign", "p1", { title: "Hijack" }, "alice")).toEqual({ success: false, error: "Node not found" });
   });
+});
+
+it("rejects a stale node edit without overwriting the newer value", async () => {
+  expect(await updateCanvasNode("mine", "p1", { position_x: 64 }, "alice", 1)).toMatchObject({ success: true, version: 2 });
+  expect(await updateCanvasNode("mine", "p1", { position_x: 128 }, "alice", 1)).toMatchObject({ success: false });
+  expect(mocks.tables.canvas_nodes.find(n => n.id === "mine")?.position_x).toBe(64);
 });
