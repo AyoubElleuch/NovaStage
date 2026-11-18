@@ -166,6 +166,7 @@ function NodeDrawer({ node, allNodes, edges, currentUserId, isProjectOwner, onCl
         <button ref={closeRef} type="button" onClick={close} aria-label="Close details" title="Close details (Esc)" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-[#1e2634]"><X className="h-4 w-4" /></button>
       </div>
 
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <div className={`shrink-0 border-b px-5 py-3 ${claimedByOther ? "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20" : "border-neutral-100 bg-neutral-50 dark:border-[#283548] dark:bg-[#121721]/60"}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300">{claimedByOther ? <Lock className="h-3.5 w-3.5 shrink-0 text-amber-600" /> : <Unlock className="h-3.5 w-3.5 shrink-0" />}<span>{editable ? "You have edit access" : claimedByOther ? `Editing: ${holderName}` : "Claim this node to make changes"}</span></p>
@@ -175,7 +176,7 @@ function NodeDrawer({ node, allNodes, edges, currentUserId, isProjectOwner, onCl
         {saveError && <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">{saveError}</p>}
       </div>
 
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5">
+      <div className="space-y-6 px-5 py-5">
         <div>
           <label htmlFor={`${id}-title`} className={LABEL}>{isAws ? "Resource label" : isGroup ? "Group name" : isAnnotation ? "Note title" : "Milestone title"}</label>
           <input id={`${id}-title`} value={title} disabled={!editable} maxLength={200} onChange={(event) => { setTitle(event.target.value); setTitleError(""); }} onBlur={saveTitle}
@@ -248,6 +249,7 @@ function NodeDrawer({ node, allNodes, edges, currentUserId, isProjectOwner, onCl
         {(editable || isProjectOwner) && <div className="border-t border-neutral-100 pt-5 md:hidden dark:border-[#283548]"><button type="button" onClick={() => onDeleteNode(node.id)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400"><Trash2 className="h-3.5 w-3.5" />Delete {kind.toLowerCase()}</button></div>}
       </div>
 
+      </div>
       {(editable || isProjectOwner) && <div className="hidden shrink-0 border-t border-neutral-100 px-5 py-3 md:block dark:border-[#283548]"><button type="button" onClick={() => onDeleteNode(node.id)} className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/30"><Trash2 className="h-3.5 w-3.5" />Delete {kind.toLowerCase()}</button></div>}
       <div className="shrink-0 border-t border-neutral-100 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden dark:border-[#283548]"><button type="button" onClick={close} className="min-h-11 w-full rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700">Done</button></div>
     </aside>

@@ -45,7 +45,9 @@ export function worldToScreen(
   };
 }
 
-export function snapToGrid(value: number, gridSize = 16): number {
+export const CANVAS_GRID_SIZE = 16;
+
+export function snapToGrid(value: number, gridSize = CANVAS_GRID_SIZE): number {
   return Math.round(value / gridSize) * gridSize;
 }
 
@@ -413,33 +415,37 @@ export function getCanvasBoundingBox(
  * Exports the current roadmap graph to Mermaid.js diagram format.
  */
 export function exportToMermaid(nodes: CanvasNode[], edges: CanvasEdge[]): string {
-  const lines: string[] = ["graph LR"];
-
-  const sanitize = (str: string) =>
-    str.replace(/["\n\r]/g, " ").trim();
-
-  // Nodes definition
-  for (const node of nodes) {
-    const safeTitle = sanitize(node.title || "Milestone");
-    if (node.node_type === "aws_service") {
-      lines.push(`  ${node.id}["AWS: ${safeTitle}"]`);
-    } else if (node.node_type === "group") {
-      lines.push(`  ${node.id}[["Group: ${safeTitle}"]]`);
+  const lines = ["graph LR"];
+  const ids = new Map(nodes.map((node, index) => [node.id, `n${index + 1}`]));
+  const escape = (text: string) => text.replace(/[#&"<>|\[\]{}]/g, char => `#${char.charCodeAt(0)};`).replace(/[\r\n]/g, " ");
+  const emitted = new Set<string>();
+  const emit = (node: CanvasNode, indent: string) => {
+    if (emitted.has(node.id)) return;
+    emitted.add(node.id);
+    const id = ids.get(node.id);
+    const title = escape(node.title || "Untitled");
+    if (node.node_type === "group") {
+      lines.push(`${indent}subgraph ${id}["${title}"]`);
+      nodes.filter(child => child.parent_group_id === node.id || node.group_metadata?.childNodeIds.includes(child.id)).forEach(child => emit(child, indent + "  "));
+      lines.push(`${indent}end`);
     } else {
-      const completion = calculateCompletionPercentage(node.checkpoints);
-      const label = `${safeTitle} (${completion}%)`;
-      lines.push(`  ${node.id}["${label}"]`);
+      const label = node.node_type === "aws_service" ? `AWS: ${title}` : node.node_type === "annotation" ? title : `${title} (${calculateCompletionPercentage(node.checkpoints)}%)`;
+      lines.push(`${indent}${id}["${label}"]`);
     }
-  }
-
-  // Edges definition
+  };
+  nodes.filter(node => !node.parent_group_id).forEach(node => emit(node, "  "));
+  nodes.forEach(node => emit(node, "  ")); // Retain orphaned or cyclic legacy groups.
   for (const edge of edges) {
-    if (edge.label) {
-      lines.push(`  ${edge.source_node_id} -->|${sanitize(edge.label)}| ${edge.target_node_id}`);
-    } else {
-      lines.push(`  ${edge.source_node_id} --> ${edge.target_node_id}`);
-    }
+    if (!ids.has(edge.source_node_id) || !ids.has(edge.target_node_id)) continue;
+    const type = edge.edge_type || "dependency";
+    const arrow = ["event", "async_queue", "security_iam"].includes(type) ? "-.->" : type === "network" ? "<-->" : "-->";
+    const label = [edge.label, type === "dependency" ? "" : type.replaceAll("_", " ")].filter(Boolean).join(" · ");
+    lines.push(`  ${ids.get(edge.source_node_id)} ${arrow}${label ? `|"${escape(label)}"|` : ""} ${ids.get(edge.target_node_id)}`);
   }
-
   return lines.join("\n");
+}
+
+export function getNodeStatusLabel(node: CanvasNode): string {
+  return isNodeFullyComplete(node) ? "Complete" : node.status === "blocked" ? "Blocked" :
+    calculateCompletionPercentage(node.checkpoints) > 0 || node.status === "in_progress" ? "In progress" : "Planned";
 }

@@ -3,7 +3,7 @@
 import { MIN_CANVAS_ZOOM } from "@/lib/canvas/workspace";
 import React, { useRef, useState, useCallback, useEffect, useId } from "react";
 import { CanvasViewport, CanvasTool } from "@/lib/canvas/types";
-import { screenToWorld } from "@/lib/canvas/coordinate-math";
+import { CANVAS_GRID_SIZE, screenToWorld } from "@/lib/canvas/coordinate-math";
 import { useTheme } from "@/lib/theme-context";
 
 const CTRL_WHEEL_ZOOM_SENSITIVITY = 0.0025;
@@ -381,7 +381,7 @@ export default function CanvasViewportContainer({
 
   // Dynamic grid scaling with zoom
   const gridMultiplier = 2 ** Math.max(0, Math.ceil(Math.log2(0.65 / viewport.zoom)));
-  const gridSize = 24 * viewport.zoom * gridMultiplier;
+  const gridSize = CANVAS_GRID_SIZE * viewport.zoom * gridMultiplier;
   const gridOffsetX = viewport.x % gridSize;
   const gridOffsetY = viewport.y % gridSize;
 

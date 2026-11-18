@@ -4,6 +4,34 @@ import { getNodeDimensions, screenToWorld, snapToGrid } from "./coordinate-math"
 export interface CanvasArea { width: number; height: number; leftInset?: number; rightInset?: number; bottomInset?: number }
 export const MIN_CANVAS_ZOOM = 0.001;
 
+/** Snap matching edges or port centers within six screen pixels, before grid rounding. */
+export function alignNodePosition(node: CanvasNode, position: { x: number; y: number }, nodes: CanvasNode[], zoom: number) {
+  const size = getNodeDimensions(node);
+  const tolerance = Math.min(16, 6 / zoom);
+  const result = { x: snapToGrid(position.x), y: snapToGrid(position.y) };
+  const guides: { axis: "x" | "y"; value: number }[] = [];
+  for (const axis of ["x", "y"] as const) {
+    const dimension = axis === "x" ? "width" : "height";
+    let best = tolerance;
+    let guide: number | undefined;
+    for (const other of nodes) {
+      if (other.id === node.id || other.node_type === "group" || node.node_type === "group") continue;
+      const origin = axis === "x" ? other.position_x : other.position_y;
+      for (const ratio of [0.5, 0, 1]) {
+        const anchor = origin + getNodeDimensions(other)[dimension] * ratio;
+        const delta = anchor - (position[axis] + size[dimension] * ratio);
+        if (Math.abs(delta) < best) {
+          best = Math.abs(delta);
+          result[axis] = position[axis] + delta;
+          guide = anchor;
+        }
+      }
+    }
+    if (guide !== undefined) guides.push({ axis, value: guide });
+  }
+  return { ...result, guides };
+}
+
 /** Resolve taps after viewport pointer capture, preferring resources to groups. */
 export function getCanvasNodeAtPoint(nodes: CanvasNode[], point: { x: number; y: number }) {
   return [...nodes].sort((a, b) => {

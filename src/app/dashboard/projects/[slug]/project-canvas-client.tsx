@@ -27,7 +27,7 @@ import {
   getNodeDimensions,
 } from "@/lib/canvas/coordinate-math";
 import { autoLayoutNodes } from "@/lib/canvas/auto-layout";
-import { fitCanvasNodes, getDragNodeIds, getOpenNodePosition, zoomAroundCenter, getCanvasNodeAtPoint } from "@/lib/canvas/workspace";
+import { alignNodePosition, fitCanvasNodes, getDragNodeIds, getOpenNodePosition, zoomAroundCenter, getCanvasNodeAtPoint } from "@/lib/canvas/workspace";
 import { useCanvasVisualViewport } from "@/lib/canvas/use-visual-viewport";
 import { AIGenerationOperation } from "@/lib/ai/types";
 import { readAIGenerationResponse, toAIGenerationError } from "@/lib/ai/response";
@@ -158,7 +158,7 @@ export default function ProjectCanvasClient({
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [snapGrid, setSnapGrid] = useState(true);
-  const [isMinimapOpen, setIsMinimapOpen] = useState(true);
+  const [isMinimapOpen, setIsMinimapOpen] = useState(false);
   const [isServicePaletteOpen, setIsServicePaletteOpen] = useState(false);
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -324,7 +324,7 @@ export default function ProjectCanvasClient({
   const getCanvasArea = useCallback(() => {
     const element = canvasRootElement?.querySelector<HTMLElement>("[data-canvas-viewport]") || canvasRootElement;
     return { width: element?.clientWidth || window.innerWidth, height: element?.clientHeight || window.innerHeight,
-      rightInset: selectedNodeId && !isMobile ? 420 : 0,
+      rightInset: (selectedNodeId || isReleasePulseOpen) && !isMobile ? 420 : 0,
       bottomInset: selectedNodeId && isMobile ? 280 : 0 };
   }, [canvasRootElement, selectedNodeId, isMobile]);
 
@@ -624,14 +624,13 @@ export default function ProjectCanvasClient({
     (customPos?: { x: number; y: number }) => {
       if (isAIGenerating) return;
       const area = { ...getCanvasArea(), rightInset: isMobile ? 0 : 420 };
-      const position = customPos || { x: ((area.width - (area.rightInset || 0)) / 2 - viewport.x) / viewport.zoom - 220,
-        y: (area.height / 2 - viewport.y) / viewport.zoom - 160 };
+      const position = customPos || getOpenNodePosition(nodes, viewport, area, { width: 440, height: 320 });
       const posX = position.x;
       const posY = position.y;
       const finalX = snapGrid ? snapToGrid(posX) : posX;
       const finalY = snapGrid ? snapToGrid(posY) : posY;
 
-      const defaultTitle = "VPC Network";
+      const defaultTitle = "New Group";
       const clientNodeId = crypto.randomUUID();
 
       const myHolder = {
@@ -660,7 +659,7 @@ export default function ProjectCanvasClient({
         node_type: "group",
         group_metadata: {
           label: defaultTitle,
-          style: "vpc",
+          style: "custom",
           childNodeIds: [],
         },
       };
@@ -1787,6 +1786,7 @@ export default function ProjectCanvasClient({
   }, [broadcastEvent, currentUser.id, notify, resyncCanvasState, saveRequest]);
 
   // Pointer Move (Cursor broadcast + dragging + magnetic handle snapping)
+  const [alignmentGuides, setAlignmentGuides] = useState<{ axis: "x" | "y"; value: number }[]>([]);
   const handlePointerMove = useCallback(
     (
       worldPos: { x: number; y: number },
@@ -1857,8 +1857,12 @@ export default function ProjectCanvasClient({
           let nextX = activeDrag.startPos.x + dx;
           let nextY = activeDrag.startPos.y + dy;
           if (snapGrid) {
-            nextX = snapToGrid(nextX, 16);
-            nextY = snapToGrid(nextY, 16);
+            const moving = nodes.find(node => node.id === activeDrag.nodeId);
+            if (moving) {
+              const aligned = alignNodePosition(moving, { x: nextX, y: nextY }, nodes, viewport.zoom);
+              nextX = aligned.x; nextY = aligned.y;
+              setAlignmentGuides(aligned.guides);
+            }
           }
           const lastPosition = { x: nextX, y: nextY };
           draggingNodeRef.current = { ...activeDrag, lastPosition };
@@ -1932,6 +1936,7 @@ export default function ProjectCanvasClient({
 
     draggingNodeRef.current = null;
     setDraggingNode(null);
+    setAlignmentGuides([]);
 
     const positions = completedDrag.lastPositions || new Map([[completedDrag.nodeId, completedDrag.lastPosition]]);
     const changed = Array.from(positions).filter(([id, position]) => {
@@ -2346,13 +2351,15 @@ export default function ProjectCanvasClient({
   };
 
   // Export handlers
-  const handleExportMermaid = () => {
+  const handleExportMermaid = async () => {
+    try {
     const markdown = exportToMermaid(nodes, edges);
-    navigator.clipboard.writeText(markdown);
+    await navigator.clipboard.writeText(markdown);
     notify({
       title: "Mermaid Code Copied",
       message: "Copied Mermaid.js diagram definition to clipboard",
     });
+    } catch { notify({ title: "Clipboard unavailable", message: "Allow clipboard access or use JSON export to download the canvas." }); }
   };
 
   const handleExportJSON = () => {
@@ -2630,6 +2637,7 @@ export default function ProjectCanvasClient({
           />
         ))}
 
+        {alignmentGuides.map(guide => <div key={guide.axis} aria-hidden="true" className="pointer-events-none absolute bg-emerald-500/60" style={guide.axis === "x" ? { left: guide.value, top: -100000, width: 1 / viewport.zoom, height: 200000 } : { top: guide.value, left: -100000, height: 1 / viewport.zoom, width: 200000 }} />)}
         {/* Multiplayer Live Cursors */}
         <CanvasCursors
           collaborators={collaborators}
@@ -2637,13 +2645,14 @@ export default function ProjectCanvasClient({
         />
       </CanvasViewportContainer>
 
+      {selectedNodeIds.size > 0 && <button data-canvas-ui type="button" onClick={() => handleFitView(true)} className="absolute left-3 top-[124px] z-20 rounded-xl border border-neutral-200 bg-white/95 px-3 py-2 text-xs font-medium shadow-sm dark:border-[#283548] dark:bg-[#161d27]">Focus selection</button>}
       {/* Interactive Radar Minimap Component */}
       <CanvasMinimap
         nodes={nodes}
         viewport={viewport}
         onViewportChange={(next) => { setFollowingUserId(null); setViewport(next); }}
-        isOpen={isMinimapOpen}
-        rightInset={selectedNode && !isMobile ? 420 : 0}
+        isOpen={isMinimapOpen && !isNotebookOpen && !isAIAssistantOpen}
+        rightInset={(selectedNode || isReleasePulseOpen) && !isMobile ? 420 : 0}
         onToggleOpen={() => setIsMinimapOpen((v) => !v)}
       />
 
@@ -2709,9 +2718,10 @@ export default function ProjectCanvasClient({
       )}
 
       {/* Bottom Floating Control Bar (Canvas Tools Dock + AI Assistant) */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-6 z-20 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-2.5 px-3">
+      <div style={{ right: (selectedNode || isReleasePulseOpen) && !isMobile ? 420 : 0 }} className="@container/controls pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-6 z-20 px-3">
+      <div className="flex flex-col @[950px]/controls:flex-row items-center justify-center gap-2">
         {/* On mobile: AI Assistant & Notebook stack above toolbar (order-1). On desktop: sit alongside dock (sm:order-2) */}
-          <div className={`order-1 md:order-2 pointer-events-auto ${selectedNode && isMobile ? "hidden" : "flex"} items-center justify-end md:justify-start gap-2 w-full max-w-[340px] md:w-auto md:max-w-none`}>
+          <div className={`order-1 @[950px]/controls:order-2 pointer-events-auto ${selectedNode && isMobile ? "hidden" : "flex"} items-center justify-end @[950px]/controls:justify-start gap-2 w-full max-w-[340px] @[950px]/controls:w-auto @[950px]/controls:max-w-none`}>
             <CanvasAIAssistant
               projectId={project.id}
               projectSlug={project.slug}
@@ -2750,7 +2760,7 @@ export default function ProjectCanvasClient({
           </div>
 
         {/* Primary Canvas Dock: order-2 on mobile (at bottom), sm:order-1 on desktop (on left) */}
-        <div className="order-2 md:order-1 pointer-events-auto flex items-center justify-center max-w-full">
+        <div className="order-2 @[950px]/controls:order-1 pointer-events-auto flex items-center justify-center max-w-full">
           <CanvasDock
             isBusy={isAIGenerating}
             activeTool={activeTool}
@@ -2790,6 +2800,8 @@ export default function ProjectCanvasClient({
             onAddGroup={() => handleAddGroup()}
           />
         </div>
+      </div>
+
       </div>
 
       {/* AWS Service Palette Flyout */}

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Circle, Lock, Pencil, Plus, Unlock } from "lucide-react";
 import { CanvasNode, HandlePosition } from "@/lib/canvas/types";
-import { calculateCompletionPercentage, getNodeDimensions, getUserColor, isNodeFullyComplete } from "@/lib/canvas/coordinate-math";
+import { calculateCompletionPercentage, getNodeStatusLabel, getNodeDimensions, getUserColor, isNodeFullyComplete } from "@/lib/canvas/coordinate-math";
 import CanvasServiceNode from "./canvas-service-node";
 import CanvasGroupNode from "./canvas-group-node";
 import CanvasAnnotationNode from "./canvas-annotation-node";
@@ -76,7 +76,7 @@ function CanvasMilestoneNode({ node, stepIndex, isSelected, isMultiSelected = fa
   const isClaimedByMe = node.claimed_by === currentUserId;
   const isClaimedByOther = Boolean(node.claimed_by && !isClaimedByMe);
   const holderName = node.claim_holder?.fullName && node.claim_holder.fullName !== "You" ? node.claim_holder.fullName : "Collaborator";
-  const statusLabel = isComplete ? "Complete" : node.status === "blocked" ? "Blocked" : completionPct > 0 || node.status === "in_progress" ? "In progress" : "Planned";
+  const statusLabel = getNodeStatusLabel(node);
   const previewCount = 5;
   const canRename = !readOnly && Boolean(onUpdateTitle) && !isClaimedByOther;
 

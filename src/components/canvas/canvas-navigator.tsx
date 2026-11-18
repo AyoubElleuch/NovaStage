@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Search, X, Map, Box, Flag, StickyNote } from "lucide-react";
 import type { CanvasNode } from "@/lib/canvas/types";
+import { getNodeStatusLabel } from "@/lib/canvas/coordinate-math";
 import { getAWSService } from "./aws-icons";
 
 interface Props {
@@ -24,7 +25,7 @@ export default function CanvasNavigator({ nodes, isOpen, onToggle, onClose, onJu
   const results = useMemo(() => nodes.filter(node => {
     const type = node.node_type || "milestone";
     const service = node.aws_metadata && getAWSService(node.aws_metadata.serviceId);
-    const haystack = [node.title, node.description, node.status.replaceAll("_", " "), type.replaceAll("_", " "),
+    const haystack = [node.title, node.description, getNodeStatusLabel(node), type.replaceAll("_", " "),
       service?.name, service?.shortName, service?.category, node.aws_metadata?.serviceId, node.aws_metadata?.region,
       ...Object.values(node.aws_metadata?.config || {}), node.group_metadata?.label,
       node.group_metadata?.style.replaceAll("_", " "), node.annotation_metadata?.content,
@@ -109,7 +110,7 @@ export default function CanvasNavigator({ nodes, isOpen, onToggle, onClose, onJu
             className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left hover:bg-neutral-50 focus-visible:bg-emerald-50 dark:hover:bg-[#1e2634] dark:focus-visible:bg-[#1e2634] ${highlightedIndex === index ? "bg-emerald-50 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-500/10 dark:ring-emerald-500/30" : ""}`}>
             <span className="rounded-lg bg-neutral-100 p-2 text-neutral-500 dark:bg-[#1e2634] dark:text-neutral-300"><Icon className="h-4 w-4" /></span>
             <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-neutral-900 dark:text-white">{node.title || "Untitled"}</span>
-              <span className="mt-0.5 block truncate text-[10px] text-neutral-500 dark:text-neutral-300">{type === "aws_service" ? `AWS · ${node.aws_metadata?.region || "No region"}` : type === "group" ? "Container" : type === "annotation" ? "Note" : node.status.replaceAll("_", " ")}</span></span>
+              <span className="mt-0.5 block truncate text-[10px] text-neutral-500 dark:text-neutral-300">{type === "aws_service" ? `AWS · ${node.aws_metadata?.region || "No region"}` : type === "group" ? "Container" : type === "annotation" ? "Note" : getNodeStatusLabel(node)}</span></span>
           </button>;
         })}
         {!results.length && <p className="px-3 py-8 text-center text-xs text-neutral-500 dark:text-neutral-300">{nodes.length ? "No matches. Try another search or filter." : "Add your first milestone or AWS resource to get started."}</p>}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fitCanvasNodes, zoomAroundCenter, getCanvasNodeAtPoint } from "./workspace";
+import { alignNodePosition, fitCanvasNodes, zoomAroundCenter, getCanvasNodeAtPoint } from "./workspace";
 import { getNodeDimensions } from "./coordinate-math";
 import type { CanvasNode } from "./types";
 
@@ -66,4 +66,12 @@ describe("canvas fit and zoom", () => {
     expect((center.x - next.x) / next.zoom).toBeCloseTo((center.x - initial.x) / initial.zoom);
     expect((center.y - next.y) / next.zoom).toBeCloseTo((center.y - initial.y) / initial.zoom);
   });
+});
+
+it("aligns unequal card centers so facing ports form a straight connection", () => {
+  const a = { ...nodes[1], id: "a", position_x: 0, position_y: 0 };
+  const b = { ...a, id: "b", title: "A much longer title ".repeat(10), position_x: 600 };
+  const y = getNodeDimensions(a).height / 2 - getNodeDimensions(b).height / 2;
+  expect(alignNodePosition(b, { x: 600, y: y + 3 }, [a, b], 1).y).toBe(y);
+  expect(alignNodePosition(b, { x: 603, y: 499 }, [b], 1)).toMatchObject({ x: 608, y: 496 });
 });
