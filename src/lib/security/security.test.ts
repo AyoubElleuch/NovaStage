@@ -43,7 +43,11 @@ describe("Security, Password Generation & Abuse Prevention", () => {
 
   it("blocks requests once limits are exceeded and resets properly", () => {
     checkRateLimit(testKey, { maxAttempts: 1, windowSeconds: 60, lockoutSeconds: 10 });
-    const blocked = checkRateLimit(testKey, { maxAttempts: 1, windowSeconds: 60, lockoutSeconds: 10 });
+    const blocked = checkRateLimit(testKey, {
+      maxAttempts: 1,
+      windowSeconds: 60,
+      lockoutSeconds: 10,
+    });
     expect(blocked.allowed).toBe(false);
     expect(blocked.remaining).toBe(0);
     expect(blocked.retryAfterSeconds).toBeGreaterThan(0);
@@ -63,6 +67,8 @@ describe("Security, Password Generation & Abuse Prevention", () => {
     expect(res2.allowed).toBe(false);
 
     await resetRateLimitAsync(asyncKey);
-    expect((await checkRateLimitAsync(asyncKey, { maxAttempts: 1, windowSeconds: 60 })).allowed).toBe(true);
+    expect(
+      (await checkRateLimitAsync(asyncKey, { maxAttempts: 1, windowSeconds: 60 })).allowed,
+    ).toBe(true);
   });
 });

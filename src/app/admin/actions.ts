@@ -84,14 +84,16 @@ export async function getPlatformAnnouncement(): Promise<{
     if (error) return { error: error.message };
     return { data: parsePlatformAnnouncement(data) };
   } catch (err: unknown) {
-    return { error: err instanceof Error ? err.message : "Failed to load the platform announcement." };
+    return {
+      error: err instanceof Error ? err.message : "Failed to load the platform announcement.",
+    };
   }
 }
 
 export async function savePlatformAnnouncement(
   message: string,
   severity: AnnouncementSeverity,
-  isActive: boolean
+  isActive: boolean,
 ): Promise<AdminActionResult> {
   try {
     const session = await assertSuperAdmin();
@@ -122,7 +124,7 @@ export async function savePlatformAnnouncement(
           updated_by: session.user.id,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "id" }
+        { onConflict: "id" },
       )
       .select("id, message, severity, is_active, updated_at, updated_by")
       .single();
@@ -144,7 +146,9 @@ export async function savePlatformAnnouncement(
       message: isActive ? "Announcement activated for all users." : "Announcement disabled.",
     };
   } catch (err: unknown) {
-    return { error: err instanceof Error ? err.message : "Failed to save the platform announcement." };
+    return {
+      error: err instanceof Error ? err.message : "Failed to save the platform announcement.",
+    };
   }
 }
 
@@ -168,7 +172,7 @@ export async function getWaitlistEntries(): Promise<{ data?: WaitlistRecord[]; e
 
     // 2. Fetch all auth users to compute active account state
     const { data: authUsersData, error: authError } = await adminClient.auth.admin.listUsers();
-    
+
     if (authError) {
       return { error: authError.message };
     }
@@ -210,7 +214,7 @@ export async function getWaitlistEntries(): Promise<{ data?: WaitlistRecord[]; e
  */
 export async function approveWaitlistEntry(
   email: string,
-  initialPassword?: string
+  initialPassword?: string,
 ): Promise<AdminActionResult> {
   try {
     await assertPermission("waitlist:approve");
@@ -295,7 +299,10 @@ export async function disapproveWaitlistEntry(email: string): Promise<AdminActio
     }
 
     revalidatePath("/admin/waitlist");
-    return { success: true, message: `Waitlist entry for ${normalizedEmail} marked as disapproved.` };
+    return {
+      success: true,
+      message: `Waitlist entry for ${normalizedEmail} marked as disapproved.`,
+    };
   } catch (err: unknown) {
     return { error: err instanceof Error ? err.message : "Disapproval failed." };
   }
@@ -373,7 +380,8 @@ export async function getAdminOverviewUsers(): Promise<{
 
     // 3. Map auth users to AdminOverviewUser
     const users: AdminOverviewUser[] = (authUsersData.users || []).map((u) => {
-      const profile = profileMap.get(u.id) || (u.email ? profileMap.get(u.email.toLowerCase()) : undefined);
+      const profile =
+        profileMap.get(u.id) || (u.email ? profileMap.get(u.email.toLowerCase()) : undefined);
       const email = u.email || profile?.email || "Unknown";
       const provider =
         (u.app_metadata?.provider as string) ||
@@ -452,7 +460,9 @@ export async function getUserAiLimits(): Promise<{ data?: UserAiLimitRecord[]; e
 
     const { data: profiles, error } = await adminClient
       .from("profiles")
-      .select("id, email, full_name, username, avatar_url, role, ai_requests_count, created_at, updated_at")
+      .select(
+        "id, email, full_name, username, avatar_url, role, ai_requests_count, created_at, updated_at",
+      )
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -586,7 +596,9 @@ export async function getAdminSubscriptionUsers(): Promise<{
     let profileList: RawProfile[] = [];
     const { data: profiles, error: profileError } = await adminClient
       .from("profiles")
-      .select("id, email, full_name, username, avatar_url, role, plan, ai_requests_count, created_at");
+      .select(
+        "id, email, full_name, username, avatar_url, role, plan, ai_requests_count, created_at",
+      );
 
     if (profileError) {
       const fallback = await adminClient
@@ -612,17 +624,18 @@ export async function getAdminSubscriptionUsers(): Promise<{
     const validPlans: SubscriptionPlan[] = ["free", "plus", "pro", "enterprise"];
 
     const users: AdminSubscriptionUser[] = (authUsersData.users || []).map((u) => {
-      const profile = profileMap.get(u.id) || (u.email ? profileMap.get(u.email.toLowerCase()) : undefined);
+      const profile =
+        profileMap.get(u.id) || (u.email ? profileMap.get(u.email.toLowerCase()) : undefined);
       const email = u.email || profile?.email || "Unknown";
       const metadataPlan = u.user_metadata?.plan as SubscriptionPlan | undefined;
       const profilePlan = profile?.plan as SubscriptionPlan | undefined;
 
       const resolvedPlan =
-        (profilePlan && validPlans.includes(profilePlan))
+        profilePlan && validPlans.includes(profilePlan)
           ? profilePlan
-          : (metadataPlan && validPlans.includes(metadataPlan))
-          ? metadataPlan
-          : "free";
+          : metadataPlan && validPlans.includes(metadataPlan)
+            ? metadataPlan
+            : "free";
 
       return {
         id: u.id,
@@ -650,7 +663,7 @@ export async function getAdminSubscriptionUsers(): Promise<{
  */
 export async function updateUserSubscriptionPlan(
   userId: string,
-  plan: SubscriptionPlan
+  plan: SubscriptionPlan,
 ): Promise<AdminActionResult> {
   try {
     await assertSuperAdmin();
@@ -662,7 +675,8 @@ export async function updateUserSubscriptionPlan(
     const adminClient = createAdminClient();
 
     // 1. Update user metadata in auth.users
-    const { data: userData, error: getUserError } = await adminClient.auth.admin.getUserById(userId);
+    const { data: userData, error: getUserError } =
+      await adminClient.auth.admin.getUserById(userId);
     if (getUserError || !userData?.user) {
       return { error: getUserError?.message || "User not found." };
     }
@@ -706,5 +720,3 @@ export async function updateUserSubscriptionPlan(
     return { error: err instanceof Error ? err.message : "Failed to update subscription plan." };
   }
 }
-
-

@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     if (!projectId || !memberId) {
       return NextResponse.json(
         { error: "Both projectId and memberId are required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || "Could not remove member from project." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     console.error("Error kicking member:", error);
     return NextResponse.json(
       { error: "An unexpected error occurred while removing the member." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

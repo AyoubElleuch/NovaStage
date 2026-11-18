@@ -36,20 +36,18 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({
             request: {
               headers: requestHeaders,
             },
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, options),
           );
         },
       },
-    }
+    },
   );
 
   // Refresh auth token
@@ -98,9 +96,7 @@ export async function updateSession(request: NextRequest) {
     // Completed profile: redirect away from /onboarding
     if (isComplete && isOnboardingPage) {
       const destination =
-        profile?.role === "admin" || profile?.role === "super_admin"
-          ? "/admin"
-          : "/dashboard";
+        profile?.role === "admin" || profile?.role === "super_admin" ? "/admin" : "/dashboard";
       const redirectResponse = NextResponse.redirect(new URL(destination, request.url));
       supabaseResponse.cookies.getAll().forEach((cookie) => {
         redirectResponse.cookies.set(cookie);

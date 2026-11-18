@@ -25,7 +25,7 @@ export interface ValidationReport {
 export function resolveMilestoneColor(
   phase?: MilestonePhase,
   title?: string,
-  currentColor?: "default" | "amber" | "purple" | "rose"
+  currentColor?: "default" | "amber" | "purple" | "rose",
 ): "default" | "amber" | "purple" | "rose" {
   if (currentColor && ["default", "amber", "purple", "rose"].includes(currentColor)) {
     return currentColor;
@@ -42,13 +42,25 @@ export function resolveMilestoneColor(
   if (phase === "testing" || phase === "deployment" || phase === "operations") return "rose";
 
   const t = (title || "").toLowerCase();
-  if (t.includes("qa") || t.includes("test") || t.includes("deploy") || t.includes("security") || t.includes("audit")) {
+  if (
+    t.includes("qa") ||
+    t.includes("test") ||
+    t.includes("deploy") ||
+    t.includes("security") ||
+    t.includes("audit")
+  ) {
     return "rose";
   }
   if (t.includes("ui") || t.includes("front") || t.includes("auth") || t.includes("view")) {
     return "amber";
   }
-  if (t.includes("api") || t.includes("service") || t.includes("backend") || t.includes("billing") || t.includes("stripe")) {
+  if (
+    t.includes("api") ||
+    t.includes("service") ||
+    t.includes("backend") ||
+    t.includes("billing") ||
+    t.includes("stripe")
+  ) {
     return "purple";
   }
 
@@ -56,20 +68,45 @@ export function resolveMilestoneColor(
 }
 
 /** Safe normalization only: semantic failures must be corrected by the provider. */
-export function validateAndRepairWorkflow(workflow: AIWorkflowResult): { workflow: AIWorkflowResult; report: ValidationReport } {
+export function validateAndRepairWorkflow(workflow: AIWorkflowResult): {
+  workflow: AIWorkflowResult;
+  report: ValidationReport;
+} {
   assertSemanticGraph(workflow);
   const normalized = normalizeArchitectureTopology({
     ...workflow,
     mode: workflow.mode || "workflow",
-    milestones: workflow.milestones.map(m => ({ ...m,
-      title: m.title.trim(), color: resolveMilestoneColor(m.phase, m.title, m.color),
-      checkpoints: m.checkpoints.map(cp => ({ ...cp, title: cp.title.trim() })),
+    milestones: workflow.milestones.map((m) => ({
+      ...m,
+      title: m.title.trim(),
+      color: resolveMilestoneColor(m.phase, m.title, m.color),
+      checkpoints: m.checkpoints.map((cp) => ({ ...cp, title: cp.title.trim() })),
     })),
-    serviceNodes: (workflow.serviceNodes || []).map(s => ({ ...s, serviceId: normalizeAWSServiceId(s.serviceId) })),
-    edges: [...new Map(workflow.edges.map(e => [e.fromId + ":" + e.toId, { ...e }])).values()],
-    dataFlowEdges: [...new Map((workflow.dataFlowEdges || []).map(e => [e.fromId + ":" + e.toId + ":" + e.edgeType + ":" + (e.label || ""), { ...e }])).values()],
+    serviceNodes: (workflow.serviceNodes || []).map((s) => ({
+      ...s,
+      serviceId: normalizeAWSServiceId(s.serviceId),
+    })),
+    edges: [...new Map(workflow.edges.map((e) => [e.fromId + ":" + e.toId, { ...e }])).values()],
+    dataFlowEdges: [
+      ...new Map(
+        (workflow.dataFlowEdges || []).map((e) => [
+          e.fromId + ":" + e.toId + ":" + e.edgeType + ":" + (e.label || ""),
+          { ...e },
+        ]),
+      ).values(),
+    ],
   });
-  return { workflow: normalized, report: { isValid: true, cyclesRemoved: 0, orphansConnected: 0,
-    brokenEdgesRemoved: 0, checkpointsPadded: 0, duplicateTitlesFixed: 0,
-    architectureReferencesRepaired: 0, architectureEdgesRemoved: 0 } };
+  return {
+    workflow: normalized,
+    report: {
+      isValid: true,
+      cyclesRemoved: 0,
+      orphansConnected: 0,
+      brokenEdgesRemoved: 0,
+      checkpointsPadded: 0,
+      duplicateTitlesFixed: 0,
+      architectureReferencesRepaired: 0,
+      architectureEdgesRemoved: 0,
+    },
+  };
 }

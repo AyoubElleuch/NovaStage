@@ -37,6 +37,7 @@ jobs:
           key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'next.config.*') }}
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

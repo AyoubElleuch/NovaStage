@@ -1,10 +1,7 @@
 "use client";
 
 import { SWRConfig } from "swr";
-import type {
-  DashboardProjectsData,
-  DashboardSettingsData,
-} from "@/lib/dashboard-data";
+import type { DashboardProjectsData, DashboardSettingsData } from "@/lib/dashboard-data";
 
 interface DashboardDataProviderProps {
   children: React.ReactNode;

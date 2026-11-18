@@ -7,7 +7,8 @@ import { CANVAS_GRID_SIZE, screenToWorld } from "@/lib/canvas/coordinate-math";
 import { useTheme } from "@/lib/theme-context";
 
 const CTRL_WHEEL_ZOOM_SENSITIVITY = 0.0025;
-const INTERACTIVE_SELECTOR = "button, input, textarea, select, a, [contenteditable]:not([contenteditable='false']), [data-canvas-ui]";
+const INTERACTIVE_SELECTOR =
+  "button, input, textarea, select, a, [contenteditable]:not([contenteditable='false']), [data-canvas-ui]";
 
 interface CanvasViewportProps {
   allowHandToolClick?: boolean;
@@ -20,8 +21,14 @@ interface CanvasViewportProps {
   children: React.ReactNode;
   onCanvasClick?: (worldPos: { x: number; y: number }) => void;
   onPointerMove?: (worldPos: { x: number; y: number }, screenPos: { x: number; y: number }) => void;
-  onMarqueeStart?: (worldPos: { x: number; y: number }, screenPos: { x: number; y: number }) => void;
-  onMarqueeChange?: (worldPos: { x: number; y: number }, screenPos: { x: number; y: number }) => void;
+  onMarqueeStart?: (
+    worldPos: { x: number; y: number },
+    screenPos: { x: number; y: number },
+  ) => void;
+  onMarqueeChange?: (
+    worldPos: { x: number; y: number },
+    screenPos: { x: number; y: number },
+  ) => void;
   onMarqueeEnd?: () => void;
 }
 
@@ -43,11 +50,16 @@ export default function CanvasViewportContainer({
   const containerRef = useRef<HTMLDivElement>(null);
   const navigationHelpId = useId();
   const viewportRef = useRef(viewport);
-  useEffect(() => { viewportRef.current = viewport; }, [viewport]);
-  const updateViewport = useCallback((next: CanvasViewport) => {
-    viewportRef.current = next;
-    onViewportChange(next);
-  }, [onViewportChange]);
+  useEffect(() => {
+    viewportRef.current = viewport;
+  }, [viewport]);
+  const updateViewport = useCallback(
+    (next: CanvasViewport) => {
+      viewportRef.current = next;
+      onViewportChange(next);
+    },
+    [onViewportChange],
+  );
   const [isPanning, setIsPanning] = useState(false);
   const gestureRef = useRef<{
     mode: "pan" | "marquee";
@@ -58,7 +70,9 @@ export default function CanvasViewportContainer({
   const [isSpacePressed, setIsSpacePressed] = useState(false);
 
   // Multi-touch tracking for pinch-to-zoom & smooth touch pan
-  const activePointersRef = useRef<Map<number, { x: number; y: number; pointerType: string }>>(new Map());
+  const activePointersRef = useRef<Map<number, { x: number; y: number; pointerType: string }>>(
+    new Map(),
+  );
   const pinchStateRef = useRef<{
     initialDistance: number;
     initialZoom: number;
@@ -119,10 +133,17 @@ export default function CanvasViewportContainer({
     (e: WheelEvent) => {
       if (!containerRef.current) return;
       if (allowPageScroll && !e.ctrlKey && !e.metaKey) return;
-      if (!e.ctrlKey && !e.metaKey && e.target instanceof Element && e.target.closest("[data-canvas-scroll]")) return;
+      if (
+        !e.ctrlKey &&
+        !e.metaKey &&
+        e.target instanceof Element &&
+        e.target.closest("[data-canvas-scroll]")
+      )
+        return;
       e.preventDefault();
       const viewport = viewportRef.current;
-      const deltaScale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? containerRef.current.clientHeight : 1;
+      const deltaScale =
+        e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? containerRef.current.clientHeight : 1;
       const deltaX = e.deltaX * deltaScale;
       const deltaY = e.deltaY * deltaScale;
 
@@ -133,7 +154,7 @@ export default function CanvasViewportContainer({
       if (e.ctrlKey || e.metaKey) {
         // Pinch / Ctrl + Wheel Zoom
         const zoomFactor = Math.exp(
-          -Math.max(-100, Math.min(100, deltaY)) * CTRL_WHEEL_ZOOM_SENSITIVITY
+          -Math.max(-100, Math.min(100, deltaY)) * CTRL_WHEEL_ZOOM_SENSITIVITY,
         );
         const newZoom = Math.min(Math.max(viewport.zoom * zoomFactor, MIN_CANVAS_ZOOM), 2.5);
 
@@ -152,7 +173,7 @@ export default function CanvasViewportContainer({
         });
       }
     },
-    [allowPageScroll, getScreenPoint, updateViewport]
+    [allowPageScroll, getScreenPoint, updateViewport],
   );
 
   useEffect(() => {
@@ -174,14 +195,22 @@ export default function CanvasViewportContainer({
       marqueeDistanceRef.current = 0;
       justFinishedMarqueeRef.current = false;
     }
-    const continuingTouchGesture = isTouch && activePointersRef.current.size > 0 &&
-      Array.from(activePointersRef.current.values()).every((pointer) => pointer.pointerType === "touch");
-    const shouldPan = activeTool === "hand" || isSpacePressed || e.button === 1 ||
-      (e.button === 0 && e.altKey) || (isTouch && (isBackground || continuingTouchGesture));
+    const continuingTouchGesture =
+      isTouch &&
+      activePointersRef.current.size > 0 &&
+      Array.from(activePointersRef.current.values()).every(
+        (pointer) => pointer.pointerType === "touch",
+      );
+    const shouldPan =
+      activeTool === "hand" ||
+      isSpacePressed ||
+      e.button === 1 ||
+      (e.button === 0 && e.altKey) ||
+      (isTouch && (isBackground || continuingTouchGesture));
     if (!isBackground && !shouldPan) return;
     // Keep controls inside cards usable, including when the hand tool is active.
-    if (!isBackground && e.target instanceof Element &&
-      e.target.closest(INTERACTIVE_SELECTOR)) return;
+    if (!isBackground && e.target instanceof Element && e.target.closest(INTERACTIVE_SELECTOR))
+      return;
     if (!isTouch && e.button !== 0 && e.button !== 1) return;
     if (activePointersRef.current.size >= 2) return;
     // A pen or mouse drag is a single-pointer gesture, never one half of a pinch.
@@ -225,7 +254,10 @@ export default function CanvasViewportContainer({
     if (shouldPan) {
       setIsPanning(true);
       gestureRef.current = {
-        mode: "pan", pointerId: e.pointerId, start: screenPoint, initialViewport: currentViewport,
+        mode: "pan",
+        pointerId: e.pointerId,
+        start: screenPoint,
+        initialViewport: currentViewport,
       };
       try {
         containerRef.current?.setPointerCapture(e.pointerId);
@@ -238,7 +270,10 @@ export default function CanvasViewportContainer({
       const worldPos = screenToWorld(screenX, screenY, currentViewport);
 
       gestureRef.current = {
-        mode: "marquee", pointerId: e.pointerId, start: screenPoint, initialViewport: currentViewport,
+        mode: "marquee",
+        pointerId: e.pointerId,
+        start: screenPoint,
+        initialViewport: currentViewport,
       };
       onMarqueeStart?.(worldPos, { x: e.clientX, y: e.clientY });
       try {
@@ -250,7 +285,10 @@ export default function CanvasViewportContainer({
   const handlePointerMove = (e: React.PointerEvent) => {
     const activePointer = activePointersRef.current.get(e.pointerId);
     if (activePointer) {
-      activePointersRef.current.set(e.pointerId, { ...getScreenPoint(e.clientX, e.clientY), pointerType: activePointer.pointerType });
+      activePointersRef.current.set(e.pointerId, {
+        ...getScreenPoint(e.clientX, e.clientY),
+        pointerType: activePointer.pointerType,
+      });
     }
 
     // 2-Finger Pinch Zoom & Pan
@@ -269,7 +307,10 @@ export default function CanvasViewportContainer({
       };
 
       const scale = currentDistance / (pinchStateRef.current.initialDistance || 1);
-      const newZoom = Math.min(Math.max(pinchStateRef.current.initialZoom * scale, MIN_CANVAS_ZOOM), 2.5);
+      const newZoom = Math.min(
+        Math.max(pinchStateRef.current.initialZoom * scale, MIN_CANVAS_ZOOM),
+        2.5,
+      );
 
       const worldMidX =
         (initialMidScreen.x - pinchStateRef.current.initialViewport.x) /
@@ -322,7 +363,10 @@ export default function CanvasViewportContainer({
       pinchStateRef.current = null;
       const [pointerId, remaining] = Array.from(activePointersRef.current.entries())[0];
       gestureRef.current = {
-        mode: "pan", pointerId, start: remaining, initialViewport: viewportRef.current,
+        mode: "pan",
+        pointerId,
+        start: remaining,
+        initialViewport: viewportRef.current,
       };
       setIsPanning(true);
       return;
@@ -344,7 +388,12 @@ export default function CanvasViewportContainer({
 
   const handleClick = (e: React.MouseEvent) => {
     if (e.target instanceof Element && e.target.closest(INTERACTIVE_SELECTOR)) return;
-    if ((activeTool === "hand" && !allowHandToolClick) || isSpacePressed || e.altKey || dragDistanceRef.current > 4) {
+    if (
+      (activeTool === "hand" && !allowHandToolClick) ||
+      isSpacePressed ||
+      e.altKey ||
+      dragDistanceRef.current > 4
+    ) {
       e.preventDefault();
       e.stopPropagation();
       return;
@@ -359,7 +408,12 @@ export default function CanvasViewportContainer({
       return;
     }
 
-    if (isBackground && !gestureRef.current && containerRef.current && dragDistanceRef.current < 8) {
+    if (
+      isBackground &&
+      !gestureRef.current &&
+      containerRef.current &&
+      dragDistanceRef.current < 8
+    ) {
       const screen = getScreenPoint(e.clientX, e.clientY);
       const screenX = screen.x;
       const screenY = screen.y;
@@ -368,16 +422,15 @@ export default function CanvasViewportContainer({
     }
   };
 
-  const cursorClass =
-    isPanning
-      ? "cursor-grabbing"
-      : isSpacePressed || activeTool === "hand"
+  const cursorClass = isPanning
+    ? "cursor-grabbing"
+    : isSpacePressed || activeTool === "hand"
       ? "cursor-grab"
       : activeTool === "add_node"
-      ? "cursor-crosshair"
-      : activeTool === "link"
-      ? "cursor-cell"
-      : "cursor-default";
+        ? "cursor-crosshair"
+        : activeTool === "link"
+          ? "cursor-cell"
+          : "cursor-default";
 
   // Dynamic grid scaling with zoom
   const gridMultiplier = 2 ** Math.max(0, Math.ceil(Math.log2(0.65 / viewport.zoom)));
@@ -420,20 +473,33 @@ export default function CanvasViewportContainer({
         const current = viewportRef.current;
         const step = e.shiftKey ? 128 : 48;
         const movement: Record<string, { x: number; y: number }> = {
-          ArrowLeft: { x: step, y: 0 }, ArrowRight: { x: -step, y: 0 },
-          ArrowUp: { x: 0, y: step }, ArrowDown: { x: 0, y: -step },
+          ArrowLeft: { x: step, y: 0 },
+          ArrowRight: { x: -step, y: 0 },
+          ArrowUp: { x: 0, y: step },
+          ArrowDown: { x: 0, y: -step },
         };
         if (movement[e.key]) {
           e.preventDefault();
           e.stopPropagation();
-          updateViewport({ ...current, x: current.x + movement[e.key].x, y: current.y + movement[e.key].y });
+          updateViewport({
+            ...current,
+            x: current.x + movement[e.key].x,
+            y: current.y + movement[e.key].y,
+          });
         } else if (["+", "=", "-", "_"].includes(e.key)) {
           e.preventDefault();
           e.stopPropagation();
-          const zoom = Math.max(MIN_CANVAS_ZOOM, Math.min(2.5, current.zoom * (e.key === "-" || e.key === "_" ? 1 / 1.2 : 1.2)));
+          const zoom = Math.max(
+            MIN_CANVAS_ZOOM,
+            Math.min(2.5, current.zoom * (e.key === "-" || e.key === "_" ? 1 / 1.2 : 1.2)),
+          );
           const x = e.currentTarget.clientWidth / 2;
           const y = e.currentTarget.clientHeight / 2;
-          updateViewport({ x: x - (x - current.x) * zoom / current.zoom, y: y - (y - current.y) * zoom / current.zoom, zoom });
+          updateViewport({
+            x: x - ((x - current.x) * zoom) / current.zoom,
+            y: y - ((y - current.y) * zoom) / current.zoom,
+            zoom,
+          });
         }
       }}
       onPointerDownCapture={handlePointerDown}

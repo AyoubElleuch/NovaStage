@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
   const origin = forwardedHost
     ? `${forwardedProto}://${forwardedHost}`
-    : (process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin);
+    : process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin;
 
   if (code) {
     const supabase = await createClient();
@@ -63,8 +63,7 @@ export async function GET(request: Request) {
         (isSignup ||
           !profile ||
           !profile.username ||
-          (user.created_at &&
-            Math.abs(Date.now() - new Date(user.created_at).getTime()) < 120000));
+          (user.created_at && Math.abs(Date.now() - new Date(user.created_at).getTime()) < 120000));
 
       if (isNewUser) {
         // Send welcoming email for new registration

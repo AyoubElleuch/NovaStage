@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     if (!result.success || !result.members) {
       return NextResponse.json(
         { error: result.error || "Failed to load project members." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     console.error("Error fetching project members:", error);
     return NextResponse.json(
       { error: "An unexpected error occurred while fetching members." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

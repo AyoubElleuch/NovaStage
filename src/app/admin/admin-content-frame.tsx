@@ -7,11 +7,7 @@ import Link from "next/link";
 import { Menu, ShieldCheck } from "lucide-react";
 import { useMobileNav } from "@/lib/mobile-nav-context";
 
-export default function AdminContentFrame({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminContentFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { toggle } = useMobileNav();
 
@@ -19,14 +15,14 @@ export default function AdminContentFrame({
     pathname === "/admin"
       ? "Overview"
       : pathname === "/admin/subscriptions"
-      ? "Subscriptions"
-      : pathname === "/admin/waitlist"
-      ? "Waitlist"
-      : pathname === "/admin/ai-limits"
-      ? "AI Limits"
-      : pathname === "/admin/broadcast"
-      ? "Announcement"
-      : "Admin Console";
+        ? "Subscriptions"
+        : pathname === "/admin/waitlist"
+          ? "Waitlist"
+          : pathname === "/admin/ai-limits"
+            ? "AI Limits"
+            : pathname === "/admin/broadcast"
+              ? "Announcement"
+              : "Admin Console";
 
   return (
     <main className="min-w-0 flex-1 overflow-y-auto flex flex-col">
@@ -63,9 +59,7 @@ export default function AdminContentFrame({
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-10 sm:py-12 flex-1">
-        {children}
-      </div>
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-10 sm:py-12 flex-1">{children}</div>
     </main>
   );
 }

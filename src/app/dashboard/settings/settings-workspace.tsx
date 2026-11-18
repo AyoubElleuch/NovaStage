@@ -10,7 +10,7 @@ import SettingsLoading from "./loading";
 export default function SettingsWorkspace() {
   const { data, isLoading } = useSWR<DashboardSettingsData>(
     "/api/dashboard/settings",
-    fetcher<DashboardSettingsData>
+    fetcher<DashboardSettingsData>,
   );
 
   if (isLoading && !data) {
@@ -22,7 +22,7 @@ export default function SettingsWorkspace() {
   const displayName = profile.full_name || email.split("@")[0] || "NovaStage member";
   const joinedDate = profile.created_at
     ? new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(
-        new Date(profile.created_at)
+        new Date(profile.created_at),
       )
     : "Recently";
 
@@ -32,7 +32,9 @@ export default function SettingsWorkspace() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500">
           Account
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">Settings</h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+          Settings
+        </h1>
         <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
           Your identity, security, appearance, and personal workspace details.
         </p>
@@ -50,9 +52,13 @@ export default function SettingsWorkspace() {
           className="shadow-sm"
         />
         <div className="min-w-0">
-          <h2 className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{displayName}</h2>
+          <h2 className="truncate text-sm font-semibold text-neutral-900 dark:text-white">
+            {displayName}
+          </h2>
           <p className="truncate text-[13px] text-neutral-500 dark:text-neutral-400">{email}</p>
-          <p className="mt-0.5 text-xs text-neutral-400 dark:text-neutral-500">Member since {joinedDate}</p>
+          <p className="mt-0.5 text-xs text-neutral-400 dark:text-neutral-500">
+            Member since {joinedDate}
+          </p>
         </div>
         <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
           <span className="relative flex h-1.5 w-1.5">

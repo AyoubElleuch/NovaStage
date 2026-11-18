@@ -64,9 +64,7 @@ export async function requireAuth(redirectTo?: string): Promise<User> {
   const user = await getAuthenticatedUser();
 
   if (!user) {
-    const loginUrl = redirectTo
-      ? `/login?redirectTo=${encodeURIComponent(redirectTo)}`
-      : "/login";
+    const loginUrl = redirectTo ? `/login?redirectTo=${encodeURIComponent(redirectTo)}` : "/login";
     redirect(loginUrl);
   }
 
@@ -144,7 +142,7 @@ export function isAdminRole(role?: string | null | string[]): boolean {
  */
 export async function requirePermission(
   required: Permission | Permission[],
-  redirectTo = "/login"
+  redirectTo = "/login",
 ): Promise<AuthSessionContext> {
   const session = await getAuthenticatedProfile();
 
@@ -169,7 +167,7 @@ export async function requirePermission(
  * New users or users who have not completed onboarding return false.
  */
 export function isProfileComplete(
-  profile?: Pick<UserProfile, "full_name" | "username"> | null
+  profile?: Pick<UserProfile, "full_name" | "username"> | null,
 ): boolean {
   if (!profile) return false;
   const fullName = typeof profile.full_name === "string" ? profile.full_name.trim() : "";
@@ -182,7 +180,9 @@ export function isProfileComplete(
  * If user is not authenticated, redirects to /login.
  * If user profile is incomplete, redirects to /onboarding.
  */
-export async function requireCompleteProfile(redirectTo = "/onboarding"): Promise<AuthSessionContext> {
+export async function requireCompleteProfile(
+  redirectTo = "/onboarding",
+): Promise<AuthSessionContext> {
   const session = await getAuthenticatedProfile();
 
   if (!session || !session.user) {
@@ -209,8 +209,7 @@ export async function requireIncompleteProfile(): Promise<AuthSessionContext> {
   }
 
   if (isProfileComplete(session.profile)) {
-    const isAdmin =
-      isAdminRole(session.roles) || isAdminRole(session.profile?.role);
+    const isAdmin = isAdminRole(session.roles) || isAdminRole(session.profile?.role);
     redirect(isAdmin ? "/admin" : "/dashboard");
   }
 

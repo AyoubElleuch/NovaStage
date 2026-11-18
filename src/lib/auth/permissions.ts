@@ -29,10 +29,10 @@ export interface RoleDefinition {
  */
 export function hasPermission(
   userPermissions: string[] = [],
-  required: Permission | Permission[]
+  required: Permission | Permission[],
 ): boolean {
   if (!userPermissions || userPermissions.length === 0) return false;
-  
+
   // Wildcard / super_admin full grant
   if (userPermissions.includes("*") || userPermissions.includes("all")) {
     return true;
@@ -45,10 +45,7 @@ export function hasPermission(
 /**
  * Checks if a user has any of the required permissions (OR condition).
  */
-export function hasAnyPermission(
-  userPermissions: string[] = [],
-  required: Permission[]
-): boolean {
+export function hasAnyPermission(userPermissions: string[] = [], required: Permission[]): boolean {
   if (!userPermissions || userPermissions.length === 0) return false;
   if (userPermissions.includes("*") || userPermissions.includes("all")) {
     return true;

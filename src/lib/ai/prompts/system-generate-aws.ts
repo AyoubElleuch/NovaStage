@@ -17,7 +17,7 @@ function providerExample(example: typeof AWS_WEB_APP_FEW_SHOT_EXAMPLE) {
 
 export function buildAWSGenerationSystemInstruction(
   prompt: string,
-  decomposition?: PromptDecomposition
+  decomposition?: PromptDecomposition,
 ): string {
   const domainGuidances = decomposition
     ? getAWSTemplateGuidance(decomposition.domainTags, prompt)
@@ -25,11 +25,12 @@ export function buildAWSGenerationSystemInstruction(
 
   let domainGuidanceText = "";
   if (domainGuidances.length > 0) {
-    domainGuidanceText = `\n\nDOMAIN-SPECIFIC AWS ARCHITECTURE STANDARDS:\n` +
+    domainGuidanceText =
+      `\n\nDOMAIN-SPECIFIC AWS ARCHITECTURE STANDARDS:\n` +
       domainGuidances
         .map(
           (g) =>
-            `### ${g.domain}\nKey Considerations:\n${g.keyArchitecturalConsiderations.map((c) => `- ${c}`).join("\n")}`
+            `### ${g.domain}\nKey Considerations:\n${g.keyArchitecturalConsiderations.map((c) => `- ${c}`).join("\n")}`,
         )
         .join("\n\n");
   }

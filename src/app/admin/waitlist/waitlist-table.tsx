@@ -1,11 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  WaitlistRecord,
-  approveWaitlistEntry,
-  disapproveWaitlistEntry,
-} from "../actions";
+import { WaitlistRecord, approveWaitlistEntry, disapproveWaitlistEntry } from "../actions";
 import {
   CheckCircle2,
   XCircle,
@@ -25,7 +21,9 @@ interface WaitlistTableProps {
 export default function WaitlistTable({ initialData }: WaitlistTableProps) {
   const [data, setData] = useState<WaitlistRecord[]>(initialData);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "disapproved">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "disapproved">(
+    "all",
+  );
   const [isPending, startTransition] = useTransition();
   const [activeActionEmail, setActiveActionEmail] = useState<string | null>(null);
   const { notify } = useNotifications();
@@ -45,18 +43,29 @@ export default function WaitlistTable({ initialData }: WaitlistTableProps) {
         notify({
           title: "User approved",
           message: `${email} was approved and user account created.`,
-          detail: res.temporaryPassword ? `Temporary password: ${res.temporaryPassword}` : undefined,
+          detail: res.temporaryPassword
+            ? `Temporary password: ${res.temporaryPassword}`
+            : undefined,
           copyText: res.temporaryPassword,
         });
         setData((prev) =>
           prev.map((item) =>
             item.email === email
-              ? { ...item, status: "approved", has_active_user: true, approved_at: new Date().toISOString() }
-              : item
-          )
+              ? {
+                  ...item,
+                  status: "approved",
+                  has_active_user: true,
+                  approved_at: new Date().toISOString(),
+                }
+              : item,
+          ),
         );
       } else {
-        notify({ tone: "error", title: "Approval failed", message: res.error || "The user could not be approved." });
+        notify({
+          tone: "error",
+          title: "Approval failed",
+          message: res.error || "The user could not be approved.",
+        });
       }
     });
   };
@@ -72,11 +81,15 @@ export default function WaitlistTable({ initialData }: WaitlistTableProps) {
           prev.map((item) =>
             item.email === email
               ? { ...item, status: "disapproved", disapproved_at: new Date().toISOString() }
-              : item
-          )
+              : item,
+          ),
         );
       } else {
-        notify({ tone: "error", title: "Disapproval failed", message: res.error || "The user could not be disapproved." });
+        notify({
+          tone: "error",
+          title: "Disapproval failed",
+          message: res.error || "The user could not be disapproved.",
+        });
       }
     });
   };
@@ -190,7 +203,10 @@ export default function WaitlistTable({ initialData }: WaitlistTableProps) {
                   const isRowPending = isPending && activeActionEmail === row.email;
 
                   return (
-                    <tr key={row.email} className="transition-colors hover:bg-neutral-50/60 dark:hover:bg-[#121721]/60">
+                    <tr
+                      key={row.email}
+                      className="transition-colors hover:bg-neutral-50/60 dark:hover:bg-[#121721]/60"
+                    >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-neutral-900 text-[11px] font-semibold text-white dark:bg-emerald-600">
@@ -212,8 +228,8 @@ export default function WaitlistTable({ initialData }: WaitlistTableProps) {
                             row.status === "approved"
                               ? "border border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-400"
                               : row.status === "pending"
-                              ? "border border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-400"
-                              : "border border-neutral-200 bg-neutral-100 text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-400"
+                                ? "border border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-400"
+                                : "border border-neutral-200 bg-neutral-100 text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-400"
                           }`}
                         >
                           <span
@@ -221,8 +237,8 @@ export default function WaitlistTable({ initialData }: WaitlistTableProps) {
                               row.status === "approved"
                                 ? "bg-emerald-500"
                                 : row.status === "pending"
-                                ? "bg-amber-500"
-                                : "bg-neutral-400"
+                                  ? "bg-amber-500"
+                                  : "bg-neutral-400"
                             }`}
                           />
                           <span className="capitalize">{row.status}</span>
@@ -274,7 +290,9 @@ export default function WaitlistTable({ initialData }: WaitlistTableProps) {
                                   ) : (
                                     <CheckCircle2 className="h-3 w-3" />
                                   )}
-                                  <span>{row.status === "disapproved" ? "Re-Approve" : "Approve"}</span>
+                                  <span>
+                                    {row.status === "disapproved" ? "Re-Approve" : "Approve"}
+                                  </span>
                                 </button>
                               )}
 

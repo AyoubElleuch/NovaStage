@@ -7,6 +7,6 @@ create table if not exists public.waitlist (
 
 alter table public.waitlist enable row level security;
 
-create policy "Anyone can join the waitlist."
-  on public.waitlist for insert
+create policy "Anyone can join the waitlist." on public.waitlist
+  for insert
   with check (true);

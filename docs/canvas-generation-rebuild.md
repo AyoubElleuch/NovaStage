@@ -26,9 +26,9 @@ MCP review includes a production-card thumbnail, the selected mode, card/connect
 
 ## Visual evidence
 
-| Case | Before | After |
-| --- | --- | --- |
-| Workflow, desktop/light | [Screenshot](canvas-generation-evidence/workflow-before.png) | [Screenshot](canvas-generation-evidence/workflow-after.png) |
+| Case                    | Before                                                           | After                                                           |
+| ----------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------- |
+| Workflow, desktop/light | [Screenshot](canvas-generation-evidence/workflow-before.png)     | [Screenshot](canvas-generation-evidence/workflow-after.png)     |
 | Nested AWS, phone/light | [Screenshot](canvas-generation-evidence/nested-phone-before.png) | [Screenshot](canvas-generation-evidence/nested-phone-after.png) |
 
 Workflow screenshots show dependency-based STEP 01 → 02 → 03 numbering, smaller short-content cards, three-line titles, two-line checkpoint previews and orthogonal branches. The phone comparison shows the complete nested graph within the viewport instead of clipping at the former minimum zoom. These are real production card/edge components, with fixture APIs and local data.

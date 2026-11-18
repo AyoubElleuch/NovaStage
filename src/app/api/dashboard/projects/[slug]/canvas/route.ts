@@ -12,10 +12,7 @@ import {
   updateCanvasEdge,
 } from "@/lib/canvas/server";
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ slug: string }> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ slug: string }> }) {
   try {
     const session = await getAuthenticatedProfile();
     if (!session?.user) {
@@ -33,7 +30,8 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (request.nextUrl.searchParams.get("access") === "1") return new NextResponse(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+    if (request.nextUrl.searchParams.get("access") === "1")
+      return new NextResponse(null, { status: 204, headers: { "Cache-Control": "no-store" } });
     const canvasData = await getProjectCanvasData(project.id);
     return NextResponse.json({
       project: { id: project.id, slug: project.slug, name: project.name },
@@ -46,10 +44,7 @@ export async function GET(
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ slug: string }> }
-) {
+export async function POST(request: NextRequest, context: { params: Promise<{ slug: string }> }) {
   try {
     const session = await getAuthenticatedProfile();
     if (!session?.user) {
@@ -73,8 +68,19 @@ export async function POST(
     const isOwner = await isProjectOwner(project.id, session.user.id);
 
     if (action === "apply_layout") {
-      const { data: versions, error } = await createAdminClient().rpc("apply_canvas_layout", { p_project_id: project.id, p_user_id: session.user.id, p_nodes: body.nodes });
-      if (error) return NextResponse.json({ success: false, error: "Layout was not saved. It may have changed; refresh before retrying." }, { status: 409 });
+      const { data: versions, error } = await createAdminClient().rpc("apply_canvas_layout", {
+        p_project_id: project.id,
+        p_user_id: session.user.id,
+        p_nodes: body.nodes,
+      });
+      if (error)
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Layout was not saved. It may have changed; refresh before retrying.",
+          },
+          { status: 409 },
+        );
       return NextResponse.json({ success: true, versions });
     }
 
@@ -96,10 +102,13 @@ export async function POST(
           annotation_metadata: body.annotation_metadata,
           parent_group_id: body.parent_group_id,
         },
-        session.user.id
+        session.user.id,
       );
       if (!newNode) {
-        return NextResponse.json({ success: false, error: "Unable to create this item. Please try again." }, { status: 500 });
+        return NextResponse.json(
+          { success: false, error: "Unable to create this item. Please try again." },
+          { status: 500 },
+        );
       }
       return NextResponse.json({ success: true, node: newNode });
     }
@@ -110,7 +119,7 @@ export async function POST(
         project.id,
         body.updates || {},
         session.user.id,
-        body.expected_version
+        body.expected_version,
       );
       return NextResponse.json(result, { status: result.success ? 200 : 409 });
     }
@@ -129,13 +138,19 @@ export async function POST(
         body.target_handle || "left",
         session.user.id,
         isOwner,
-        body.edge_type
+        body.edge_type,
       );
       return NextResponse.json({ success: Boolean(newEdge), edge: newEdge });
     }
 
     if (action === "update_edge") {
-      const result = await updateCanvasEdge(body.edge_id, project.id, session.user.id, isOwner, body.updates);
+      const result = await updateCanvasEdge(
+        body.edge_id,
+        project.id,
+        session.user.id,
+        isOwner,
+        body.updates,
+      );
       return NextResponse.json(result, { status: result.success ? 200 : 400 });
     }
 

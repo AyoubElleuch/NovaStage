@@ -6,24 +6,24 @@ Set the SDK base URL to the NovaStage origin, without `/api`. The specification 
 
 ## Endpoints
 
-| Method | Path | Operation ID | Access |
-| --- | --- | --- | --- |
-| GET / HEAD | `/api/ping` | `ping` / `headPing` | Public |
-| GET | `/api/dashboard/settings` | `getAccountSettings` | Signed-in user |
-| GET / POST | `/api/dashboard/projects` | `listProjects` / `createProject` | Signed-in user |
-| GET | `/api/dashboard/projects/members` | `listProjectMembers` | Project member or owner |
-| POST | `/api/dashboard/projects/join` | `requestToJoinProject` | Signed-in user; owner approval required |
-| POST | `/api/dashboard/projects/leave` | `leaveProject` | Collaborator |
-| POST | `/api/dashboard/projects/delete` | `deleteProject` | Owner |
-| POST | `/api/dashboard/projects/kick` | `kickProjectMember` | Owner |
-| GET / POST | `/api/dashboard/projects/requests` | `listJoinRequests` / `resolveJoinRequest` | Owner |
-| GET / POST | `/api/dashboard/projects/banned` | `listBannedMembers` / `unbanProjectMember` | Owner |
-| GET / POST | `/api/dashboard/projects/{slug}/canvas` | `getProjectCanvas` / `mutateProjectCanvas` | Project member |
-| GET / POST / DELETE | `/api/dashboard/projects/{slug}/canvas/share` | `getCanvasShare` / `enableCanvasShare` / `disableCanvasShare` | Owner only |
-| POST | `/api/dashboard/projects/{slug}/canvas/checkpoints` | `mutateCheckpoint` | Project member; milestone claim required |
-| POST | `/api/dashboard/projects/{slug}/canvas/claim` | `manageCanvasClaim` | Project member; some actions require holder or owner |
-| GET / POST | `/api/dashboard/projects/{slug}/canvas/ai-generate` | `generateProjectCanvas` | Project member; AI quota and server configuration required |
-| GET | `/auth/callback` | `completeAuthCallback` | Browser OAuth/PKCE flow; redirects with 307 |
+| Method              | Path                                                | Operation ID                                                  | Access                                                     |
+| ------------------- | --------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| GET / HEAD          | `/api/ping`                                         | `ping` / `headPing`                                           | Public                                                     |
+| GET                 | `/api/dashboard/settings`                           | `getAccountSettings`                                          | Signed-in user                                             |
+| GET / POST          | `/api/dashboard/projects`                           | `listProjects` / `createProject`                              | Signed-in user                                             |
+| GET                 | `/api/dashboard/projects/members`                   | `listProjectMembers`                                          | Project member or owner                                    |
+| POST                | `/api/dashboard/projects/join`                      | `requestToJoinProject`                                        | Signed-in user; owner approval required                    |
+| POST                | `/api/dashboard/projects/leave`                     | `leaveProject`                                                | Collaborator                                               |
+| POST                | `/api/dashboard/projects/delete`                    | `deleteProject`                                               | Owner                                                      |
+| POST                | `/api/dashboard/projects/kick`                      | `kickProjectMember`                                           | Owner                                                      |
+| GET / POST          | `/api/dashboard/projects/requests`                  | `listJoinRequests` / `resolveJoinRequest`                     | Owner                                                      |
+| GET / POST          | `/api/dashboard/projects/banned`                    | `listBannedMembers` / `unbanProjectMember`                    | Owner                                                      |
+| GET / POST          | `/api/dashboard/projects/{slug}/canvas`             | `getProjectCanvas` / `mutateProjectCanvas`                    | Project member                                             |
+| GET / POST / DELETE | `/api/dashboard/projects/{slug}/canvas/share`       | `getCanvasShare` / `enableCanvasShare` / `disableCanvasShare` | Owner only                                                 |
+| POST                | `/api/dashboard/projects/{slug}/canvas/checkpoints` | `mutateCheckpoint`                                            | Project member; milestone claim required                   |
+| POST                | `/api/dashboard/projects/{slug}/canvas/claim`       | `manageCanvasClaim`                                           | Project member; some actions require holder or owner       |
+| GET / POST          | `/api/dashboard/projects/{slug}/canvas/ai-generate` | `generateProjectCanvas`                                       | Project member; AI quota and server configuration required |
+| GET                 | `/auth/callback`                                    | `completeAuthCallback`                                        | Browser OAuth/PKCE flow; redirects with 307                |
 
 Request fields, response schemas, action variants, and permission failures are defined in the YAML. Next.js server actions, Supabase Realtime messages, and external provider APIs are outside this HTTP contract.
 
@@ -38,9 +38,9 @@ For a server SDK test, sign in to NovaStage and copy the complete `Cookie` heade
 The specification models the complete `Cookie` header as an `apiKey` header scheme to accommodate deployment-specific cookie names and chunking. It does not provide a permanent API key. Confirm that your generator supports this scheme or a custom header transport. For ongoing use, retain refreshed `Set-Cookie` values in a cookie jar; a copied header is suitable for a short smoke test.
 
 ```js
-const baseUrl = process.env.NOVASTAGE_BASE_URL || 'http://localhost:3000';
+const baseUrl = process.env.NOVASTAGE_BASE_URL || "http://localhost:3000";
 const cookie = process.env.NOVASTAGE_COOKIE;
-if (!cookie) throw new Error('Set NOVASTAGE_COOKIE');
+if (!cookie) throw new Error("Set NOVASTAGE_COOKIE");
 
 const response = await fetch(`${baseUrl}/api/dashboard/settings`, {
   headers: { Cookie: cookie },

@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useCallback, useSyncExternalStore } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
 import { Moon, Sun } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -48,7 +54,8 @@ function subscribeTheme(callback: () => void) {
   if (typeof window !== "undefined") {
     window.addEventListener("storage", handleStorage);
   }
-  const systemTheme = typeof window !== "undefined" ? window.matchMedia?.("(prefers-color-scheme: dark)") : undefined;
+  const systemTheme =
+    typeof window !== "undefined" ? window.matchMedia?.("(prefers-color-scheme: dark)") : undefined;
   systemTheme?.addEventListener("change", callback);
   return () => {
     listeners.delete(callback);
@@ -65,7 +72,9 @@ function getThemeSnapshot(followSystem = false): Theme {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "dark" || stored === "light") return stored;
   } catch {}
-  return followSystem && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return followSystem && window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 function getServerThemeSnapshot(): Theme {
@@ -111,7 +120,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 /** Provides a fixed visual theme without changing user preferences. */
 export function DarkPreviewTheme({ children }: { children: React.ReactNode }) {
-  return <ThemeContext.Provider value={{ theme: "dark", setTheme: () => {}, toggleTheme: () => {} }}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ theme: "dark", setTheme: () => {}, toggleTheme: () => {} }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {

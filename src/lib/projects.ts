@@ -155,17 +155,13 @@ export async function getUserProjects(userId: string): Promise<DashboardProject[
     }
 
     const createdProjectIds = (createdRows || []).map((p) => p.id);
-    const allProjectIds = Array.from(
-      new Set([...memberProjectIds, ...createdProjectIds])
-    );
+    const allProjectIds = Array.from(new Set([...memberProjectIds, ...createdProjectIds]));
 
     if (allProjectIds.length === 0) {
       return [];
     }
 
-    const userRoleMap = new Map(
-      (memberRows || []).map((m) => [m.project_id, m.role])
-    );
+    const userRoleMap = new Map((memberRows || []).map((m) => [m.project_id, m.role]));
 
     // 2. Fetch project details
     const { data: projectRows, error: projectsError } = await adminClient
@@ -423,7 +419,8 @@ export async function joinProjectByInviteCode(params: {
   if (bannedEntry) {
     return {
       success: false,
-      error: "You were removed from this project by the owner and cannot rejoin with this invite code.",
+      error:
+        "You were removed from this project by the owner and cannot rejoin with this invite code.",
     };
   }
 
@@ -531,7 +528,8 @@ export async function leaveProject(params: {
   if (member.role === "owner") {
     return {
       success: false,
-      error: "As the project owner, you cannot leave the project. You can delete the project if you no longer need it.",
+      error:
+        "As the project owner, you cannot leave the project. You can delete the project if you no longer need it.",
     };
   }
 
@@ -583,10 +581,7 @@ export async function deleteProject(params: {
   }
 
   // 2. Delete project (cascades to project_members)
-  const { error: deleteError } = await adminClient
-    .from("projects")
-    .delete()
-    .eq("id", projectId);
+  const { error: deleteError } = await adminClient.from("projects").delete().eq("id", projectId);
 
   if (deleteError) {
     console.error("Error deleting project:", deleteError);
@@ -692,8 +687,7 @@ export async function kickProjectMember(params: {
     .eq("id", projectId)
     .maybeSingle();
 
-  const isOwner =
-    requesterMember?.role === "owner" || project?.created_by === requesterUserId;
+  const isOwner = requesterMember?.role === "owner" || project?.created_by === requesterUserId;
 
   if (!isOwner) {
     return { success: false, error: "Only the project owner can remove collaborators." };
@@ -712,17 +706,15 @@ export async function kickProjectMember(params: {
   }
 
   // 3. Automatically add to project_banned_members so they cannot rejoin using the invite code
-  await adminClient
-    .from("project_banned_members")
-    .upsert(
-      {
-        project_id: projectId,
-        user_id: targetUserId,
-        banned_by: requesterUserId,
-        reason: "Removed by project owner",
-      },
-      { onConflict: "project_id,user_id" }
-    );
+  await adminClient.from("project_banned_members").upsert(
+    {
+      project_id: projectId,
+      user_id: targetUserId,
+      banned_by: requesterUserId,
+      reason: "Removed by project owner",
+    },
+    { onConflict: "project_id,user_id" },
+  );
 
   await invalidateProjectMembershipCache(projectId, targetUserId);
 
@@ -843,7 +835,7 @@ export async function resolveProjectJoinRequest(params: {
         user_id: req.user_id,
         role: "collaborator",
       },
-      { onConflict: "project_id,user_id" }
+      { onConflict: "project_id,user_id" },
     );
 
     // If user was previously on banned list, remove them from banned
@@ -994,12 +986,12 @@ export async function getProjectBySlug(slug: string) {
 /**
  * Invalidates cached membership status in Redis for a project and user.
  */
-export async function invalidateProjectMembershipCache(projectId: string, userId?: string): Promise<void> {
+export async function invalidateProjectMembershipCache(
+  projectId: string,
+  userId?: string,
+): Promise<void> {
   if (userId) {
-    await safeRedisDel([
-      `cache:pm:${projectId}:${userId}`,
-      `cache:po:${projectId}:${userId}`,
-    ]);
+    await safeRedisDel([`cache:pm:${projectId}:${userId}`, `cache:po:${projectId}:${userId}`]);
   }
 }
 
@@ -1099,4 +1091,3 @@ export async function isProjectOwner(projectId: string, userId: string): Promise
   await safeRedisSet(cacheKey, isOwner, { ex: 120 });
   return isOwner;
 }
-

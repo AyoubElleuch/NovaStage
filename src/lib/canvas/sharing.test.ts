@@ -10,7 +10,11 @@ it("rejects invalid tokens before querying the database", async () => {
   expect(mock.from).not.toHaveBeenCalled();
 });
 it("returns no canvas for an unknown or revoked token", async () => {
-  const query = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) };
+  const query = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
   mock.from.mockReturnValue(query);
   expect(await getSharedCanvas("a".repeat(64))).toBeNull();
   expect(mock.from).toHaveBeenCalledExactlyOnceWith("canvas_shares");
@@ -18,16 +22,26 @@ it("returns no canvas for an unknown or revoked token", async () => {
 });
 it("scopes every read to the token's project and never queries project or member metadata", async () => {
   const queries: { table: string; eq: ReturnType<typeof vi.fn> }[] = [];
-  mock.from.mockImplementation(table => {
+  mock.from.mockImplementation((table) => {
     const query = {
-      select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: { project_id: "shared-project" }, error: null }),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      maybeSingle: vi
+        .fn()
+        .mockResolvedValue({ data: { project_id: "shared-project" }, error: null }),
       then: (resolve: (value: unknown) => void) => resolve({ data: [], error: null }),
     };
     queries.push({ table, eq: query.eq });
     return query;
   });
   expect(await getSharedCanvas("b".repeat(64))).toEqual({ nodes: [], edges: [] });
-  expect(queries.map(q => q.table)).toEqual(["canvas_shares", "canvas_nodes", "canvas_checkpoints", "canvas_edges"]);
-  for (const query of queries.slice(1)) expect(query.eq).toHaveBeenCalledWith("project_id", "shared-project");
+  expect(queries.map((q) => q.table)).toEqual([
+    "canvas_shares",
+    "canvas_nodes",
+    "canvas_checkpoints",
+    "canvas_edges",
+  ]);
+  for (const query of queries.slice(1))
+    expect(query.eq).toHaveBeenCalledWith("project_id", "shared-project");
 });

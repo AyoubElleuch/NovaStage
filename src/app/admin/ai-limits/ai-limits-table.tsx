@@ -1,19 +1,8 @@
 "use client";
 
 import { useState, useTransition, useEffect, useCallback } from "react";
-import {
-  UserAiLimitRecord,
-  resetUserAiQuota,
-  resetAllUsersAiQuota,
-} from "../actions";
-import {
-  Sparkles,
-  RotateCcw,
-  Search,
-  Loader2,
-  X,
-  CheckCircle2,
-} from "lucide-react";
+import { UserAiLimitRecord, resetUserAiQuota, resetAllUsersAiQuota } from "../actions";
+import { Sparkles, RotateCcw, Search, Loader2, X, CheckCircle2 } from "lucide-react";
 import { useNotifications } from "@/components/notifications/notification-provider";
 
 interface AiLimitsTableProps {
@@ -33,7 +22,9 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
   // Summary counts
   const totalUsers = data.length;
   const depletedUsers = data.filter((u) => u.ai_requests_remaining === 0).length;
-  const inUseUsers = data.filter((u) => u.ai_requests_remaining < 10 && u.ai_requests_remaining > 0).length;
+  const inUseUsers = data.filter(
+    (u) => u.ai_requests_remaining < 10 && u.ai_requests_remaining > 0,
+  ).length;
   const fullUsers = data.filter((u) => u.ai_requests_remaining === 10).length;
   const totalAvailableRequests = data.reduce((acc, u) => acc + u.ai_requests_remaining, 0);
 
@@ -77,8 +68,8 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
                   ai_requests_remaining: 10,
                   updated_at: new Date().toISOString(),
                 }
-              : item
-          )
+              : item,
+          ),
         );
       } else {
         notify({
@@ -111,7 +102,7 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
             ai_requests_count: 0,
             ai_requests_remaining: 10,
             updated_at: new Date().toISOString(),
-          }))
+          })),
         );
         setIsResetAllModalOpen(false);
         setResetAllConfirmationText("");
@@ -153,34 +144,59 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
       >
         <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all duration-150 hover:border-neutral-300 dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]">
           <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Total Users</p>
-          <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">{totalUsers}</p>
-          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">Registered platform profiles</p>
-        </div>
-
-        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all duration-150 hover:border-neutral-300 dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]">
-          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">In Active Use</p>
-          <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">{inUseUsers}</p>
-          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">Users with 1–9 requests left</p>
-        </div>
-
-        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all duration-150 hover:border-neutral-300 dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]">
-          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Exhausted Quota</p>
-          <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">{depletedUsers}</p>
-          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">Users at 0 / 10 remaining</p>
-        </div>
-
-        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all duration-150 hover:border-neutral-300 dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]">
-          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Available Prompts</p>
           <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-            {totalAvailableRequests} <span className="text-sm font-normal text-neutral-400 dark:text-neutral-500">/ {totalUsers * 10}</span>
+            {totalUsers}
           </p>
-          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">Across all platform users</p>
+          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+            Registered platform profiles
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all duration-150 hover:border-neutral-300 dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]">
+          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            In Active Use
+          </p>
+          <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+            {inUseUsers}
+          </p>
+          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+            Users with 1–9 requests left
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all duration-150 hover:border-neutral-300 dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]">
+          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            Exhausted Quota
+          </p>
+          <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+            {depletedUsers}
+          </p>
+          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+            Users at 0 / 10 remaining
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs transition-all duration-150 hover:border-neutral-300 dark:border-[#283548] dark:bg-[#161d27] dark:hover:border-[#384961]">
+          <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            Available Prompts
+          </p>
+          <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+            {totalAvailableRequests}{" "}
+            <span className="text-sm font-normal text-neutral-400 dark:text-neutral-500">
+              / {totalUsers * 10}
+            </span>
+          </p>
+          <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+            Across all platform users
+          </p>
         </div>
       </section>
 
-
       {/* Action Bar: Filters, Search & Reset All Button */}
-      <div className="dash-enter flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ "--dash-delay": "100ms" } as React.CSSProperties}>
+      <div
+        className="dash-enter flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        style={{ "--dash-delay": "100ms" } as React.CSSProperties}
+      >
         <div
           className="flex flex-wrap items-center gap-1.5"
           role="tablist"
@@ -306,7 +322,10 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
                   const isDepleted = remaining === 0;
 
                   return (
-                    <tr key={user.id} className="transition-colors hover:bg-neutral-50/60 dark:hover:bg-[#121721]/60">
+                    <tr
+                      key={user.id}
+                      className="transition-colors hover:bg-neutral-50/60 dark:hover:bg-[#121721]/60"
+                    >
                       {/* User & Email */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
@@ -318,7 +337,14 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
                               {user.email}
                             </p>
                             <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                              Joined {user.created_at ? new Date(user.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                              Joined{" "}
+                              {user.created_at
+                                ? new Date(user.created_at).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })
+                                : "—"}
                             </p>
                           </div>
                         </div>
@@ -326,12 +352,22 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
 
                       {/* Full Name */}
                       <td className="px-5 py-4 text-xs font-medium text-neutral-800 dark:text-neutral-200">
-                        {user.full_name || <span className="text-neutral-400 dark:text-neutral-500 italic">Not set</span>}
+                        {user.full_name || (
+                          <span className="text-neutral-400 dark:text-neutral-500 italic">
+                            Not set
+                          </span>
+                        )}
                       </td>
 
                       {/* Username */}
                       <td className="px-5 py-4 text-xs font-mono text-neutral-600 dark:text-neutral-400">
-                        {user.username ? `@${user.username}` : <span className="text-neutral-400 dark:text-neutral-500 italic font-sans">Not set</span>}
+                        {user.username ? (
+                          `@${user.username}`
+                        ) : (
+                          <span className="text-neutral-400 dark:text-neutral-500 italic font-sans">
+                            Not set
+                          </span>
+                        )}
                       </td>
 
                       {/* AI Quota Remaining Progress */}
@@ -343,8 +379,8 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
                                 isFull
                                   ? "text-emerald-700 dark:text-emerald-400"
                                   : isDepleted
-                                  ? "text-red-600 dark:text-red-400"
-                                  : "text-amber-700 dark:text-amber-400"
+                                    ? "text-red-600 dark:text-red-400"
+                                    : "text-amber-700 dark:text-amber-400"
                               }`}
                             >
                               {isFull ? (
@@ -461,22 +497,45 @@ export default function AiLimitsTable({ initialData }: AiLimitsTableProps) {
                 <Sparkles className="h-5 w-5" aria-hidden="true" />
               </span>
               <div>
-                <h2 id="reset-all-modal-title" className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-white">
+                <h2
+                  id="reset-all-modal-title"
+                  className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-white"
+                >
                   Reset AI for all users?
                 </h2>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">Bulk platform quota reset</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Bulk platform quota reset
+                </p>
               </div>
             </div>
 
-            <p id="reset-all-modal-description" className="mt-4 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-              This will reset the AI prompt quota back to <strong className="font-semibold text-neutral-900 dark:text-white">10 out of 10</strong> for all <strong className="font-semibold text-neutral-900 dark:text-white">{totalUsers} registered users</strong> across NovaStage.
+            <p
+              id="reset-all-modal-description"
+              className="mt-4 text-sm leading-6 text-neutral-600 dark:text-neutral-300"
+            >
+              This will reset the AI prompt quota back to{" "}
+              <strong className="font-semibold text-neutral-900 dark:text-white">
+                10 out of 10
+              </strong>{" "}
+              for all{" "}
+              <strong className="font-semibold text-neutral-900 dark:text-white">
+                {totalUsers} registered users
+              </strong>{" "}
+              across NovaStage.
             </p>
 
             {/* Strict Confirmation Input */}
             <div className="mt-5 space-y-4">
               <div>
-                <label htmlFor="reset-all-confirm-input" className="block text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                  Type <span className="font-mono font-semibold text-neutral-950 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200 dark:text-white dark:bg-[#121721] dark:border-[#283548] select-all">{requiredConfirmPhrase}</span> to confirm:
+                <label
+                  htmlFor="reset-all-confirm-input"
+                  className="block text-xs font-medium text-neutral-700 dark:text-neutral-300"
+                >
+                  Type{" "}
+                  <span className="font-mono font-semibold text-neutral-950 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200 dark:text-white dark:bg-[#121721] dark:border-[#283548] select-all">
+                    {requiredConfirmPhrase}
+                  </span>{" "}
+                  to confirm:
                 </label>
                 <input
                   id="reset-all-confirm-input"

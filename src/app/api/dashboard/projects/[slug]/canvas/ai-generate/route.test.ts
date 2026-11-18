@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
 
-vi.mock("@/lib/canvas/ai-preview", () => ({ canvasFingerprint: vi.fn(async () => "baseline"), createCanvasPreview: vi.fn(async () => ({ id: "preview", nodes: [], edges: [], deletedIds: [] })) }));
+vi.mock("@/lib/canvas/ai-preview", () => ({
+  canvasFingerprint: vi.fn(async () => "baseline"),
+  createCanvasPreview: vi.fn(async () => ({ id: "preview", nodes: [], edges: [], deletedIds: [] })),
+}));
 
 const mockRpc = vi.fn();
 const mockSupabaseClient = {
@@ -61,9 +64,13 @@ describe("POST /api/dashboard/projects/[slug]/canvas/ai-generate", () => {
   });
 
   it("rejects unsupported generation modes before consuming quota or acquiring a lock", async () => {
-    const response = await POST(new NextRequest("http://localhost:3000/api/test", {
-      method: "POST", body: JSON.stringify({ prompt: "Build a roadmap", mode: "unsupported" }),
-    }), { params: Promise.resolve({ slug: "test-proj" }) });
+    const response = await POST(
+      new NextRequest("http://localhost:3000/api/test", {
+        method: "POST",
+        body: JSON.stringify({ prompt: "Build a roadmap", mode: "unsupported" }),
+      }),
+      { params: Promise.resolve({ slug: "test-proj" }) },
+    );
     expect(response.status).toBe(400);
     expect(mockRpc).not.toHaveBeenCalled();
   });
@@ -199,17 +206,39 @@ describe("POST /api/dashboard/projects/[slug]/canvas/ai-generate", () => {
     const { getProjectCanvasData } = await import("@/lib/canvas/server");
     const { executeAIPipeline } = await import("@/lib/ai/pipeline");
     vi.mocked(getProjectCanvasData).mockResolvedValueOnce({
-      nodes: [{
-        id: "svc-1", project_id: "proj-456", title: "API", description: "", status: "draft",
-        position_x: 100, position_y: 100, width: 260, height: 220, color: "default", sort_order: 0,
-        claimed_by: null, version: 1, checkpoints: [], node_type: "aws_service",
-        aws_metadata: { serviceId: "ecs", category: "compute", region: "us-east-1", config: { desiredCount: "2" } },
-        parent_group_id: null,
-      }],
+      nodes: [
+        {
+          id: "svc-1",
+          project_id: "proj-456",
+          title: "API",
+          description: "",
+          status: "draft",
+          position_x: 100,
+          position_y: 100,
+          width: 260,
+          height: 220,
+          color: "default",
+          sort_order: 0,
+          claimed_by: null,
+          version: 1,
+          checkpoints: [],
+          node_type: "aws_service",
+          aws_metadata: {
+            serviceId: "ecs",
+            category: "compute",
+            region: "us-east-1",
+            config: { desiredCount: "2" },
+          },
+          parent_group_id: null,
+        },
+      ],
       edges: [],
       claimRequests: [],
     });
-    mockRpc.mockResolvedValue({ data: { success: true, requests_used: 1, requests_remaining: 9 }, error: null });
+    mockRpc.mockResolvedValue({
+      data: { success: true, requests_used: 1, requests_remaining: 9 },
+      error: null,
+    });
 
     const req = new NextRequest("http://localhost:3000/api/test", {
       method: "POST",
@@ -225,7 +254,7 @@ describe("POST /api/dashboard/projects/[slug]/canvas/ai-generate", () => {
         existingMilestones: [],
         existingServiceNodes: [expect.objectContaining({ id: "svc-1", serviceId: "ecs" })],
       }),
-      expect.objectContaining({ operation: "update" })
+      expect.objectContaining({ operation: "update" }),
     );
   });
 });

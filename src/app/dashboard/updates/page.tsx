@@ -9,7 +9,8 @@ const releases = [
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
     title: "A More Reliable Canvas",
-    summary: "Easier alignment, safer collaboration, reviewed AI changes, and faster verification—with the same NovaStage look.",
+    summary:
+      "Easier alignment, safer collaboration, reviewed AI changes, and faster verification—with the same NovaStage look.",
     changes: [
       "Precise alignment: The visible grid matches snapping, cards align by edges and port centers, and aligned connections stay straight. Focus a selection to inspect dense diagrams.",
       "Safer saving: Tidy and multi-card moves save together, stale edits are rejected, and failed edits stay available as recovery drafts. Undo history survives refresh on this device.",
@@ -22,7 +23,8 @@ const releases = [
     version: "Beta v1.1.6",
     date: "November 4, 2026",
     title: "Clearer Canvas, Reliable Saving",
-    summary: "A guided first canvas, honest save status, undo that persists, and clearer AI generation.",
+    summary:
+      "A guided first canvas, honest save status, undo that persists, and clearer AI generation.",
     changes: [
       "First-project guide: A short dismissible guide covers milestones, checkpoints, connections, claims and navigation, with touch and keyboard wording and larger mobile controls.",
       "Honest saving: The header shows Saved, Saving, Not saved or Offline. Failed saves revert with a reason; there is no offline edit queue. Undo and redo are saved and never overwrite collaborators.",
@@ -33,7 +35,8 @@ const releases = [
     version: "Beta v1.1.5",
     date: "October 26, 2026",
     title: "Clearer Generated Diagrams",
-    summary: "More readable workflows and AWS architectures, with consistent layouts across built-in AI, Codex and Claude.",
+    summary:
+      "More readable workflows and AWS architectures, with consistent layouts across built-in AI, Codex and Claude.",
     changes: [
       "Better reading order: Milestones follow their dependencies, parallel branches stay clear, and equivalent requests keep the same layout even when returned in a different order.",
       "Readable cards and boundaries: Long titles and task previews wrap, groups grow around their contents, and connections route around cards and group headers.",
@@ -45,7 +48,8 @@ const releases = [
     version: "Beta v1.1.4",
     date: "October 26, 2026",
     title: "Bring Your Own AI to the Canvas",
-    summary: "Create workflows or AWS architecture with built-in AI or your own Codex and Claude models, with clearer controls in both themes.",
+    summary:
+      "Create workflows or AWS architecture with built-in AI or your own Codex and Claude models, with clearer controls in both themes.",
     changes: [
       "Open your AI: Choose the Codex or Claude button to open its desktop app with your request prepared and temporary canvas access. No terminal setup is needed.",
       "Focused generation: Built-in AI opens first. Both assistants use a custom mode picker. Workflow creates task milestones; AWS Architecture creates only AWS services and groups, with the selected mode enforced when drafts are proposed and accepted.",
@@ -57,7 +61,8 @@ const releases = [
     version: "Beta v1.1.3",
     date: "October 25, 2026",
     title: "View-Only Sharing & a Better Mobile Canvas",
-    summary: "Share your canvas without inviting collaborators, with faster loading and more comfortable controls on phones.",
+    summary:
+      "Share your canvas without inviting collaborators, with faster loading and more comfortable controls on phones.",
     changes: [
       "Canvas sharing: Send a revocable, view-only link. Visitors can navigate and open canvas details without seeing the project name or members.",
       "Faster mobile loading: Load canvas data in parallel and enter the workspace without the homepage loading intro.",
@@ -69,7 +74,8 @@ const releases = [
     version: "Beta v1.1.2",
     date: "October 25, 2026",
     title: "Smoother Canvas Navigation & Keyboard Controls",
-    summary: "More predictable navigation, easier search, and a new shortcut guide for working comfortably across desktop and mobile.",
+    summary:
+      "More predictable navigation, easier search, and a new shortcut guide for working comfortably across desktop and mobile.",
     changes: [
       "Touch and pan: Pinch to zoom even when your second finger lands on a card, and hold Space to pan without scrolling the page.",
       "Radar and fit: Drag the minimap viewport without a sudden jump, recover cleanly from interrupted gestures, and fit diagrams clear of canvas controls.",
@@ -81,7 +87,8 @@ const releases = [
     version: "Beta v1.1.1",
     date: "October 14, 2026",
     title: "Focused on Canvas Usability, Connections & UI Polish",
-    summary: "Smoother canvas interactions and a more consistent workspace for architecture and delivery planning.",
+    summary:
+      "Smoother canvas interactions and a more consistent workspace for architecture and delivery planning.",
     changes: [
       "Connections: Easier label editing, expanded connection types, and comfortable multi-port linking.",
       "Milestones: View up to five checkpoints directly on each card.",
@@ -93,7 +100,8 @@ const releases = [
     version: "Beta v1.1.0",
     date: "September 29, 2026",
     title: "Canvas Experience, from Milestones to AWS",
-    summary: "A more comfortable workspace for planning delivery, exploring cloud resources, and navigating complex diagrams on desktop and mobile.",
+    summary:
+      "A more comfortable workspace for planning delivery, exploring cloud resources, and navigating complex diagrams on desktop and mobile.",
     changes: [
       "Canvas navigation: Find milestones, AWS services, regions, and tasks with canvas search. Fit the diagram or selection, zoom around the visible center, and navigate with a more accurate minimap.",
       "Clearer milestones: Improved card hierarchy, task progress, editing feedback, and milestone details, with consistent numbering that stays separate from cloud resources.",
@@ -224,7 +232,8 @@ const releases = [
     version: "Alpha v1.4.1",
     date: "September 3, 2026",
     title: "Eye-Friendly Dark Mode",
-    summary: "Complete workspace-wide dark mode with a balanced slate palette, instant switching, and light mode by default.",
+    summary:
+      "Complete workspace-wide dark mode with a balanced slate palette, instant switching, and light mode by default.",
     changes: [
       "Introduced system-wide dark mode with an eye-friendly, high-contrast palette and instant switching across all pages and canvas tools.",
     ],
@@ -233,7 +242,8 @@ const releases = [
     version: "Alpha v1.4.0",
     date: "September 2, 2026",
     title: "Mobile-Native Workspace & Canvas",
-    summary: "Complete mobile responsiveness overhaul with fluid touch gestures, multi-touch pinch-to-zoom, and responsive controls.",
+    summary:
+      "Complete mobile responsiveness overhaul with fluid touch gestures, multi-touch pinch-to-zoom, and responsive controls.",
     changes: [
       "Engineered multi-touch gesture engine supporting fluid 1-finger canvas panning and 2-finger pinch-to-zoom.",
       "Added two-tier mobile canvas layout elevating AI Assistant and Project Notebook cleanly above the bottom toolbar.",
@@ -321,13 +331,18 @@ export default function UpdatesPage() {
           <Sparkles className="h-4 w-4 text-amber-500 dark:text-amber-400" aria-hidden="true" />
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">Release notes</p>
         </div>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">Updates</h1>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+          Updates
+        </h1>
         <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
           The meaningful changes shaping NovaStage, from the first workspace release to today.
         </p>
       </header>
 
-      <div id="release-history" className="relative py-3 before:absolute before:bottom-8 before:left-1.75 before:top-8 before:w-px before:bg-neutral-200 dark:before:bg-[#283548]">
+      <div
+        id="release-history"
+        className="relative py-3 before:absolute before:bottom-8 before:left-1.75 before:top-8 before:w-px before:bg-neutral-200 dark:before:bg-[#283548]"
+      >
         {releases.slice(0, visibleCount).map((release, index) => (
           <article
             key={release.version}
@@ -336,7 +351,9 @@ export default function UpdatesPage() {
           >
             <span
               className={`relative z-10 mt-1 h-3.75 w-3.75 rounded-full border-4 border-white dark:border-[#0f141c] ${
-                index === 0 ? "bg-neutral-900 dark:bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600"
+                index === 0
+                  ? "bg-neutral-900 dark:bg-emerald-500"
+                  : "bg-neutral-300 dark:bg-neutral-600"
               }`}
               aria-hidden="true"
             />
@@ -345,19 +362,31 @@ export default function UpdatesPage() {
                 <span className="font-mono text-xs font-semibold text-neutral-900 dark:text-white">
                   {release.version}
                 </span>
-                <time className="text-xs text-neutral-400 dark:text-neutral-500">{release.date}</time>
+                <time className="text-xs text-neutral-400 dark:text-neutral-500">
+                  {release.date}
+                </time>
                 {index === 0 && (
                   <span className="rounded-full bg-neutral-900 dark:bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold text-white">
                     Latest
                   </span>
                 )}
               </div>
-              <h2 className="mt-3 text-lg font-semibold text-neutral-900 dark:text-white">{release.title}</h2>
-              <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">{release.summary}</p>
+              <h2 className="mt-3 text-lg font-semibold text-neutral-900 dark:text-white">
+                {release.title}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                {release.summary}
+              </p>
               <ul className="mt-4 space-y-2">
                 {release.changes.map((change) => (
-                  <li key={change} className="flex gap-2.5 text-[13px] leading-5 text-neutral-600 dark:text-neutral-300">
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                  <li
+                    key={change}
+                    className="flex gap-2.5 text-[13px] leading-5 text-neutral-600 dark:text-neutral-300"
+                  >
+                    <Check
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                      aria-hidden="true"
+                    />
                     <span>{change}</span>
                   </li>
                 ))}
@@ -371,7 +400,7 @@ export default function UpdatesPage() {
           <button
             type="button"
             aria-controls="release-history"
-            onClick={() => setVisibleCount(count => count + 3)}
+            onClick={() => setVisibleCount((count) => count + 3)}
             className="cursor-pointer text-sm text-blue-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500 dark:text-blue-400"
           >
             Load more

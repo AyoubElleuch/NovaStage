@@ -1,6 +1,19 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeRedisSet, safeRedisDel } from "@/lib/redis/client";
-import { EDGE_TYPES, CanvasNode, CanvasEdge, CanvasCheckpoint, CanvasClaimRequest, CanvasNodeType, EdgeType, HandlePosition, NodeStatus, AWSServiceMetadata, GroupMetadata, AnnotationMetadata } from "./types";
+import {
+  EDGE_TYPES,
+  CanvasNode,
+  CanvasEdge,
+  CanvasCheckpoint,
+  CanvasClaimRequest,
+  CanvasNodeType,
+  EdgeType,
+  HandlePosition,
+  NodeStatus,
+  AWSServiceMetadata,
+  GroupMetadata,
+  AnnotationMetadata,
+} from "./types";
 import { autoLayoutNodes } from "./auto-layout";
 import { GeneratedWorkflow } from "@/lib/ai/gemini";
 export { applyAIWorkflowResult, applyAWSServiceNodes } from "./ai-reconcile";
@@ -13,33 +26,46 @@ export async function getProjectCanvasData(projectId: string): Promise<{
   const adminClient = createAdminClient();
 
   // Independent graph tables load together instead of four network round trips.
-  const [{ data: rawNodes, error: nodesErr }, { data: rawCheckpoints, error: checkpointsErr }, { data: rawEdges, error: edgesErr }, { data: rawClaims, error: claimsErr }] = await Promise.all([
+  const [
+    { data: rawNodes, error: nodesErr },
+    { data: rawCheckpoints, error: checkpointsErr },
+    { data: rawEdges, error: edgesErr },
+    { data: rawClaims, error: claimsErr },
+  ] = await Promise.all([
     adminClient
-    .from("canvas_nodes")
-    .select(`
+      .from("canvas_nodes")
+      .select(
+        `
       id, project_id, title, description, status,
       position_x, position_y, width, height, color, sort_order,
       claimed_by, claimed_at, claim_expires_at, version, created_at, updated_at,
       node_type, aws_metadata, group_metadata, annotation_metadata, parent_group_id
-    `)
-    .eq("project_id", projectId)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true }),
+    `,
+      )
+      .eq("project_id", projectId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
     adminClient
-    .from("canvas_checkpoints")
-    .select("id, node_id, project_id, title, is_completed, sort_order, completed_at, completed_by, created_at")
-    .eq("project_id", projectId)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true }),
+      .from("canvas_checkpoints")
+      .select(
+        "id, node_id, project_id, title, is_completed, sort_order, completed_at, completed_by, created_at",
+      )
+      .eq("project_id", projectId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
     adminClient
-    .from("canvas_edges")
-    .select("id, project_id, source_node_id, target_node_id, source_handle, target_handle, edge_type, label, created_at")
-    .eq("project_id", projectId),
+      .from("canvas_edges")
+      .select(
+        "id, project_id, source_node_id, target_node_id, source_handle, target_handle, edge_type, label, created_at",
+      )
+      .eq("project_id", projectId),
     adminClient
-    .from("canvas_claim_requests")
-    .select("id, project_id, node_id, requester_id, current_holder_id, status, created_at, resolved_at")
-    .eq("project_id", projectId)
-    .eq("status", "pending"),
+      .from("canvas_claim_requests")
+      .select(
+        "id, project_id, node_id, requester_id, current_holder_id, status, created_at, resolved_at",
+      )
+      .eq("project_id", projectId)
+      .eq("status", "pending"),
   ]);
 
   if (nodesErr || checkpointsErr || edgesErr || claimsErr) {
@@ -48,14 +74,11 @@ export async function getProjectCanvasData(projectId: string): Promise<{
 
   // Fetch profiles for claimed users
   const claimedUserIds = Array.from(
-    new Set(
-      (rawNodes || [])
-        .map((n) => n.claimed_by)
-        .filter((id): id is string => Boolean(id))
-    )
+    new Set((rawNodes || []).map((n) => n.claimed_by).filter((id): id is string => Boolean(id))),
   );
 
-  const profilesMap: Record<string, { fullName: string; email: string; avatarUrl: string | null }> = {};
+  const profilesMap: Record<string, { fullName: string; email: string; avatarUrl: string | null }> =
+    {};
   if (claimedUserIds.length > 0) {
     const { data: profiles } = await adminClient
       .from("profiles")
@@ -84,16 +107,17 @@ export async function getProjectCanvasData(projectId: string): Promise<{
 
   // Assemble full nodes
   const nodes: CanvasNode[] = (rawNodes || []).map((n) => {
-    const claimHolder = n.claimed_by && profilesMap[n.claimed_by]
-      ? {
-          id: n.claimed_by,
-          email: profilesMap[n.claimed_by].email,
-          fullName: profilesMap[n.claimed_by].fullName,
-          avatarUrl: profilesMap[n.claimed_by].avatarUrl,
-        }
-      : n.claimed_by
-      ? { id: n.claimed_by, email: "", fullName: "Collaborator", avatarUrl: null }
-      : null;
+    const claimHolder =
+      n.claimed_by && profilesMap[n.claimed_by]
+        ? {
+            id: n.claimed_by,
+            email: profilesMap[n.claimed_by].email,
+            fullName: profilesMap[n.claimed_by].fullName,
+            avatarUrl: profilesMap[n.claimed_by].avatarUrl,
+          }
+        : n.claimed_by
+          ? { id: n.claimed_by, email: "", fullName: "Collaborator", avatarUrl: null }
+          : null;
 
     return {
       id: n.id,
@@ -166,7 +190,7 @@ export async function createCanvasNode(
     annotation_metadata?: AnnotationMetadata | null;
     parent_group_id?: string | null;
   },
-  userId: string
+  userId: string,
 ): Promise<CanvasNode | null> {
   const adminClient = createAdminClient();
 
@@ -261,7 +285,7 @@ export async function updateCanvasNode(
   projectId: string,
   updates: Partial<CanvasNode>,
   userId: string,
-  expectedVersion?: number
+  expectedVersion?: number,
 ): Promise<{ success: boolean; error?: string; version?: number }> {
   const adminClient = createAdminClient();
 
@@ -292,7 +316,8 @@ export async function updateCanvasNode(
     }
   }
 
-  if (expectedVersion !== undefined && expectedVersion !== node.version) return { success: false, error: "This item changed. Refresh before retrying." };
+  if (expectedVersion !== undefined && expectedVersion !== node.version)
+    return { success: false, error: "This item changed. Refresh before retrying." };
   const updatePayload: Record<string, unknown> = {
     version: (node.version || 1) + 1,
     updated_at: new Date().toISOString(),
@@ -308,8 +333,10 @@ export async function updateCanvasNode(
   if (updates.node_type !== undefined) updatePayload.node_type = updates.node_type;
   if (updates.aws_metadata !== undefined) updatePayload.aws_metadata = updates.aws_metadata;
   if (updates.group_metadata !== undefined) updatePayload.group_metadata = updates.group_metadata;
-  if (updates.annotation_metadata !== undefined) updatePayload.annotation_metadata = updates.annotation_metadata;
-  if (updates.parent_group_id !== undefined) updatePayload.parent_group_id = updates.parent_group_id;
+  if (updates.annotation_metadata !== undefined)
+    updatePayload.annotation_metadata = updates.annotation_metadata;
+  if (updates.parent_group_id !== undefined)
+    updatePayload.parent_group_id = updates.parent_group_id;
 
   const { data: saved, error } = await adminClient
     .from("canvas_nodes")
@@ -329,7 +356,7 @@ export async function deleteCanvasNode(
   nodeId: string,
   projectId: string,
   userId?: string,
-  isOwner?: boolean
+  isOwner?: boolean,
 ): Promise<{ success: boolean; error?: string }> {
   const adminClient = createAdminClient();
 
@@ -364,7 +391,7 @@ export async function createCanvasEdge(
   targetHandle: HandlePosition = "left",
   userId?: string,
   isOwner?: boolean,
-  edgeType?: EdgeType
+  edgeType?: EdgeType,
 ): Promise<CanvasEdge | null> {
   if (sourceNodeId === targetNodeId) return null;
   if (edgeType && !EDGE_TYPES.includes(edgeType)) throw new Error("Invalid connection type");
@@ -460,29 +487,55 @@ export async function createCanvasEdge(
 }
 
 export async function updateCanvasEdge(
-  edgeId: string, projectId: string, userId: string, isOwner: boolean,
-  updates: { label: string; edge_type: EdgeType }
+  edgeId: string,
+  projectId: string,
+  userId: string,
+  isOwner: boolean,
+  updates: { label: string; edge_type: EdgeType },
 ): Promise<{ success: boolean; error?: string; edge?: CanvasEdge }> {
-  if (typeof updates?.label !== "string" || updates.label.length > 120 ||
-      !EDGE_TYPES.includes(updates?.edge_type)) {
-    return { success: false, error: "Provide a label of at most 120 characters and a valid connection type" };
+  if (
+    typeof updates?.label !== "string" ||
+    updates.label.length > 120 ||
+    !EDGE_TYPES.includes(updates?.edge_type)
+  ) {
+    return {
+      success: false,
+      error: "Provide a label of at most 120 characters and a valid connection type",
+    };
   }
   const client = createAdminClient();
-  const { data: existing } = await client.from("canvas_edges").select("source_node_id, target_node_id")
-    .eq("id", edgeId).eq("project_id", projectId).maybeSingle();
+  const { data: existing } = await client
+    .from("canvas_edges")
+    .select("source_node_id, target_node_id")
+    .eq("id", edgeId)
+    .eq("project_id", projectId)
+    .maybeSingle();
   if (!existing) return { success: false, error: "Connection not found" };
   if (!isOwner) {
-    const { data: nodes } = await client.from("canvas_nodes").select("claimed_by, claim_expires_at")
-      .in("id", [existing.source_node_id, existing.target_node_id]).eq("project_id", projectId);
-    if (!nodes?.some((node) => node.claimed_by === userId &&
-      (!node.claim_expires_at || new Date(node.claim_expires_at) > new Date()))) {
+    const { data: nodes } = await client
+      .from("canvas_nodes")
+      .select("claimed_by, claim_expires_at")
+      .in("id", [existing.source_node_id, existing.target_node_id])
+      .eq("project_id", projectId);
+    if (
+      !nodes?.some(
+        (node) =>
+          node.claimed_by === userId &&
+          (!node.claim_expires_at || new Date(node.claim_expires_at) > new Date()),
+      )
+    ) {
       return { success: false, error: "Claim a connected resource before editing its connection" };
     }
   }
-  const { data: edge, error } = await client.from("canvas_edges")
+  const { data: edge, error } = await client
+    .from("canvas_edges")
     .update({ label: updates.label.trim() || null, edge_type: updates.edge_type })
-    .eq("id", edgeId).eq("project_id", projectId).select().single();
-  if (error || !edge) return { success: false, error: error?.message || "Unable to save connection" };
+    .eq("id", edgeId)
+    .eq("project_id", projectId)
+    .select()
+    .single();
+  if (error || !edge)
+    return { success: false, error: error?.message || "Unable to save connection" };
   return { success: true, edge: edge as CanvasEdge };
 }
 
@@ -490,7 +543,7 @@ export async function deleteCanvasEdge(
   edgeId: string,
   projectId: string,
   userId?: string,
-  isOwner?: boolean
+  isOwner?: boolean,
 ): Promise<{ success: boolean }> {
   const adminClient = createAdminClient();
 
@@ -531,7 +584,7 @@ export async function deleteCanvasEdge(
 export async function claimCanvasNodeDirect(
   nodeId: string,
   projectId: string,
-  userId: string
+  userId: string,
 ): Promise<{ success: boolean; error?: string; expiresAt?: string }> {
   const adminClient = createAdminClient();
   const now = new Date();
@@ -566,7 +619,7 @@ export async function claimCanvasNodeDirect(
 export async function releaseCanvasNodeDirect(
   nodeId: string,
   projectId: string,
-  userId: string
+  userId: string,
 ): Promise<{ success: boolean }> {
   const adminClient = createAdminClient();
   const lockKey = `canvas:lock:${projectId}:${nodeId}`;
@@ -591,7 +644,7 @@ export async function releaseCanvasNodeDirect(
 
 export async function createBatchCanvasWorkflow(
   projectId: string,
-  workflow: GeneratedWorkflow
+  workflow: GeneratedWorkflow,
 ): Promise<{ nodes: CanvasNode[]; edges: CanvasEdge[] }> {
   const adminClient = createAdminClient();
 

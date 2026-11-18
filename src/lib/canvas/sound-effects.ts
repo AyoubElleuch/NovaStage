@@ -142,9 +142,9 @@ export function playCompleteTaskSound(): void {
   try {
     const now = ctx.currentTime;
     const notes = [
-      { freq: 523.25, time: 0.0 },  // C5
+      { freq: 523.25, time: 0.0 }, // C5
       { freq: 659.25, time: 0.05 }, // E5
-      { freq: 783.99, time: 0.1 },  // G5
+      { freq: 783.99, time: 0.1 }, // G5
     ];
 
     notes.forEach(({ freq, time }) => {

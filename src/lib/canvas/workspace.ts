@@ -1,11 +1,22 @@
 import type { CanvasNode, CanvasViewport } from "./types";
 import { getNodeDimensions, screenToWorld, snapToGrid } from "./coordinate-math";
 
-export interface CanvasArea { width: number; height: number; leftInset?: number; rightInset?: number; bottomInset?: number }
+export interface CanvasArea {
+  width: number;
+  height: number;
+  leftInset?: number;
+  rightInset?: number;
+  bottomInset?: number;
+}
 export const MIN_CANVAS_ZOOM = 0.001;
 
 /** Snap matching edges or port centers within six screen pixels, before grid rounding. */
-export function alignNodePosition(node: CanvasNode, position: { x: number; y: number }, nodes: CanvasNode[], zoom: number) {
+export function alignNodePosition(
+  node: CanvasNode,
+  position: { x: number; y: number },
+  nodes: CanvasNode[],
+  zoom: number,
+) {
   const size = getNodeDimensions(node);
   const tolerance = Math.min(16, 6 / zoom);
   const result = { x: snapToGrid(position.x), y: snapToGrid(position.y) };
@@ -15,7 +26,8 @@ export function alignNodePosition(node: CanvasNode, position: { x: number; y: nu
     let best = tolerance;
     let guide: number | undefined;
     for (const other of nodes) {
-      if (other.id === node.id || other.node_type === "group" || node.node_type === "group") continue;
+      if (other.id === node.id || other.node_type === "group" || node.node_type === "group")
+        continue;
       const origin = axis === "x" ? other.position_x : other.position_y;
       for (const ratio of [0.5, 0, 1]) {
         const anchor = origin + getNodeDimensions(other)[dimension] * ratio;
@@ -34,30 +46,49 @@ export function alignNodePosition(node: CanvasNode, position: { x: number; y: nu
 
 /** Resolve taps after viewport pointer capture, preferring resources to groups. */
 export function getCanvasNodeAtPoint(nodes: CanvasNode[], point: { x: number; y: number }) {
-  return [...nodes].sort((a, b) => {
-    const groups = Number(a.node_type === "group") - Number(b.node_type === "group");
-    return groups || getNodeDimensions(a).width * getNodeDimensions(a).height - getNodeDimensions(b).width * getNodeDimensions(b).height;
-  }).find(node => {
-    const size = getNodeDimensions(node);
-    return point.x >= node.position_x && point.x <= node.position_x + size.width &&
-      point.y >= node.position_y - (node.node_type === "group" ? 24 : 0) && point.y <= node.position_y + size.height;
-  });
+  return [...nodes]
+    .sort((a, b) => {
+      const groups = Number(a.node_type === "group") - Number(b.node_type === "group");
+      return (
+        groups ||
+        getNodeDimensions(a).width * getNodeDimensions(a).height -
+          getNodeDimensions(b).width * getNodeDimensions(b).height
+      );
+    })
+    .find((node) => {
+      const size = getNodeDimensions(node);
+      return (
+        point.x >= node.position_x &&
+        point.x <= node.position_x + size.width &&
+        point.y >= node.position_y - (node.node_type === "group" ? 24 : 0) &&
+        point.y <= node.position_y + size.height
+      );
+    });
 }
 
-export function zoomAroundCenter(viewport: CanvasViewport, zoom: number, area: CanvasArea): CanvasViewport {
+export function zoomAroundCenter(
+  viewport: CanvasViewport,
+  zoom: number,
+  area: CanvasArea,
+): CanvasViewport {
   const nextZoom = Math.min(2.5, Math.max(MIN_CANVAS_ZOOM, zoom));
-  const x = (area.leftInset || 0) + Math.max(1, area.width - (area.rightInset || 0) - (area.leftInset || 0)) / 2;
+  const x =
+    (area.leftInset || 0) +
+    Math.max(1, area.width - (area.rightInset || 0) - (area.leftInset || 0)) / 2;
   const y = area.height / 2;
-  return { x: x - ((x - viewport.x) / viewport.zoom) * nextZoom,
-    y: y - ((y - viewport.y) / viewport.zoom) * nextZoom, zoom: nextZoom };
+  return {
+    x: x - ((x - viewport.x) / viewport.zoom) * nextZoom,
+    y: y - ((y - viewport.y) / viewport.zoom) * nextZoom,
+    zoom: nextZoom,
+  };
 }
 
 export function fitCanvasNodes(nodes: CanvasNode[], area: CanvasArea): CanvasViewport {
   if (!nodes.length) return { x: 100, y: 100, zoom: 1 };
-  const minX = Math.min(...nodes.map(n => n.position_x));
-  const minY = Math.min(...nodes.map(n => n.position_y));
-  const maxX = Math.max(...nodes.map(n => n.position_x + getNodeDimensions(n).width));
-  const maxY = Math.max(...nodes.map(n => n.position_y + getNodeDimensions(n).height));
+  const minX = Math.min(...nodes.map((n) => n.position_x));
+  const minY = Math.min(...nodes.map((n) => n.position_y));
+  const maxX = Math.max(...nodes.map((n) => n.position_x + getNodeDimensions(n).width));
+  const maxY = Math.max(...nodes.map((n) => n.position_y + getNodeDimensions(n).height));
   const leftInset = area.leftInset || 0;
   const width = Math.max(1, area.width - (area.rightInset || 0) - leftInset);
   // Keep cards and raised group headers below Find and above the mobile dock.
@@ -65,9 +96,15 @@ export function fitCanvasNodes(nodes: CanvasNode[], area: CanvasArea): CanvasVie
   const bottomPadding = Math.max(area.height < 600 ? 88 : 144, area.bottomInset || 0);
   const availableW = Math.max(1, width - 80);
   const availableH = Math.max(1, area.height - topPadding - bottomPadding);
-  const zoom = Math.max(MIN_CANVAS_ZOOM, Math.min(1.2, availableW / Math.max(1, maxX - minX), availableH / Math.max(1, maxY - minY)));
-  return { x: leftInset + width / 2 - (minX + maxX) / 2 * zoom,
-    y: topPadding + availableH / 2 - (minY + maxY) / 2 * zoom, zoom };
+  const zoom = Math.max(
+    MIN_CANVAS_ZOOM,
+    Math.min(1.2, availableW / Math.max(1, maxX - minX), availableH / Math.max(1, maxY - minY)),
+  );
+  return {
+    x: leftInset + width / 2 - ((minX + maxX) / 2) * zoom,
+    y: topPadding + availableH / 2 - ((minY + maxY) / 2) * zoom,
+    zoom,
+  };
 }
 
 /** Places a new card near the visible center without covering existing milestones or resources. */
@@ -75,20 +112,31 @@ export function getOpenNodePosition(
   nodes: CanvasNode[],
   viewport: CanvasViewport,
   area: CanvasArea,
-  dimensions: { width: number; height: number } = { width: 280, height: 170 }
+  dimensions: { width: number; height: number } = { width: 280, height: 170 },
 ): { x: number; y: number } {
-  const center = screenToWorld((area.leftInset || 0) + Math.max(1, area.width - (area.rightInset || 0) - (area.leftInset || 0)) / 2, area.height / 2, viewport);
+  const center = screenToWorld(
+    (area.leftInset || 0) +
+      Math.max(1, area.width - (area.rightInset || 0) - (area.leftInset || 0)) / 2,
+    area.height / 2,
+    viewport,
+  );
   const width = Math.max(1, dimensions.width);
   const height = Math.max(1, dimensions.height);
   const origin = { x: snapToGrid(center.x - width / 2), y: snapToGrid(center.y - height / 2) };
-  const obstacles = nodes.filter(node => node.node_type !== "group" && node.node_type !== "annotation")
-    .map(node => ({ x: node.position_x, y: node.position_y, ...getNodeDimensions(node) }));
+  const obstacles = nodes
+    .filter((node) => node.node_type !== "group" && node.node_type !== "annotation")
+    .map((node) => ({ x: node.position_x, y: node.position_y, ...getNodeDimensions(node) }));
   const gap = 24;
   const stepX = Math.ceil((width + gap * 2) / 16) * 16;
   const stepY = Math.ceil((height + gap * 2) / 16) * 16;
-  const isFree = (position: { x: number; y: number }) => !obstacles.some(node =>
-    position.x < node.x + node.width + gap && position.x + width + gap > node.x &&
-    position.y < node.y + node.height + gap && position.y + height + gap > node.y);
+  const isFree = (position: { x: number; y: number }) =>
+    !obstacles.some(
+      (node) =>
+        position.x < node.x + node.width + gap &&
+        position.x + width + gap > node.x &&
+        position.y < node.y + node.height + gap &&
+        position.y + height + gap > node.y,
+    );
   let column = 0;
   let row = 0;
   let dx = 1;
@@ -110,14 +158,17 @@ export function getOpenNodePosition(
       if (segments % 2 === 0) segmentLength++;
     }
   }
-  return { x: Math.ceil((Math.max(...obstacles.map(node => node.x + node.width)) + gap) / 16) * 16, y: origin.y };
+  return {
+    x: Math.ceil((Math.max(...obstacles.map((node) => node.x + node.width)) + gap) / 16) * 16,
+    y: origin.y,
+  };
 }
 
 /** Includes descendants identified by parent IDs or legacy group metadata. */
 export function getDragNodeIds(nodes: CanvasNode[], selectedIds: Set<string>): Set<string> {
   const result = new Set(selectedIds);
   const children = new Map<string, Set<string>>();
-  const nodeIds = new Set(nodes.map(node => node.id));
+  const nodeIds = new Set(nodes.map((node) => node.id));
   const addChild = (parent: string, child: string) => {
     if (!nodeIds.has(child)) return;
     if (!children.has(parent)) children.set(parent, new Set());

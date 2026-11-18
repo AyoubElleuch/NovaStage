@@ -11,12 +11,13 @@ export type AIWorkflowIntent = "create_pipeline" | "update_pipeline" | "create_p
 
 /** Generation mode selector for the AI pipeline */
 export const AI_GENERATION_MODES = ["workflow", "aws_architecture"] as const;
-export type AIGenerationMode = typeof AI_GENERATION_MODES[number];
+export type AIGenerationMode = (typeof AI_GENERATION_MODES)[number];
 export const isAIGenerationMode = (value: unknown): value is AIGenerationMode =>
   typeof value === "string" && (AI_GENERATION_MODES as readonly string[]).includes(value);
 export type AIGenerationOperation = "create" | "update";
 
-export type MilestonePhase = "planning" | "architecture" | "implementation" | "testing" | "deployment" | "operations";
+export type MilestonePhase =
+  "planning" | "architecture" | "implementation" | "testing" | "deployment" | "operations";
 
 export interface CanvasContextCheckpoint {
   id: string;
@@ -79,7 +80,19 @@ export interface CanvasAIContext {
 
 export interface ConcernArea {
   name: string;
-  category: "core" | "auth" | "billing" | "data" | "infrastructure" | "ui_ux" | "security" | "testing" | "operations" | "cloud_infrastructure" | "networking" | "monitoring";
+  category:
+    | "core"
+    | "auth"
+    | "billing"
+    | "data"
+    | "infrastructure"
+    | "ui_ux"
+    | "security"
+    | "testing"
+    | "operations"
+    | "cloud_infrastructure"
+    | "networking"
+    | "monitoring";
   priority: "critical" | "high" | "medium";
   description: string;
   dependencies: string[];

@@ -35,7 +35,11 @@ interface CanvasAIAssistantProps {
   /** Existing canvas content, so the assistant can say what a request will change before it runs. */
   existingNodes?: Pick<CanvasNode, "node_type">[];
   onReloadCanvas?: () => void;
-  onSubmitPrompt?: (prompt: string, mode?: string, operation?: AIGenerationOperation) => Promise<void> | void;
+  onSubmitPrompt?: (
+    prompt: string,
+    mode?: string,
+    operation?: AIGenerationOperation,
+  ) => Promise<void> | void;
 }
 
 const getThinkingStages = (mode: AIGenerationMode) => {
@@ -72,25 +76,29 @@ const getThinkingStages = (mode: AIGenerationMode) => {
     {
       buttonLabel: "Decomposing…",
       title: "Phase 1: Architectural Decomposition",
-      detail: "Analyzing domain requirements, tech stack constraints, risk factors, and parallel tracks…",
+      detail:
+        "Analyzing domain requirements, tech stack constraints, risk factors, and parallel tracks…",
       pct: "25%",
     },
     {
       buttonLabel: "Generating…",
       title: "Phase 2: Deep Branching DAG Generation",
-      detail: "Synthesizing domain-specific engineering milestones, parallel branches, and actionable checklists…",
+      detail:
+        "Synthesizing domain-specific engineering milestones, parallel branches, and actionable checklists…",
       pct: "55%",
     },
     {
       buttonLabel: "Validating…",
       title: "Phase 3: DAG Validation & Cycle Detection",
-      detail: "Running cycle detection DFS, eliminating orphan nodes, verifying edge integrity, and padding tasks…",
+      detail:
+        "Running cycle detection DFS, eliminating orphan nodes, verifying edge integrity, and padding tasks…",
       pct: "80%",
     },
     {
       buttonLabel: "Synchronizing…",
       title: "Phase 4: Auto-Layout & Multiplayer Sync",
-      detail: "Calculating non-overlapping coordinates, persisting database changes, and broadcasting to peers…",
+      detail:
+        "Calculating non-overlapping coordinates, persisting database changes, and broadcasting to peers…",
       pct: "95%",
     },
   ];
@@ -169,7 +177,7 @@ export default function CanvasAIAssistant({
     () =>
       typeof window !== "undefined" &&
       Boolean(window.SpeechRecognition || window.webkitSpeechRecognition),
-    () => true
+    () => true,
   );
 
   const stopListening = useCallback(() => {
@@ -204,18 +212,32 @@ export default function CanvasAIAssistant({
     dialogRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
     const trapFocus = (event: KeyboardEvent) => {
       if (event.key !== "Tab") return;
-      const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
-        "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), summary, a[href]"
-      ) || []).filter(element => element.getClientRects().length > 0);
-      const first = controls[0], last = controls[controls.length - 1];
-      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
-        event.preventDefault(); last?.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
-        event.preventDefault(); first?.focus();
+      const controls = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), summary, a[href]",
+        ) || [],
+      ).filter((element) => element.getClientRects().length > 0);
+      const first = controls[0],
+        last = controls[controls.length - 1];
+      if (
+        event.shiftKey &&
+        (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))
+      ) {
+        event.preventDefault();
+        last?.focus();
+      } else if (
+        !event.shiftKey &&
+        (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))
+      ) {
+        event.preventDefault();
+        first?.focus();
       }
     };
     document.addEventListener("keydown", trapFocus);
-    return () => { document.removeEventListener("keydown", trapFocus); trigger?.focus(); };
+    return () => {
+      document.removeEventListener("keydown", trapFocus);
+      trigger?.focus();
+    };
   }, [isOpen]);
 
   // Adjust textarea height smoothly based on content
@@ -251,14 +273,13 @@ export default function CanvasAIAssistant({
       const visibleOffset = Math.min(desiredOffset, window.innerHeight - 120);
       document.documentElement.style.setProperty(
         "--canvas-ai-notification-offset",
-        `${Math.max(24, visibleOffset)}px`
+        `${Math.max(24, visibleOffset)}px`,
       );
     };
 
     updateNotificationOffset();
-    const resizeObserver = typeof ResizeObserver === "undefined"
-      ? null
-      : new ResizeObserver(updateNotificationOffset);
+    const resizeObserver =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateNotificationOffset);
     if (dialogRef.current) resizeObserver?.observe(dialogRef.current);
     window.addEventListener("resize", updateNotificationOffset);
 
@@ -287,8 +308,7 @@ export default function CanvasAIAssistant({
   const startListening = () => {
     setSpeechError(null);
     setFailure(null);
-    const SpeechRecognitionClass =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognitionClass) {
       setSpeechError("Speech recognition is not supported in this browser.");
@@ -367,7 +387,12 @@ export default function CanvasAIAssistant({
   };
 
   const isQuotaDepleted = requestsRemaining <= 0;
-  const preview = previewGeneration({ mode, prompt, nodes: existingNodes, chosenOperation: operationChoice });
+  const preview = previewGeneration({
+    mode,
+    prompt,
+    nodes: existingNodes,
+    chosenOperation: operationChoice,
+  });
   const guidance = failure ? describeAIFailure(failure, { maxRequests }) : null;
   const stages = getThinkingStages(mode);
   const currentStage = stages[thinkingStep] || stages[0];
@@ -378,7 +403,10 @@ export default function CanvasAIAssistant({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => { setProvider("builtin"); onToggle(); }}
+        onClick={() => {
+          setProvider("builtin");
+          onToggle();
+        }}
         title={isOpen ? "Close AI Assistant" : "Open AI Assistant"}
         aria-label="Toggle AI Assistant"
         className={`group relative flex h-11 sm:h-12 items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl border px-2.5 sm:px-3.5 shadow-[0_2px_5px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all cursor-pointer select-none ${
@@ -407,283 +435,389 @@ export default function CanvasAIAssistant({
       </button>
 
       {/* Floating Chat / Prompt Popup Panel (Positioned right above tools dock) */}
-      {isOpen && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs sm:hidden dark:bg-black/60"
-            onClick={onClose}
-            aria-hidden="true"
-          />
-          <div
-            ref={dialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ai-assistant-title"
-            className="canvas-floating-panel dash-pop fixed bottom-20 inset-x-3 sm:inset-x-auto z-50 max-h-[85vh] overflow-y-auto sm:bottom-24 sm:left-1/2 flex w-auto sm:w-[calc(100%-24px)] max-w-lg sm:-translate-x-1/2 flex-col rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-2xl transition-all sm:max-w-xl dark:border-[#283548] dark:bg-[#161d27]/95"
-          >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#283548] px-1 pb-2.5">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3
-                  id="ai-assistant-title"
-                  className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white"
-                >
-                  AI assistant
-                </h3>
-                {provider === "builtin" && <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
-                    isQuotaDepleted
-                      ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/50"
-                      : "bg-neutral-100 text-neutral-600 border-neutral-200/80 dark:bg-[#1e2634] dark:text-neutral-300 dark:border-[#283548]"
-                  }`}
-                >
-                  <span className="whitespace-nowrap md:hidden">{maxRequests >= 999 ? "Unlimited" : `${requestsRemaining}/${maxRequests} left`}</span>
-                  <span className="hidden md:inline">
-                    {maxRequests >= 999
-                      ? "Unlimited AI requests"
-                      : isQuotaDepleted
-                      ? `0 / ${maxRequests} remaining`
-                      : `${requestsRemaining} of ${maxRequests} requests left`}
-                  </span>
-                  <span className="hidden md:inline text-[9px] font-medium opacity-75 border-l border-neutral-300 dark:border-neutral-600 pl-1.5">
-                    Google Gemini
-                  </span>
-                </span>}
-              </div>
-              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                {provider === "external" ? "Open your AI with a prepared request." : "Describe what to create or change."}
-              </p>
-            </div>
-
-            <button
-              type="button"
+      {isOpen &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-neutral-950/40 backdrop-blur-xs sm:hidden dark:bg-black/60"
               onClick={onClose}
-              aria-label="Close AI Assistant"
-              className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 dark:hover:bg-[#1e2634] dark:hover:text-white"
+              aria-hidden="true"
+            />
+            <div
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ai-assistant-title"
+              className="canvas-floating-panel dash-pop fixed bottom-20 inset-x-3 sm:inset-x-auto z-50 max-h-[85vh] overflow-y-auto sm:bottom-24 sm:left-1/2 flex w-auto sm:w-[calc(100%-24px)] max-w-lg sm:-translate-x-1/2 flex-col rounded-2xl border border-neutral-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-2xl transition-all sm:max-w-xl dark:border-[#283548] dark:bg-[#161d27]/95"
             >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-neutral-100 dark:border-[#283548] px-1 pb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3
+                      id="ai-assistant-title"
+                      className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-white"
+                    >
+                      AI assistant
+                    </h3>
+                    {provider === "builtin" && (
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
+                          isQuotaDepleted
+                            ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/50"
+                            : "bg-neutral-100 text-neutral-600 border-neutral-200/80 dark:bg-[#1e2634] dark:text-neutral-300 dark:border-[#283548]"
+                        }`}
+                      >
+                        <span className="whitespace-nowrap md:hidden">
+                          {maxRequests >= 999
+                            ? "Unlimited"
+                            : `${requestsRemaining}/${maxRequests} left`}
+                        </span>
+                        <span className="hidden md:inline">
+                          {maxRequests >= 999
+                            ? "Unlimited AI requests"
+                            : isQuotaDepleted
+                              ? `0 / ${maxRequests} remaining`
+                              : `${requestsRemaining} of ${maxRequests} requests left`}
+                        </span>
+                        <span className="hidden md:inline text-[9px] font-medium opacity-75 border-l border-neutral-300 dark:border-neutral-600 pl-1.5">
+                          Google Gemini
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    {provider === "external"
+                      ? "Open your AI with a prepared request."
+                      : "Describe what to create or change."}
+                  </p>
+                </div>
 
-          {projectId && projectSlug && <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-[#10151f]" aria-label="AI provider">
-            {(["builtin", "external"] as const).map(value => <button key={value} type="button" aria-pressed={provider === value}
-              onClick={() => { if (!isThinking) { stopListening(); setProvider(value); } }} disabled={isThinking}
-              className={`min-h-10 rounded-md px-2 text-xs font-semibold ${provider === value ? "bg-white text-neutral-900 shadow-sm dark:bg-[#283548] dark:text-white" : "text-neutral-500 dark:text-neutral-400"}`}>
-              {value === "external" ? "Your AI" : "Built-in AI"}
-            </button>)}
-          </div>}
-          {projectId && projectSlug && <p className="mt-1.5 px-0.5 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
-            {provider === "builtin" ? "Built-in AI prepares a preview. Review and apply it before your canvas changes." : "Your AI (Codex or Claude) prepares a draft that you review before anything is added."}
-          </p>}
-          {provider === "external" && projectId && projectSlug && <CanvasMcpAssistant projectId={projectId} projectSlug={projectSlug} onApplied={onExternalApplied} />}
-          {/* Form & Input Area */}
-          {provider === "builtin" && <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
-            <CanvasAIModeSelect id="builtin-ai-mode" value={mode} onChange={(next) => { setMode(next); setOperationChoice(null); }} disabled={isThinking || isQuotaDepleted} />
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close AI Assistant"
+                  className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-200 dark:hover:bg-[#1e2634] dark:hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
 
-            <section aria-label="What this will change" data-ai-preview className="rounded-lg border border-neutral-200 bg-neutral-50/80 p-2.5 text-[11px] leading-relaxed text-neutral-600 dark:border-[#283548] dark:bg-[#10151f] dark:text-neutral-300">
-              <p><span className="font-semibold text-neutral-800 dark:text-neutral-100">{preview.modeLabel}:</span> {preview.builds} {preview.leavesAlone}</p>
-              <p className="mt-1.5 font-semibold text-neutral-800 dark:text-neutral-100">{preview.headline}</p>
-              {preview.details.map((line) => <p key={line} className="mt-0.5">{line}</p>)}
-              {preview.canChooseOperation && (
-                <div role="group" aria-label="Choose how to apply this" className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-neutral-200/60 p-0.5 dark:bg-[#1e2634]">
-                  {([["update", "Update existing"], ["create", "Add new"]] as const).map(([value, label]) => (
-                    <button key={value} type="button" aria-pressed={preview.operation === value} disabled={isThinking || isQuotaDepleted}
-                      onClick={() => setOperationChoice(value)}
-                      className={`min-h-9 rounded px-2 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${preview.operation === value ? "bg-white text-neutral-900 shadow-sm dark:bg-[#283548] dark:text-white" : "text-neutral-500 dark:text-neutral-400"}`}>
-                      {label}
+              {projectId && projectSlug && (
+                <div
+                  className="mt-3 grid grid-cols-2 gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-[#10151f]"
+                  aria-label="AI provider"
+                >
+                  {(["builtin", "external"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={provider === value}
+                      onClick={() => {
+                        if (!isThinking) {
+                          stopListening();
+                          setProvider(value);
+                        }
+                      }}
+                      disabled={isThinking}
+                      className={`min-h-10 rounded-md px-2 text-xs font-semibold ${provider === value ? "bg-white text-neutral-900 shadow-sm dark:bg-[#283548] dark:text-white" : "text-neutral-500 dark:text-neutral-400"}`}
+                    >
+                      {value === "external" ? "Your AI" : "Built-in AI"}
                     </button>
                   ))}
                 </div>
               )}
-              {preview.canChooseOperation && preview.inferred && <p className="mt-1 text-[10px] text-neutral-500 dark:text-neutral-400">{preview.operation === "update" ? "Chosen because your canvas already has content. Pick Add new to keep it untouched." : "Chosen because your request asks for something new."}</p>}
-              {maxRequests < 999 && <p className="mt-1.5 text-[10px] text-neutral-500 dark:text-neutral-400">Uses 1 of your {requestsRemaining} remaining requests. It&apos;s restored if generation fails.</p>}
-            </section>
+              {projectId && projectSlug && (
+                <p className="mt-1.5 px-0.5 text-[11px] leading-snug text-neutral-500 dark:text-neutral-400">
+                  {provider === "builtin"
+                    ? "Built-in AI prepares a preview. Review and apply it before your canvas changes."
+                    : "Your AI (Codex or Claude) prepares a draft that you review before anything is added."}
+                </p>
+              )}
+              {provider === "external" && projectId && projectSlug && (
+                <CanvasMcpAssistant
+                  projectId={projectId}
+                  projectSlug={projectSlug}
+                  onApplied={onExternalApplied}
+                />
+              )}
+              {/* Form & Input Area */}
+              {provider === "builtin" && (
+                <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
+                  <CanvasAIModeSelect
+                    id="builtin-ai-mode"
+                    value={mode}
+                    onChange={(next) => {
+                      setMode(next);
+                      setOperationChoice(null);
+                    }}
+                    disabled={isThinking || isQuotaDepleted}
+                  />
 
-            <div className="rounded-xl border border-neutral-200 bg-white shadow-2xs transition-all focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/5 dark:border-[#283548] dark:bg-[#121721] dark:focus-within:border-emerald-500 dark:focus-within:ring-emerald-500/10">
-              <textarea
-                aria-label="AI prompt"
-                ref={textareaRef}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={
-                  isQuotaDepleted
-                    ? `You have reached your ${maxRequests} AI workflow limit.`
-                    : "Describe what to create or change…"
-                }
-                disabled={isThinking || isQuotaDepleted}
-                style={{ height: "68px", overflowY: "hidden" }}
-                className="w-full resize-none bg-transparent px-3.5 pt-3 pb-2 text-[13px] leading-relaxed text-neutral-900 placeholder-neutral-400 focus:outline-none disabled:opacity-50 transition-[height] duration-200 ease-out dark:text-white dark:placeholder-neutral-500"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-              />
-
-              {/* Bottom Controls Bar cleanly separated below Textarea */}
-              <div className="flex items-center justify-between gap-2 border-t border-neutral-100 dark:border-[#283548] px-3 py-2">
-                {/* Voice / Mic Button */}
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handleToggleMic}
-                    disabled={!speechSupported || isThinking || isQuotaDepleted}
-                    title={
-                      !speechSupported
-                        ? "Voice recognition not supported in browser"
-                        : isListening
-                          ? "Stop listening"
-                          : "Record voice input"
-                    }
-                    className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                      isListening
-                        ? "bg-red-500 text-white shadow-xs animate-pulse"
-                        : "border border-neutral-200 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
-                    }`}
+                  <section
+                    aria-label="What this will change"
+                    data-ai-preview
+                    className="rounded-lg border border-neutral-200 bg-neutral-50/80 p-2.5 text-[11px] leading-relaxed text-neutral-600 dark:border-[#283548] dark:bg-[#10151f] dark:text-neutral-300"
                   >
-                    {isListening ? (
-                      <>
-                        <MicOff className="h-3.5 w-3.5" />
-                        <span>Listening…</span>
-                      </>
-                    ) : (
-                      <>
-                        <Mic className="h-3.5 w-3.5" />
-                        <span>Voice</span>
-                      </>
-                    )}
-                  </button>
-
-                  {isListening && (
-                    <span className="flex items-center gap-1 text-[11px] font-medium text-red-600 dark:text-red-400">
-                      <Volume2 className="h-3.5 w-3.5 animate-bounce" />
-                      <span>Speak now</span>
-                    </span>
-                  )}
-                </div>
-
-                {/* Submit / Clear Buttons */}
-                <div className="flex items-center gap-2">
-                  {prompt && !isQuotaDepleted && !isThinking && (
-                    <button
-                      type="button"
-                      onClick={() => setPrompt("")}
-                      className="text-[11px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer dark:hover:text-neutral-200"
-                    >
-                      Clear
-                    </button>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={!prompt.trim() || isThinking || isQuotaDepleted}
-                    className="flex h-8 min-w-23 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-                  >
-                    {isThinking ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        <span className="text-[11px]">{currentStage.buttonLabel}</span>
-                      </>
-                    ) : isQuotaDepleted ? (
-                      <>
-                        <Lock className="h-3.5 w-3.5" />
-                        <span>Limit Reached</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Generate</span>
-                        <ArrowUp className="h-3.5 w-3.5" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* AI Transparency & Privacy Note */}
-            <div className="flex items-center justify-between px-1 text-[11px] text-neutral-400 dark:text-neutral-500">
-              <span>Google Gemini AI &bull; Prompts are not stored</span>
-              <PrivacyPolicyTrigger className="cursor-pointer text-[11px] text-neutral-400 dark:text-neutral-500 underline decoration-neutral-300 dark:decoration-neutral-600 underline-offset-2 transition-colors hover:text-neutral-700 dark:hover:text-neutral-300">
-                AI Privacy
-              </PrivacyPolicyTrigger>
-            </div>
-
-            {/* Recoverable failure with next steps */}
-            {failure && guidance && (
-              <div role="alert" data-ai-failure={failure.code} className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold">{guidance.title}</p>
-                    <p className="mt-0.5 font-medium">{guidance.message}</p>
-                    {guidance.note && <p className="mt-1 text-[11px] opacity-80">{guidance.note}</p>}
-                    {guidance.actions.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {guidance.actions.map((action) => (
-                          <button key={action} type="button" disabled={isThinking}
-                            onClick={() => {
-                              if (action === "retry") void handleSubmit({ preventDefault() {} } as React.FormEvent);
-                              else if (action === "reload") { setFailure(null); onReloadCanvas?.(); }
-                              else if (projectId && projectSlug) { setFailure(null); setProvider("external"); }
-                            }}
-                            className="min-h-9 rounded-lg border border-amber-300 bg-white px-3 text-[11px] font-semibold text-amber-900 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50 dark:border-amber-700 dark:bg-transparent dark:text-amber-200 dark:hover:bg-amber-900/30">
-                            {action === "retry" ? "Try again" : action === "reload" ? "Reload canvas" : "Use your own AI"}
+                    <p>
+                      <span className="font-semibold text-neutral-800 dark:text-neutral-100">
+                        {preview.modeLabel}:
+                      </span>{" "}
+                      {preview.builds} {preview.leavesAlone}
+                    </p>
+                    <p className="mt-1.5 font-semibold text-neutral-800 dark:text-neutral-100">
+                      {preview.headline}
+                    </p>
+                    {preview.details.map((line) => (
+                      <p key={line} className="mt-0.5">
+                        {line}
+                      </p>
+                    ))}
+                    {preview.canChooseOperation && (
+                      <div
+                        role="group"
+                        aria-label="Choose how to apply this"
+                        className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-neutral-200/60 p-0.5 dark:bg-[#1e2634]"
+                      >
+                        {(
+                          [
+                            ["update", "Update existing"],
+                            ["create", "Add new"],
+                          ] as const
+                        ).map(([value, label]) => (
+                          <button
+                            key={value}
+                            type="button"
+                            aria-pressed={preview.operation === value}
+                            disabled={isThinking || isQuotaDepleted}
+                            onClick={() => setOperationChoice(value)}
+                            className={`min-h-9 rounded px-2 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${preview.operation === value ? "bg-white text-neutral-900 shadow-sm dark:bg-[#283548] dark:text-white" : "text-neutral-500 dark:text-neutral-400"}`}
+                          >
+                            {label}
                           </button>
                         ))}
                       </div>
                     )}
+                    {preview.canChooseOperation && preview.inferred && (
+                      <p className="mt-1 text-[10px] text-neutral-500 dark:text-neutral-400">
+                        {preview.operation === "update"
+                          ? "Chosen because your canvas already has content. Pick Add new to keep it untouched."
+                          : "Chosen because your request asks for something new."}
+                      </p>
+                    )}
+                    {maxRequests < 999 && (
+                      <p className="mt-1.5 text-[10px] text-neutral-500 dark:text-neutral-400">
+                        Uses 1 of your {requestsRemaining} remaining requests. It&apos;s restored if
+                        generation fails.
+                      </p>
+                    )}
+                  </section>
+
+                  <div className="rounded-xl border border-neutral-200 bg-white shadow-2xs transition-all focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/5 dark:border-[#283548] dark:bg-[#121721] dark:focus-within:border-emerald-500 dark:focus-within:ring-emerald-500/10">
+                    <textarea
+                      aria-label="AI prompt"
+                      ref={textareaRef}
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder={
+                        isQuotaDepleted
+                          ? `You have reached your ${maxRequests} AI workflow limit.`
+                          : "Describe what to create or change…"
+                      }
+                      disabled={isThinking || isQuotaDepleted}
+                      style={{ height: "68px", overflowY: "hidden" }}
+                      className="w-full resize-none bg-transparent px-3.5 pt-3 pb-2 text-[13px] leading-relaxed text-neutral-900 placeholder-neutral-400 focus:outline-none disabled:opacity-50 transition-[height] duration-200 ease-out dark:text-white dark:placeholder-neutral-500"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSubmit(e);
+                        }
+                      }}
+                    />
+
+                    {/* Bottom Controls Bar cleanly separated below Textarea */}
+                    <div className="flex items-center justify-between gap-2 border-t border-neutral-100 dark:border-[#283548] px-3 py-2">
+                      {/* Voice / Mic Button */}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleToggleMic}
+                          disabled={!speechSupported || isThinking || isQuotaDepleted}
+                          title={
+                            !speechSupported
+                              ? "Voice recognition not supported in browser"
+                              : isListening
+                                ? "Stop listening"
+                                : "Record voice input"
+                          }
+                          className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                            isListening
+                              ? "bg-red-500 text-white shadow-xs animate-pulse"
+                              : "border border-neutral-200 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:border-[#283548] dark:bg-[#161d27] dark:text-neutral-300 dark:hover:bg-[#1e2634]"
+                          }`}
+                        >
+                          {isListening ? (
+                            <>
+                              <MicOff className="h-3.5 w-3.5" />
+                              <span>Listening…</span>
+                            </>
+                          ) : (
+                            <>
+                              <Mic className="h-3.5 w-3.5" />
+                              <span>Voice</span>
+                            </>
+                          )}
+                        </button>
+
+                        {isListening && (
+                          <span className="flex items-center gap-1 text-[11px] font-medium text-red-600 dark:text-red-400">
+                            <Volume2 className="h-3.5 w-3.5 animate-bounce" />
+                            <span>Speak now</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Submit / Clear Buttons */}
+                      <div className="flex items-center gap-2">
+                        {prompt && !isQuotaDepleted && !isThinking && (
+                          <button
+                            type="button"
+                            onClick={() => setPrompt("")}
+                            className="text-[11px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer dark:hover:text-neutral-200"
+                          >
+                            Clear
+                          </button>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={!prompt.trim() || isThinking || isQuotaDepleted}
+                          className="flex h-8 min-w-23 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white shadow-xs transition-all hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-neutral-200 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                        >
+                          {isThinking ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <span className="text-[11px]">{currentStage.buttonLabel}</span>
+                            </>
+                          ) : isQuotaDepleted ? (
+                            <>
+                              <Lock className="h-3.5 w-3.5" />
+                              <span>Limit Reached</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Generate</span>
+                              <ArrowUp className="h-3.5 w-3.5" />
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
 
-            {/* Speech Error Notice */}
-            {speechError && (
-              <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60">
-                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <span>{speechError}</span>
-              </div>
-            )}
-
-            {/* Progressive Thinking & Planning State Indicator */}
-            {isThinking && (
-              <div className="dash-pop rounded-xl border border-neutral-200/90 bg-neutral-50/90 p-3 text-xs text-neutral-600 shadow-2xs space-y-2 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-300">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-900 dark:text-emerald-400 shrink-0" />
-                    <span className="font-semibold text-neutral-900 dark:text-white text-[12px]">
-                      {currentStage.title}
-                    </span>
+                  {/* AI Transparency & Privacy Note */}
+                  <div className="flex items-center justify-between px-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+                    <span>Google Gemini AI &bull; Prompts are not stored</span>
+                    <PrivacyPolicyTrigger className="cursor-pointer text-[11px] text-neutral-400 dark:text-neutral-500 underline decoration-neutral-300 dark:decoration-neutral-600 underline-offset-2 transition-colors hover:text-neutral-700 dark:hover:text-neutral-300">
+                      AI Privacy
+                    </PrivacyPolicyTrigger>
                   </div>
-                  <span className="text-[10px] font-mono font-medium text-neutral-400 dark:text-neutral-500">
-                    Step {thinkingStep + 1} of 4
-                  </span>
-                </div>
 
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-snug">
-                  {currentStage.detail}
-                </p>
+                  {/* Recoverable failure with next steps */}
+                  {failure && guidance && (
+                    <div
+                      role="alert"
+                      data-ai-failure={failure.code}
+                      className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300"
+                    >
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold">{guidance.title}</p>
+                          <p className="mt-0.5 font-medium">{guidance.message}</p>
+                          {guidance.note && (
+                            <p className="mt-1 text-[11px] opacity-80">{guidance.note}</p>
+                          )}
+                          {guidance.actions.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {guidance.actions.map((action) => (
+                                <button
+                                  key={action}
+                                  type="button"
+                                  disabled={isThinking}
+                                  onClick={() => {
+                                    if (action === "retry")
+                                      void handleSubmit({ preventDefault() {} } as React.FormEvent);
+                                    else if (action === "reload") {
+                                      setFailure(null);
+                                      onReloadCanvas?.();
+                                    } else if (projectId && projectSlug) {
+                                      setFailure(null);
+                                      setProvider("external");
+                                    }
+                                  }}
+                                  className="min-h-9 rounded-lg border border-amber-300 bg-white px-3 text-[11px] font-semibold text-amber-900 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50 dark:border-amber-700 dark:bg-transparent dark:text-amber-200 dark:hover:bg-amber-900/30"
+                                >
+                                  {action === "retry"
+                                    ? "Try again"
+                                    : action === "reload"
+                                      ? "Reload canvas"
+                                      : "Use your own AI"}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                {/* Animated Progress Bar */}
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200/70 dark:bg-[#1e2634]">
-                  <div
-                    className="h-full bg-neutral-900 dark:bg-emerald-500 transition-all duration-700 ease-out rounded-full"
-                    style={{ width: currentStage.pct }}
-                  />
-                </div>
+                  {/* Speech Error Notice */}
+                  {speechError && (
+                    <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 border border-amber-200/70 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                      <span>{speechError}</span>
+                    </div>
+                  )}
 
-                <div className="truncate border-t border-neutral-200/60 dark:border-[#283548] pt-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 italic">
-                  “{submittedMessage}”
-                </div>
-              </div>
-            )}
-          </form>}
-        </div>
-        </>,
-        portalContainer ?? document.body
-      )}
+                  {/* Progressive Thinking & Planning State Indicator */}
+                  {isThinking && (
+                    <div className="dash-pop rounded-xl border border-neutral-200/90 bg-neutral-50/90 p-3 text-xs text-neutral-600 shadow-2xs space-y-2 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-300">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-900 dark:text-emerald-400 shrink-0" />
+                          <span className="font-semibold text-neutral-900 dark:text-white text-[12px]">
+                            {currentStage.title}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono font-medium text-neutral-400 dark:text-neutral-500">
+                          Step {thinkingStep + 1} of 4
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-snug">
+                        {currentStage.detail}
+                      </p>
+
+                      {/* Animated Progress Bar */}
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200/70 dark:bg-[#1e2634]">
+                        <div
+                          className="h-full bg-neutral-900 dark:bg-emerald-500 transition-all duration-700 ease-out rounded-full"
+                          style={{ width: currentStage.pct }}
+                        />
+                      </div>
+
+                      <div className="truncate border-t border-neutral-200/60 dark:border-[#283548] pt-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 italic">
+                        “{submittedMessage}”
+                      </div>
+                    </div>
+                  )}
+                </form>
+              )}
+            </div>
+          </>,
+          portalContainer ?? document.body,
+        )}
     </>
   );
 }

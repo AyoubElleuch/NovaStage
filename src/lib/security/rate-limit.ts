@@ -46,7 +46,7 @@ export interface RateLimitResult {
  */
 export function checkRateLimit(
   key: string,
-  options: RateLimitOptions = { maxAttempts: 5, windowSeconds: 60, lockoutSeconds: 30 }
+  options: RateLimitOptions = { maxAttempts: 5, windowSeconds: 60, lockoutSeconds: 30 },
 ): RateLimitResult {
   cleanupStaleEntries();
 
@@ -101,7 +101,7 @@ export function checkRateLimit(
  */
 export async function checkRateLimitAsync(
   key: string,
-  options: RateLimitOptions = { maxAttempts: 5, windowSeconds: 60, lockoutSeconds: 30 }
+  options: RateLimitOptions = { maxAttempts: 5, windowSeconds: 60, lockoutSeconds: 30 },
 ): Promise<RateLimitResult> {
   const redis = getRedis();
 

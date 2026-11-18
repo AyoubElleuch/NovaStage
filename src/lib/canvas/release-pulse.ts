@@ -33,7 +33,7 @@ function getCompletion(node: CanvasNode) {
 
 export function analyzeReleasePulse(
   nodes: CanvasNode[],
-  edges: CanvasEdge[]
+  edges: CanvasEdge[],
 ): ReleasePulseAnalysis {
   // Only evaluate milestone nodes for roadmap progress, readiness, and blockers
   const milestoneNodes = nodes.filter((node) => !node.node_type || node.node_type === "milestone");
@@ -48,7 +48,9 @@ export function analyzeReleasePulse(
     outgoing.get(edge.source_node_id)?.push(edge.target_node_id);
   }
 
-  const indegree = new Map(milestoneNodes.map((node) => [node.id, incoming.get(node.id)?.length ?? 0]));
+  const indegree = new Map(
+    milestoneNodes.map((node) => [node.id, incoming.get(node.id)?.length ?? 0]),
+  );
   const queue = milestoneNodes.filter((node) => indegree.get(node.id) === 0).map((node) => node.id);
   const topologicalOrder: string[] = [];
 
@@ -103,14 +105,14 @@ export function analyzeReleasePulse(
     .filter(
       (node) =>
         node.status !== "blocked" &&
-        (incoming.get(node.id) ?? []).every((sourceId) => completionById.get(sourceId) === 100)
+        (incoming.get(node.id) ?? []).every((sourceId) => completionById.get(sourceId) === 100),
     )
     .map((node) => toInsight(node.id));
   const blockedNodes = incompleteNodes
     .filter(
       (node) =>
         node.status === "blocked" ||
-        (incoming.get(node.id) ?? []).some((sourceId) => completionById.get(sourceId) !== 100)
+        (incoming.get(node.id) ?? []).some((sourceId) => completionById.get(sourceId) !== 100),
     )
     .map((node) => toInsight(node.id));
 
@@ -137,12 +139,12 @@ export function analyzeReleasePulse(
       (left, right) =>
         Number(right.isExplicitlyBlocked) - Number(left.isExplicitlyBlocked) ||
         right.downstreamCount - left.downstreamCount ||
-        left.completion - right.completion
+        left.completion - right.completion,
     );
 
   const totalWorkUnits = milestoneNodes.reduce(
     (total, node) => total + Math.max(node.checkpoints.length, 1),
-    0
+    0,
   );
   const completedWorkUnits = milestoneNodes.reduce(
     (total, node) =>
@@ -152,7 +154,7 @@ export function analyzeReleasePulse(
         : node.status === "completed"
           ? 1
           : 0),
-    0
+    0,
   );
 
   return {
@@ -163,7 +165,9 @@ export function analyzeReleasePulse(
     blockedNodes,
     blockers,
     criticalPath: criticalEndId
-      ? (pathIds.get(criticalEndId) ?? []).filter((nodeId) => completionById.get(nodeId) !== 100).map(toInsight)
+      ? (pathIds.get(criticalEndId) ?? [])
+          .filter((nodeId) => completionById.get(nodeId) !== 100)
+          .map(toInsight)
       : [],
     hasCycle,
   };

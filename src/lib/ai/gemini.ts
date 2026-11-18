@@ -4,12 +4,7 @@
  * and high-fidelity deterministic offline workflows.
  */
 
-import {
-  CanvasAIContext,
-  AIWorkflowResult,
-  AIProcessedMilestone,
-  AIProcessedEdge,
-} from "./types";
+import { CanvasAIContext, AIWorkflowResult, AIProcessedMilestone, AIProcessedEdge } from "./types";
 import { DOMAIN_TEMPLATES } from "./prompts/domain-templates";
 
 export * from "./types";
@@ -47,7 +42,7 @@ export interface GeminiCallOptions {
 async function callOpenAI<T>(
   prompt: string,
   schema: object,
-  options?: GeminiCallOptions
+  options?: GeminiCallOptions,
 ): Promise<T | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
@@ -104,7 +99,7 @@ async function callOpenAI<T>(
 export async function callGemini<T>(
   prompt: string,
   schema: object,
-  options?: GeminiCallOptions
+  options?: GeminiCallOptions,
 ): Promise<T | null> {
   const callerSignal = options?.signal;
   // Check if OpenAI is explicitly chosen or Gemini is unconfigured
@@ -126,7 +121,8 @@ export async function callGemini<T>(
     return null;
   }
 
-  const primaryModel = options?.modelOverride || process.env.GEMINI_MODEL?.trim() || "gemini-3.1-flash-lite";
+  const primaryModel =
+    options?.modelOverride || process.env.GEMINI_MODEL?.trim() || "gemini-3.1-flash-lite";
   const configuredChain = (process.env.GEMINI_MODEL_CHAIN || "")
     .split(",")
     .map((model) => model.trim())
@@ -187,7 +183,9 @@ export async function callGemini<T>(
               return parsed;
             }
           } catch {
-            console.warn(`[Gemini AI] Model ${model} returned malformed JSON, trying next model...`);
+            console.warn(
+              `[Gemini AI] Model ${model} returned malformed JSON, trying next model...`,
+            );
           }
         }
       } else {
@@ -212,7 +210,7 @@ export async function callGemini<T>(
  */
 function buildDomainFallbackMilestones(
   prompt: string,
-  domainKey: string
+  domainKey: string,
 ): { milestones: AIProcessedMilestone[]; edges: AIProcessedEdge[] } {
   const template = DOMAIN_TEMPLATES[domainKey] || DOMAIN_TEMPLATES.saas;
   const milestones: AIProcessedMilestone[] = [];
@@ -323,7 +321,7 @@ function buildDomainFallbackMilestones(
  */
 export function generateFallbackWorkflow(
   prompt: string,
-  context?: CanvasAIContext
+  context?: CanvasAIContext,
 ): AIWorkflowResult {
   const cleanPrompt = prompt.trim();
   const lowerPrompt = cleanPrompt.toLowerCase();
@@ -341,7 +339,7 @@ export function generateFallbackWorkflow(
     if (!isExplicitNewPipeline) {
       // Check for "between step X and step Y" or "between X and Y"
       const betweenMatch = lowerPrompt.match(
-        /between (?:step\s*)?(\d+|one|two|three|four|five|six|seven|eight)\s+and\s+(?:step\s*)?(\d+|one|two|three|four|five|six|seven|eight)/i
+        /between (?:step\s*)?(\d+|one|two|three|four|five|six|seven|eight)\s+and\s+(?:step\s*)?(\d+|one|two|three|four|five|six|seven|eight)/i,
       );
 
       const wordToNum: Record<string, number> = {
@@ -388,7 +386,8 @@ export function generateFallbackWorkflow(
           ];
         } else if (lowerPrompt.includes("security") || lowerPrompt.includes("audit")) {
           newTitle = "Security & Compliance Audit";
-          desc = "Vulnerability assessment, permission matrix verification, and penetration testing";
+          desc =
+            "Vulnerability assessment, permission matrix verification, and penetration testing";
           checkpoints = [
             { title: "Audit PostgreSQL Row-Level Security policies" },
             { title: "Perform static application security testing (SAST)" },
@@ -491,9 +490,7 @@ export function generateFallbackWorkflow(
             title: cp.title,
             isCompleted: cp.is_completed,
           })),
-          ...(idx === 0
-            ? [{ title: `Updated requirement: ${cleanPrompt.slice(0, 40)}` }]
-            : []),
+          ...(idx === 0 ? [{ title: `Updated requirement: ${cleanPrompt.slice(0, 40)}` }] : []),
         ],
       }));
 
@@ -514,13 +511,33 @@ export function generateFallbackWorkflow(
 
   // Scenario 2: Create new deep, branching pipeline matching domain keywords
   let domainKey = "saas";
-  if (lowerPrompt.includes("shop") || lowerPrompt.includes("ecommerce") || lowerPrompt.includes("product") || lowerPrompt.includes("order")) {
+  if (
+    lowerPrompt.includes("shop") ||
+    lowerPrompt.includes("ecommerce") ||
+    lowerPrompt.includes("product") ||
+    lowerPrompt.includes("order")
+  ) {
     domainKey = "ecommerce";
-  } else if (lowerPrompt.includes("realtime") || lowerPrompt.includes("collaborat") || lowerPrompt.includes("websocket") || lowerPrompt.includes("chat")) {
+  } else if (
+    lowerPrompt.includes("realtime") ||
+    lowerPrompt.includes("collaborat") ||
+    lowerPrompt.includes("websocket") ||
+    lowerPrompt.includes("chat")
+  ) {
     domainKey = "realtime";
-  } else if (lowerPrompt.includes("api") || lowerPrompt.includes("microservice") || lowerPrompt.includes("backend") || lowerPrompt.includes("grpc")) {
+  } else if (
+    lowerPrompt.includes("api") ||
+    lowerPrompt.includes("microservice") ||
+    lowerPrompt.includes("backend") ||
+    lowerPrompt.includes("grpc")
+  ) {
     domainKey = "api_backend";
-  } else if (lowerPrompt.includes("mobile") || lowerPrompt.includes("ios") || lowerPrompt.includes("android") || lowerPrompt.includes("react native")) {
+  } else if (
+    lowerPrompt.includes("mobile") ||
+    lowerPrompt.includes("ios") ||
+    lowerPrompt.includes("android") ||
+    lowerPrompt.includes("react native")
+  ) {
     domainKey = "mobile_cloud";
   }
 
@@ -541,7 +558,7 @@ export function generateFallbackWorkflow(
  */
 export async function generateWorkflowWithGemini(
   prompt: string,
-  context?: CanvasAIContext
+  context?: CanvasAIContext,
 ): Promise<AIWorkflowResult> {
   const { executeAIPipeline } = await import("./pipeline");
   return executeAIPipeline(prompt, "workflow", context);

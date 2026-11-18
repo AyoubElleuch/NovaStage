@@ -5,7 +5,8 @@ import { PLAN_LIMITS, getAiRequestLimit, normalizePlan } from "./plans";
 
 it("matches the limits enforced by the database quota function", () => {
   const sql = readFileSync("supabase/migrations/020_tier_quotas_and_perks.sql", "utf8");
-  const limit = (plan: string) => Number(new RegExp(`v_plan = '${plan}' then\\s+v_max := (\\d+)`).exec(sql)?.[1]);
+  const limit = (plan: string) =>
+    Number(new RegExp(`v_plan = '${plan}' then\\s+v_max := (\\d+)`).exec(sql)?.[1]);
   expect(limit("pro")).toBe(PLAN_LIMITS.pro.aiRequests);
   expect(limit("plus")).toBe(PLAN_LIMITS.plus.aiRequests);
   expect(Number(/else\s+v_max := (\d+)/.exec(sql)?.[1])).toBe(PLAN_LIMITS.free.aiRequests);
@@ -19,4 +20,3 @@ it("shares one definition of member and request limits across the app", () => {
   }
   expect(normalizePlan("unknown")).toBe("free");
 });
-

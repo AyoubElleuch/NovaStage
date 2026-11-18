@@ -29,7 +29,10 @@ export async function GET(request: Request) {
     });
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || "Failed to fetch join requests." }, { status: 403 });
+      return NextResponse.json(
+        { error: result.error || "Failed to fetch join requests." },
+        { status: 403 },
+      );
     }
 
     return NextResponse.json({ success: true, requests: result.requests || [] });
@@ -66,7 +69,10 @@ export async function POST(request: Request) {
     });
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || "Failed to resolve join request." }, { status: 400 });
+      return NextResponse.json(
+        { error: result.error || "Failed to resolve join request." },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json({

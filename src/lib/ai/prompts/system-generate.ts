@@ -8,19 +8,18 @@ import { SAAS_FEW_SHOT_EXAMPLE } from "./few-shot-examples";
 
 export function buildGenerationSystemInstruction(
   prompt: string,
-  decomposition?: PromptDecomposition
+  decomposition?: PromptDecomposition,
 ): string {
-  const domainGuidances = decomposition
-    ? getDomainGuidance(decomposition.domainTags, prompt)
-    : [];
+  const domainGuidances = decomposition ? getDomainGuidance(decomposition.domainTags, prompt) : [];
 
   let domainGuidanceText = "";
   if (domainGuidances.length > 0) {
-    domainGuidanceText = `\n\nDOMAIN-SPECIFIC ARCHITECTURAL STANDARDS (incorporate these specific patterns):\n` +
+    domainGuidanceText =
+      `\n\nDOMAIN-SPECIFIC ARCHITECTURAL STANDARDS (incorporate these specific patterns):\n` +
       domainGuidances
         .map(
           (g) =>
-            `### ${g.domain}\nKey Considerations:\n${g.keyArchitecturalConsiderations.map((c) => `- ${c}`).join("\n")}\nRecommended Milestone Patterns:\n${g.recommendedMilestones.map((m) => `* **${m.title}**: ${m.description} (${m.checkpoints.length} specific tasks)`).join("\n")}`
+            `### ${g.domain}\nKey Considerations:\n${g.keyArchitecturalConsiderations.map((c) => `- ${c}`).join("\n")}\nRecommended Milestone Patterns:\n${g.recommendedMilestones.map((m) => `* **${m.title}**: ${m.description} (${m.checkpoints.length} specific tasks)`).join("\n")}`,
         )
         .join("\n\n");
   }

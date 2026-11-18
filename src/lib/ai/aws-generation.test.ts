@@ -9,61 +9,151 @@ vi.mock("./gemini", () => ({ callGemini: vi.fn() }));
 vi.mock("./phases/decompose", () => ({ decomposePrompt: async () => undefined }));
 
 describe("AWS provider wire contract through orchestration", () => {
-  it.each(["aws_architecture"] as const)("preserves empty-boundary removals on %s updates", async mode => {
-    const result = structuredClone(AWS_ARCHITECTURE_FIXTURES[1].result);
-    result.groups!.push({ id: "saved-empty", tempId: "saved-empty", label: "Unused VPC", style: "vpc", childTempIds: [] });
-    result.serviceNodes = result.serviceNodes!.map(service => ({ ...service, config: { Environment: "fixture", Purpose: service.serviceId } }));
-    vi.mocked(callGemini).mockReset().mockResolvedValue(result);
-    const generated = await executeAIPipeline("simple website update", mode, {
-      operation: "update", existingMilestones: [], existingEdges: [],
-      existingGroups: [{ id: "saved-empty", label: "Unused VPC", style: "vpc", childNodeIds: [] }],
-    });
-    expect(generated.intent).toBe("update_pipeline");
-    expect(generated.groups).toEqual([]);
-    expect(generated.deletedGroupIds).toContain("saved-empty");
-  });
+  it.each(["aws_architecture"] as const)(
+    "preserves empty-boundary removals on %s updates",
+    async (mode) => {
+      const result = structuredClone(AWS_ARCHITECTURE_FIXTURES[1].result);
+      result.groups!.push({
+        id: "saved-empty",
+        tempId: "saved-empty",
+        label: "Unused VPC",
+        style: "vpc",
+        childTempIds: [],
+      });
+      result.serviceNodes = result.serviceNodes!.map((service) => ({
+        ...service,
+        config: { Environment: "fixture", Purpose: service.serviceId },
+      }));
+      vi.mocked(callGemini).mockReset().mockResolvedValue(result);
+      const generated = await executeAIPipeline("simple website update", mode, {
+        operation: "update",
+        existingMilestones: [],
+        existingEdges: [],
+        existingGroups: [
+          { id: "saved-empty", label: "Unused VPC", style: "vpc", childNodeIds: [] },
+        ],
+      });
+      expect(generated.intent).toBe("update_pipeline");
+      expect(generated.groups).toEqual([]);
+      expect(generated.deletedGroupIds).toContain("saved-empty");
+    },
+  );
 
-  it.each([AWS_ARCHITECTURE_FIXTURES[0], AWS_ARCHITECTURE_FIXTURES[1]])("$name", async ({ name, result }) => {
-    vi.mocked(callGemini).mockReset().mockResolvedValue({ ...result, serviceNodes: result.serviceNodes!.map(service => ({ ...service, configEntries: [{ key: "Environment", value: "fixture" }, { key: "Purpose", value: service.serviceId }] })) });
-    const generated = await executeAIPipeline(name, "aws_architecture");
-    expect(generated.serviceNodes).toHaveLength(result.serviceNodes!.length);
-    expect(generated.serviceNodes!.every(service => !service.configEntries && service.config?.Environment === "fixture")).toBe(true);
-    expect(generated.dataFlowEdges).toEqual(result.dataFlowEdges);
-    expect(layoutAWSArchitecture(generated, [])).toHaveLength(generated.serviceNodes!.length + generated.groups!.length);
-    expect(vi.mocked(callGemini).mock.calls[0][2]?.systemInstruction).toContain("application owns all layout");
-  });
+  it.each([AWS_ARCHITECTURE_FIXTURES[0], AWS_ARCHITECTURE_FIXTURES[1]])(
+    "$name",
+    async ({ name, result }) => {
+      vi.mocked(callGemini)
+        .mockReset()
+        .mockResolvedValue({
+          ...result,
+          serviceNodes: result.serviceNodes!.map((service) => ({
+            ...service,
+            configEntries: [
+              { key: "Environment", value: "fixture" },
+              { key: "Purpose", value: service.serviceId },
+            ],
+          })),
+        });
+      const generated = await executeAIPipeline(name, "aws_architecture");
+      expect(generated.serviceNodes).toHaveLength(result.serviceNodes!.length);
+      expect(
+        generated.serviceNodes!.every(
+          (service) => !service.configEntries && service.config?.Environment === "fixture",
+        ),
+      ).toBe(true);
+      expect(generated.dataFlowEdges).toEqual(result.dataFlowEdges);
+      expect(layoutAWSArchitecture(generated, [])).toHaveLength(
+        generated.serviceNodes!.length + generated.groups!.length,
+      );
+      expect(vi.mocked(callGemini).mock.calls[0][2]?.systemInstruction).toContain(
+        "application owns all layout",
+      );
+    },
+  );
 
-  it.each(["duplicate IDs", "unknown service", "dangling connection", "mixed modes", "invalid placement"])("rejects %s before any canvas mutation", async kind => {
+  it.each([
+    "duplicate IDs",
+    "unknown service",
+    "dangling connection",
+    "mixed modes",
+    "invalid placement",
+  ])("rejects %s before any canvas mutation", async (kind) => {
     const result = structuredClone(AWS_ARCHITECTURE_FIXTURES[1].result);
     if (kind === "duplicate IDs") result.serviceNodes![1].tempId = result.serviceNodes![0].tempId;
     if (kind === "unknown service") result.serviceNodes![0].serviceId = "imaginary-service";
     if (kind === "dangling connection") result.dataFlowEdges![0].toId = "missing";
-    if (kind === "mixed modes") result.milestones = [{ tempId: "plan", title: "Deploy infrastructure", checkpoints: [{ title: "Implement API" }] }];
+    if (kind === "mixed modes")
+      result.milestones = [
+        {
+          tempId: "plan",
+          title: "Deploy infrastructure",
+          checkpoints: [{ title: "Implement API" }],
+        },
+      ];
     if (kind === "invalid placement") {
-      result.groups = [{ tempId: "subnet", label: "Subnet", style: "subnet", childTempIds: [result.serviceNodes![0].tempId] }];
+      result.groups = [
+        {
+          tempId: "subnet",
+          label: "Subnet",
+          style: "subnet",
+          childTempIds: [result.serviceNodes![0].tempId],
+        },
+      ];
       result.serviceNodes![0].parentGroupTempId = "subnet";
     }
     expect(hasUsableArchitecture(normalizeArchitectureResult(result))).toBe(false);
     vi.mocked(callGemini).mockReset().mockResolvedValue(result);
-    await expect(executeAIPipeline("simple architecture", "aws_architecture")).rejects.toThrow("No canvas changes were applied");
+    await expect(executeAIPipeline("simple architecture", "aws_architecture")).rejects.toThrow(
+      "No canvas changes were applied",
+    );
     expect(callGemini).toHaveBeenCalledTimes(2);
   });
   it("keeps AWS-only output despite delivery tasks in the prompt and existing workflow context", async () => {
     const result = structuredClone(AWS_ARCHITECTURE_FIXTURES[1].result);
     vi.mocked(callGemini).mockReset().mockResolvedValue(result);
-    const generated = await executeAIPipeline("simple website; implement, test and deploy the API", "aws_architecture", {
-      existingMilestones: [{ id: "saved-task", title: "Implement API", order: 0, checkpoints: [{ id: "saved-cp", title: "Deploy" }] }], existingEdges: [],
-    });
-    expect(generated.mode).toBe("aws_architecture"); expect(generated.milestones).toEqual([]); expect(generated.edges).toEqual([]);
+    const generated = await executeAIPipeline(
+      "simple website; implement, test and deploy the API",
+      "aws_architecture",
+      {
+        existingMilestones: [
+          {
+            id: "saved-task",
+            title: "Implement API",
+            order: 0,
+            checkpoints: [{ id: "saved-cp", title: "Deploy" }],
+          },
+        ],
+        existingEdges: [],
+      },
+    );
+    expect(generated.mode).toBe("aws_architecture");
+    expect(generated.milestones).toEqual([]);
+    expect(generated.edges).toEqual([]);
   });
   it("corrects a workflow dependency cycle once and preserves the requested operation", async () => {
-    const workflow = { intent: "create_pipeline", summary: "API release", milestones: [
-      { tempId: "plan", title: "Design API", checkpoints: [{ title: "Define HTTP contract" }] },
-      { tempId: "ship", title: "Release API", checkpoints: [{ title: "Verify staging deployment" }] },
-    ], edges: [{ fromId: "plan", toId: "ship" }] };
-    vi.mocked(callGemini).mockReset().mockResolvedValueOnce({ ...workflow, edges: [...workflow.edges, { fromId: "ship", toId: "plan" }] }).mockResolvedValueOnce(workflow);
+    const workflow = {
+      intent: "create_pipeline",
+      summary: "API release",
+      milestones: [
+        { tempId: "plan", title: "Design API", checkpoints: [{ title: "Define HTTP contract" }] },
+        {
+          tempId: "ship",
+          title: "Release API",
+          checkpoints: [{ title: "Verify staging deployment" }],
+        },
+      ],
+      edges: [{ fromId: "plan", toId: "ship" }],
+    };
+    vi.mocked(callGemini)
+      .mockReset()
+      .mockResolvedValueOnce({
+        ...workflow,
+        edges: [...workflow.edges, { fromId: "ship", toId: "plan" }],
+      })
+      .mockResolvedValueOnce(workflow);
     const generated = await executeAIPipeline("Create an API release workflow", "workflow");
-    expect(generated.edges).toEqual(workflow.edges); expect(callGemini).toHaveBeenCalledTimes(2);
+    expect(generated.edges).toEqual(workflow.edges);
+    expect(callGemini).toHaveBeenCalledTimes(2);
     expect(vi.mocked(callGemini).mock.calls[1][0]).toContain("Dependency cycle");
   });
 });

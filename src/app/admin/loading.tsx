@@ -43,10 +43,7 @@ export default function AdminLoading() {
         {/* Table Rows Skeleton */}
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((row) => (
-            <div
-              key={row}
-              className="flex items-center justify-between rounded-lg p-2.5"
-            >
+            <div key={row} className="flex items-center justify-between rounded-lg p-2.5">
               <div className="flex items-center gap-3">
                 <div className="skeleton h-9 w-9 rounded-full" />
                 <div className="space-y-1.5">

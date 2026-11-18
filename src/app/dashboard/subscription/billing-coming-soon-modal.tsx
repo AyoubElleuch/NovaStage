@@ -51,18 +51,20 @@ export default function BillingComingSoonModal({
     selectedPlan === "free"
       ? "Free Plan ($0/mo)"
       : selectedPlan === "plus"
-      ? "Plus Plan ($1.99/mo)"
-      : selectedPlan === "pro"
-      ? hasPlusCredit
-        ? `Pro Plan (${proPrice || "$3.00"}/mo — with Plus upgrade credit applied)`
-        : "Pro Plan ($4.99/mo)"
-      : "Enterprise Tier";
+        ? "Plus Plan ($1.99/mo)"
+        : selectedPlan === "pro"
+          ? hasPlusCredit
+            ? `Pro Plan (${proPrice || "$3.00"}/mo — with Plus upgrade credit applied)`
+            : "Pro Plan ($4.99/mo)"
+          : "Enterprise Tier";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
     // Nothing is stored by NovaStage: this only opens the person's own mail client.
-    const body = encodeURIComponent(`Please tell me when ${planTitle} billing opens.\nReply to: ${email.trim()}`);
+    const body = encodeURIComponent(
+      `Please tell me when ${planTitle} billing opens.\nReply to: ${email.trim()}`,
+    );
     window.location.href = `mailto:support@novastage.com?subject=${encodeURIComponent("Notify me when billing opens")}&body=${body}`;
     setIsSubmitted(true);
   };
@@ -108,13 +110,11 @@ export default function BillingComingSoonModal({
         <div className="billing-modal-copy mt-4 space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
           <p>
             You selected the{" "}
-            <strong className="font-semibold text-neutral-900 dark:text-white">
-              {planTitle}
-            </strong>
-            .
+            <strong className="font-semibold text-neutral-900 dark:text-white">{planTitle}</strong>.
           </p>
           <p className="text-neutral-500 dark:text-neutral-400">
-            NovaStage is currently operating in early beta preview. Our corporate entity and automated payment processing are being finalized, so checkout is not live yet.
+            NovaStage is currently operating in early beta preview. Our corporate entity and
+            automated payment processing are being finalized, so checkout is not live yet.
           </p>
           <div className="billing-modal-notice rounded-xl border border-neutral-100 bg-neutral-50/80 p-4 text-xs text-neutral-600 dark:border-[#283548]/80 dark:bg-[#1e2736]/50 dark:text-neutral-300">
             <div className="flex items-center gap-2 font-medium text-neutral-900 dark:text-white">
@@ -122,7 +122,8 @@ export default function BillingComingSoonModal({
               Provisional Testing Notice
             </div>
             <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-              During this preview phase, platform administrators can upgrade accounts to test Plus and Pro features. All current features remain fully accessible.
+              During this preview phase, platform administrators can upgrade accounts to test Plus
+              and Pro features. All current features remain fully accessible.
             </p>
           </div>
         </div>
@@ -135,7 +136,8 @@ export default function BillingComingSoonModal({
               <div>
                 <p className="font-semibold">Your email app should have opened.</p>
                 <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                  NovaStage doesn&apos;t store your address from this form. Send the prepared message to be told when billing opens.
+                  NovaStage doesn&apos;t store your address from this form. Send the prepared
+                  message to be told when billing opens.
                 </p>
               </div>
             </div>

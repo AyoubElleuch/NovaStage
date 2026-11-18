@@ -9,14 +9,19 @@ interface CanvasClaimModalProps {
   onResolve: (requestId: string, accept: boolean) => void;
 }
 
-export default function CanvasClaimModal({
-  pendingRequest,
-  onResolve,
-}: CanvasClaimModalProps) {
+export default function CanvasClaimModal({ pendingRequest, onResolve }: CanvasClaimModalProps) {
   if (!pendingRequest) return null;
 
   return (
-    <div data-canvas-ui="true" role="region" aria-label="Edit access request" aria-live="polite" onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()} className="fixed inset-x-3 top-20 z-[60] mx-auto max-w-sm sm:inset-x-auto sm:top-6 sm:right-6 animate-in fade-in slide-in-from-top-4 duration-300 motion-reduce:animate-none">
+    <div
+      data-canvas-ui="true"
+      role="region"
+      aria-label="Edit access request"
+      aria-live="polite"
+      onPointerDown={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+      className="fixed inset-x-3 top-20 z-[60] mx-auto max-w-sm sm:inset-x-auto sm:top-6 sm:right-6 animate-in fade-in slide-in-from-top-4 duration-300 motion-reduce:animate-none"
+    >
       <div className="w-full rounded-2xl border border-amber-200/90 bg-white p-4 shadow-2xl backdrop-blur-xl dark:border-amber-800/70 dark:bg-[#161d27]">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400">
@@ -28,7 +33,8 @@ export default function CanvasClaimModal({
               Claim Handoff Requested
             </h4>
             <p className="mt-1 text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
-              <strong>{pendingRequest.requester_name || "A collaborator"}</strong> wants to take over editing:
+              <strong>{pendingRequest.requester_name || "A collaborator"}</strong> wants to take
+              over editing:
             </p>
             <p className="mt-1 break-words text-xs font-semibold text-neutral-900 dark:text-white rounded-md bg-neutral-100 dark:bg-[#121721] px-2 py-1">
               {pendingRequest.node_title || "Milestone Box"}

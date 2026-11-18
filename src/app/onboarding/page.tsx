@@ -5,8 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage() {
   const session = await requireIncompleteProfile();
-  const isAdmin =
-    isAdminRole(session.roles) || isAdminRole(session.profile?.role);
+  const isAdmin = isAdminRole(session.roles) || isAdminRole(session.profile?.role);
   const destination = isAdmin ? "/admin" : "/dashboard";
 
   return (

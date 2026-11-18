@@ -19,7 +19,9 @@
     "preview:aws-layout": "node scripts/preview-aws-layout.mjs",
     "db:scrub": "node scripts/scrub-database.mjs",
     "admin:create": "node scripts/create-super-admin.mjs",
-    "redis:test": "node scripts/test-redis.mjs"
+    "redis:test": "node scripts/test-redis.mjs",
+    "format": "node scripts/format.mjs",
+    "format:check": "node scripts/format.mjs --check"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.1.1",
@@ -52,7 +54,9 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "jsdom": "^29.1.1",
+    "pg-formatter": "2.1.0",
     "playwright": "^1.63.0",
+    "prettier": "3.10.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.11"

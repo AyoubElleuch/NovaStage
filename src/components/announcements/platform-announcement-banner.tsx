@@ -3,10 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Info, OctagonAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import {
-  parsePlatformAnnouncement,
-  PlatformAnnouncement,
-} from "@/lib/announcements/types";
+import { parsePlatformAnnouncement, PlatformAnnouncement } from "@/lib/announcements/types";
 
 interface PlatformAnnouncementBannerProps {
   initialAnnouncement: PlatformAnnouncement | null;
@@ -14,19 +11,22 @@ interface PlatformAnnouncementBannerProps {
 
 const severityStyles = {
   low: {
-    container: "border-sky-200 bg-sky-50 text-sky-950 dark:border-sky-900/70 dark:bg-sky-950/45 dark:text-sky-100",
+    container:
+      "border-sky-200 bg-sky-50 text-sky-950 dark:border-sky-900/70 dark:bg-sky-950/45 dark:text-sky-100",
     icon: "text-sky-600 dark:text-sky-300",
     label: "Notice",
     Icon: Info,
   },
   medium: {
-    container: "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/45 dark:text-amber-100",
+    container:
+      "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/45 dark:text-amber-100",
     icon: "text-amber-600 dark:text-amber-300",
     label: "Attention",
     Icon: AlertTriangle,
   },
   high: {
-    container: "border-red-200 bg-red-50 text-red-950 dark:border-red-900/70 dark:bg-red-950/45 dark:text-red-100",
+    container:
+      "border-red-200 bg-red-50 text-red-950 dark:border-red-900/70 dark:bg-red-950/45 dark:text-red-100",
     icon: "text-red-600 dark:text-red-300",
     label: "Important",
     Icon: OctagonAlert,
@@ -91,7 +91,7 @@ export default function PlatformAnnouncementBanner({
         },
         () => {
           void refreshAnnouncement();
-        }
+        },
       )
       .subscribe();
 

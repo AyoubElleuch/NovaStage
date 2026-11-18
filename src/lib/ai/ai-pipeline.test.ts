@@ -14,7 +14,11 @@ describe("AI Workflow Pipeline, Graph Validation & Quality Engine", () => {
   });
 
   it("fails offline generation without reporting a fabricated success", async () => {
-    await expect(executeAIPipeline("Realtime collaboration workspace")).rejects.toThrow("No canvas changes were applied");
-    await expect(executeAIPipeline("Deploy SaaS", "aws_architecture")).rejects.toThrow("No canvas changes were applied");
+    await expect(executeAIPipeline("Realtime collaboration workspace")).rejects.toThrow(
+      "No canvas changes were applied",
+    );
+    await expect(executeAIPipeline("Deploy SaaS", "aws_architecture")).rejects.toThrow(
+      "No canvas changes were applied",
+    );
   });
 });

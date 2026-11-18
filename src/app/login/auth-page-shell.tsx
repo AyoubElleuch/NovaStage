@@ -51,9 +51,7 @@ export default function AuthPageShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <div className="flex flex-1 items-center justify-center py-12">
-          {children}
-        </div>
+        <div className="flex flex-1 items-center justify-center py-12">{children}</div>
 
         <div className="flex items-center justify-center gap-3 text-xs pt-4">
           <span className="font-semibold text-neutral-900 dark:text-white">{APP_RELEASE}</span>

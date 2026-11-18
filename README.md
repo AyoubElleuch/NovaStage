@@ -37,15 +37,15 @@ The Next.js App Router serves authenticated project APIs and the React canvas. B
 
 Built-in previews use `accept_canvas_ai_preview` and the transactional `apply_canvas_ai_graph` RPC. Tidy and group dragging use `apply_canvas_layout`; content edits compare node versions. MCP acceptance uses `apply_canvas_mcp_draft`, which commits the diagram and acceptance status together and rejects duplicate acceptance. Ownership, membership, claims and generation guards are checked at protected boundaries.
 
-| Area | Implementation |
-| --- | --- |
-| Framework | Next.js 16.4, React 19, TypeScript |
-| UI | Tailwind CSS 4, Lucide icons, HTML cards and SVG connections |
-| Data and collaboration | Supabase PostgreSQL, row-level security, realtime broadcasts |
-| Leases and rate limiting | Upstash Redis with database-backed fallbacks where supported |
-| Diagram semantics | Shared validation, canonical AWS catalog IDs, strict mode separation |
-| Geometry | Dagre ranking, recursive containment, shared card sizing and orthogonal routes |
-| Verification | Vitest, Testing Library, Playwright, embedded PostgreSQL |
+| Area                     | Implementation                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| Framework                | Next.js 16.4, React 19, TypeScript                                             |
+| UI                       | Tailwind CSS 4, Lucide icons, HTML cards and SVG connections                   |
+| Data and collaboration   | Supabase PostgreSQL, row-level security, realtime broadcasts                   |
+| Leases and rate limiting | Upstash Redis with database-backed fallbacks where supported                   |
+| Diagram semantics        | Shared validation, canonical AWS catalog IDs, strict mode separation           |
+| Geometry                 | Dagre ranking, recursive containment, shared card sizing and orthogonal routes |
+| Verification             | Vitest, Testing Library, Playwright, embedded PostgreSQL                       |
 
 ### Important boundaries
 
@@ -81,6 +81,8 @@ npm run dev
 Open [localhost:3000](http://localhost:3000). Built-in generation needs a configured model provider; missing credentials or invalid responses return a failure without a fabricated diagram. External assistants use the setup described in [canvas-mcp.md](docs/canvas-mcp.md).
 
 ## Verification
+
+Run `npm run format` to format maintained source, scripts, configuration, documentation and SQL, or `npm run format:check` to verify without writing. CI checks formatting before linting. Prettier uses two-space indentation, a 100-column target and LF endings; pgFormatter handles PostgreSQL and PL/pgSQL. SQL formatting needs Perl (available on the CI runner and in Git for Windows); set `PERL_BINARY` if Perl is installed elsewhere. Generated files, the lockfile, binaries and imported AWS artwork are excluded.
 
 ```sh
 npm test

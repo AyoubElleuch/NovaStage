@@ -1,17 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const mocks = vi.hoisted(() => ({ session: vi.fn(), project: vi.fn(), member: vi.fn(), owner: vi.fn(), create: vi.fn(), remove: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  session: vi.fn(),
+  project: vi.fn(),
+  member: vi.fn(),
+  owner: vi.fn(),
+  create: vi.fn(),
+  remove: vi.fn(),
+}));
 vi.mock("@/lib/auth/session", () => ({ getAuthenticatedProfile: mocks.session }));
-vi.mock("@/lib/projects", () => ({ getProjectBySlug: mocks.project, isProjectMember: mocks.member, isProjectOwner: mocks.owner }));
+vi.mock("@/lib/projects", () => ({
+  getProjectBySlug: mocks.project,
+  isProjectMember: mocks.member,
+  isProjectOwner: mocks.owner,
+}));
 vi.mock("@/lib/canvas/server", () => ({
-  getProjectCanvasData: vi.fn(), createCanvasNode: mocks.create, updateCanvasNode: vi.fn(), deleteCanvasNode: vi.fn(),
-  createCanvasEdge: vi.fn(), deleteCanvasEdge: mocks.remove, updateCanvasEdge: vi.fn(),
+  getProjectCanvasData: vi.fn(),
+  createCanvasNode: mocks.create,
+  updateCanvasNode: vi.fn(),
+  deleteCanvasNode: vi.fn(),
+  createCanvasEdge: vi.fn(),
+  deleteCanvasEdge: mocks.remove,
+  updateCanvasEdge: vi.fn(),
 }));
 import { POST } from "./route";
 
 const context = () => ({ params: Promise.resolve({ slug: "launch" }) });
-const post = (body: unknown) => POST(new NextRequest("http://localhost:3000/api/dashboard/projects/launch/canvas", { method: "POST", body: JSON.stringify(body) }), context());
+const post = (body: unknown) =>
+  POST(
+    new NextRequest("http://localhost:3000/api/dashboard/projects/launch/canvas", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+    context(),
+  );
 
 beforeEach(() => {
   vi.resetAllMocks();

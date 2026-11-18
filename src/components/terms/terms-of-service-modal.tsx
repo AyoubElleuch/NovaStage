@@ -13,11 +13,15 @@ interface TermsOfServiceModalProps {
 
 const emptySubscribe = () => () => {};
 
-export function TermsOfServiceModal({ isOpen, onClose, variant = "default" }: TermsOfServiceModalProps) {
+export function TermsOfServiceModal({
+  isOpen,
+  onClose,
+  variant = "default",
+}: TermsOfServiceModalProps) {
   const isMounted = useSyncExternalStore(
     emptySubscribe,
     () => true,
-    () => false
+    () => false,
   );
 
   useEffect(() => {

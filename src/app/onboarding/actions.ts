@@ -12,7 +12,7 @@ export interface OnboardingActionResult {
 
 export async function completeOnboarding(
   fullNameInput: string,
-  usernameInput: string
+  usernameInput: string,
 ): Promise<OnboardingActionResult> {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -47,18 +47,16 @@ export async function completeOnboarding(
   }
 
   // 2. Upsert user profile record
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .upsert(
-      {
-        id: user.id,
-        email: user.email || "",
-        full_name: fullName,
-        username: username,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: user.id,
+      email: user.email || "",
+      full_name: fullName,
+      username: username,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  );
 
   if (profileError) {
     return { error: "We could not save your profile. Please try again." };

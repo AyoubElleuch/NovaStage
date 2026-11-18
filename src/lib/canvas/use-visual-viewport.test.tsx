@@ -3,7 +3,10 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, renderHook } from "@testing-library/react";
 import { useCanvasVisualViewport } from "./use-visual-viewport";
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 it("keeps panels inside the keyboard's visible area and restores document styles on exit", () => {
   const viewport = Object.assign(new EventTarget(), { height: 844, offsetTop: 0 });
   vi.stubGlobal("visualViewport", viewport);

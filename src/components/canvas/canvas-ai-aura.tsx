@@ -13,7 +13,7 @@ interface CanvasAIAuraProps {
 // Premium aura blob configurations — each has unique position, color, size, and drift animation
 const AURA_BLOBS = [
   {
-    color: "rgba(139, 92, 246, 0.18)",   // violet
+    color: "rgba(139, 92, 246, 0.18)", // violet
     size: "45%",
     initialX: "15%",
     initialY: "20%",
@@ -22,7 +22,7 @@ const AURA_BLOBS = [
     delay: "0s",
   },
   {
-    color: "rgba(6, 182, 212, 0.15)",     // cyan
+    color: "rgba(6, 182, 212, 0.15)", // cyan
     size: "40%",
     initialX: "60%",
     initialY: "15%",
@@ -31,7 +31,7 @@ const AURA_BLOBS = [
     delay: "0.1s",
   },
   {
-    color: "rgba(236, 72, 153, 0.16)",    // magenta
+    color: "rgba(236, 72, 153, 0.16)", // magenta
     size: "38%",
     initialX: "40%",
     initialY: "55%",
@@ -40,7 +40,7 @@ const AURA_BLOBS = [
     delay: "0.2s",
   },
   {
-    color: "rgba(245, 158, 11, 0.12)",    // amber
+    color: "rgba(245, 158, 11, 0.12)", // amber
     size: "35%",
     initialX: "75%",
     initialY: "60%",
@@ -49,7 +49,7 @@ const AURA_BLOBS = [
     delay: "0.3s",
   },
   {
-    color: "rgba(16, 185, 129, 0.14)",    // emerald
+    color: "rgba(16, 185, 129, 0.14)", // emerald
     size: "42%",
     initialX: "25%",
     initialY: "70%",
@@ -77,8 +77,8 @@ export default function CanvasAIAura({
   const phase: "entering" | "active" | "exiting" = isExiting
     ? "exiting"
     : hasEntered
-    ? "active"
-    : "entering";
+      ? "active"
+      : "entering";
 
   // Fire exit callback after exit animation completes
   useEffect(() => {
@@ -91,14 +91,10 @@ export default function CanvasAIAura({
   }, [phase, onExitComplete]);
 
   const overlayOpacity =
-    phase === "entering" ? "opacity-0" :
-    phase === "exiting" ? "opacity-0" :
-    "opacity-100";
+    phase === "entering" ? "opacity-0" : phase === "exiting" ? "opacity-0" : "opacity-100";
 
   const blobScale =
-    phase === "entering" ? "scale-[0.3]" :
-    phase === "exiting" ? "scale-[0.4]" :
-    "scale-100";
+    phase === "entering" ? "scale-[0.3]" : phase === "exiting" ? "scale-[0.4]" : "scale-100";
 
   return (
     <>
@@ -156,7 +152,9 @@ export default function CanvasAIAura({
         {/* Very subtle darkened frosted glass backdrop */}
         <div
           className={`absolute inset-0 transition-all duration-[600ms] ease-out ${
-            phase === "exiting" ? "backdrop-blur-0 bg-transparent" : "backdrop-blur-[2px] bg-black/[0.03]"
+            phase === "exiting"
+              ? "backdrop-blur-0 bg-transparent"
+              : "backdrop-blur-[2px] bg-black/[0.03]"
           }`}
         />
 
@@ -188,15 +186,17 @@ export default function CanvasAIAura({
         {/* Premium center status pill */}
         <div
           className={`${isAssistantOpen ? "fixed left-1/2 z-20 -translate-x-1/2" : "absolute inset-0 flex items-center justify-center"} pointer-events-none`}
-          style={isAssistantOpen ? { bottom: "var(--canvas-ai-notification-offset, 50%)" } : undefined}
+          style={
+            isAssistantOpen ? { bottom: "var(--canvas-ai-notification-offset, 50%)" } : undefined
+          }
         >
           <div
             className={`flex items-center gap-2.5 rounded-2xl border border-white/40 bg-white/90 px-5 py-2.5 shadow-2xl backdrop-blur-xl transition-all duration-500 ease-out dark:border-[#384961] dark:bg-[#161d27]/95 ${
               phase === "entering"
                 ? "opacity-0 scale-90 translate-y-2"
                 : phase === "exiting"
-                ? "opacity-0 scale-90 translate-y-2"
-                : "opacity-100 scale-100 translate-y-0"
+                  ? "opacity-0 scale-90 translate-y-2"
+                  : "opacity-100 scale-100 translate-y-0"
             }`}
             style={{
               transitionDelay: phase === "entering" ? "300ms" : "0ms",

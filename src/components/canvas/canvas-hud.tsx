@@ -81,10 +81,17 @@ export default function CanvasHud({
       setCopied(true);
       if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
       copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
-    } finally { setIsCopying(false); }
+    } finally {
+      setIsCopying(false);
+    }
   };
 
-  useEffect(() => () => { if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current); }, []);
+  useEffect(
+    () => () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    },
+    [],
+  );
   useEffect(() => {
     if (!isExportOpen) return;
     const outside = (event: PointerEvent) => {
@@ -96,16 +103,24 @@ export default function CanvasHud({
 
   const { theme, toggleTheme } = useTheme();
 
-  const overallProgress =
-    totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0;
+  const overallProgress = totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0;
 
   const followedUser = collaborators.find((c) => c.userId === followingUserId);
 
   return (
-    <header data-canvas-ui="true" onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => {
-      event.stopPropagation();
-      if (event.key === "Escape" && isExportOpen) { event.preventDefault(); setIsExportOpen(false); exportTriggerRef.current?.focus(); }
-    }} className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2.5 md:p-5 select-none gap-2 [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-emerald-500">
+    <header
+      data-canvas-ui="true"
+      onPointerDown={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Escape" && isExportOpen) {
+          event.preventDefault();
+          setIsExportOpen(false);
+          exportTriggerRef.current?.focus();
+        }
+      }}
+      className="pointer-events-none absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2.5 md:p-5 select-none gap-2 [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-emerald-500"
+    >
       {/* Top Left: Project Identity & Breadcrumb */}
       <div className="pointer-events-auto flex flex-1 items-center gap-1.5 md:gap-3 min-w-0 md:flex-initial">
         <Link
@@ -119,7 +134,10 @@ export default function CanvasHud({
         <div className="flex min-h-11 flex-1 md:flex-initial items-center gap-2 rounded-xl border border-neutral-200/80 bg-white/90 px-2.5 py-1 md:px-3.5 md:py-1.5 shadow-sm backdrop-blur-md min-w-0 dark:border-[#283548] dark:bg-[#161d27]/90">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h1 title={projectName} className="text-xs font-bold text-neutral-900 capitalize truncate md:max-w-[260px] dark:text-white">
+              <h1
+                title={projectName}
+                className="text-xs font-bold text-neutral-900 capitalize truncate md:max-w-[260px] dark:text-white"
+              >
                 {projectName}
               </h1>
               <span
@@ -144,7 +162,9 @@ export default function CanvasHud({
               </span>
               {saveIndicator && (
                 <>
-                  <span aria-hidden="true" className="text-neutral-300 dark:text-neutral-600">·</span>
+                  <span aria-hidden="true" className="text-neutral-300 dark:text-neutral-600">
+                    ·
+                  </span>
                   <CanvasSaveStatus indicator={saveIndicator} onAction={onSaveAction} />
                 </>
               )}
@@ -171,10 +191,24 @@ export default function CanvasHud({
         )}
       </div>
 
-      <CanvasMobileActions canShare={Boolean(isOwner && projectSlug)} onShare={() => setIsShareOpen(true)}
-        inviteCode={inviteCode} onCopyInvite={() => { void handleCopy().catch(() => setCopied(false)); }} copied={copied} isCopying={isCopying}
-        onExportMermaid={onExportMermaid} onExportJSON={onExportJSON} networkStatus={networkStatus} latencyMs={latencyMs}
-        collaborators={collaborators} currentUserId={currentUserId} followingUserId={followingUserId} onToggleFollowUser={onToggleFollowUser} />
+      <CanvasMobileActions
+        canShare={Boolean(isOwner && projectSlug)}
+        onShare={() => setIsShareOpen(true)}
+        inviteCode={inviteCode}
+        onCopyInvite={() => {
+          void handleCopy().catch(() => setCopied(false));
+        }}
+        copied={copied}
+        isCopying={isCopying}
+        onExportMermaid={onExportMermaid}
+        onExportJSON={onExportJSON}
+        networkStatus={networkStatus}
+        latencyMs={latencyMs}
+        collaborators={collaborators}
+        currentUserId={currentUserId}
+        followingUserId={followingUserId}
+        onToggleFollowUser={onToggleFollowUser}
+      />
       {/* Top Right: Export, Theme Toggle, Network Status, Live Collaborators Stack & Invite Code */}
       <div className="pointer-events-auto hidden md:flex items-center gap-1.5 md:gap-2 shrink-0">
         {/* Quick Theme Toggle Button */}
@@ -250,19 +284,19 @@ export default function CanvasHud({
             networkStatus === "online"
               ? `Real-time connection active${latencyMs ? ` (${latencyMs}ms latency)` : ""}`
               : networkStatus === "slow"
-              ? `Slow connection (${latencyMs || 250}+ms).`
-              : networkStatus === "reconnecting"
-              ? "Reconnecting to realtime channel..."
-              : "Offline."
+                ? `Slow connection (${latencyMs || 250}+ms).`
+                : networkStatus === "reconnecting"
+                  ? "Reconnecting to realtime channel..."
+                  : "Offline."
           }
           className={`flex items-center gap-1.5 rounded-xl border px-2 md:px-2.5 py-1.5 text-[11px] font-medium shadow-sm backdrop-blur-md transition-all ${
             networkStatus === "online"
               ? "border-neutral-200/80 bg-white/90 text-neutral-700 dark:border-[#283548] dark:bg-[#161d27]/90 dark:text-neutral-300"
               : networkStatus === "slow"
-              ? "border-amber-200 bg-amber-50/90 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/60 dark:text-amber-300"
-              : networkStatus === "reconnecting"
-              ? "border-orange-200 bg-orange-50/90 text-orange-800 animate-pulse dark:border-orange-900/50 dark:bg-orange-950/60 dark:text-orange-300"
-              : "border-red-200 bg-red-50/90 text-red-700 dark:border-red-900/50 dark:bg-red-950/60 dark:text-red-400"
+                ? "border-amber-200 bg-amber-50/90 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/60 dark:text-amber-300"
+                : networkStatus === "reconnecting"
+                  ? "border-orange-200 bg-orange-50/90 text-orange-800 animate-pulse dark:border-orange-900/50 dark:bg-orange-950/60 dark:text-orange-300"
+                  : "border-red-200 bg-red-50/90 text-red-700 dark:border-red-900/50 dark:bg-red-950/60 dark:text-red-400"
           }`}
         >
           {networkStatus === "online" ? (
@@ -311,14 +345,18 @@ export default function CanvasHud({
                       onToggleFollowUser(c.userId);
                     }
                   }}
-                  aria-label={isMe ? `${c.fullName || c.email}, you` : `${isFollowingThis ? "Stop following" : "Follow"} ${c.fullName || c.email}`}
+                  aria-label={
+                    isMe
+                      ? `${c.fullName || c.email}, you`
+                      : `${isFollowingThis ? "Stop following" : "Follow"} ${c.fullName || c.email}`
+                  }
                   aria-pressed={isFollowingThis}
                   title={
                     isMe
                       ? `${c.fullName || c.email} (You)`
                       : isFollowingThis
-                      ? `Following ${c.fullName || c.email}. Click to stop.`
-                      : `Click to follow ${c.fullName || c.email}`
+                        ? `Following ${c.fullName || c.email}. Click to stop.`
+                        : `Click to follow ${c.fullName || c.email}`
                   }
                   className={`relative flex items-center justify-center rounded-full ring-2 shadow-2xs transition-transform cursor-pointer overflow-visible ${
                     isFollowingThis
@@ -345,15 +383,25 @@ export default function CanvasHud({
           </div>
         )}
 
-        {isOwner && projectSlug && <button type="button" onClick={() => setIsShareOpen(true)} aria-label="Share canvas" title="Share view-only canvas"
-          className="flex h-9 w-9 md:w-auto items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-0 text-xs font-semibold text-emerald-800 shadow-sm md:px-3 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300">
-          <Share2 className="h-4 w-4" /><span className="hidden md:inline">Share</span>
-        </button>}
+        {isOwner && projectSlug && (
+          <button
+            type="button"
+            onClick={() => setIsShareOpen(true)}
+            aria-label="Share canvas"
+            title="Share view-only canvas"
+            className="flex h-9 w-9 md:w-auto items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-0 text-xs font-semibold text-emerald-800 shadow-sm md:px-3 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300"
+          >
+            <Share2 className="h-4 w-4" />
+            <span className="hidden md:inline">Share</span>
+          </button>
+        )}
         {/* Invite Code Quick Copy */}
         {inviteCode && (
           <button
             type="button"
-            onClick={() => { void handleCopy().catch(() => setCopied(false)); }}
+            onClick={() => {
+              void handleCopy().catch(() => setCopied(false));
+            }}
             disabled={isCopying}
             aria-label={copied ? "Invite code copied" : "Copy invite code"}
             title={copied ? "Copied!" : `Copy invite code: ${inviteCode}`}
@@ -362,18 +410,24 @@ export default function CanvasHud({
             {copied ? (
               <>
                 <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span className="hidden md:inline text-emerald-700 dark:text-emerald-400">Copied!</span>
+                <span className="hidden md:inline text-emerald-700 dark:text-emerald-400">
+                  Copied!
+                </span>
               </>
             ) : (
               <>
                 <UserPlus className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
-                <span className="hidden md:inline font-mono text-[11px] text-neutral-900 dark:text-white">{inviteCode}</span>
+                <span className="hidden md:inline font-mono text-[11px] text-neutral-900 dark:text-white">
+                  {inviteCode}
+                </span>
               </>
             )}
           </button>
         )}
       </div>
-      {isShareOpen && projectSlug && <CanvasShareDialog slug={projectSlug} onClose={() => setIsShareOpen(false)} />}
+      {isShareOpen && projectSlug && (
+        <CanvasShareDialog slug={projectSlug} onClose={() => setIsShareOpen(false)} />
+      )}
     </header>
   );
 }

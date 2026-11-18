@@ -23,13 +23,22 @@ function PasswordStrength({ password }: { password: string }) {
         ? "text-amber-600"
         : "text-red-600";
   const barTone =
-    strength === "Strong" ? "bg-emerald-500" : strength === "Medium" ? "bg-amber-500" : "bg-red-500";
+    strength === "Strong"
+      ? "bg-emerald-500"
+      : strength === "Medium"
+        ? "bg-amber-500"
+        : "bg-red-500";
 
   return (
-    <div className="mt-2.5 border-t border-neutral-100 dark:border-[#283548] pt-2.5" aria-live="polite">
+    <div
+      className="mt-2.5 border-t border-neutral-100 dark:border-[#283548] pt-2.5"
+      aria-live="polite"
+    >
       <div className="flex items-center justify-between gap-3 text-xs">
         <span className="text-neutral-400 dark:text-neutral-500">Password strength</span>
-        <span className={`font-semibold ${password ? strengthTone : "text-neutral-400 dark:text-neutral-500"}`}>
+        <span
+          className={`font-semibold ${password ? strengthTone : "text-neutral-400 dark:text-neutral-500"}`}
+        >
           {password ? strength : "Not set"}
         </span>
       </div>
@@ -43,7 +52,12 @@ function PasswordStrength({ password }: { password: string }) {
       </div>
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-neutral-400 dark:text-neutral-500">
         {passwordRequirements.map(({ label, test }) => (
-          <span key={label} className={password && test(password) ? "text-neutral-700 dark:text-neutral-200" : undefined}>
+          <span
+            key={label}
+            className={
+              password && test(password) ? "text-neutral-700 dark:text-neutral-200" : undefined
+            }
+          >
             {label}
           </span>
         ))}

@@ -84,7 +84,9 @@ function NotificationToast({
           {notification.title}
         </strong>
         {notification.message && (
-          <p className="mt-0.5 text-[11px] leading-3.5 text-neutral-500 dark:text-neutral-400">{notification.message}</p>
+          <p className="mt-0.5 text-[11px] leading-3.5 text-neutral-500 dark:text-neutral-400">
+            {notification.message}
+          </p>
         )}
         {notification.detail && (
           <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-neutral-200/80 bg-neutral-50 px-2.5 py-1.5 font-mono text-[11px] text-neutral-700 dark:border-[#283548] dark:bg-[#121721] dark:text-neutral-300">
@@ -98,7 +100,10 @@ function NotificationToast({
               >
                 {isCopied ? (
                   <>
-                    <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                    <Check
+                      className="h-3 w-3 text-emerald-600 dark:text-emerald-400"
+                      aria-hidden="true"
+                    />
                     <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
                   </>
                 ) : (
@@ -146,7 +151,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     pathname &&
     pathname.startsWith("/dashboard/projects/") &&
     !pathname.endsWith("/settings") &&
-    !pathname.endsWith("/deployments")
+    !pathname.endsWith("/deployments"),
   );
 
   const dismiss = useCallback((id: string) => {
@@ -160,8 +165,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     setNotifications((current) =>
       current.map((notification) =>
-        notification.id === id ? { ...notification, isExiting: true } : notification
-      )
+        notification.id === id ? { ...notification, isExiting: true } : notification,
+      ),
     );
 
     const exitTimer = window.setTimeout(() => {
@@ -172,17 +177,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     exitTimers.current.set(id, exitTimer);
   }, []);
 
-  const startDismissTimer = useCallback((id: string) => {
-    const existingTimer = lifetimeTimers.current.get(id);
-    if (existingTimer) window.clearTimeout(existingTimer);
+  const startDismissTimer = useCallback(
+    (id: string) => {
+      const existingTimer = lifetimeTimers.current.get(id);
+      if (existingTimer) window.clearTimeout(existingTimer);
 
-    const timer = window.setTimeout(() => {
-      lifetimeTimers.current.delete(id);
-      if (hoveredIds.current.has(id) || dismissedIds.current.has(id)) return;
-      dismiss(id);
-    }, NOTIFICATION_DURATION);
-    lifetimeTimers.current.set(id, timer);
-  }, [dismiss]);
+      const timer = window.setTimeout(() => {
+        lifetimeTimers.current.delete(id);
+        if (hoveredIds.current.has(id) || dismissedIds.current.has(id)) return;
+        dismiss(id);
+      }, NOTIFICATION_DURATION);
+      lifetimeTimers.current.set(id, timer);
+    },
+    [dismiss],
+  );
 
   const pauseDismissTimer = useCallback((id: string) => {
     if (dismissedIds.current.has(id)) return;
@@ -192,30 +200,42 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     lifetimeTimers.current.delete(id);
   }, []);
 
-  const resumeDismissTimer = useCallback((id: string) => {
-    hoveredIds.current.delete(id);
-    if (dismissedIds.current.has(id)) return;
-    startDismissTimer(id);
-  }, [startDismissTimer]);
+  const resumeDismissTimer = useCallback(
+    (id: string) => {
+      hoveredIds.current.delete(id);
+      if (dismissedIds.current.has(id)) return;
+      startDismissTimer(id);
+    },
+    [startDismissTimer],
+  );
 
-  const notify = useCallback((options: NotificationOptions) => {
-    const id = `${Date.now()}-${idCounter.current++}`;
-    const notification: NotificationItem = { ...options, id };
+  const notify = useCallback(
+    (options: NotificationOptions) => {
+      const id = `${Date.now()}-${idCounter.current++}`;
+      const notification: NotificationItem = { ...options, id };
 
-    setNotifications((current) => [...current, notification]);
-    startDismissTimer(id);
-  }, [startDismissTimer]);
+      setNotifications((current) => [...current, notification]);
+      startDismissTimer(id);
+    },
+    [startDismissTimer],
+  );
 
   useEffect(() => {
     const activeNotifications = notifications.filter((notification) => !notification.isExiting);
-    const overflow = activeNotifications.slice(0, Math.max(0, activeNotifications.length - MAX_VISIBLE_NOTIFICATIONS));
+    const overflow = activeNotifications.slice(
+      0,
+      Math.max(0, activeNotifications.length - MAX_VISIBLE_NOTIFICATIONS),
+    );
     overflow.forEach((notification) => dismiss(notification.id));
   }, [dismiss, notifications]);
 
-  useEffect(() => () => {
-    lifetimeTimers.current.forEach((timer) => window.clearTimeout(timer));
-    exitTimers.current.forEach((timer) => window.clearTimeout(timer));
-  }, []);
+  useEffect(
+    () => () => {
+      lifetimeTimers.current.forEach((timer) => window.clearTimeout(timer));
+      exitTimers.current.forEach((timer) => window.clearTimeout(timer));
+    },
+    [],
+  );
 
   const isLeft = !isCanvasRoute && notifications.some((n) => n.position === "bottom-left");
 
