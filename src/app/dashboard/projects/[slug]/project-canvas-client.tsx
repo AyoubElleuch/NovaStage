@@ -1,4 +1,11 @@
 "use client";
+import {
+  CLOUD_PROVIDER_LABELS,
+  createCloudServiceNodeData,
+  SERVICE_NODE_SIZE,
+  isServiceNode,
+} from "@/lib/canvas/cloud-services";
+import type { CloudProvider } from "@/lib/canvas/types";
 
 import React, {
   useState,
@@ -95,7 +102,6 @@ import CanvasShortcuts from "@/components/canvas/canvas-shortcuts";
 import CanvasGuide from "@/components/canvas/canvas-guide";
 import CanvasChangeBanner from "@/components/canvas/canvas-change-banner";
 import { isGuideDismissed, setGuideDismissed, subscribeGuide } from "@/lib/canvas/guide";
-import { createAWSServiceNodeData, AWS_SERVICE_NODE_SIZE } from "@/lib/canvas/aws-service-node";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
 
@@ -187,6 +193,7 @@ export default function ProjectCanvasClient({
   const [activeTool, setActiveTool] = useState<CanvasTool>("select");
   const [snapGrid, setSnapGrid] = useState(true);
   const [isMinimapOpen, setIsMinimapOpen] = useState(false);
+  const [serviceProvider, setServiceProvider] = useState<CloudProvider>("aws");
   const [isServicePaletteOpen, setIsServicePaletteOpen] = useState(false);
   const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -741,8 +748,8 @@ export default function ProjectCanvasClient({
   );
 
   // Add AWS Service Node (Optimistic Instant Pop)
-  const handleAddAWSService = useCallback(
-    (serviceId: string, customPos?: { x: number; y: number }) => {
+  const handleAddCloudService = useCallback(
+    (provider: CloudProvider, serviceId: string, customPos?: { x: number; y: number }) => {
       if (isAIGenerating) return;
       const position =
         customPos ||
@@ -750,14 +757,14 @@ export default function ProjectCanvasClient({
           nodes,
           viewport,
           { ...getCanvasArea(), rightInset: isMobile ? 0 : 420 },
-          AWS_SERVICE_NODE_SIZE,
+          SERVICE_NODE_SIZE,
         );
       const posX = position.x;
       const posY = position.y;
       const finalX = snapGrid ? snapToGrid(posX) : posX;
       const finalY = snapGrid ? snapToGrid(posY) : posY;
 
-      const serviceData = createAWSServiceNodeData(serviceId);
+      const serviceData = createCloudServiceNodeData(provider, serviceId);
       const serviceName = serviceData.title;
       const clientNodeId = crypto.randomUUID();
 
@@ -784,8 +791,9 @@ export default function ProjectCanvasClient({
         claim_holder: myHolder,
         version: 1,
         checkpoints: [],
-        node_type: "aws_service",
+        node_type: serviceData.node_type,
         aws_metadata: serviceData.aws_metadata,
+        gcp_metadata: serviceData.gcp_metadata,
       };
 
       // 0ms instant local insertion & close palette
@@ -802,7 +810,10 @@ export default function ProjectCanvasClient({
       pushHistorySnapshot([...nodes, optimisticNode], edges);
       canvasSounds.addNode();
       broadcastEvent("node:created", { node: optimisticNode });
-      notify({ title: "AWS Service Added", message: `Added "${serviceName}" to canvas` });
+      notify({
+        title: `${CLOUD_PROVIDER_LABELS[provider]} Service Added`,
+        message: `Added "${serviceName}" to canvas`,
+      });
 
       // Background persistence
       void trackSave(() =>
@@ -810,15 +821,16 @@ export default function ProjectCanvasClient({
           action: "create_node",
           id: clientNodeId,
           title: serviceName,
-          node_type: "aws_service",
+          node_type: serviceData.node_type,
           width: serviceData.width,
           height: serviceData.height,
           position_x: finalX,
           position_y: finalY,
           aws_metadata: serviceData.aws_metadata,
+          gcp_metadata: serviceData.gcp_metadata,
           checkpoints: [],
         }),
-      ).catch((e) => reportSaveFailure("AWS Service Not Saved", e));
+      ).catch((e) => reportSaveFailure(`${CLOUD_PROVIDER_LABELS[provider]} Service Not Saved`, e));
     },
     [
       broadcastEvent,
@@ -1425,6 +1437,7 @@ export default function ProjectCanvasClient({
               height: node.height,
               node_type: node.node_type,
               aws_metadata: node.aws_metadata,
+              gcp_metadata: node.gcp_metadata,
               group_metadata: node.group_metadata,
               annotation_metadata: node.annotation_metadata,
               parent_group_id: node.parent_group_id,
@@ -2436,7 +2449,7 @@ export default function ProjectCanvasClient({
           setSnappedHandle({ node: nearest.node, handle: nearest.handle });
           const cycle =
             ![draftEdgeRef.current.sourceNode, nearest.node].every(
-              (item) => item.node_type === "aws_service" || item.node_type === "group",
+              (item) => isServiceNode(item) || item.node_type === "group",
             ) &&
             detectCycle(edges, {
               sourceNodeId: draftEdgeRef.current.sourceNode.id,
@@ -2461,7 +2474,7 @@ export default function ProjectCanvasClient({
             setSnappedHandle({ node: hoveredCandidate, handle: bestHandle });
             const cycle =
               ![draftEdgeRef.current.sourceNode, hoveredCandidate].every(
-                (item) => item.node_type === "aws_service" || item.node_type === "group",
+                (item) => isServiceNode(item) || item.node_type === "group",
               ) &&
               detectCycle(edges, {
                 sourceNodeId: draftEdgeRef.current.sourceNode.id,
@@ -2732,7 +2745,7 @@ export default function ProjectCanvasClient({
 
     // Check for circular dependency
     const architectureLink = [activeDraft.sourceNode, node].every(
-      (item) => item.node_type === "aws_service" || item.node_type === "group",
+      (item) => isServiceNode(item) || item.node_type === "group",
     );
     const cycle = !architectureLink && detectCycle(edges, { sourceNodeId, targetNodeId });
     if (cycle) {
@@ -2762,11 +2775,7 @@ export default function ProjectCanvasClient({
           ? handle
           : getClosestHandleToPoint(node, activeDraft.currentPos);
 
-    const sourceNode = nodes.find((n) => n.id === sourceNodeId);
-    const isAwsConnection =
-      (sourceNode?.node_type === "aws_service" || sourceNode?.node_type === "group") &&
-      (node.node_type === "aws_service" || node.node_type === "group");
-    const edgeType: EdgeType = isAwsConnection ? "data_flow" : "dependency";
+    const edgeType: EdgeType = architectureLink ? "data_flow" : "dependency";
 
     // 0ms instant local insertion
     const clientEdgeId = `edge_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -2787,7 +2796,7 @@ export default function ProjectCanvasClient({
     broadcastEvent("edge:created", { edge: optimisticEdge });
     notify({
       title: "Connected!",
-      message: isAwsConnection ? "Architecture data flow wire created" : "Dependency wire created",
+      message: architectureLink ? "Architecture data flow wire created" : "Dependency wire created",
     });
 
     // Cache immediately in browser localStorage
@@ -3113,7 +3122,10 @@ export default function ProjectCanvasClient({
               </button>
               <button
                 type="button"
-                onClick={() => setIsServicePaletteOpen(true)}
+                onClick={() => {
+                  setServiceProvider("aws");
+                  setIsServicePaletteOpen(true);
+                }}
                 className="flex min-h-11 flex-col items-center gap-2 rounded-xl border border-neutral-200 px-2 py-4 text-xs font-semibold text-neutral-700 hover:border-orange-400 hover:bg-orange-50 dark:border-[#283548] dark:text-white dark:hover:bg-[#1e2634]"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-xl bg-orange-100/70 dark:bg-orange-500/10">
@@ -3580,12 +3592,21 @@ export default function ProjectCanvasClient({
                 setIsNotebookOpen(false);
                 setIsReleasePulseOpen((open) => !open);
               }}
-              onToggleServicePalette={() => {
+              onToggleGoogleCloudPalette={() => {
                 setIsNavigatorOpen(false);
                 setIsAIAssistantOpen(false);
                 setIsNotebookOpen(false);
                 setIsReleasePulseOpen(false);
-                setIsServicePaletteOpen((open) => !open);
+                setServiceProvider("gcp");
+                setIsServicePaletteOpen((open) => serviceProvider !== "gcp" || !open);
+              }}
+              onToggleServicePalette={() => {
+                setServiceProvider("aws");
+                setIsNavigatorOpen(false);
+                setIsAIAssistantOpen(false);
+                setIsNotebookOpen(false);
+                setIsReleasePulseOpen(false);
+                setIsServicePaletteOpen((open) => serviceProvider !== "aws" || !open);
               }}
               onAddGroup={() => handleAddGroup()}
             />
@@ -3593,11 +3614,13 @@ export default function ProjectCanvasClient({
         </div>
       </div>
 
-      {/* AWS Service Palette Flyout */}
+      {/* Cloud service palette */}
       <CanvasServicePalette
+        key={serviceProvider}
+        provider={serviceProvider}
         isOpen={isServicePaletteOpen}
         onClose={() => setIsServicePaletteOpen(false)}
-        onAddService={(serviceId) => handleAddAWSService(serviceId)}
+        onAddService={(serviceId) => handleAddCloudService(serviceProvider, serviceId)}
       />
 
       {isReleasePulseOpen && (

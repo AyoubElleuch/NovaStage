@@ -1,4 +1,5 @@
 import { CanvasCheckpoint, CanvasEdge, CanvasNode, CanvasViewport, HandlePosition } from "./types";
+import { CLOUD_PROVIDER_LABELS, getCloudProvider, isServiceNode } from "./cloud-services";
 
 const COLLABORATOR_COLORS = [
   "#10b981", // Emerald
@@ -81,17 +82,18 @@ export function previewLines(text: string, width: number, fontSize: number, maxi
 }
 
 type DimensionNode = Pick<CanvasNode, "width" | "height"> &
-  Partial<Pick<CanvasNode, "title" | "node_type" | "checkpoints" | "aws_metadata">>;
+  Partial<
+    Pick<CanvasNode, "title" | "node_type" | "checkpoints" | "aws_metadata" | "gcp_metadata">
+  >;
 /** Shared sizes keep layout, handles, fitting and the radar aligned with rendered cards. */
 export function getNodeDimensions(node: DimensionNode): { width: number; height: number } {
-  const fallback =
-    node.node_type === "aws_service"
-      ? { width: 200, height: 220 }
-      : node.node_type === "group"
-        ? { width: 400, height: 300 }
-        : node.node_type === "annotation"
-          ? { width: 200, height: 150 }
-          : { width: 280, height: 180 };
+  const fallback = isServiceNode(node)
+    ? { width: 200, height: 220 }
+    : node.node_type === "group"
+      ? { width: 400, height: 300 }
+      : node.node_type === "annotation"
+        ? { width: 200, height: 150 }
+        : { width: 280, height: 180 };
   const milestone = !node.node_type || node.node_type === "milestone";
   const width = node.width > 0 ? node.width : fallback.width;
   const titleHeight = previewLines(node.title || "", width - 64, 14, 3) * 18;
@@ -108,12 +110,16 @@ export function getNodeDimensions(node: DimensionNode): { width: number; height:
   const serviceHeight =
     148 +
     previewLines(node.title || "", width - 52, 14, 3) * 20 +
-    (Object.keys(node.aws_metadata?.config || {}).length ? 48 : 0);
+    (Object.keys(
+      (node.node_type === "gcp_service" ? node.gcp_metadata : node.aws_metadata)?.config || {},
+    ).length
+      ? 48
+      : 0);
   return {
     width,
     height: Math.max(
       node.height || fallback.height,
-      milestone ? checklistHeight : node.node_type === "aws_service" ? serviceHeight : 0,
+      milestone ? checklistHeight : isServiceNode(node) ? serviceHeight : 0,
     ),
   };
 }
@@ -440,12 +446,11 @@ export function exportToMermaid(nodes: CanvasNode[], edges: CanvasEdge[]): strin
         .forEach((child) => emit(child, indent + "  "));
       lines.push(`${indent}end`);
     } else {
-      const label =
-        node.node_type === "aws_service"
-          ? `AWS: ${title}`
-          : node.node_type === "annotation"
-            ? title
-            : `${title} (${calculateCompletionPercentage(node.checkpoints)}%)`;
+      const label = isServiceNode(node)
+        ? `${CLOUD_PROVIDER_LABELS[getCloudProvider(node)]}: ${title}`
+        : node.node_type === "annotation"
+          ? title
+          : `${title} (${calculateCompletionPercentage(node.checkpoints)}%)`;
       lines.push(`${indent}${id}["${label}"]`);
     }
   };

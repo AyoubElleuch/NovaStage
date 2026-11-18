@@ -14,7 +14,13 @@ import {
   X,
 } from "lucide-react";
 import { CanvasNode, CanvasEdge, NodeStatus } from "@/lib/canvas/types";
-import { AwsIcon, getAWSService } from "./aws-icons";
+import { CloudServiceIcon, getCloudService } from "./cloud-icons";
+import {
+  CLOUD_PROVIDER_LABELS,
+  getCloudProvider,
+  getServiceMetadata,
+  isServiceNode,
+} from "@/lib/canvas/cloud-services";
 import { calculateCompletionPercentage, isNodeFullyComplete } from "@/lib/canvas/coordinate-math";
 import { trapMobilePanelTab } from "@/lib/canvas/panel-focus";
 
@@ -40,7 +46,7 @@ interface CanvasDrawerProps {
 const GROUP_STYLES = [
   ["vpc", "Virtual Private Cloud (VPC)"],
   ["subnet", "Subnet"],
-  ["region", "AWS Region"],
+  ["region", "Region"],
   ["availability_zone", "Availability Zone"],
   ["custom", "Custom group"],
 ] as const;
@@ -82,6 +88,9 @@ function NodeDrawer({
   onJumpToNode,
 }: Omit<CanvasDrawerProps, "node"> & { node: CanvasNode }) {
   const id = useId();
+  const provider = getCloudProvider(node);
+  const providerLabel = CLOUD_PROVIDER_LABELS[provider];
+  const metadata = getServiceMetadata(node);
   const closeRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const pendingSaveRef = useRef(new Map<string, Promise<void>>());
@@ -89,8 +98,8 @@ function NodeDrawer({
   const [saveError, setSaveError] = useState("");
   const [title, setTitle] = useDraft(node.title);
   const [description, setDescription] = useDraft(node.description || "");
-  const [region, setRegion] = useDraft(node.aws_metadata?.region || "");
-  const [config, setConfig] = useDraft<Record<string, string>>(node.aws_metadata?.config || {});
+  const [region, setRegion] = useDraft(metadata?.region || "");
+  const [config, setConfig] = useDraft<Record<string, string>>(metadata?.config || {});
   const [annotation, setAnnotation] = useDraft(node.annotation_metadata?.content || "");
   const [newCheckpoint, setNewCheckpoint] = useState("");
   const [newConfigKey, setNewConfigKey] = useState("");
@@ -108,10 +117,16 @@ function NodeDrawer({
   }, []);
 
   const isMilestone = !node.node_type || node.node_type === "milestone";
-  const isAws = node.node_type === "aws_service";
+  const isService = isServiceNode(node);
   const isGroup = node.node_type === "group";
   const isAnnotation = node.node_type === "annotation";
-  const kind = isAws ? "AWS resource" : isGroup ? "Group" : isAnnotation ? "Note" : "Milestone";
+  const kind = isService
+    ? `${providerLabel} resource`
+    : isGroup
+      ? "Group"
+      : isAnnotation
+        ? "Note"
+        : "Milestone";
   const editable = node.claimed_by === currentUserId;
   const claimedByOther = Boolean(node.claimed_by && !editable);
   const holderName =
@@ -121,7 +136,7 @@ function NodeDrawer({
   const completion = calculateCompletionPercentage(node.checkpoints);
   const completedCount = node.checkpoints.filter((checkpoint) => checkpoint.is_completed).length;
   const complete = isNodeFullyComplete(node);
-  const service = getAWSService(node.aws_metadata?.serviceId || "");
+  const service = getCloudService(provider, metadata?.serviceId || "");
   const incoming = [
     ...new Set(
       edges.filter((edge) => edge.target_node_id === node.id).map((edge) => edge.source_node_id),
@@ -194,18 +209,18 @@ function NodeDrawer({
     if (editable && description !== (node.description || "")) persist({ description });
   };
   const saveMetadata = (nextConfig = config) => {
-    if (!editable || !isAws) return;
+    if (!editable || !isService) return;
     const nextRegion = region.trim();
     if (
-      nextRegion === (node.aws_metadata?.region || "") &&
-      JSON.stringify(nextConfig) === JSON.stringify(node.aws_metadata?.config || {})
+      nextRegion === (metadata?.region || "") &&
+      JSON.stringify(nextConfig) === JSON.stringify(metadata?.config || {})
     )
       return;
     persist({
-      aws_metadata: {
-        ...node.aws_metadata,
-        serviceId: node.aws_metadata?.serviceId || "",
-        category: node.aws_metadata?.category || "compute",
+      [provider === "gcp" ? "gcp_metadata" : "aws_metadata"]: {
+        ...metadata,
+        serviceId: metadata?.serviceId || "",
+        category: metadata?.category || "compute",
         region: nextRegion || undefined,
         config: nextConfig,
       },
@@ -249,7 +264,7 @@ function NodeDrawer({
                   className={`shrink-0 text-[10px] font-semibold ${isNodeFullyComplete(connected) ? "text-emerald-600 dark:text-emerald-400" : connected.status === "blocked" ? "text-red-600 dark:text-red-400" : "text-neutral-500"}`}
                 >
                   {isNodeFullyComplete(connected)
-                    ? connected.node_type === "aws_service"
+                    ? isServiceNode(connected)
                       ? "Ready"
                       : "Complete"
                     : connected.status === "blocked"
@@ -375,7 +390,7 @@ function NodeDrawer({
           <div className="space-y-6 px-5 py-5">
             <div>
               <label htmlFor={`${id}-title`} className={LABEL}>
-                {isAws
+                {isService
                   ? "Resource label"
                   : isGroup
                     ? "Group name"
@@ -424,11 +439,11 @@ function NodeDrawer({
             {!isAnnotation && (
               <div>
                 <label htmlFor={`${id}-status`} className={LABEL}>
-                  {isAws ? "Resource status" : "Status"}
+                  {isService ? "Resource status" : "Status"}
                 </label>
                 <Dropdown
                   id={`${id}-status`}
-                  aria-label={isAws ? "Resource status" : "Status"}
+                  aria-label={isService ? "Resource status" : "Status"}
                   value={isMilestone && complete ? "completed" : node.status}
                   disabled={!editable || (isMilestone && node.checkpoints.length > 0 && complete)}
                   onChange={(value) => persist({ status: value as NodeStatus })}
@@ -450,7 +465,7 @@ function NodeDrawer({
                     },
                     {
                       value: "completed",
-                      label: isAws ? "Ready" : "Complete",
+                      label: isService ? "Ready" : "Complete",
                       disabled: isMilestone && node.checkpoints.length > 0 && !complete,
                       indicator: <span className="h-2 w-2 rounded-full bg-emerald-500" />,
                     },
@@ -574,16 +589,16 @@ function NodeDrawer({
               </section>
             )}
 
-            {isAws && (
-              <section aria-label="AWS resource configuration" className="space-y-4">
+            {isService && (
+              <section aria-label={`${providerLabel} resource configuration`} className="space-y-4">
                 <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-[#283548] dark:bg-[#121721]">
-                  <AwsIcon serviceId={node.aws_metadata?.serviceId || ""} size={36} />
+                  <CloudServiceIcon node={node} size={36} />
                   <div className="min-w-0">
                     <p className="text-xs font-semibold text-neutral-900 dark:text-white">
-                      {service?.name || node.aws_metadata?.serviceId || "AWS service"}
+                      {service?.name || metadata?.serviceId || `${providerLabel} service`}
                     </p>
                     <p className="mt-1 text-[11px] capitalize text-neutral-500 dark:text-neutral-400">
-                      {(service?.category || node.aws_metadata?.category || "")
+                      {(service?.category || metadata?.category || "")
                         .replaceAll("-", " ")
                         .replaceAll("_", " ")}
                     </p>
@@ -591,7 +606,7 @@ function NodeDrawer({
                 </div>
                 <div>
                   <label htmlFor={`${id}-region`} className={LABEL}>
-                    AWS Region
+                    {providerLabel} Region
                   </label>
                   <input
                     id={`${id}-region`}
@@ -605,7 +620,11 @@ function NodeDrawer({
                         saveMetadata();
                       }
                     }}
-                    placeholder="Unspecified · e.g. eu-west-1"
+                    placeholder={
+                      provider === "gcp"
+                        ? "Unspecified · e.g. europe-west1"
+                        : "Unspecified · e.g. eu-west-1"
+                    }
                     className={FIELD}
                   />
                   <p className="mt-1.5 text-[11px] text-neutral-500 dark:text-neutral-400">

@@ -1,4 +1,6 @@
-import { AWS_SERVICE_REGISTRY } from "@/components/canvas/aws-icons";
+import { getCloudService } from "@/components/canvas/cloud-icons";
+import { createCloudServiceNodeData } from "@/lib/canvas/cloud-services";
+import type { CloudProvider } from "@/lib/canvas/types";
 import type { CanvasEdge, CanvasGraphData, CanvasNode, HandlePosition } from "@/lib/canvas/types";
 
 export const VISITOR_ID = "local-visitor";
@@ -10,9 +12,12 @@ export function createService(
   serviceId: string,
   position_x: number,
   position_y: number,
+  provider: CloudProvider = "aws",
 ): CanvasNode {
-  const service = AWS_SERVICE_REGISTRY[serviceId];
+  const data = createCloudServiceNodeData(provider, serviceId);
+  const service = getCloudService(provider, serviceId)!;
   return {
+    ...data,
     id,
     project_id: PROJECT_ID,
     title,
@@ -27,13 +32,6 @@ export function createService(
     claimed_by: null,
     version: 1,
     checkpoints: [],
-    node_type: "aws_service",
-    aws_metadata: {
-      serviceId,
-      category: service.category,
-      region: "us-east-1",
-      config: service.defaultConfig,
-    },
   };
 }
 

@@ -4,7 +4,13 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Search, X, Map, Box, Flag, StickyNote } from "lucide-react";
 import type { CanvasNode } from "@/lib/canvas/types";
 import { getNodeStatusLabel } from "@/lib/canvas/coordinate-math";
-import { getAWSService } from "./aws-icons";
+import { getCloudService } from "./cloud-icons";
+import {
+  CLOUD_PROVIDER_LABELS,
+  getCloudProvider,
+  getServiceMetadata,
+  isServiceNode,
+} from "@/lib/canvas/cloud-services";
 
 interface Props {
   nodes: CanvasNode[];
@@ -34,7 +40,8 @@ export default function CanvasNavigator({
     () =>
       nodes.filter((node) => {
         const type = node.node_type || "milestone";
-        const service = node.aws_metadata && getAWSService(node.aws_metadata.serviceId);
+        const metadata = getServiceMetadata(node);
+        const service = metadata && getCloudService(getCloudProvider(node), metadata.serviceId);
         const haystack = [
           node.title,
           node.description,
@@ -43,9 +50,10 @@ export default function CanvasNavigator({
           service?.name,
           service?.shortName,
           service?.category,
-          node.aws_metadata?.serviceId,
-          node.aws_metadata?.region,
-          ...Object.values(node.aws_metadata?.config || {}),
+          ...(service?.aliases || []),
+          metadata?.serviceId,
+          metadata?.region,
+          ...Object.values(metadata?.config || {}),
           node.group_metadata?.label,
           node.group_metadata?.style.replaceAll("_", " "),
           node.annotation_metadata?.content,
@@ -206,6 +214,7 @@ export default function CanvasNavigator({
               ["all", "All"],
               ["milestone", "Milestones"],
               ["aws_service", "AWS"],
+              ["gcp_service", "Google Cloud"],
               ["group", "Groups"],
               ["annotation", "Notes"],
             ].map(([value, label]) => (
@@ -239,14 +248,13 @@ export default function CanvasNavigator({
           >
             {results.map((node, index) => {
               const type = node.node_type || "milestone";
-              const Icon =
-                type === "aws_service"
-                  ? Box
-                  : type === "group"
-                    ? Map
-                    : type === "annotation"
-                      ? StickyNote
-                      : Flag;
+              const Icon = isServiceNode(node)
+                ? Box
+                : type === "group"
+                  ? Map
+                  : type === "annotation"
+                    ? StickyNote
+                    : Flag;
               return (
                 <button
                   key={node.id}
@@ -267,8 +275,8 @@ export default function CanvasNavigator({
                       {node.title || "Untitled"}
                     </span>
                     <span className="mt-0.5 block truncate text-[10px] text-neutral-500 dark:text-neutral-300">
-                      {type === "aws_service"
-                        ? `AWS · ${node.aws_metadata?.region || "No region"}`
+                      {isServiceNode(node)
+                        ? `${CLOUD_PROVIDER_LABELS[getCloudProvider(node)]} · ${getServiceMetadata(node)?.region || "No region"}`
                         : type === "group"
                           ? "Container"
                           : type === "annotation"

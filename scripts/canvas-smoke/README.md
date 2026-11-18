@@ -15,13 +15,14 @@ uses an in-memory model, and non-local network requests are blocked. It requires
 account or environment variables and never changes a real project.
 
 It checks desktop and mobile layout, fit clearance, checkpoint search and jump,
-node drag persistence, inline rename, zoom and fit controls, radar dragging and
+node drag persistence, inline rename, zoom and fit controls, radar dragging, bottom alignment with details open, compact controls and
 shortcut isolation, shortcut-dialog focus and mobile keyboard scrolling, and
 touch pinch starting across the background and a node. Screenshots and a JSON
 summary are written to the ignored `.tmp/canvas-smoke/` directory.
 
 It also exercises owner share-link creation/copy/revocation, anonymous read-only
 viewing, safe swipes over cards, and layouts at 320, 390, 430, 700 and 844 pixels.
+Google Cloud coverage exercises search aliases, official SVG loading, region edits, undo/redo, mixed-provider connections, reload persistence, deletion/restore, public viewing and a 320px palette.
 An empty-phone flow creates and edits a milestone, adds a checkpoint and an AWS
 resource, checks the AI form at a simulated keyboard height, and verifies that
 generated content fits on screen. The shared viewer fails the test if it requests
@@ -65,6 +66,6 @@ Run `npm run test:generation-browser` for real cards, groups and edges built by 
 
 CI groups these suites into interaction (canvas and usability) and recovery/generation (reliability, AI and generation). Each runner installs dependencies and Chromium once; the suite runner reports duration and continues after a failed suite so diagnostics are available. The claim-renewal check advances minutes without executing every animation frame.
 
-The unit suite keeps 196 core checks; duplicated component-render and repeated geometry assertions were removed where the real-browser flows already cover the behavior. Security, authorization, migration rollback, stale writes, graph validation and recovery remain covered. The optional AWS gallery still renders the full fixture catalog with `npm run preview:aws-layout`.
+The unit suite keeps 200 core checks; duplicated component-render and repeated geometry assertions were removed where the real-browser flows already cover the behavior. Security, authorization, migration rollback, stale writes, graph validation and recovery remain covered. The optional AWS gallery still renders the full fixture catalog with `npm run preview:aws-layout`.
 
 Use `scripts/test-staging.mjs` only with an explicitly configured disposable staging project and two test accounts. It creates and cleans up two unique test nodes, checks real session cookies, atomic/stale layouts, claims and access latency, and optionally spends one AI request to review and discard a real preview. See [operations](../../docs/operations.md) for variables and the remaining live checks.

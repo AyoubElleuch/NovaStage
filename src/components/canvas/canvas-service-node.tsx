@@ -4,7 +4,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { Lock, Plus, Unlock, Pencil } from "lucide-react";
 import { CanvasNode, HandlePosition } from "@/lib/canvas/types";
 import { getNodeDimensions, getUserColor } from "@/lib/canvas/coordinate-math";
-import { AwsIcon, getAWSService, AWS_CATEGORIES } from "./aws-icons";
+import { CLOUD_CATALOGS, CloudServiceIcon, getCloudService } from "./cloud-icons";
+import {
+  CLOUD_PROVIDER_LABELS,
+  getCloudProvider,
+  getServiceMetadata,
+} from "@/lib/canvas/cloud-services";
 
 export interface CanvasServiceNodeProps {
   readOnly?: boolean;
@@ -77,14 +82,17 @@ export default function CanvasServiceNode({
     node.claim_holder?.fullName && node.claim_holder.fullName !== "You"
       ? node.claim_holder.fullName
       : "Collaborator";
-  const serviceId = node.aws_metadata?.serviceId?.toLowerCase() || "";
-  const service = getAWSService(serviceId);
-  const metadataCategory =
-    node.aws_metadata?.category === "ai_ml" ? "ml" : node.aws_metadata?.category;
+  const provider = getCloudProvider(node);
+  const providerLabel = CLOUD_PROVIDER_LABELS[provider];
+  const metadata = getServiceMetadata(node);
+  const serviceId = metadata?.serviceId || "";
+  const service = getCloudService(provider, serviceId);
+  const categories = CLOUD_CATALOGS[provider].categories;
+  const metadataCategory = metadata?.category === "ai_ml" ? "ml" : metadata?.category;
   const category =
-    AWS_CATEGORIES[service?.category || metadataCategory || "compute"] || AWS_CATEGORIES.compute;
-  const categoryColor = category?.color || "#FF9900";
-  const configEntries = Object.entries(node.aws_metadata?.config || {});
+    categories[service?.category || metadataCategory || "compute"] || categories.compute;
+  const categoryColor = category.color;
+  const configEntries = Object.entries(metadata?.config || {});
   const dimensions = getNodeDimensions(node);
   const compact = dimensions.height < 190;
   const active = isSelected || isMultiSelected;
@@ -135,11 +143,11 @@ export default function CanvasServiceNode({
 
   return (
     <div
-      data-node-type="aws_service"
+      data-node-type={node.node_type}
       data-node-id={node.id}
       role="group"
       tabIndex={0}
-      aria-label={`${node.title}, ${service?.name || "AWS service"}, ${STATUS_LABELS[node.status]}${node.aws_metadata?.region ? `, ${node.aws_metadata.region}` : ""}${isClaimedByOther ? `, claimed by ${otherClaimName}` : ""}`}
+      aria-label={`${node.title}, ${service?.name || `${providerLabel} service`}, ${STATUS_LABELS[node.status]}${metadata?.region ? `, ${metadata.region}` : ""}${isClaimedByOther ? `, claimed by ${otherClaimName}` : ""}`}
       onPointerDown={handlePointerDown}
       onClick={readOnly ? () => onSelect(node) : undefined}
       onPointerUp={handlePointerUp}
@@ -204,8 +212,8 @@ export default function CanvasServiceNode({
           </button>
         ))}
       <div className="flex items-start justify-between gap-2">
-        <AwsIcon
-          serviceId={serviceId}
+        <CloudServiceIcon
+          node={node}
           size={compact ? 32 : 40}
           className={compact ? "h-8 w-8 shrink-0" : "h-10 w-10 shrink-0"}
         />
@@ -269,7 +277,7 @@ export default function CanvasServiceNode({
           className="truncate text-[10px] font-medium text-neutral-500 dark:text-neutral-400"
           title={service?.name}
         >
-          {service?.name || serviceId || "AWS service"}
+          {service?.name || serviceId || `${providerLabel} service`}
         </p>
         {isEditingTitle ? (
           <input
@@ -326,14 +334,14 @@ export default function CanvasServiceNode({
             style={{ backgroundColor: `${categoryColor}20` }}
             title={category?.label}
           >
-            {category?.label || "AWS"}
+            {category?.label || providerLabel}
           </span>
-          {node.aws_metadata?.region && (
+          {metadata?.region && (
             <span
               className="max-w-full truncate rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 font-mono text-[9px] text-neutral-600 dark:border-[#283548] dark:bg-[#1e2634] dark:text-neutral-300"
-              title={`Region: ${node.aws_metadata.region}`}
+              title={`Region: ${metadata.region}`}
             >
-              {node.aws_metadata.region}
+              {metadata.region}
             </span>
           )}
         </div>

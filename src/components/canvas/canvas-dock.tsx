@@ -1,4 +1,5 @@
 "use client";
+import GoogleCloudLogo from "@/components/google-cloud-logo";
 import AWSLogo from "@/components/aws-logo";
 
 import React, { useEffect, useId, useRef, useState } from "react";
@@ -44,6 +45,7 @@ interface CanvasDockProps {
   isReleasePulseOpen?: boolean;
   onToggleReleasePulse?: () => void;
   onToggleServicePalette?: () => void;
+  onToggleGoogleCloudPalette?: () => void;
   onOpenShortcuts?: () => void;
   onOpenGuide?: () => void;
   isGuideOpen?: boolean;
@@ -72,6 +74,7 @@ export default function CanvasDock({
   isReleasePulseOpen,
   onToggleReleasePulse,
   onToggleServicePalette,
+  onToggleGoogleCloudPalette,
   onOpenShortcuts,
   onOpenGuide,
   isGuideOpen,
@@ -355,6 +358,20 @@ export default function CanvasDock({
           </button>
         )}
 
+        {/* Google Cloud Services Button */}
+        {onToggleGoogleCloudPalette && (
+          <button
+            type="button"
+            onClick={onToggleGoogleCloudPalette}
+            disabled={isBusy}
+            title="Google Cloud Services"
+            aria-label="Google Cloud Services"
+            className="inline-flex h-11 @[950px]/controls:h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-xl border border-[#4285F4]/30 bg-[#4285F4]/10 px-2 @[950px]/controls:px-2.5 text-xs font-bold text-[#4285F4] shadow-[0_2px_5px_rgba(66,133,244,0.08)] transition-all hover:bg-[#4285F4]/20 hover:scale-[1.02] cursor-pointer"
+          >
+            <GoogleCloudLogo className="h-6 w-7" />
+          </button>
+        )}
+
         {/* Tools stay available at every width */}
         <button
           ref={quickToolsRef}
@@ -365,14 +382,13 @@ export default function CanvasDock({
           aria-expanded={isQuickToolsOpen}
           aria-controls={quickToolsId}
           title="Open Canvas Tools"
-          className={`flex h-11 @[950px]/controls:h-9 shrink-0 items-center gap-1 rounded-xl px-3 text-xs font-semibold transition-colors cursor-pointer ${
+          className={`flex h-11 w-11 @[950px]/controls:h-9 @[950px]/controls:w-9 shrink-0 items-center justify-center rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
             isQuickToolsOpen
               ? "bg-neutral-900 text-white dark:bg-emerald-600"
               : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-[#1e2634]"
           }`}
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
-          <span className="font-mono text-[11px] @[950px]/controls:hidden">{zoomPct}%</span>
         </button>
 
         {/* Desktop-only Zoom Controls */}

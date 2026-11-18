@@ -358,6 +358,141 @@ try {
     },
   );
   await check(
+    "Google Cloud resources save, connect across providers, survive reload and render in shared views",
+    async () => {
+      const cloudContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+      const isolated = await fixturePage(cloudContext);
+      const cloud = isolated.page;
+      const graph = isolated.state;
+      const save = (predicate, action) =>
+        Promise.all([
+          cloud.waitForResponse((r) => predicate(r.request().postDataJSON() || {})),
+          action(),
+        ]);
+      await cloud.getByRole("button", { name: "Google Cloud Services", exact: true }).click();
+      const palette = cloud.getByRole("dialog", { name: "Google Cloud services", exact: true });
+      await palette
+        .getByRole("textbox", { name: "Search Google Cloud services" })
+        .fill("no-such-service");
+      await palette.getByText("No matching services", { exact: true }).waitFor();
+      await palette.getByRole("textbox", { name: "Search Google Cloud services" }).fill("k8s");
+      await palette
+        .getByRole("button", { name: "Add Google Kubernetes Engine to canvas", exact: true })
+        .waitFor();
+      await palette
+        .getByRole("textbox", { name: "Search Google Cloud services" })
+        .fill("Cloud Run");
+      await palette.getByRole("button", { name: "Add Cloud Run to canvas", exact: true }).click();
+      const region = cloud.getByRole("textbox", { name: "Google Cloud Region", exact: true });
+      await region.waitFor();
+      const change = cloud.waitForResponse(
+        (r) => r.request().postDataJSON()?.updates?.gcp_metadata?.region === "europe-west1",
+      );
+      await region.fill("europe-west1");
+      await region.press("Tab");
+      await change;
+      const saved = graph.nodes.find((n) => n.node_type === "gcp_service");
+      assert.ok(saved);
+      assert.equal(saved.gcp_metadata.serviceId, "cloud-run");
+      assert.equal(saved.aws_metadata, null);
+      const image = cloud
+        .getByRole("region", { name: "Google Cloud resource configuration" })
+        .getByRole("img", { name: "Cloud Run", exact: true });
+      assert.equal(
+        await image.evaluate((img) => img.complete && img.naturalWidth > 0),
+        true,
+        "official SVG loads",
+      );
+      await cloud.getByRole("button", { name: "Close details", exact: true }).click();
+      const viewport = cloud.locator("[data-canvas-viewport]");
+      await viewport.focus();
+      await save(
+        (body) => body.updates?.gcp_metadata?.region === "us-central1",
+        () => cloud.keyboard.press("Control+z"),
+      );
+      assert.equal(graph.nodes.find((n) => n.id === saved.id).gcp_metadata.region, "us-central1");
+      await save(
+        (body) => body.updates?.gcp_metadata?.region === "europe-west1",
+        () => cloud.keyboard.press("Control+Shift+z"),
+      );
+      await cloud.keyboard.press("Shift+Digit1");
+      await cloud.getByRole("group", { name: /^Cloud Run, / }).hover();
+      await cloud
+        .getByRole("button", { name: "Link from right port of Cloud Run", exact: true })
+        .click();
+      await save(
+        (body) => body.action === "create_edge",
+        () =>
+          cloud
+            .getByRole("button", {
+              name: "Link from left port of Application servers",
+              exact: true,
+            })
+            .click(),
+      );
+      assert.ok(
+        graph.edges.some(
+          (e) =>
+            e.source_node_id === saved.id &&
+            e.target_node_id === "compute" &&
+            e.edge_type === "data_flow",
+        ),
+      );
+      await cloud.goto(`${origin}/scripts/canvas-smoke/index.html?live`);
+      await cloud.getByRole("button", { name: "Find on canvas", exact: true }).click();
+      await cloud.getByRole("button", { name: "Google Cloud", exact: true }).click();
+      await cloud.getByRole("combobox", { name: "Search canvas" }).fill("europe-west1");
+      assert.equal(await cloud.getByRole("option").count(), 1);
+      await cloud.getByRole("option").click();
+      assert.equal(await region.inputValue(), "europe-west1");
+      await cloud.screenshot({ path: resolve(output, "google-cloud-desktop.png") });
+      await cloud.getByTitle("Switch to dark mode", { exact: true }).click();
+      await cloud.screenshot({ path: resolve(output, "google-cloud-dark.png") });
+      await save(
+        (body) => body.action === "delete_node",
+        () =>
+          cloud.getByRole("button", { name: "Delete google cloud resource", exact: true }).click(),
+      );
+      await viewport.focus();
+      await save(
+        (body) => body.action === "create_node",
+        () => cloud.keyboard.press("Control+z"),
+      );
+      assert.equal(graph.nodes.find((n) => n.id === saved.id).gcp_metadata.region, "europe-west1");
+      await cloud.setViewportSize({ width: 320, height: 568 });
+      await cloud.getByRole("button", { name: "Google Cloud Services", exact: true }).click();
+      await palette.waitFor();
+      const box = await palette.boundingBox();
+      assert.ok(box.x >= 0 && box.x + box.width <= 320 && box.y >= 0 && box.y + box.height <= 568);
+      const dock = await cloud
+        .getByRole("navigation", { name: "Canvas control dock" })
+        .boundingBox();
+      assert.ok(dock.x >= 0 && dock.x + dock.width <= 320);
+      await cloud.screenshot({ path: resolve(output, "google-cloud-phone.png") });
+      await palette.getByRole("textbox", { name: "Search Google Cloud services" }).fill("Pub/Sub");
+      await palette.getByRole("button", { name: "Add Pub/Sub to canvas", exact: true }).click();
+      await region.waitFor();
+      assert.ok(graph.nodes.some((n) => n.gcp_metadata?.serviceId === "pubsub"));
+      await cloud.route("**/__generation/gcp-share", (route) =>
+        route.fulfill({ json: { nodes: graph.nodes, edges: graph.edges } }),
+      );
+      await cloud.goto(`${origin}/scripts/canvas-smoke/index.html?generation=gcp-share`);
+      await cloud.getByRole("button", { name: "Find on canvas", exact: true }).click();
+      await cloud.getByRole("combobox", { name: "Search canvas" }).fill("Cloud Run");
+      await cloud.getByRole("option").click();
+      await cloud
+        .getByRole("dialog")
+        .getByText(/europe-west1/)
+        .waitFor();
+      assert.equal(
+        await cloud.getByRole("button", { name: /Claim|Delete google cloud/i }).count(),
+        0,
+      );
+      assert.deepEqual(isolated.errors, []);
+      await cloudContext.close();
+    },
+  );
+  await check(
     "two assistant buttons open prepared desktop requests without MCP installation",
     async () => {
       await page.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();

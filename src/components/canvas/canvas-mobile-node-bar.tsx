@@ -1,4 +1,10 @@
 "use client";
+import {
+  CLOUD_PROVIDER_LABELS,
+  getCloudProvider,
+  getServiceMetadata,
+  isServiceNode,
+} from "@/lib/canvas/cloud-services";
 
 import React from "react";
 import { ArrowUpRight, CheckCircle2, Circle, Lock, Scan, Unlock, X } from "lucide-react";
@@ -46,16 +52,15 @@ export default function CanvasMobileNodeBar({
 
   const nextUnfinishedCheckpoint = node.checkpoints.find((c) => !c.is_completed);
   const isMilestone = !node.node_type || node.node_type === "milestone";
-  const kind =
-    node.node_type === "aws_service"
-      ? "AWS resource"
-      : node.node_type === "group"
-        ? "group"
-        : node.node_type === "annotation"
-          ? "note"
-          : "milestone";
+  const kind = isServiceNode(node)
+    ? `${CLOUD_PROVIDER_LABELS[getCloudProvider(node)]} resource`
+    : node.node_type === "group"
+      ? "group"
+      : node.node_type === "annotation"
+        ? "note"
+        : "milestone";
   const statusLabel = isComplete
-    ? node.node_type === "aws_service"
+    ? isServiceNode(node)
       ? "Ready"
       : "Complete"
     : node.status === "blocked"
@@ -94,8 +99,8 @@ export default function CanvasMobileNodeBar({
               ? isComplete
                 ? "DONE"
                 : `STEP ${String(stepIndex + 1).padStart(2, "0")}`
-              : node.node_type === "aws_service"
-                ? "AWS"
+              : isServiceNode(node)
+                ? CLOUD_PROVIDER_LABELS[getCloudProvider(node)]
                 : kind.toUpperCase()}
           </span>
           <h3 className="truncate text-sm font-semibold text-neutral-900 dark:text-white">
@@ -154,8 +159,7 @@ export default function CanvasMobileNodeBar({
       {(!isMilestone || node.checkpoints.length === 0) && (
         <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
           {statusLabel}
-          {node.node_type === "aws_service" &&
-            ` · ${node.aws_metadata?.region || "Region unspecified"}`}
+          {isServiceNode(node) && ` · ${getServiceMetadata(node)?.region || "Region unspecified"}`}
           {isMilestone && " · No checkpoints yet"}
         </p>
       )}

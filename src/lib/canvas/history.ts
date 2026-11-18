@@ -19,6 +19,7 @@ export const NODE_FIELDS = [
   "height",
   "color",
   "aws_metadata",
+  "gcp_metadata",
   "group_metadata",
   "annotation_metadata",
   "parent_group_id",

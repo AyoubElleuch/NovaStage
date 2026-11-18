@@ -31,6 +31,7 @@ beforeAll(async () => {
   await db.exec(readFileSync("supabase/migrations/026_atomic_ai_canvas_graph.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/027_atomic_canvas_layout.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/028_canvas_ai_previews.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/029_google_cloud_canvas.sql", "utf8"));
 }, 30000);
 beforeEach(async () => {
   await db.exec(`truncate public.projects, auth.users, public.project_members, public.project_banned_members cascade;
@@ -314,4 +315,38 @@ it("keeps AI previews unapplied, rejects changed canvases, and accepts exactly o
   expect(await count("canvas_nodes")).toBe(2);
   await accept();
   expect(await count("canvas_nodes")).toBe(2);
+});
+
+it("stores Google Cloud metadata, fingerprints edits and keeps AI and MCP modes isolated", async () => {
+  const id = randomUUID();
+  const insert = (type: string, metadata: unknown) =>
+    db.query(
+      "insert into public.canvas_nodes(id, project_id, title, node_type, gcp_metadata) values ($1,$2,'Cloud Run',$3,$4::jsonb)",
+      [id, project, type, JSON.stringify(metadata)],
+    );
+  for (const metadata of [null, {}, { serviceId: 12 }])
+    await expect(insert("gcp_service", metadata)).rejects.toThrow();
+  await expect(insert("milestone", { serviceId: "cloud-run" })).rejects.toThrow();
+  await insert("gcp_service", {
+    serviceId: "cloud-run",
+    category: "compute",
+    region: "us-central1",
+  });
+  const fingerprint = () =>
+    db.query("select public.canvas_content_fingerprint($1) as value", [project]);
+  const before = await fingerprint();
+  await db.query(
+    'update public.canvas_nodes set gcp_metadata = gcp_metadata || \'{"region":"europe-west1"}\'::jsonb where id=$1',
+    [id],
+  );
+  expect(await fingerprint()).not.toEqual(before);
+  const bad = graph();
+  bad.nodes[0].node_type = "gcp_service";
+  await expect(apply(bad)).rejects.toThrow();
+  await apply(graph());
+  expect(
+    (await db.query("select gcp_metadata from public.canvas_nodes where id=$1", [id])).rows[0],
+  ).toEqual({
+    gcp_metadata: { serviceId: "cloud-run", category: "compute", region: "europe-west1" },
+  });
 });

@@ -1,4 +1,5 @@
 "use client";
+import { isServiceNode } from "@/lib/canvas/cloud-services";
 
 import React, { useMemo, useState } from "react";
 import { routeArchitectureEdge } from "@/lib/canvas/architecture-routing";
@@ -193,9 +194,9 @@ export default function CanvasEdgeLayer({
           calculateBezierPath(p1.x, p1.y, p2.x, p2.y, edge.source_handle, edge.target_handle);
 
         const isArchitecture =
-          sourceNode.node_type === "aws_service" ||
+          isServiceNode(sourceNode) ||
           sourceNode.node_type === "group" ||
-          targetNode.node_type === "aws_service" ||
+          isServiceNode(targetNode) ||
           targetNode.node_type === "group";
         const isNeonActive = !isArchitecture && isNodeFullyComplete(sourceNode);
         const isHovered = hoveredEdgeId === edge.id;
@@ -214,7 +215,7 @@ export default function CanvasEdgeLayer({
         const edgeType = edge.edge_type || "dependency";
         const isInterlockingBridge =
           (sourceNode.node_type === "milestone" &&
-            (targetNode.node_type === "aws_service" || targetNode.node_type === "group")) ||
+            (isServiceNode(targetNode) || targetNode.node_type === "group")) ||
           Boolean(
             edge.label &&
             (edge.label.includes("Provisions") ||

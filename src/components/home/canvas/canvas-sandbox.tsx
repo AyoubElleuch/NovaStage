@@ -19,7 +19,8 @@ import CanvasDock from "@/components/canvas/canvas-dock";
 import CanvasDrawer from "@/components/canvas/canvas-drawer";
 import CanvasReleasePulse from "@/components/canvas/canvas-release-pulse";
 import CanvasServicePalette from "@/components/canvas/canvas-service-palette";
-import { AWS_SERVICE_REGISTRY } from "@/components/canvas/aws-icons";
+import { getCloudService } from "@/components/canvas/cloud-icons";
+import type { CloudProvider } from "@/lib/canvas/types";
 import { getNodeDimensions, getNodeHandlePosition } from "@/lib/canvas/coordinate-math";
 import type { CanvasNode, CanvasTool, CanvasViewport, HandlePosition } from "@/lib/canvas/types";
 import { canvasSounds } from "@/lib/canvas/sound-effects";
@@ -66,6 +67,7 @@ export default function CanvasSandbox({
     currentX: number;
     currentY: number;
   } | null>(null);
+  const [serviceProvider, setServiceProvider] = useState<CloudProvider>("aws");
   const [isServicePaletteOpen, setIsServicePaletteOpen] = useState(false);
   const [isReleasePulseOpen, setIsReleasePulseOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -337,12 +339,19 @@ export default function CanvasSandbox({
     setSelectedNodeIds(new Set([node.id]));
   }
 
-  function addAWSService(serviceId: string) {
-    const service = AWS_SERVICE_REGISTRY[serviceId];
+  function addCloudService(serviceId: string) {
+    const service = getCloudService(serviceProvider, serviceId);
     if (!service) return;
     const position = nextOpenPosition();
     const node = {
-      ...createService(crypto.randomUUID(), service.name, serviceId, position.x, position.y),
+      ...createService(
+        crypto.randomUUID(),
+        service.name,
+        serviceId,
+        position.x,
+        position.y,
+        serviceProvider,
+      ),
       claimed_by: VISITOR_ID,
       claim_holder: { id: VISITOR_ID, fullName: "You" },
     };
@@ -681,13 +690,22 @@ export default function CanvasSandbox({
               onRedo={() => dispatch({ type: "redo" })}
               isReleasePulseOpen={isReleasePulseOpen}
               onToggleReleasePulse={() => setIsReleasePulseOpen((current) => !current)}
-              onToggleServicePalette={() => setIsServicePaletteOpen((current) => !current)}
+              onToggleServicePalette={() => {
+                setServiceProvider("aws");
+                setIsServicePaletteOpen((current) => serviceProvider !== "aws" || !current);
+              }}
+              onToggleGoogleCloudPalette={() => {
+                setServiceProvider("gcp");
+                setIsServicePaletteOpen((current) => serviceProvider !== "gcp" || !current);
+              }}
             />
           </div>
           <CanvasServicePalette
+            key={serviceProvider}
+            provider={serviceProvider}
             isOpen={isServicePaletteOpen}
             onClose={() => setIsServicePaletteOpen(false)}
-            onAddService={addAWSService}
+            onAddService={addCloudService}
           />
           {interactive && isReleasePulseOpen && (
             <CanvasReleasePulse
