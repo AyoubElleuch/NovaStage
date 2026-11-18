@@ -3,7 +3,7 @@
 Real-time collaborative canvas for engineering roadmaps and AWS architecture diagrams.
 
 [![CI Pipeline](https://github.com/AyoubElleuch/NovaStage/actions/workflows/ci.yml/badge.svg)](https://github.com/AyoubElleuch/NovaStage/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/Beta-v1.2.0-10b981)](docs/releases/v1.2.0-pr.md)
+[![Release](https://img.shields.io/badge/Beta-v1.2.1-10b981)](#beta-v121)
 [![Next.js](https://img.shields.io/badge/Next.js-16.4-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)](https://supabase.com/)
@@ -24,13 +24,13 @@ NovaStage gives engineering teams a shared workspace for delivery planning and c
 - **View-only sharing:** Project owners can enable or revoke a public canvas link. Visitors can navigate and inspect shared content without editing or viewing project membership.
 - **Access controls:** Project membership, roles, row-level security, editing leases and generation locks govern protected actions.
 
-## Beta v1.2.0
+## Beta v1.2.1
 
-This release improves grid and port alignment, keeps controls clear of drawers, saves multi-card layouts atomically, and preserves failed edits and undo history across refreshes. Built-in AI now prepares a reviewable preview before changing the canvas. Plan limits, account feedback, search statuses, and Mermaid exports are consistent with the application.
+This release adds editable Google Cloud services alongside AWS and keeps the canvas toolbar centered when resource details open. Focus selection sits below Find, and the radar stays clear of the toolbar.
 
-See the [release notes](docs/releases/v1.2.0-pr.md), [technical report and before/after screenshots](docs/canvas-generation-rebuild.md), and [layout contract and limitations](docs/aws-architecture-layout.md).
+See the [v1.2.0 release notes](docs/releases/v1.2.0-pr.md), [technical report and before/after screenshots](docs/canvas-generation-rebuild.md), and [layout contract and limitations](docs/aws-architecture-layout.md).
 
-**Deployment requirement:** Apply migrations through `029_google_cloud_canvas.sql`, before deploying this release. No existing saved canvas is automatically rearranged.
+Apply migrations through `029_google_cloud_canvas.sql` before deploying this release. No existing saved canvas is automatically rearranged.
 
 ## Architecture
 

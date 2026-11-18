@@ -1,4 +1,4 @@
-# Operations: Beta v1.2.0
+# Operations for Beta v1.2.1
 
 ## Deployment order
 

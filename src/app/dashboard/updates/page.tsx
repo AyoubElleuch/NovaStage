@@ -8,6 +8,16 @@ const releases = [
   {
     version: APP_RELEASE,
     date: APP_RELEASE_DATE,
+    title: "Google Cloud and a Clearer Canvas",
+    summary: "Design with both cloud providers and keep canvas controls in a predictable place.",
+    changes: [
+      "Add 62 Google Cloud services with official SVG icons and editable settings, and connect them to AWS resources.",
+      "The toolbar stays centered with AI and Notebook beside it on desktop. The details divider stays visible, the right panel fills the screen height, and the radar stays clear.",
+    ],
+  },
+  {
+    version: "Beta v1.2.0",
+    date: "November 18, 2026",
     title: "A More Reliable Cloud Canvas",
     summary:
       "Google Cloud resources, easier alignment, safer collaboration, and faster verification with the same NovaStage look.",
