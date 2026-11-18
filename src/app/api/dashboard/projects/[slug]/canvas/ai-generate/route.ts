@@ -6,7 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { executeAIPipeline } from "@/lib/ai/pipeline";
 import { CanvasAIContext, isAIGenerationMode } from "@/lib/ai/types";
 import { resolveGenerationOperation } from "@/lib/ai/orchestration";
-import { getProjectCanvasData, applyAIWorkflowResult, applyAWSServiceNodes } from "@/lib/canvas/server";
+import { getProjectCanvasData } from "@/lib/canvas/server";
+import { canvasFingerprint, createCanvasPreview } from "@/lib/canvas/ai-preview";
 import { getAiRequestLimit } from "@/lib/plans";
 
 export const maxDuration = 120;
@@ -36,6 +37,20 @@ export async function POST(
     }
 
     const body = await request.json().catch(() => ({}));
+    if (body.action === "apply_preview") {
+      const supabase = await createClient();
+      const { data: lock, error: lockError } = await supabase.rpc("acquire_project_ai_lock", { p_project_id: project.id });
+      if (lockError || !lock?.success) return NextResponse.json({ error: "COLLISION_LOCKED", message: "Another generation is active. Try applying this preview again shortly." }, { status: 409 });
+      projectToUnlock = project.id;
+      const { error } = await createAdminClient().rpc("accept_canvas_ai_preview", { p_preview_id: body.id, p_project_id: project.id, p_user_id: session.user.id });
+      if (error) return NextResponse.json({ error: "PREVIEW_STALE", message: "This preview expired or the canvas changed. Generate a new preview; nothing was applied." }, { status: 409 });
+      const saved = await getProjectCanvasData(project.id);
+      return NextResponse.json({ success: true, ...saved });
+    }
+    if (body.action === "dismiss_preview") {
+      const { error } = await createAdminClient().from("canvas_ai_previews").delete().eq("id", body.id).eq("project_id", project.id).eq("user_id", session.user.id);
+      return NextResponse.json({ success: !error }, { status: error ? 500 : 200 });
+    }
     const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
     const mode = body?.mode ?? "workflow";
     if (!isAIGenerationMode(mode)) {
@@ -191,6 +206,7 @@ export async function POST(
     quotaConsumed = true;
 
     // 3. Load current canvas graph state to provide as context
+    const baseline = await canvasFingerprint(project.id);
     const currentCanvasData = await getProjectCanvasData(project.id);
     const operation = resolveGenerationOperation(
       mode,
@@ -290,37 +306,7 @@ export async function POST(
       );
     }
 
-    // 5. Apply graph mutations, insertions, rewiring, or parallel generation
-    let finalNodes = currentCanvasData.nodes;
-    let finalEdges = currentCanvasData.edges;
-
-    // Apply milestone changes if present
-    if (mode === "workflow" && workflowResult.milestones.length > 0) {
-      const reconciled = await applyAIWorkflowResult(
-        project.id,
-        workflowResult,
-        currentCanvasData,
-        session.user.id
-      );
-      finalNodes = reconciled.nodes;
-      finalEdges = reconciled.edges;
-    }
-
-    // Apply AWS architecture nodes if present
-    const hasAWSContent =
-      (workflowResult.serviceNodes && workflowResult.serviceNodes.length > 0) ||
-      (workflowResult.groups && workflowResult.groups.length > 0);
-
-    if (mode === "aws_architecture" && hasAWSContent) {
-      const awsReconciled = await applyAWSServiceNodes(
-        project.id,
-        workflowResult,
-        { nodes: finalNodes, edges: finalEdges },
-        session.user.id
-      );
-      finalNodes = awsReconciled.nodes;
-      finalEdges = awsReconciled.edges;
-    }
+    const preview = await createCanvasPreview(project.id, session.user.id, mode, workflowResult, currentCanvasData.nodes, baseline);
 
     return NextResponse.json({
       success: true,
@@ -328,8 +314,9 @@ export async function POST(
       mode: workflowResult.mode,
       operation,
       summary: workflowResult.summary,
-      nodes: finalNodes,
-      edges: finalEdges,
+      preview,
+      nodes: currentCanvasData.nodes,
+      edges: currentCanvasData.edges,
       requests_used: quotaResult?.requests_used ?? 1,
       requests_remaining: quotaResult?.requests_remaining ?? 0,
     });
@@ -362,4 +349,15 @@ export async function POST(
       }
     }
   }
+}
+
+export async function GET(_request: NextRequest, context: { params: Promise<{ slug: string }> }) {
+  const session = await getAuthenticatedProfile();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { slug } = await context.params;
+  const project = await getProjectBySlug(slug);
+  if (!project || !await isProjectMember(project.id, session.user.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { data, error } = await createAdminClient().from("canvas_ai_previews").select("id,graph,summary,expires_at").eq("project_id", project.id).eq("user_id", session.user.id).is("applied_at", null).gt("expires_at", new Date().toISOString()).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) return NextResponse.json({ error: "Unable to load AI preview" }, { status: 503 });
+  return NextResponse.json({ preview: data ? { id: data.id, ...data.graph, expiresAt: data.expires_at, summary: data.summary } : null }, { headers: { "Cache-Control": "no-store" } });
 }

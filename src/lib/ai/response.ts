@@ -1,6 +1,9 @@
 import type { CanvasNode, CanvasEdge } from "../canvas/types";
 
+export interface AIPreview { id: string; expiresAt: string; nodes: CanvasNode[]; edges: CanvasEdge[]; deletedIds: string[]; summary?: string }
+
 interface AIGenerationResponse {
+  preview?: AIPreview;
   success: boolean;
   nodes: CanvasNode[];
   edges?: CanvasEdge[];

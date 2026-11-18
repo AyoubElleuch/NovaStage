@@ -48,6 +48,8 @@ import {
   type History,
 } from "@/lib/canvas/history";
 import { describeSave, friendlySaveError, INITIAL_SAVE_STATE, reduceSaveState } from "@/lib/canvas/save-status";
+import CanvasAIReview from "@/components/canvas/canvas-ai-review";
+import type { AIPreview } from "@/lib/ai/response";
 import CanvasViewportContainer from "@/components/canvas/canvas-viewport";
 import CanvasNodeComponent from "@/components/canvas/canvas-node";
 import CanvasEdgeLayer from "@/components/canvas/canvas-edge-layer";
@@ -268,6 +270,7 @@ export default function ProjectCanvasClient({
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [aiPreview, setAiPreview] = useState<AIPreview | null>(null);
   const [aiChange, setAiChange] = useState<{ text: string; index: number; label: string } | null>(null);
   const [saveState, dispatchSave] = useReducer(reduceSaveState, INITIAL_SAVE_STATE);
 
@@ -1325,6 +1328,12 @@ export default function ProjectCanvasClient({
 
         const data = await readAIGenerationResponse(res);
 
+        if (data.preview) {
+          setAiPreview({ ...data.preview, summary: data.summary });
+          if (typeof data.requests_remaining === "number") setAiRequestsRemaining(data.requests_remaining);
+          setIsAIAssistantOpen(false);
+          return;
+        }
         if (data.success && data.nodes) {
           const isUpdateIntent = data.intent === "update_pipeline";
           let changeOps: CanvasOp[] = [];
@@ -1402,6 +1411,31 @@ export default function ProjectCanvasClient({
     },
     [broadcastEvent, currentUser.email, currentUser.fullName, currentUser.id, getCanvasArea, notify, project.slug, pushHistorySnapshot, secureFetch]
   );
+
+  useEffect(() => {
+    let active = true;
+    void secureFetch(`/api/dashboard/projects/${project.slug}/canvas/ai-generate`, { cache: "no-store" }).then(response => response.ok ? response.json() : null).then(data => { if (active && data?.preview) setAiPreview(data.preview); }).catch(() => {});
+    return () => { active = false; };
+  }, [project.slug, secureFetch]);
+
+  const resolveAIPreview = async (apply: boolean) => {
+    if (!aiPreview) return;
+    const response = await secureFetch(`/api/dashboard/projects/${project.slug}/canvas/ai-generate`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: apply ? "apply_preview" : "dismiss_preview", id: aiPreview.id }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || data.error || "Unable to resolve this preview.");
+    if (apply) {
+      pushHistorySnapshot(data.nodes, data.edges);
+      setNodes(data.nodes); setEdges(data.edges);
+      versionsRef.current = new Map((data.nodes as CanvasNode[]).map(node => [node.id, node.version]));
+      confirmedCanvasRef.current = { nodes: data.nodes, edges: data.edges };
+      broadcastEvent("canvas:resync", { userId: currentUser.id });
+      setViewport(fitCanvasNodes(data.nodes, getCanvasArea()));
+      notify({ title: "AI changes applied", message: aiPreview.summary || "Your reviewed diagram has been saved." });
+    }
+    setAiPreview(null);
+  };
 
   // ---------------------------------------------------------------------------
   // 1. Supabase Realtime Subscription & Presence
@@ -2883,6 +2917,8 @@ export default function ProjectCanvasClient({
           }}
         />
       )}
+
+      {aiPreview && <CanvasAIReview preview={aiPreview} existingNodes={nodes} onApply={() => resolveAIPreview(true)} onDismiss={() => resolveAIPreview(false)} />}
 
       {/* Realtime Claim Handoff Modal Prompt */}
       {isShortcutsOpen && <CanvasShortcuts onClose={() => setIsShortcutsOpen(false)} />}

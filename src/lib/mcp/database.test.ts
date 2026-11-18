@@ -28,6 +28,7 @@ beforeAll(async () => {
   await db.exec(readFileSync("supabase/migrations/025_enforce_mcp_diagram_modes.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/026_atomic_ai_canvas_graph.sql", "utf8"));
   await db.exec(readFileSync("supabase/migrations/027_atomic_canvas_layout.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/028_canvas_ai_previews.sql", "utf8"));
 }, 30000);
 beforeEach(async () => {
   await db.exec(`truncate public.projects, auth.users, public.project_members, public.project_banned_members cascade;
@@ -173,4 +174,24 @@ it("atomically lays out nodes and rolls back stale, foreign, invalid, or unautho
   await applyLayout(layout);
   expect((await db.query<{ version: number; position_x: number }>("select version, position_x from public.canvas_nodes")).rows.every(n => n.version === 2 && n.position_x === 500)).toBe(true);
   await expect(applyLayout(layout)).rejects.toThrow("Stale");
+});
+
+it("keeps AI previews unapplied, rejects changed canvases, and accepts exactly once", async () => {
+  await db.query("update public.projects set ai_generating_by=$1, ai_generating_at=now()", [user]);
+  const graph = buildAIGraph({ ...sampleWorkflow(), intent: "create_pipeline" }, [], "workflow");
+  const previewId = randomUUID();
+  await db.query("insert into public.canvas_ai_previews(id,project_id,user_id,mode,graph,baseline) values ($1,$2,$3,'workflow',$4::jsonb,public.canvas_content_fingerprint($2))", [previewId, project, user, JSON.stringify(graph)]);
+  expect(await count("canvas_nodes")).toBe(0);
+  const accept = (actor = user) => db.query("select public.accept_canvas_ai_preview($1,$2,$3)", [previewId, project, actor]);
+  await expect(accept(randomUUID())).rejects.toThrow("access denied");
+  await db.query("update public.canvas_ai_previews set expires_at=now()-interval '1 second'");
+  await expect(accept()).rejects.toThrow("expired");
+  await db.query("update public.canvas_ai_previews set expires_at=now()+interval '15 minutes'");
+  await applyAI(graph);
+  await expect(accept()).rejects.toThrow("Canvas changed");
+  await db.query("delete from public.canvas_nodes");
+  await accept();
+  expect(await count("canvas_nodes")).toBe(2);
+  await accept();
+  expect(await count("canvas_nodes")).toBe(2);
 });

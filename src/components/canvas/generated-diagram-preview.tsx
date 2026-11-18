@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CanvasState } from "@/lib/canvas/history";
 import type { AIWorkflowResult } from "@/lib/ai/types";
 import { buildGeneratedGraph } from "@/lib/canvas/generated-graph";
 import CanvasNodeComponent from "./canvas-node";
 import CanvasEdgeLayer from "./canvas-edge-layer";
 
 /** Preview uses the exact geometry and card components that acceptance persists. */
-export default function GeneratedDiagramPreview({ workflow }: { workflow: AIWorkflowResult }) {
+export default function GeneratedDiagramPreview({ workflow, graph: suppliedGraph }: { workflow?: AIWorkflowResult; graph?: CanvasState }) {
   const frame = useRef<HTMLDivElement>(null);
   const [frameWidth, setFrameWidth] = useState(280);
   useEffect(() => {
@@ -15,10 +16,11 @@ export default function GeneratedDiagramPreview({ workflow }: { workflow: AIWork
     const observer = new ResizeObserver(entries => setFrameWidth(entries[0].contentRect.width));
     observer.observe(frame.current);
     return () => observer.disconnect();
-  }, [workflow]);
+  }, [workflow, suppliedGraph]);
   const preview = useMemo(() => {
     try {
-      const graph = buildGeneratedGraph(workflow, []);
+      const graph = suppliedGraph || buildGeneratedGraph(workflow!, []);
+      if (!graph.nodes.length) throw new Error("No cards in this preview.");
       const minX = Math.min(...graph.nodes.map(node => node.position_x)) - 24;
       const minY = Math.min(...graph.nodes.map(node => node.position_y - (node.node_type === "group" ? 36 : 0))) - 24;
       const width = Math.max(...graph.nodes.map(node => node.position_x + node.width)) - minX + 24;
@@ -37,6 +39,6 @@ export default function GeneratedDiagramPreview({ workflow }: { workflow: AIWork
         {preview.graph.nodes.map(node => <CanvasNodeComponent key={node.id} node={node} stepIndex={node.sort_order} readOnly isSelected={false} isLinking={false} currentUserId="preview" onSelect={() => {}} onDragStart={() => {}} onDragEnd={() => {}} onStartLink={() => {}} onToggleCheckpoint={() => {}} onRequestClaim={() => {}} />)}
       </div>
     </div>
-    <figcaption className="text-[11px] text-neutral-500 dark:text-neutral-400">{preview.graph.nodes.length} cards · {preview.graph.edges.length} connections · Layout and containment checked. Added alongside existing work.</figcaption>
+    <figcaption className="text-[11px] text-neutral-500 dark:text-neutral-400">{preview.graph.nodes.length} cards · {preview.graph.edges.length} connections · Layout and containment checked.</figcaption>
   </figure>;
 }

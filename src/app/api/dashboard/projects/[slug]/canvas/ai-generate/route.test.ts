@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
 
+vi.mock("@/lib/canvas/ai-preview", () => ({ canvasFingerprint: vi.fn(async () => "baseline"), createCanvasPreview: vi.fn(async () => ({ id: "preview", nodes: [], edges: [], deletedIds: [] })) }));
+
 const mockRpc = vi.fn();
 const mockSupabaseClient = {
   rpc: mockRpc,
@@ -93,6 +95,9 @@ describe("POST /api/dashboard/projects/[slug]/canvas/ai-generate", () => {
 
     const resJson = await res.json();
     expect(resJson.success).toBe(true);
+    expect(resJson.preview.id).toBe("preview");
+    const { applyAIWorkflowResult } = await import("@/lib/canvas/server");
+    expect(applyAIWorkflowResult).not.toHaveBeenCalled();
 
     // Verify acquire_project_ai_lock called with only p_project_id
     expect(mockRpc).toHaveBeenCalledWith("acquire_project_ai_lock", {
