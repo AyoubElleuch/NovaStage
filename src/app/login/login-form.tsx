@@ -116,7 +116,10 @@ export default function LoginForm({
     setMessage("");
     setIsSuccess(false);
 
-    if (nextEmailError || nextPasswordError || nextConfirmPasswordError) return;
+    if (nextEmailError || nextPasswordError || nextConfirmPasswordError) {
+      document.getElementById(nextEmailError ? "email" : nextPasswordError ? "password" : "confirmPassword")?.focus();
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -173,7 +176,10 @@ export default function LoginForm({
     setEmailError(nextEmailError);
     setMessage("");
 
-    if (nextEmailError) return;
+    if (nextEmailError) {
+      document.getElementById("reset-email")?.focus();
+      return;
+    }
 
     startTransition(async () => {
       try {

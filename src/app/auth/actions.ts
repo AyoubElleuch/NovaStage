@@ -1,5 +1,7 @@
 "use server";
 
+import { signInErrorMessage } from "@/lib/auth/errors";
+
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimitAsync, resetRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
@@ -117,7 +119,7 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
   });
 
   if (error) {
-    return { error: "The email or password you entered is incorrect." };
+    return { error: signInErrorMessage(error) };
   }
 
   // Reset rate limit key on successful login

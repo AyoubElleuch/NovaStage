@@ -916,8 +916,8 @@ export default function ProjectsWorkspace() {
                       <span className="inline-flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400">
                         <Users className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
                         <span>
-                          {project.members}/5 members
-                          {project.members >= 5 && (
+                          {project.members}/{project.maxMembers || 5} members
+                          {project.members >= (project.maxMembers || 5) && (
                             <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                               (Full)
                             </span>
@@ -1111,19 +1111,22 @@ export default function ProjectsWorkspace() {
                     autoFocus
                     required
                     value={inviteCode}
+                    pattern="NS-[A-Z0-9]{5}"
+                    maxLength={8}
+                    aria-describedby="invite-code-help"
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                     disabled={isSubmitting}
                     placeholder="e.g. NS-8A3F1"
                     className="h-11 w-full font-mono uppercase tracking-wider rounded-lg border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 shadow-xs transition-colors duration-150 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-400 focus:ring-4 focus:ring-neutral-100 focus:outline-none disabled:opacity-50 dark:border-[#283548] dark:bg-[#121721] dark:text-white dark:placeholder:text-neutral-500 dark:hover:border-[#384961] dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
                   />
-                  <p className="mt-1.5 text-xs text-neutral-400 dark:text-neutral-500">
+                  <p id="invite-code-help" className="mt-1.5 text-xs text-neutral-400 dark:text-neutral-500">
                     Invite codes begin with <span className="font-mono font-medium">NS-</span> followed by 5 characters.
                   </p>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || !inviteCode.trim()}
+                  disabled={isSubmitting || !/^NS-[A-Z0-9]{5}$/.test(inviteCode.trim())}
                   className={`${primaryButton} h-11 w-full`}
                 >
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
@@ -1285,7 +1288,7 @@ export default function ProjectsWorkspace() {
                       }`}
                     >
                       <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>Members ({projectMembers.length}/5)</span>
+                      <span>Members ({projectMembers.length}/{selectedProject.maxMembers || 5})</span>
                     </button>
 
                     <button
@@ -1490,7 +1493,7 @@ export default function ProjectsWorkspace() {
                           const displayName = req.fullName || req.email?.split("@")[0] || "User";
                           const displaySub = req.email || (req.username ? `@${req.username}` : "");
                           const isBusy = resolvingRequestId === req.id;
-                          const isProjectFull = projectMembers.length >= 5;
+                          const isProjectFull = projectMembers.length >= (selectedProject.maxMembers || 5);
 
                           return (
                             <div
@@ -1519,7 +1522,7 @@ export default function ProjectsWorkspace() {
                                   type="button"
                                   disabled={isBusy || isProjectFull}
                                   onClick={() => handleResolveRequest(req.id, "approve")}
-                                  title={isProjectFull ? "Project is at maximum capacity (5/5 members)" : "Approve join request"}
+                                  title={isProjectFull ? `Project is at maximum capacity (${selectedProject.maxMembers || 5} members)` : "Approve join request"}
                                   className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-2xs transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                                 >
                                   {isBusy ? (
