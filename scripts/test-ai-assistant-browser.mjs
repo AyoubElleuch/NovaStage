@@ -5,7 +5,7 @@ import { chromium, devices } from "playwright";
 import { startHarness, root } from "./canvas-smoke/harness.mjs";
 import { nodes, edges } from "./canvas-smoke/fixtures.mjs";
 import { COLLABORATOR, createApiModel } from "./canvas-smoke/api-model.mjs";
-import { createSessions, until } from "./canvas-smoke/browser-helpers.mjs";
+import { createSessions, openDockAction, until } from "./canvas-smoke/browser-helpers.mjs";
 
 // Built-in AI assistant: what a request will change before it runs, what it did afterwards, and how
 // failures recover. The generation route is a deterministic MODEL (no model call, no paid quota).
@@ -39,7 +39,7 @@ const aiRequests = (model) =>
 const assistant = (page) => page.getByRole("dialog", { name: "AI assistant" });
 const preview = (page) => assistant(page).getByRole("region", { name: "What this will change" });
 async function openAssistant(page) {
-  await page.getByRole("button", { name: "Toggle AI Assistant" }).click();
+  await openDockAction(page, "Toggle AI Assistant");
   await assistant(page).waitFor();
 }
 async function chooseMode(page, label) {

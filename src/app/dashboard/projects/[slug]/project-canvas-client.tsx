@@ -2954,6 +2954,17 @@ export default function ProjectCanvasClient({
     notify({ title: "Roadmap Exported", message: `Downloaded ${project.slug}-roadmap.json` });
   };
 
+  const toggleServicePalette = (provider: CloudProvider) => {
+    setSelectedNodeId(null);
+    setIsMobileDrawerOpen(false);
+    setIsNavigatorOpen(false);
+    setIsAIAssistantOpen(false);
+    setIsNotebookOpen(false);
+    setIsReleasePulseOpen(false);
+    setServiceProvider(provider);
+    setIsServicePaletteOpen((open) => serviceProvider !== provider || !open);
+  };
+
   const milestoneNodes = nodes
     .filter((n) => !n.node_type || n.node_type === "milestone")
     .sort((a, b) => a.sort_order - b.sort_order);
@@ -2992,7 +3003,7 @@ export default function ProjectCanvasClient({
   return (
     <div
       ref={setCanvasRootElement}
-      className="canvas-workspace relative h-full w-full overflow-hidden select-none"
+      className="canvas-workspace @container/controls relative h-full w-full overflow-hidden select-none"
     >
       {recoveryDraft && (
         <section
@@ -3434,6 +3445,10 @@ export default function ProjectCanvasClient({
         <CanvasCursors collaborators={collaborators} currentUserId={currentUser.id} />
       </CanvasViewportContainer>
 
+      <div
+        aria-hidden="true"
+        className="canvas-side-divider pointer-events-none absolute inset-y-0 z-10 hidden w-px bg-neutral-200 dark:bg-[#283548]"
+      />
       <CanvasMinimap
         nodes={nodes}
         viewport={viewport}
@@ -3442,7 +3457,7 @@ export default function ProjectCanvasClient({
           setViewport(next);
         }}
         isOpen={isMinimapOpen && !isNotebookOpen && !isAIAssistantOpen}
-        rightInset={(selectedNode || isReleasePulseOpen) && !isMobile ? 420 : 0}
+        hasSidePanel={Boolean(selectedNode || isReleasePulseOpen || isNotebookOpen) && !isMobile}
         onToggleOpen={() => setIsMinimapOpen((v) => !v)}
       />
 
@@ -3507,64 +3522,54 @@ export default function ProjectCanvasClient({
         />
       )}
 
-      {/* Bottom Floating Control Bar (Canvas Tools Dock + AI Assistant) */}
-      <div
-        style={{
-          right: (selectedNode || isReleasePulseOpen) && !isMobile ? 420 : 0,
-        }}
-        className="@container/controls pointer-events-none absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-6 z-20 px-3"
-      >
-        <div
-          className={`flex flex-col @[950px]/controls:flex-row items-center justify-center gap-2 ${isMinimapOpen && !isMobile ? "mb-44 @[600px]/controls:mb-0 @[600px]/controls:mr-[216px]" : ""}`}
-        >
-          {/* On mobile: AI Assistant & Notebook stack above toolbar (order-1). On desktop: sit alongside dock (sm:order-2) */}
-          <div
-            className={`order-1 @[950px]/controls:order-2 pointer-events-auto ${selectedNode && isMobile ? "hidden" : "flex"} items-center justify-end @[950px]/controls:justify-start gap-2 w-full max-w-[340px] @[950px]/controls:w-auto @[950px]/controls:max-w-none`}
-          >
-            <CanvasAIAssistant
-              projectId={project.id}
-              projectSlug={project.slug}
-              onExternalApplied={() => {
-                void resyncCanvasState();
-              }}
-              isOpen={isAIAssistantOpen}
-              portalContainer={canvasRootElement}
-              onToggle={() => {
-                setSelectedNodeId(null);
-                setIsMobileDrawerOpen(false);
-                setIsServicePaletteOpen(false);
-                setIsNavigatorOpen(false);
-                setIsNotebookOpen(false);
-                setIsReleasePulseOpen(false);
-                setIsAIAssistantOpen((prev) => !prev);
-              }}
-              onClose={() => setIsAIAssistantOpen(false)}
-              requestsRemaining={aiRequestsRemaining}
-              maxRequests={maxAiRequests}
-              userPlan={userPlan}
-              existingNodes={nodes}
-              onReloadCanvas={() => {
-                void resyncCanvasState();
-              }}
-              onSubmitPrompt={handleGenerateAIWorkflow}
-            />
-
-            <CanvasNotebook
-              projectId={project.id}
-              isOpen={isNotebookOpen}
-              onToggle={() => {
-                setSelectedNodeId(null);
-                setIsAIAssistantOpen(false);
-                setIsReleasePulseOpen(false);
-                setIsNotebookOpen((open) => !open);
-              }}
-              onClose={() => setIsNotebookOpen(false)}
-            />
-          </div>
-
-          {/* Primary Canvas Dock: order-2 on mobile (at bottom), sm:order-1 on desktop (on left) */}
-          <div className="order-2 @[950px]/controls:order-1 pointer-events-auto flex items-center justify-center max-w-full">
+      <div className="canvas-dock-position pointer-events-none absolute inset-x-0 z-20 flex justify-center px-3">
+        <div className="relative min-w-0 max-w-full">
+          <div className="pointer-events-auto">
             <CanvasDock
+              auxiliaryControls={
+                <>
+                  <CanvasAIAssistant
+                    projectId={project.id}
+                    projectSlug={project.slug}
+                    onExternalApplied={() => {
+                      void resyncCanvasState();
+                    }}
+                    isOpen={isAIAssistantOpen}
+                    portalContainer={canvasRootElement}
+                    onToggle={() => {
+                      setSelectedNodeId(null);
+                      setIsMobileDrawerOpen(false);
+                      setIsServicePaletteOpen(false);
+                      setIsNavigatorOpen(false);
+                      setIsNotebookOpen(false);
+                      setIsReleasePulseOpen(false);
+                      setIsAIAssistantOpen((prev) => !prev);
+                    }}
+                    onClose={() => setIsAIAssistantOpen(false)}
+                    requestsRemaining={aiRequestsRemaining}
+                    maxRequests={maxAiRequests}
+                    userPlan={userPlan}
+                    existingNodes={nodes}
+                    onReloadCanvas={() => {
+                      void resyncCanvasState();
+                    }}
+                    onSubmitPrompt={handleGenerateAIWorkflow}
+                  />
+
+                  <CanvasNotebook
+                    portalContainer={canvasRootElement}
+                    projectId={project.id}
+                    isOpen={isNotebookOpen}
+                    onToggle={() => {
+                      setSelectedNodeId(null);
+                      setIsAIAssistantOpen(false);
+                      setIsReleasePulseOpen(false);
+                      setIsNotebookOpen((open) => !open);
+                    }}
+                    onClose={() => setIsNotebookOpen(false)}
+                  />
+                </>
+              }
               isBusy={isAIGenerating}
               activeTool={activeTool}
               onSelectTool={setActiveTool}
@@ -3592,22 +3597,8 @@ export default function ProjectCanvasClient({
                 setIsNotebookOpen(false);
                 setIsReleasePulseOpen((open) => !open);
               }}
-              onToggleGoogleCloudPalette={() => {
-                setIsNavigatorOpen(false);
-                setIsAIAssistantOpen(false);
-                setIsNotebookOpen(false);
-                setIsReleasePulseOpen(false);
-                setServiceProvider("gcp");
-                setIsServicePaletteOpen((open) => serviceProvider !== "gcp" || !open);
-              }}
-              onToggleServicePalette={() => {
-                setServiceProvider("aws");
-                setIsNavigatorOpen(false);
-                setIsAIAssistantOpen(false);
-                setIsNotebookOpen(false);
-                setIsReleasePulseOpen(false);
-                setIsServicePaletteOpen((open) => serviceProvider !== "aws" || !open);
-              }}
+              onToggleGoogleCloudPalette={() => toggleServicePalette("gcp")}
+              onToggleServicePalette={() => toggleServicePalette("aws")}
               onAddGroup={() => handleAddGroup()}
             />
           </div>
@@ -3625,6 +3616,7 @@ export default function ProjectCanvasClient({
 
       {isReleasePulseOpen && (
         <CanvasReleasePulse
+          portalContainer={canvasRootElement}
           nodes={nodes}
           edges={edges}
           onClose={() => setIsReleasePulseOpen(false)}

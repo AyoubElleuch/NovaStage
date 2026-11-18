@@ -17,6 +17,7 @@ interface NotebookEntry {
 type NotebookEntries = Record<NotebookTab, NotebookEntry[]>;
 
 interface CanvasNotebookProps {
+  portalContainer?: HTMLElement | null;
   projectId: string;
   isOpen: boolean;
   onToggle: () => void;
@@ -61,6 +62,7 @@ export default function CanvasNotebook({
   isOpen,
   onToggle,
   onClose,
+  portalContainer,
 }: CanvasNotebookProps) {
   const panelRef = useRef<HTMLElement>(null);
   useMobilePanelFocus(panelRef, isOpen);
@@ -299,7 +301,7 @@ export default function CanvasNotebook({
               )}
             </aside>
           </>,
-          document.body,
+          portalContainer || document.body,
         )}
 
       <button

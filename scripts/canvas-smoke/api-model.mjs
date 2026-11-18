@@ -540,6 +540,8 @@ export function createApiModel({ nodes = [], edges = [], projectId = "canvas-smo
     }
     if (method === "GET" && pathname.endsWith("/ai-generate"))
       return reply({ preview: model.previews.get(user.id) || null });
+    if (method === "GET" && pathname.endsWith("/canvas/mcp"))
+      return reply({ connection: null, drafts: [] });
     if (method === "GET" && search === "?access=1") return { status: 204 };
     if (method === "GET")
       return reply({

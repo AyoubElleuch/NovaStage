@@ -15,7 +15,7 @@ interface CanvasMinimapProps {
   onViewportChange: (newViewport: CanvasViewport) => void;
   isOpen?: boolean;
   onToggleOpen?: () => void;
-  rightInset?: number;
+  hasSidePanel?: boolean;
 }
 
 const MINIMAP_WIDTH = 190;
@@ -27,7 +27,7 @@ export default function CanvasMinimap({
   onViewportChange,
   isOpen = true,
   onToggleOpen,
-  rightInset = 0,
+  hasSidePanel = false,
 }: CanvasMinimapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const asideRef = useRef<HTMLElement>(null);
@@ -40,11 +40,15 @@ export default function CanvasMinimap({
   const [canvasSize, setCanvasSize] = useState({ width: 1280, height: 800 });
 
   useEffect(() => {
-    const canvas =
-      asideRef.current?.parentElement?.querySelector<HTMLElement>("[data-canvas-viewport]");
+    const workspace = asideRef.current?.parentElement;
+    const canvas = workspace?.querySelector<HTMLElement>("[data-canvas-viewport]");
     const updateSize = () => {
+      const panel = hasSidePanel
+        ? workspace?.querySelector<HTMLElement>(":scope > .canvas-full-height-panel")
+        : null;
+      const panelWidth = panel?.offsetWidth ?? 0;
       setCanvasSize({
-        width: canvas?.clientWidth || window.innerWidth,
+        width: Math.max(1, (canvas?.clientWidth || window.innerWidth) - panelWidth),
         height: canvas?.clientHeight || window.innerHeight,
       });
     };
@@ -56,7 +60,7 @@ export default function CanvasMinimap({
       observer?.disconnect();
       window.removeEventListener("resize", updateSize);
     };
-  }, []);
+  }, [hasSidePanel]);
 
   useEffect(() => {
     const cancelDrag = () => {
@@ -77,7 +81,7 @@ export default function CanvasMinimap({
   }, [isOpen]);
 
   // Include the visible world so the view indicator remains visible even far from the graph.
-  const visibleCanvasWidth = Math.max(1, canvasSize.width - rightInset);
+  const visibleCanvasWidth = canvasSize.width;
   const viewWorldW = visibleCanvasWidth / viewport.zoom;
   const viewWorldH = canvasSize.height / viewport.zoom;
   const viewWorldX = -viewport.x / viewport.zoom;
@@ -209,10 +213,9 @@ export default function CanvasMinimap({
   return (
     <aside
       data-canvas-ui
-      style={rightInset ? { right: rightInset + 24 } : undefined}
       ref={asideRef}
       aria-label="Canvas Minimap Radar"
-      className={`absolute bottom-24 right-3 sm:bottom-6 sm:right-6 z-20 flex flex-col items-end pointer-events-auto ${
+      className={`canvas-minimap-radar absolute right-3 sm:right-6 z-20 flex flex-col items-end pointer-events-auto ${
         !isOpen ? "hidden sm:flex" : ""
       }`}
     >

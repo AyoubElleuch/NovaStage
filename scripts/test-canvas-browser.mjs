@@ -6,6 +6,7 @@ import { chromium, devices } from "playwright";
 import { createServer } from "vite";
 import react from "@vitejs/plugin-react";
 import { nodes, edges, project } from "./canvas-smoke/fixtures.mjs";
+import { openDockAction } from "./canvas-smoke/browser-helpers.mjs";
 
 // This harness mounts the actual canvas client. All APIs and realtime are mocked;
 // it never logs in, connects to Supabase, or changes a real project.
@@ -312,51 +313,112 @@ try {
     }
     await page.screenshot({ path: resolve(output, "desktop.png") });
   });
-  await check(
-    "compact controls stay clear and radar remains bottom-aligned with details open",
-    async () => {
-      const isolated = await fixturePage(desktop);
-      const layoutPage = isolated.page;
-      const radar = layoutPage.getByRole("complementary", { name: "Canvas Minimap Radar" });
-      const dock = layoutPage.getByRole("navigation", { name: "Canvas control dock" });
-      const overlap = (a, b) =>
-        a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
-      await layoutPage.getByRole("button", { name: "Radar", exact: true }).click();
-      for (const width of [1440, 1280, 1024, 844]) {
-        await layoutPage.setViewportSize({ width, height: 1000 });
-        const before = await radar.boundingBox();
-        for (const title of ["Plan the release", "Application servers"]) {
-          await layoutPage.getByRole("button", { name: "Find on canvas" }).click();
-          await layoutPage.getByRole("combobox", { name: "Search canvas" }).fill(title);
-          await layoutPage.getByRole("option").first().click();
-          const find = await layoutPage
-            .getByRole("button", { name: "Find on canvas" })
-            .boundingBox();
-          const focus = await layoutPage
-            .getByRole("button", { name: "Focus selection", exact: true })
-            .boundingBox();
-          assert.equal(focus.x, find.x, "Find and Focus share a left edge");
-          assert.ok(focus.y >= find.y + find.height + 8, "Focus has at least 8px clearance");
-          const after = await radar.boundingBox();
-          assert.equal(
-            Math.round(after.y + after.height),
-            Math.round(before.y + before.height),
-            "details must not lift the radar",
+  await check("the dock stays centered and clear of full-height panels and the radar", async () => {
+    const isolated = await fixturePage(desktop);
+    const layoutPage = isolated.page;
+    const radar = layoutPage.getByRole("complementary", { name: "Canvas Minimap Radar" });
+    const dock = layoutPage.getByRole("navigation", { name: "Canvas control dock" });
+    const workspace = layoutPage.locator(".canvas-workspace");
+    const middleX = (box) => box.x + box.width / 2;
+    const middleY = (box) => box.y + box.height / 2;
+    const bottom = (box) => box.y + box.height;
+    const overlap = (a, b) =>
+      a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+    await layoutPage.getByRole("button", { name: "Radar", exact: true }).click();
+    for (const width of [1920, 1440, 1360, 1359, 1280, 1060, 1024, 844, 768]) {
+      await layoutPage.setViewportSize({ width, height: 1000 });
+      const canvasBounds = await workspace.boundingBox();
+      const divider = workspace.locator(".canvas-side-divider");
+      const dividerBeforeDetails = await divider.boundingBox();
+      assert.equal(dividerBeforeDetails.height, 1000, "the divider is visible with details closed");
+      const closedRadar = await radar.boundingBox();
+      const closedDock = await dock.boundingBox();
+      assert.ok(
+        Math.abs(closedDock.x + closedDock.width / 2 - (canvasBounds.x + canvasBounds.width / 2)) <=
+          1,
+        `dock is centered in the canvas at ${width}px`,
+      );
+      assert.ok(!overlap(closedRadar, closedDock), "radar clears the dock with details closed");
+      for (const title of ["Plan the release", "Application servers"]) {
+        await layoutPage.getByRole("button", { name: "Find on canvas" }).click();
+        await layoutPage.getByRole("combobox", { name: "Search canvas" }).fill(title);
+        await layoutPage.getByRole("option").first().click();
+        const find = await layoutPage.getByRole("button", { name: "Find on canvas" }).boundingBox();
+        const focus = await layoutPage
+          .getByRole("button", { name: "Focus selection", exact: true })
+          .boundingBox();
+        assert.equal(focus.x, find.x, "Find and Focus share a left edge");
+        assert.ok(focus.y >= find.y + find.height + 8, "Focus has at least 8px clearance");
+        const after = await radar.boundingBox();
+        assert.equal(
+          Math.round(after.y + after.height),
+          Math.round(closedRadar.y + closedRadar.height),
+          "details must not lift the radar",
+        );
+        const controls = await dock.boundingBox();
+        const panel = await layoutPage
+          .getByRole("complementary", { name: /details$/i })
+          .boundingBox();
+        assert.ok(
+          Math.abs(middleX(controls) - middleX(closedDock)) <= 1,
+          "opening details leaves the dock centered",
+        );
+        assert.equal(
+          bottom(controls),
+          bottom(closedDock),
+          "opening details leaves the dock at the same height",
+        );
+        for (const name of ["Toggle AI Assistant", "Open project notebook"]) {
+          const action = await layoutPage.getByRole("button", { name, exact: true }).boundingBox();
+          assert.ok(
+            Math.abs(middleY(action) - middleY(controls)) <= 1,
+            `${name} is on the dock row at ${width}px`,
           );
-          const controls = await dock.boundingBox();
-          assert.ok(!overlap(after, controls), "radar and dock do not overlap");
-          assert.ok(controls.width <= 600, "dock stays compact");
-          await layoutPage.getByRole("button", { name: "AWS Services", exact: true }).waitFor();
-          assert.equal(await layoutPage.getByRole("button", { name: /tidy/i }).count(), 0);
-          await layoutPage.screenshot({
-            path: resolve(output, `controls-${width}-${title.split(" ")[0]}.png`),
-          });
-          await layoutPage.getByRole("button", { name: "Close details", exact: true }).click();
+          assert.ok(!overlap(action, after), `${name} clears the radar at ${width}px`);
+          assert.ok(!overlap(action, panel), `${name} clears details at ${width}px`);
         }
+        assert.equal(panel.y, 0, "details reach the top of the screen");
+        assert.equal(panel.y + panel.height, 1000, "details reach the bottom of the screen");
+        assert.ok(Math.abs(dividerBeforeDetails.x - panel.x) <= 1, "details open on the divider");
+        assert.ok(after.x + after.width < panel.x, "radar stays to the left of details");
+        assert.ok(!overlap(after, controls), "radar and dock do not overlap");
+        assert.ok(!overlap(panel, controls), "details and dock do not overlap");
+        assert.ok(controls.width <= 600, "dock stays compact");
+        await layoutPage.getByRole("button", { name: "AWS Services", exact: true }).waitFor();
+        assert.equal(await layoutPage.getByRole("button", { name: /tidy/i }).count(), 0);
+        await layoutPage.screenshot({
+          path: resolve(output, `controls-${width}-${title.split(" ")[0]}.png`),
+        });
+        await layoutPage.getByRole("button", { name: "Close details", exact: true }).click();
       }
-      await layoutPage.close();
-    },
-  );
+    }
+    await layoutPage.setViewportSize({ width: 1280, height: 800 });
+    await workspace.evaluate((element) => {
+      element.parentElement.style.cssText += ";margin-left:250px;width:calc(100% - 250px)";
+    });
+    const insetCanvas = await workspace.boundingBox();
+    const insetDock = await dock.boundingBox();
+    assert.equal(insetCanvas.x, 250, "the fixture simulates the dashboard sidebar");
+    assert.ok(
+      Math.abs(insetDock.x + insetDock.width / 2 - (insetCanvas.x + insetCanvas.width / 2)) <= 1,
+      "dock follows the canvas midpoint with a dashboard sidebar",
+    );
+    const checkSidePanel = async (name) => {
+      const panel = layoutPage.getByRole("complementary", { name, exact: true });
+      await panel.waitFor();
+      assert.deepEqual(await dock.boundingBox(), insetDock, `${name} leaves the dock in place`);
+      const bounds = await panel.boundingBox();
+      assert.equal(bounds.height, 800, `${name} fills the screen height`);
+      assert.ok(!overlap(bounds, insetDock), `${name} clears the dock`);
+    };
+    await layoutPage.getByRole("button", { name: "Open project notebook", exact: true }).click();
+    await checkSidePanel("Project notebook");
+    await layoutPage.getByRole("button", { name: "Close notebook", exact: true }).click();
+    await layoutPage.getByRole("button", { name: "Canvas tools", exact: true }).click();
+    await layoutPage.getByRole("button", { name: "Open Release Pulse", exact: true }).click();
+    await checkSidePanel("Release pulse");
+    await layoutPage.close();
+  });
   await check(
     "Google Cloud resources save, connect across providers, survive reload and render in shared views",
     async () => {
@@ -1239,6 +1301,7 @@ try {
         await phone.getByRole("button", { name: "Close release pulse", exact: true }).click();
       }
       await phone.getByRole("button", { name: "Find on canvas", exact: true }).click();
+      const dockBeforeDetails = await dock.boundingBox();
       await phone
         .getByRole("combobox", { name: "Search canvas", exact: true })
         .fill("Plan the release");
@@ -1248,8 +1311,20 @@ try {
         await phone.getByRole("button", { name: "Details", exact: true }).click();
       }
       await phone.getByRole("textbox", { name: "Milestone title", exact: true }).waitFor();
+      if (viewport.width < 768) {
+        const panel = await phone
+          .getByRole("complementary", { name: "Milestone details" })
+          .boundingBox();
+        assert.equal(panel.height, viewport.height, "phone details fill the screen");
+        assert.equal(await dock.isVisible(), false, "the phone sheet takes over from the dock");
+      }
       await phone.screenshot({ path: resolve(output, `mobile-${size}-details.png`) });
       await phone.getByRole("button", { name: "Close details", exact: true }).click();
+      assert.deepEqual(
+        await dock.boundingBox(),
+        dockBeforeDetails,
+        "dock returns to the same spot",
+      );
       if (viewport.width < 768)
         await phone.getByRole("button", { name: "Deselect milestone", exact: true }).click();
       await phone.getByRole("button", { name: "AWS Services", exact: true }).click();
@@ -1317,7 +1392,7 @@ try {
     async () => {
       await creator.getByRole("button", { name: "Done", exact: true }).click();
       await creator.getByRole("button", { name: "Deselect AWS resource", exact: true }).click();
-      await creator.getByRole("button", { name: "Toggle AI Assistant", exact: true }).click();
+      await openDockAction(creator, "Toggle AI Assistant");
       const assistant = creator.getByRole("dialog", { name: "AI assistant", exact: true });
       await assistant.getByRole("textbox", { name: "AI prompt", exact: true }).waitFor();
       await assistant.getByRole("button", { name: "Your AI", exact: true }).click();
