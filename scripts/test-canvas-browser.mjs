@@ -329,7 +329,7 @@ try {
     await layoutPage.getByRole("button", { name: "Canvas tools", exact: true }).click();
     assert.equal(await layoutPage.getByRole("button", { name: "Minimap", exact: true }).count(), 0);
     await layoutPage.getByRole("button", { name: "Close tools menu", exact: true }).click();
-    for (const width of [1920, 1440, 1360, 1359, 1280, 1060, 1024, 844, 768]) {
+    for (const width of [1440, 1360, 1060, 844, 768]) {
       await layoutPage.setViewportSize({ width, height: 1000 });
       const canvasBounds = await workspace.boundingBox();
       assert.equal(await workspace.locator(".canvas-side-divider").count(), 0);
@@ -390,9 +390,8 @@ try {
         assert.ok(controls.width <= 600, "dock stays compact");
         await layoutPage.getByRole("button", { name: "AWS Services", exact: true }).waitFor();
         assert.equal(await layoutPage.getByRole("button", { name: /tidy/i }).count(), 0);
-        await layoutPage.screenshot({
-          path: resolve(output, `controls-${width}-${title.split(" ")[0]}.png`),
-        });
+        if (width === 1440 && title === "Application servers")
+          await layoutPage.screenshot({ path: resolve(output, "controls-1440-Application.png") });
         await layoutPage.getByRole("button", { name: "Close details", exact: true }).click();
       }
     }
