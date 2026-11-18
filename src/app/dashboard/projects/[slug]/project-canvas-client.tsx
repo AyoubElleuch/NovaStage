@@ -286,12 +286,13 @@ export default function ProjectCanvasClient({
   const storageKey = recoveryKey(project.id, currentUser.id);
   const confirmedCanvasRef = useRef<CanvasState>({ nodes: initialNodes, edges: initialEdges });
   const [recoveryDraft, setRecoveryDraft] = useState<CanvasRecovery | null>(null);
+  const [recoveryPersistent, setRecoveryPersistent] = useState(true);
   const [isRecovering, setIsRecovering] = useState(false);
   const preserveDraft = useCallback(() => {
     const draft = { savedAt: Date.now(), base: confirmedCanvasRef.current, canvas: { nodes: nodesRef.current, edges: edgesRef.current }, history: historyRef.current };
     if (!diffCanvas(draft.base, draft.canvas).length) return;
     setRecoveryDraft(draft);
-    try { writeRecovery(localStorage, storageKey + ":draft", draft); } catch {}
+    try { setRecoveryPersistent(writeRecovery(localStorage, storageKey + ":draft", draft)); } catch { setRecoveryPersistent(false); }
   }, [storageKey]);
 
   useEffect(() => {
@@ -362,11 +363,11 @@ export default function ProjectCanvasClient({
 
   // Warn before leaving while a save is in flight or the canvas is known to be out of sync.
   useEffect(() => {
-    if (!saveState.pending && !saveState.diverged) return;
+    if (!saveState.pending && !saveState.diverged && (!recoveryDraft || recoveryPersistent)) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [saveState.pending, saveState.diverged]);
+  }, [saveState.pending, saveState.diverged, recoveryDraft, recoveryPersistent]);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
@@ -2520,7 +2521,7 @@ export default function ProjectCanvasClient({
   return (
     <div ref={setCanvasRootElement} className="canvas-workspace relative h-full w-full overflow-hidden select-none">
       {recoveryDraft && <section data-canvas-ui role="status" aria-label="Canvas recovery" className="absolute left-1/2 top-20 z-40 w-[min(440px,calc(100%-24px))] -translate-x-1/2 rounded-2xl border border-amber-200 bg-white p-4 text-xs shadow-xl dark:border-amber-800 dark:bg-[#161d27]">
-        <p className="font-semibold">Unsaved draft available</p><p className="mt-1 text-neutral-500 dark:text-neutral-300">Kept on this device for 7 days. Restore is available only while the shared canvas matches the draft’s starting point.</p>
+        <p className="font-semibold">Unsaved draft available</p><p className="mt-1 text-neutral-500 dark:text-neutral-300">{recoveryPersistent ? "Kept on this device for 7 days." : "Browser storage is unavailable. Download this draft before closing the tab."} Restore is available only while the shared canvas matches the draft’s starting point.</p>
         <div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={isRecovering} onClick={() => void recoverDraft()} className="font-semibold text-emerald-600">{isRecovering ? "Restoring…" : "Restore draft"}</button><button type="button" onClick={() => { const url = URL.createObjectURL(new Blob([JSON.stringify(recoveryDraft.canvas, null, 2)], { type: "application/json" })); const link = document.createElement("a"); link.href = url; link.download = `${project.slug}-recovered-draft.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }}>Download draft</button><button type="button" onClick={clearRecovery}>Dismiss</button></div>
       </section>}
       {/* Top Floating HUD with Follow Mode and Export */}
